@@ -101,6 +101,8 @@ npm run build
 node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
 ```
 
+Quando o arquivo usa `use`, a CLI passa a carregar os outros arquivos `.sema` da mesma pasta de projeto como contexto de compilacao. No MVP atual, isso cobre bem multiplos modulos vizinhos no mesmo conjunto de trabalho.
+
 ## Gerar Python
 
 ```bash
@@ -137,6 +139,8 @@ O comando imprime um resumo final por modulo e por alvo, incluindo:
 - quantidade de testes executados
 - pasta de saida usada em cada alvo
 - uso recomendado como checagem completa antes de commit ou PR
+
+Quando a entrada for um unico arquivo `.sema`, os comandos `validar`, `compilar`, `testar`, `ast`, `ir` e `diagnosticos` passam a considerar os outros arquivos `.sema` vizinhos como contexto para resolver `use`, mas mantem a saida focada no arquivo solicitado.
 
 Para testar um modulo `.sema` gerando codigo temporario:
 

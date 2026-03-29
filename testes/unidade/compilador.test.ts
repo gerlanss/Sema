@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compilarCodigo, temErros } from "../../pacotes/nucleo/dist/index.js";
+import { compilarCodigo, compilarProjeto, temErros } from "../../pacotes/nucleo/dist/index.js";
 
 test("compilador gera AST e IR para task valida", () => {
   const codigo = `
@@ -138,4 +138,117 @@ module exemplo.route.invalida {
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM016"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM017"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM018"));
+});
+
+test("compilador resolve use entre multiplos modulos do projeto", () => {
+  const tipos = `
+module base.tipos {
+  entity Usuario {
+    fields {
+      id: Id
+      nome: Texto
+    }
+  }
+
+  task buscar_usuario {
+    input {
+      id: Id required
+    }
+    output {
+      usuario: Usuario
+    }
+    guarantees {
+      usuario existe
+    }
+    tests {
+      caso "busca usuario" {
+        given {
+          id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const app = `
+module app.cadastro {
+  use base.tipos
+
+  task registrar_acesso {
+    input {
+      usuario: Usuario required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "registra acesso" {
+        given {
+          usuario: "u-1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow consulta {
+    task: buscar_usuario
+    task: registrar_acesso
+  }
+}
+`;
+
+  const resultado = compilarProjeto([
+    { caminho: "base.sema", codigo: tipos },
+    { caminho: "app.sema", codigo: app },
+  ]);
+
+  assert.equal(temErros(resultado.diagnosticos), false);
+  const moduloApp = resultado.modulos.find((modulo) => modulo.modulo?.nome === "app.cadastro");
+  assert.ok(moduloApp?.ir);
+  assert.deepEqual(moduloApp.ir?.uses, ["base.tipos"]);
+  assert.deepEqual(moduloApp.ir?.flows[0]?.tasksReferenciadas, ["buscar_usuario", "registrar_acesso"]);
+});
+
+test("compilador acusa use para modulo inexistente", () => {
+  const codigo = `
+module app.invalido {
+  use base.inexistente
+
+  task eco {
+    input {
+      mensagem: Texto required
+    }
+    output {
+      mensagem: Texto
+    }
+    guarantees {
+      mensagem existe
+    }
+    tests {
+      caso "eco" {
+        given {
+          mensagem: "oi"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarProjeto([{ caminho: "app.sema", codigo }]);
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM019"));
 });

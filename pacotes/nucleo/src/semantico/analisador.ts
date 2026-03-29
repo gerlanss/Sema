@@ -22,11 +22,17 @@ export interface ContextoSemantico {
   modulo: string;
   simbolos: Map<string, SimboloSemantico>;
   tiposConhecidos: Set<string>;
+  tasksConhecidas: Set<string>;
+  modulosImportados: string[];
 }
 
 export interface ResultadoSemantico {
   contexto: ContextoSemantico;
   diagnosticos: Diagnostico[];
+}
+
+export interface OpcoesAnaliseSemantica {
+  contextosModulos?: Map<string, ContextoSemantico>;
 }
 
 const TIPOS_PRIMITIVOS = new Set([
@@ -210,6 +216,56 @@ function validarRoute(route: RouteAst, tasksConhecidas: Set<string>, diagnostico
   }
 }
 
+export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
+  const simbolos = new Map<string, SimboloSemantico>();
+  const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
+  const tasksConhecidas = new Set<string>();
+
+  const registrar = (nome: string, categoria: SimboloSemantico["categoria"]): void => {
+    if (simbolos.has(nome)) {
+      return;
+    }
+    simbolos.set(nome, { nome, categoria });
+    if (categoria === "task") {
+      tasksConhecidas.add(nome);
+      return;
+    }
+    tiposConhecidos.add(nome);
+  };
+
+  for (const type of modulo.types) {
+    registrar(type.nome, "tipo");
+  }
+  for (const entity of modulo.entities) {
+    registrar(entity.nome, "entity");
+  }
+  for (const enumeracao of modulo.enums) {
+    registrar(enumeracao.nome, "enum");
+  }
+  for (const task of modulo.tasks) {
+    registrar(task.nome, "task");
+  }
+  for (const flow of modulo.flows) {
+    registrar(flow.nome, "flow");
+  }
+  for (const route of modulo.routes) {
+    registrar(route.nome, "route");
+  }
+  for (const state of modulo.states) {
+    if (state.nome) {
+      registrar(state.nome, "state");
+    }
+  }
+
+  return {
+    modulo: modulo.nome,
+    simbolos,
+    tiposConhecidos,
+    tasksConhecidas,
+    modulosImportados: [],
+  };
+}
+
 function validarTask(task: TaskAst, tiposConhecidos: Set<string>, diagnosticos: Diagnostico[]): void {
   if (!task.input) {
     diagnosticos.push(
@@ -332,10 +388,36 @@ function validarCasoTeste(task: TaskAst, caso: BlocoCasoTesteAst, diagnosticos: 
   }
 }
 
-export function analisarSemantica(modulo: ModuloAst): ResultadoSemantico {
+export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemantica = {}): ResultadoSemantico {
   const diagnosticos: Diagnostico[] = [];
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
+  const tasksConhecidas = new Set<string>();
+  const modulosImportados: string[] = [];
+
+  for (const use of modulo.uses) {
+    const contextoImportado = opcoes.contextosModulos?.get(use.caminho);
+    if (!contextoImportado) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM019",
+          `Modulo "${modulo.nome}" usa "${use.caminho}", mas esse modulo nao foi encontrado no projeto atual.`,
+          "erro",
+          use.intervalo,
+          "Garanta que o arquivo .sema importado esteja presente no mesmo conjunto de compilacao.",
+        ),
+      );
+      continue;
+    }
+
+    modulosImportados.push(use.caminho);
+    for (const tipo of contextoImportado.tiposConhecidos) {
+      tiposConhecidos.add(tipo);
+    }
+    for (const task of contextoImportado.tasksConhecidas) {
+      tasksConhecidas.add(task);
+    }
+  }
 
   const registrar = (
     nome: string,
@@ -347,9 +429,11 @@ export function analisarSemantica(modulo: ModuloAst): ResultadoSemantico {
       return;
     }
     simbolos.set(nome, { nome, categoria });
-    if (categoria !== "task") {
-      tiposConhecidos.add(nome);
+    if (categoria === "task") {
+      tasksConhecidas.add(nome);
+      return;
     }
+    tiposConhecidos.add(nome);
   };
 
   for (const type of modulo.types) {
@@ -362,11 +446,7 @@ export function analisarSemantica(modulo: ModuloAst): ResultadoSemantico {
     registrar(enumeracao.nome, "enum", enumeracao.intervalo);
   }
   for (const task of modulo.tasks) {
-    if (simbolos.has(task.nome)) {
-      diagnosticos.push(diagnosticoDuplicado(task.nome, "Task", task.intervalo));
-    } else {
-      simbolos.set(task.nome, { nome: task.nome, categoria: "task" });
-    }
+    registrar(task.nome, "task", task.intervalo);
   }
   for (const flow of modulo.flows) {
     registrar(flow.nome, "flow", flow.intervalo);
@@ -409,8 +489,6 @@ export function analisarSemantica(modulo: ModuloAst): ResultadoSemantico {
     validarTask(task, tiposConhecidos, diagnosticos);
   }
 
-  const tasksConhecidas = new Set(modulo.tasks.map((task) => task.nome));
-
   for (const flow of modulo.flows) {
     validarFlow(flow, tasksConhecidas, diagnosticos);
   }
@@ -428,6 +506,8 @@ export function analisarSemantica(modulo: ModuloAst): ResultadoSemantico {
       modulo: modulo.nome,
       simbolos,
       tiposConhecidos,
+      tasksConhecidas,
+      modulosImportados,
     },
     diagnosticos,
   };

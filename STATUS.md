@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `bc09ada`
+- Ultimo commit de referencia: `f245bca`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
@@ -30,7 +30,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Em Andamento Nesta Sprint
 
 - `[-]` Fortalecer a semantica de `flow`, `route` e `state`
-- `[ ]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
+- `[-]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
 - `[ ]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
 - `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
 - `[ ]` Melhorar a saida estruturada para IDE, automacao e IA
@@ -65,8 +65,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Validacao inicial de `route` para `metodo`, `caminho` e referencia de `task`
 - `[x]` Validacao inicial de `flow` para etapas e referencias declarativas de `task`
 - `[x]` Validacao inicial de `state` para estrutura minima e consistencia de tipos
+- `[x]` Resolucao inicial de `use` entre multiplos modulos do mesmo conjunto de compilacao
 - `[-]` Semantica profunda de `flow`, `route` e `state`
-- `[-]` Resolucao mais completa de `use` e multiplos modulos
+- `[-]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
 - `[-]` Garantias, erros e efeitos ainda estao em nivel inicial de semantica executavel
 - `[ ]` Sistema de expressoes semanticas mais formal para regras, comparacoes e pos-condicoes
 
@@ -144,6 +145,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Execucao local de testes gerados para TypeScript
 - `[x]` Execucao local de testes gerados para Python com `pytest`
 - `[x]` Testes unitarios cobrindo validacoes iniciais de `flow`, `route` e `state`
+- `[x]` Testes unitarios e de integracao cobrindo `use` entre arquivos vizinhos
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `project:check`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida

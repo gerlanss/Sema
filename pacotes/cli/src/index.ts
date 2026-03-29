@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
   compilarCodigo,
+  compilarProjeto,
   formatarDiagnosticos,
   lerArquivoTexto,
   listarArquivosSema,
   temErros,
   type IrModulo,
+  type ResultadoCompilacaoProjetoModulo,
 } from "@sema/nucleo";
 import { gerarPython } from "@sema/gerador-python";
 import { gerarTypeScript } from "@sema/gerador-typescript";
@@ -65,13 +67,30 @@ Comandos:
 }
 
 async function carregarModulos(entrada: string): Promise<Array<{ caminho: string; codigo: string; resultado: ReturnType<typeof compilarCodigo> }>> {
-  const arquivos = await listarArquivosSema(entrada);
-  const resultados = [];
-  for (const arquivo of arquivos) {
+  const entradaResolvida = path.resolve(entrada);
+  const estatisticas = await stat(entradaResolvida);
+  const baseProjeto = estatisticas.isFile() ? path.dirname(entradaResolvida) : entradaResolvida;
+  const arquivosProjeto = await listarArquivosSema(baseProjeto);
+  const arquivosSelecionados = estatisticas.isFile() ? new Set([entradaResolvida]) : new Set(arquivosProjeto.map((arquivo) => path.resolve(arquivo)));
+
+  const fontes = [];
+  for (const arquivo of arquivosProjeto) {
     const codigo = await lerArquivoTexto(arquivo);
-    resultados.push({ caminho: arquivo, codigo, resultado: compilarCodigo(codigo, arquivo) });
+    fontes.push({ caminho: arquivo, codigo });
   }
-  return resultados;
+
+  const resultadoProjeto = compilarProjeto(fontes);
+  const resultados = new Map<string, ResultadoCompilacaoProjetoModulo>(
+    resultadoProjeto.modulos.map((modulo) => [path.resolve(modulo.caminho), modulo]),
+  );
+
+  return fontes
+    .filter((fonte) => arquivosSelecionados.has(path.resolve(fonte.caminho)))
+    .map((fonte) => ({
+      caminho: fonte.caminho,
+      codigo: fonte.codigo,
+      resultado: resultados.get(path.resolve(fonte.caminho)) ?? compilarCodigo(fonte.codigo, fonte.caminho),
+    }));
 }
 
 async function escreverArquivos(base: string, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): Promise<void> {
