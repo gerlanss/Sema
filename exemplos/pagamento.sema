@@ -1,0 +1,60 @@
+module exemplos.pagamento {
+  enum StatusPagamento {
+    PENDENTE,
+    AUTORIZADO,
+    RECUSADO,
+    PROCESSADO
+  }
+
+  entity Pagamento {
+    fields {
+      id: Id
+      valor: Decimal
+      status: StatusPagamento
+    }
+  }
+
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      pagamento: Pagamento
+      status: StatusPagamento
+    }
+    rules {
+      valor deve_ser positivo
+      token deve_ser valido
+    }
+    effects {
+      consulta gateway_pagamento
+      registra auditoria
+      notifica cliente
+    }
+    guarantees {
+      pagamento existe
+      status existe
+      estado consistente
+    }
+    error {
+      autorizacao_negada: "A operacao foi recusada pelo gateway."
+      saldo_insuficiente: "O saldo nao cobre o valor da cobranca."
+      timeout_gateway: "O gateway nao respondeu em tempo habil."
+    }
+    tests {
+      caso "pagamento autorizado" {
+        given {
+          pagamento_id: "pag_1"
+          valor: 199.9
+          token: "tok_ok"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+

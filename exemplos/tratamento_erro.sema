@@ -1,0 +1,39 @@
+module exemplos.tratamento.erro {
+  task executar_operacao_sensivel {
+    input {
+      chave: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      chave deve_ser preenchida
+    }
+    effects {
+      acessa cofre
+      registra falha
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      acesso_negado: "A chave informada nao tem permissao."
+      recurso_indisponivel: "O servico esta temporariamente indisponivel."
+      auditoria_obrigatoria: "Toda falha precisa ser registrada."
+    }
+    tests {
+      caso "falha por acesso negado" {
+        given {
+          chave: "sem_permissao"
+        }
+        expect {
+          sucesso: falso
+        }
+        error {
+          tipo: "acesso_negado"
+        }
+      }
+    }
+  }
+}
+

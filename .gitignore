@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.turbo/
+.tmp/
+coverage/
+*.log
+saida/
+testes/saida/
+*.tsbuildinfo
+*.d.ts
+*.js.map

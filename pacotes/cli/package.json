@@ -1,0 +1,20 @@
+{
+  "name": "@sema/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "sema": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sema/nucleo": "file:../nucleo",
+    "@sema/gerador-python": "file:../gerador-python",
+    "@sema/gerador-typescript": "file:../gerador-typescript",
+    "@sema/padroes": "file:../padroes"
+  }
+}
+

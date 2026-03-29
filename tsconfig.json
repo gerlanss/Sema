@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./pacotes/nucleo" },
+    { "path": "./pacotes/padroes" },
+    { "path": "./pacotes/gerador-typescript" },
+    { "path": "./pacotes/gerador-python" },
+    { "path": "./pacotes/cli" }
+  ]
+}

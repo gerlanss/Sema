@@ -1,0 +1,77 @@
+module exemplos.calculadora {
+  docs {
+    resumo: "Operacoes aritmeticas simples com garantias e testes."
+  }
+
+  comments {
+    observacao: "Exemplo base para demonstrar tarefas semanticas puras."
+  }
+
+  task somar {
+    input {
+      a: Numero required
+      b: Numero required
+    }
+    output {
+      resultado: Numero
+    }
+    rules {
+      a deve_ser numero_valido
+      b deve_ser numero_valido
+    }
+    effects {
+      registra operacao "soma"
+    }
+    guarantees {
+      resultado existe
+    }
+    error {
+      entrada_invalida: "Os valores precisam ser numericos."
+    }
+    tests {
+      caso "soma basica" {
+        given {
+          a: 2
+          b: 3
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task dividir {
+    input {
+      dividendo: Numero required
+      divisor: Numero required
+    }
+    output {
+      resultado: Numero
+    }
+    rules {
+      divisor deve_ser diferente_de_zero
+    }
+    effects {
+      registra operacao "divisao"
+    }
+    guarantees {
+      resultado existe
+    }
+    error {
+      divisor_zero: "Nao e permitido dividir por zero."
+    }
+    tests {
+      caso "divisao valida" {
+        given {
+          dividendo: 10
+          divisor: 2
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+

@@ -1,0 +1,53 @@
+module exemplos.cadastro.usuario {
+  docs {
+    resumo: "Cadastro de usuario com entidade, validacoes e persistencia declarada."
+  }
+
+  entity Usuario {
+    fields {
+      id: Id
+      nome: Texto
+      email: Email
+      ativo: Booleano
+    }
+  }
+
+  task criar_usuario {
+    input {
+      nome: Texto required
+      email: Email required
+    }
+    output {
+      usuario: Usuario
+    }
+    rules {
+      nome deve_ser preenchido
+      email deve_ser email_valido
+      email deve_ser unico em Usuario.email
+    }
+    effects {
+      grava Usuario
+      emite evento "usuario_criado"
+    }
+    guarantees {
+      usuario existe
+      persistencia concluida
+    }
+    error {
+      email_duplicado: "Ja existe usuario com este email."
+      entrada_invalida: "Os dados informados nao atendem as regras."
+    }
+    tests {
+      caso "cria usuario valido" {
+        given {
+          nome: "Ana"
+          email: "ana@empresa.com"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+

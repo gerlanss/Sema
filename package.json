@@ -1,0 +1,22 @@
+{
+  "name": "sema",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sema e uma DSL semantica para especificacao executavel de regras de negocio.",
+  "type": "module",
+  "workspaces": [
+    "pacotes/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "npm run build && node --import tsx --test testes/unidade/**/*.test.ts testes/integracao/**/*.test.ts",
+    "lint": "tsc -b --pretty false",
+    "cli": "node pacotes/cli/dist/index.js",
+    "dev:cli": "node scripts/dev-cli.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

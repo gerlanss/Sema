@@ -1,0 +1,45 @@
+module exemplos.automacao {
+  flow onboarding_cliente {
+    recebe lead
+    valida dados
+    cria conta
+    envia mensagem_boas_vindas
+    registra auditoria
+  }
+
+  task executar_onboarding {
+    input {
+      lead_id: Id required
+      email: Email required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      lead_id deve_ser valido
+      email deve_ser email_valido
+    }
+    effects {
+      le crm
+      grava conta
+      envia email
+      registra auditoria
+    }
+    guarantees {
+      protocolo existe
+      persistencia concluida
+    }
+    tests {
+      caso "onboarding completo" {
+        given {
+          lead_id: "lead_1"
+          email: "cliente@empresa.com"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+

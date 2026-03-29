@@ -1,0 +1,78 @@
+module exemplos.crud.simples {
+  entity Produto {
+    fields {
+      id: Id
+      nome: Texto
+      preco: Decimal
+      ativo: Booleano
+    }
+  }
+
+  route produtos {
+    metodo: Texto
+    caminho: Texto
+    finalidade: Texto
+  }
+
+  task criar_produto {
+    input {
+      nome: Texto required
+      preco: Decimal required
+    }
+    output {
+      produto: Produto
+    }
+    rules {
+      nome deve_ser preenchido
+      preco deve_ser positivo
+    }
+    effects {
+      grava Produto
+    }
+    guarantees {
+      produto existe
+    }
+    tests {
+      caso "cria produto" {
+        given {
+          nome: "Caneca"
+          preco: 39.9
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task atualizar_produto {
+    input {
+      id: Id required
+      nome: Texto
+      preco: Decimal
+    }
+    output {
+      produto: Produto
+    }
+    rules {
+      id deve_ser valido
+    }
+    effects {
+      atualiza Produto
+    }
+    guarantees {
+      produto existe
+    }
+    tests {
+      caso "atualiza produto" {
+        given {
+          id: "prod_1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+

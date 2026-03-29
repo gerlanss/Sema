@@ -1,0 +1,42 @@
+module exemplos.testes.embutidos {
+  task validar_documento {
+    input {
+      documento: Texto required
+    }
+    output {
+      valido: Booleano
+      motivo: Texto
+    }
+    rules {
+      documento deve_ser preenchido
+    }
+    effects {
+      registra validacao
+    }
+    guarantees {
+      valido existe
+      motivo existe
+    }
+    tests {
+      caso "documento valido" {
+        given {
+          documento: "12345678900"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+      caso "documento vazio" {
+        given {
+          documento: ""
+        }
+        expect {
+          sucesso: falso
+        }
+        error {
+          tipo: "entrada_invalida"
+        }
+      }
+    }
+  }
+}

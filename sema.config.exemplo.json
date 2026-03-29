@@ -1,0 +1,7 @@
+{
+  "origem": "./exemplos",
+  "saida": "./saida",
+  "alvos": ["typescript", "python"],
+  "modoEstrito": true
+}
+
