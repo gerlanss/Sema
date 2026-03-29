@@ -6,6 +6,12 @@ O projeto foi desenhado como uma camada acima de Python e TypeScript. A ideia na
 
 O acompanhamento operacional do que ja foi feito e do que ainda falta esta em [STATUS.md](C:\GitHub\Sema\STATUS.md).
 
+Para sincronizar a data e o commit de referencia do status:
+
+```bash
+npm run status:sync
+```
+
 ## Por que a Sema existe
 
 Em software de negocio, o problema raramente e apenas "como programar". O problema real e tornar claro:
@@ -137,4 +143,3 @@ O projeto esta em MVP funcional. A base do compilador existe, os exemplos obriga
 ## Aviso importante
 
 Este projeto esta em MVP. Ele ja serve como base real para construir a linguagem, mas ainda nao pretende ser uma implementacao final ou completa.
-

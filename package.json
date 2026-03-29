@@ -12,7 +12,8 @@
     "test": "npm run build && node --import tsx --test testes/unidade/**/*.test.ts testes/integracao/**/*.test.ts",
     "lint": "tsc -b --pretty false",
     "cli": "node pacotes/cli/dist/index.js",
-    "dev:cli": "node scripts/dev-cli.mjs"
+    "dev:cli": "node scripts/dev-cli.mjs",
+    "status:sync": "node scripts/sync-status.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",

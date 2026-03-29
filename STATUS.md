@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `47ae9c0`
+- Ultimo commit de referencia: `75ecaee`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
 - Principais areas concluidas:
@@ -25,6 +25,14 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[-]` parcial
 - `[ ]` pendente
 - `[!]` risco ou bloqueio relevante
+
+## Em Andamento Nesta Sprint
+
+- `[ ]` Fortalecer a semantica de `flow`, `route` e `state`
+- `[ ]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
+- `[ ]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
+- `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
+- `[ ]` Melhorar a saida estruturada para IDE, automacao e IA
 
 ## Fundacao do Projeto
 
@@ -110,6 +118,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Gramatica inicial
 - `[x]` Documento operacional de status
 - `[x]` Convencao de ultima atualizacao e commit de referencia
+- `[x]` Secao de sprint em andamento para acompanhamento tatico
 - `[x]` `README.md` normalizado para evitar nova bagunca de encoding no trecho corrigido
 
 ## Testes e Verificacao
