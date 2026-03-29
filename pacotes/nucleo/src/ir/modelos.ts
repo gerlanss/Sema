@@ -1,5 +1,5 @@
 import type { Diagnostico } from "../diagnosticos/index.js";
-import type { EfeitoSemantico, ExpressaoSemantica, TransicaoEstadoSemantica } from "../semantico/estruturas.js";
+import type { EfeitoSemantico, EtapaFlowSemantica, ExpressaoSemantica, TransicaoEstadoSemantica } from "../semantico/estruturas.js";
 
 export interface IrCampo {
   nome: string;
@@ -54,6 +54,7 @@ export interface IrFlow {
   campos: IrCampo[];
   linhas: string[];
   tasksReferenciadas: string[];
+  etapasEstruturadas: EtapaFlowSemantica[];
 }
 
 export interface IrRoute {

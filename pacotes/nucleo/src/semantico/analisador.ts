@@ -15,6 +15,7 @@ import type {
 import {
   extrairReferenciasDaExpressao,
   parsearEfeitoSemantico,
+  parsearEtapaFlow,
   parsearExpressaoSemantica,
   parsearTransicaoEstado,
 } from "./estruturas.js";
@@ -303,6 +304,89 @@ function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: 
           "Declare a task no mesmo modulo ou ajuste a referencia do flow.",
         ),
       );
+    }
+  }
+
+  const etapas = flow.corpo.linhas
+    .map((linha) => ({ linha, etapa: parsearEtapaFlow(linha.conteudo) }))
+    .filter((item) => item.linha.conteudo.trim().startsWith("etapa "));
+
+  const nomesEtapas = new Set<string>();
+  for (const item of etapas) {
+    if (!item.etapa) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM032",
+          `Linha de etapa invalida em flow "${flow.nome}": "${item.linha.conteudo}".`,
+          "erro",
+          item.linha.intervalo,
+          "Use o formato \"etapa nome usa task quando expressao depende_de etapa_a, etapa_b\".",
+        ),
+      );
+      continue;
+    }
+
+    if (nomesEtapas.has(item.etapa.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM033",
+          `Flow "${flow.nome}" declarou a etapa "${item.etapa.nome}" mais de uma vez.`,
+          "erro",
+          item.linha.intervalo,
+          "Use nomes unicos para cada etapa estruturada do flow.",
+        ),
+      );
+      continue;
+    }
+
+    nomesEtapas.add(item.etapa.nome);
+
+    if (item.etapa.task && !tasksConhecidas.has(item.etapa.task)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM034",
+          `Etapa "${item.etapa.nome}" do flow "${flow.nome}" usa task "${item.etapa.task}" que nao existe.`,
+          "erro",
+          item.linha.intervalo,
+          "Ajuste a task da etapa para apontar para uma task declarada ou importada.",
+        ),
+      );
+    }
+
+    if (item.etapa.condicao) {
+      const referencias = extrairReferenciasDaExpressao(item.etapa.condicao).map((referencia) => extrairRaiz(referencia));
+      for (const referencia of referencias) {
+        if (!ehMarcadorSemantico(referencia) && !tasksConhecidas.has(referencia) && !nomesEtapas.has(referencia)) {
+          diagnosticos.push(
+            criarDiagnostico(
+              "SEM035",
+              `Condicao da etapa "${item.etapa.nome}" em flow "${flow.nome}" referencia "${referencia}" fora do contexto atual.`,
+              "erro",
+              item.linha.intervalo,
+              "No MVP atual, condicoes de flow devem apontar para marcadores semanticos, tasks conhecidas ou etapas anteriores.",
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  for (const item of etapas) {
+    if (!item.etapa) {
+      continue;
+    }
+    for (const dependencia of item.etapa.dependencias) {
+      if (!nomesEtapas.has(dependencia)) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM036",
+            `Etapa "${item.etapa.nome}" do flow "${flow.nome}" depende de "${dependencia}", que nao foi declarada.`,
+            "erro",
+            item.linha.intervalo,
+            "Declare a etapa dependente no mesmo flow antes de referencia-la.",
+          ),
+        );
+      }
     }
   }
 }

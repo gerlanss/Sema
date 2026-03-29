@@ -43,6 +43,27 @@ test("geradores refletem estruturas semanticas mais ricas no exemplo de pagament
   assert.ok(arquivosPy[0]?.conteudo.includes("Garantia violada"));
 });
 
+test("geradores refletem contrato executavel de erro e fluxo estruturado", async () => {
+  const caminhoErro = path.resolve("exemplos/tratamento_erro.sema");
+  const codigoErro = await readFile(caminhoErro, "utf8");
+  const resultadoErro = compilarCodigo(codigoErro, caminhoErro);
+
+  assert.equal(temErros(resultadoErro.diagnosticos), false);
+  const arquivosTsErro = gerarTypeScript(resultadoErro.ir!);
+  const arquivosPyErro = gerarPython(resultadoErro.ir!);
+  assert.ok(arquivosTsErro[0]?.conteudo.includes("acesso_negadoErro"));
+  assert.ok(arquivosPyErro[0]?.conteudo.includes("acesso_negadoErro"));
+  assert.ok(arquivosTsErro[1]?.conteudo.includes("assert.rejects"));
+  assert.ok(arquivosPyErro[1]?.conteudo.includes("pytest.raises"));
+
+  const caminhoFlow = path.resolve("exemplos/automacao.sema");
+  const codigoFlow = await readFile(caminhoFlow, "utf8");
+  const resultadoFlow = compilarCodigo(codigoFlow, caminhoFlow);
+  assert.equal(temErros(resultadoFlow.diagnosticos), false);
+  const arquivosTsFlow = gerarTypeScript(resultadoFlow.ir!);
+  assert.ok(arquivosTsFlow[0]?.conteudo.includes("estruturadas=2"));
+});
+
 test("cli verifica todos os exemplos em lote", () => {
   const execucao = spawnSync(
     "node",

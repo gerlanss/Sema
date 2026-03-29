@@ -1,15 +1,47 @@
-export type TipoExpressaoSemantica = "existe" | "comparacao" | "predicado" | "pertencimento";
+export type TipoExpressaoSemantica = "existe" | "comparacao" | "predicado" | "pertencimento" | "composta";
 
-export interface ExpressaoSemantica {
+export interface ExpressaoBaseSemantica {
   tipo: TipoExpressaoSemantica;
   textoOriginal: string;
-  alvo: string;
-  operador?: "==" | "!=" | ">" | ">=" | "<" | "<=";
-  valor?: string;
-  predicado?: string;
-  argumentos?: string;
-  valores?: string[];
 }
+
+export interface ExpressaoExisteSemantica extends ExpressaoBaseSemantica {
+  tipo: "existe";
+  alvo: string;
+}
+
+export interface ExpressaoComparacaoSemantica extends ExpressaoBaseSemantica {
+  tipo: "comparacao";
+  alvo: string;
+  operador: "==" | "!=" | ">" | ">=" | "<" | "<=";
+  valor: string;
+}
+
+export interface ExpressaoPredicadoSemantica extends ExpressaoBaseSemantica {
+  tipo: "predicado";
+  alvo: string;
+  predicado: string;
+  argumentos?: string;
+}
+
+export interface ExpressaoPertencimentoSemantica extends ExpressaoBaseSemantica {
+  tipo: "pertencimento";
+  alvo: string;
+  valores: string[];
+}
+
+export interface ExpressaoCompostaSemantica extends ExpressaoBaseSemantica {
+  tipo: "composta";
+  operadorLogico: "e" | "ou";
+  termos: ExpressaoSemantica[];
+}
+
+export type ExpressaoSemantica =
+  | ExpressaoExisteSemantica
+  | ExpressaoComparacaoSemantica
+  | ExpressaoPredicadoSemantica
+  | ExpressaoPertencimentoSemantica
+  | ExpressaoCompostaSemantica;
 
 export interface EfeitoSemantico {
   textoOriginal: string;
@@ -24,12 +56,88 @@ export interface TransicaoEstadoSemantica {
   destino: string;
 }
 
+export interface EtapaFlowSemantica {
+  textoOriginal: string;
+  nome: string;
+  task?: string;
+  condicao?: ExpressaoSemantica;
+  dependencias: string[];
+}
+
 const OPERADORES_COMPARACAO = new Set(["==", "!=", ">", ">=", "<", "<="]);
 
-export function parsearExpressaoSemantica(texto: string): ExpressaoSemantica | undefined {
+function removerParentesesExternos(texto: string): string {
   const normalizado = texto.trim();
+  if (!(normalizado.startsWith("(") && normalizado.endsWith(")"))) {
+    return normalizado;
+  }
+
+  let profundidade = 0;
+  for (let indice = 0; indice < normalizado.length; indice += 1) {
+    const caractere = normalizado[indice]!;
+    if (caractere === "(") {
+      profundidade += 1;
+    } else if (caractere === ")") {
+      profundidade -= 1;
+      if (profundidade === 0 && indice < normalizado.length - 1) {
+        return normalizado;
+      }
+    }
+  }
+
+  return normalizado.slice(1, -1).trim();
+}
+
+function dividirNoNivelRaiz(texto: string, operador: " e " | " ou "): string[] {
+  const partes: string[] = [];
+  let profundidade = 0;
+  let inicio = 0;
+
+  for (let indice = 0; indice < texto.length; indice += 1) {
+    const caractere = texto[indice]!;
+    if (caractere === "(") {
+      profundidade += 1;
+      continue;
+    }
+    if (caractere === ")") {
+      profundidade -= 1;
+      continue;
+    }
+    if (profundidade === 0 && texto.slice(indice, indice + operador.length) === operador) {
+      partes.push(texto.slice(inicio, indice).trim());
+      inicio = indice + operador.length;
+      indice += operador.length - 1;
+    }
+  }
+
+  const ultimaParte = texto.slice(inicio).trim();
+  if (ultimaParte) {
+    partes.push(ultimaParte);
+  }
+
+  return partes;
+}
+
+export function parsearExpressaoSemantica(texto: string): ExpressaoSemantica | undefined {
+  const normalizado = removerParentesesExternos(texto.trim());
   if (!normalizado) {
     return undefined;
+  }
+
+  const partesOu = dividirNoNivelRaiz(normalizado, " ou ");
+  if (partesOu.length > 1) {
+    const termos = partesOu.map((parte) => parsearExpressaoSemantica(parte)).filter((parte): parte is ExpressaoSemantica => Boolean(parte));
+    return termos.length === partesOu.length
+      ? { tipo: "composta", textoOriginal: normalizado, operadorLogico: "ou", termos }
+      : undefined;
+  }
+
+  const partesE = dividirNoNivelRaiz(normalizado, " e ");
+  if (partesE.length > 1) {
+    const termos = partesE.map((parte) => parsearExpressaoSemantica(parte)).filter((parte): parte is ExpressaoSemantica => Boolean(parte));
+    return termos.length === partesE.length
+      ? { tipo: "composta", textoOriginal: normalizado, operadorLogico: "e", termos }
+      : undefined;
   }
 
   const correspondenciaMarcador = normalizado.match(/^(persistencia|estado|sucesso)\s+([A-Za-z_][A-Za-z0-9_]*)$/);
@@ -85,7 +193,7 @@ export function parsearExpressaoSemantica(texto: string): ExpressaoSemantica | u
       tipo: "comparacao",
       textoOriginal: normalizado,
       alvo: partes[0]!,
-      operador: partes[1] as ExpressaoSemantica["operador"],
+      operador: partes[1] as ExpressaoComparacaoSemantica["operador"],
       valor: partes.slice(2).join(" "),
     };
   }
@@ -130,7 +238,48 @@ export function parsearTransicaoEstado(texto: string): TransicaoEstadoSemantica 
   };
 }
 
+export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined {
+  const normalizado = texto.trim();
+  if (!normalizado.startsWith("etapa ")) {
+    return undefined;
+  }
+
+  const semPrefixo = normalizado.slice("etapa ".length).trim();
+  const nome = semPrefixo.split(/\s+/)[0];
+  if (!nome) {
+    return undefined;
+  }
+
+  const resto = semPrefixo.slice(nome.length).trim();
+  const task = resto.match(/\busa\s+([A-Za-z_][A-Za-z0-9_.]*)/)?.[1];
+  const dependenciasTexto = resto.match(/\bdepende_de\s+([A-Za-z0-9_.,\s]+)/)?.[1];
+  const dependencias = dependenciasTexto
+    ? dependenciasTexto.split(",").map((parte) => parte.trim()).filter(Boolean)
+    : [];
+
+  const indiceQuando = resto.indexOf(" quando ");
+  const indiceDepende = resto.indexOf(" depende_de ");
+  let condicao: ExpressaoSemantica | undefined;
+  if (indiceQuando !== -1) {
+    const fimCondicao = indiceDepende !== -1 && indiceDepende > indiceQuando ? indiceDepende : resto.length;
+    const textoCondicao = resto.slice(indiceQuando + " quando ".length, fimCondicao).trim();
+    condicao = parsearExpressaoSemantica(textoCondicao);
+  }
+
+  return {
+    textoOriginal: normalizado,
+    nome,
+    task,
+    condicao,
+    dependencias,
+  };
+}
+
 export function extrairReferenciasDaExpressao(expressao: ExpressaoSemantica): string[] {
+  if (expressao.tipo === "composta") {
+    return expressao.termos.flatMap(extrairReferenciasDaExpressao);
+  }
+
   const referencias = [expressao.alvo];
 
   if (expressao.tipo === "comparacao" && expressao.valor && pareceReferenciaSemantica(expressao.valor)) {

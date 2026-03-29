@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `a83f8c1`
+- Ultimo commit de referencia: `c34f4c6`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
@@ -30,9 +30,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Em Andamento Nesta Sprint
 
 - `[-]` Fortalecer a semantica de `flow`, `route` e `state`
-- `[-]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
+- `[x]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
 - `[x]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
-- `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
+- `[-]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
 - `[ ]` Melhorar a saida estruturada para IDE, automacao e IA
 - `[x]` Formalizar o fluxo operacional de contribuicao, checagem e revisao para humanos e Codex
 
@@ -54,7 +54,8 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Diagnosticos estruturados com codigo, mensagem, severidade e contexto
 - `[x]` IR semantica independente de linguagem-alvo
 - `[-]` Gramatica ainda pragmatica e enxuta, com espaco para expressoes mais ricas
-- `[!]` O parser e a gramatica ainda precisam amadurecer para reduzir texto livre em `rules`, `effects` e `guarantees`
+- `[-]` Expressoes compostas com `e`, `ou` e parenteses no nivel inicial do MVP
+- `[!]` O parser e a gramatica ainda precisam amadurecer para reduzir mais texto livre em `rules`, `effects` e `guarantees`
 
 ## Semantica da Linguagem
 
@@ -67,11 +68,13 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Validacao inicial de `state` para estrutura minima e consistencia de tipos
 - `[x]` Resolucao inicial de `use` entre multiplos modulos do mesmo conjunto de compilacao
 - `[x]` Expressoes estruturadas basicas em `rules`, `effects` e `guarantees`
+- `[x]` Expressoes compostas com `e`, `ou` e parenteses para regras e garantias no MVP atual
 - `[x]` `state` com invariantes e transicoes declarativas validadas no MVP
+- `[x]` `flow` com etapas estruturadas, `quando` e `depende_de` validados no MVP
 - `[-]` Semantica profunda de `flow`, `route` e `state`
 - `[-]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
-- `[-]` Garantias e efeitos ja possuem estrutura basica, mas ainda podem ganhar modelo de execucao mais forte
-- `[ ]` Sistema de expressoes semanticas mais formal para regras, comparacoes e pos-condicoes
+- `[-]` Garantias, erros e efeitos ja possuem estrutura basica, com erros executaveis iniciais nos geradores
+- `[-]` Sistema de expressoes semanticas mais formal para regras, comparacoes e pos-condicoes
 
 ## Geracao de Codigo
 
@@ -81,9 +84,10 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Comentarios gerados em portugues do Brasil
 - `[x]` Saida deterministica suficiente para o MVP atual
 - `[x]` Geracao com validacoes estruturadas basicas para regras e garantias
+- `[x]` Geracao inicial de contratos executaveis de erro em TypeScript e Python
 - `[-]` `effects` viram contratos e comentarios, mas ainda nao possuem modelo de execucao mais forte
 - `[-]` `guarantees` ja geram contratos basicos, mas ainda nao cobrem cenarios mais ricos e infraestrutura real
-- `[-]` `error` gera catalogo util, mas ainda nao virou modelagem robusta de falhas no codigo final
+- `[-]` `error` ja gera classes e cenarios executaveis basicos, mas ainda nao virou modelagem robusta de falhas no codigo final
 - `[ ]` Contratos mais ricos de execucao e adaptadores neutros mais completos
 
 ## CLI
@@ -114,6 +118,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Testes embutidos
 - `[x]` Exemplos atualizados para exercitar validacoes iniciais de `flow`, `route` e `state`
 - `[x]` Exemplo de pagamento atualizado para exercitar expressoes estruturadas, invariantes e transicoes
+- `[x]` Exemplos atualizados para exercitar `flow` estruturado e contratos executaveis de erro
 - `[-]` Os exemplos ainda nao exercitam uma semantica profunda de `flow`, `route` e `state`
 
 ## Documentacao
@@ -151,15 +156,16 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Testes unitarios cobrindo validacoes iniciais de `flow`, `route` e `state`
 - `[x]` Testes unitarios e de integracao cobrindo `use` entre arquivos vizinhos
 - `[x]` Testes cobrindo expressoes estruturadas e validacao de transicoes em `state`
+- `[x]` Testes cobrindo expressoes compostas, `flow` estruturado e contratos executaveis de erro
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `project:check`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida
 
 ## Proximos Passos do MVP
 
-- `[ ]` Fortalecer a semantica de `flow`, `route` e `state`
-- `[ ]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
-- `[ ]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
+- `[ ]` Fortalecer a semantica profunda de `flow`, `route` e `state`
+- `[ ]` Ampliar a resolucao de `use` para multiplos diretorios e importacoes mais sofisticadas
+- `[ ]` Formalizar ainda melhor expressoes em `rules`, `effects` e `guarantees`
 - `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
 - `[ ]` Adicionar `sema formatar`
 - `[ ]` Melhorar a saida estruturada para IDE, automacao e IA

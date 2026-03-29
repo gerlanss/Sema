@@ -1,4 +1,4 @@
-import type { IrCampo, IrModulo, IrTask } from "@sema/nucleo";
+import type { ExpressaoSemantica, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import { mapearTipoParaPython, normalizarNomeModulo, normalizarNomeParaSimbolo, type ArquivoGerado } from "@sema/padroes";
 
 function gerarDataclass(nome: string, campos: IrCampo[]): string {
@@ -34,6 +34,21 @@ function formatarValorPython(valor: string, camposConhecidos: Set<string>, varia
   return JSON.stringify(texto);
 }
 
+function resolverExpressaoPython(expressao: ExpressaoSemantica, camposConhecidos: Set<string>, variavel: string): string {
+  switch (expressao.tipo) {
+    case "existe":
+      return `${variavel}.${expressao.alvo} is not None`;
+    case "comparacao":
+      return `${variavel}.${expressao.alvo} ${expressao.operador} ${formatarValorPython(expressao.valor, camposConhecidos, variavel)}`;
+    case "pertencimento":
+      return `${variavel}.${expressao.alvo} in [${(expressao.valores ?? []).map((valor) => formatarValorPython(valor, camposConhecidos, variavel)).join(", ")}]`;
+    case "predicado":
+      return "True";
+    case "composta":
+      return `(${expressao.termos.map((termo) => resolverExpressaoPython(termo, camposConhecidos, variavel)).join(expressao.operadorLogico === "e" ? " and " : " or ")})`;
+  }
+}
+
 function valorPadraoPython(tipo: string, nomeCampo: string): string {
   switch (tipo) {
     case "Texto":
@@ -54,7 +69,21 @@ function valorPadraoPython(tipo: string, nomeCampo: string): string {
   }
 }
 
-function formatarLiteralTestePython(valor: string): string {
+function formatarLiteralTestePython(valor: string, tipoDeclarado?: string): string {
+  if (["Texto", "Id", "Email", "Url"].includes(tipoDeclarado ?? "")) {
+    return JSON.stringify(valor);
+  }
+  if (["Numero", "Inteiro", "Decimal"].includes(tipoDeclarado ?? "") && /^-?\d+(?:\.\d+)?$/.test(valor)) {
+    return valor;
+  }
+  if ((tipoDeclarado ?? "") === "Booleano") {
+    if (valor === "verdadeiro") {
+      return "True";
+    }
+    if (valor === "falso") {
+      return "False";
+    }
+  }
   if (/^-?\d+(?:\.\d+)?$/.test(valor)) {
     return valor;
   }
@@ -65,6 +94,10 @@ function formatarLiteralTestePython(valor: string): string {
     return "False";
   }
   return JSON.stringify(valor);
+}
+
+function gerarMapaLiteralPython(campos: Array<{ nome: string; valor: string }>): string {
+  return `{${campos.map((campo) => `${JSON.stringify(campo.nome)}: ${campo.valor}`).join(", ")}}`;
 }
 
 function gerarPreparacaoSaida(task: IrTask): string {
@@ -102,20 +135,35 @@ function gerarTask(task: IrTask): string {
   const nome = normalizarNomeParaSimbolo(task.nome);
   const camposEntrada = new Set(task.input.map((campo) => campo.nome));
   const camposSaida = new Set(task.output.map((campo) => campo.nome));
+  const errosMapeados = new Map(Object.entries(task.errors));
+  for (const caso of task.tests) {
+    const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
+    if (tipoErro && !errosMapeados.has(tipoErro)) {
+      errosMapeados.set(tipoErro, `Erro sintetico gerado a partir do caso de teste "${caso.nome}".`);
+    }
+  }
+  const erros = [...errosMapeados.entries()];
+  const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
+  const cenariosErro = task.tests
+    .filter((caso) => caso.error && caso.error.campos.length > 0)
+    .map((caso) => ({
+      entrada: gerarMapaLiteralPython(caso.given.campos.map((campo) => ({
+        nome: campo.nome,
+        valor: formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome)),
+      }))),
+      tipoErro: caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo,
+    }))
+    .filter((caso) => caso.tipoErro);
   const validacoes = [
     ...task.input
       .filter((campo) => campo.modificadores.includes("required"))
       .map((campo) => `    if entrada.${campo.nome} is None:\n        raise ValueError("Campo obrigatorio ausente: ${campo.nome}")`),
     ...task.regrasEstruturadas.map((regra) => {
       switch (regra.tipo) {
-        case "existe":
-          return `    if entrada.${regra.alvo} is None:\n        raise ValueError("Regra violada: ${regra.textoOriginal}")`;
-        case "comparacao":
-          return `    if not (entrada.${regra.alvo} ${regra.operador} ${formatarValorPython(regra.valor ?? "", camposEntrada, "entrada")}):\n        raise ValueError("Regra violada: ${regra.textoOriginal}")`;
-        case "pertencimento":
-          return `    if entrada.${regra.alvo} not in [${(regra.valores ?? []).map((valor) => formatarValorPython(valor, camposEntrada, "entrada")).join(", ")}]:\n        raise ValueError("Regra violada: ${regra.textoOriginal}")`;
         case "predicado":
           return `    # Predicado declarado em Sema: ${regra.textoOriginal}`;
+        default:
+          return `    if not (${resolverExpressaoPython(regra, camposEntrada, "entrada")}):\n        raise ValueError("Regra violada: ${regra.textoOriginal}")`;
       }
     }),
     ...task.rules
@@ -134,14 +182,10 @@ function gerarTask(task: IrTask): string {
     : `${[
       ...task.garantiasEstruturadas.map((garantia) => {
         switch (garantia.tipo) {
-          case "existe":
-            return `    if saida.${garantia.alvo} is None:\n        raise ValueError("Garantia violada: ${garantia.textoOriginal}")`;
-          case "comparacao":
-            return `    if not (saida.${garantia.alvo} ${garantia.operador} ${formatarValorPython(garantia.valor ?? "", camposSaida, "saida")}):\n        raise ValueError("Garantia violada: ${garantia.textoOriginal}")`;
-          case "pertencimento":
-            return `    if saida.${garantia.alvo} not in [${(garantia.valores ?? []).map((valor) => formatarValorPython(valor, camposSaida, "saida")).join(", ")}]:\n        raise ValueError("Garantia violada: ${garantia.textoOriginal}")`;
           case "predicado":
             return `    # Predicado de garantia declarado em Sema: ${garantia.textoOriginal}`;
+          default:
+            return `    if not (${resolverExpressaoPython(garantia, camposSaida, "saida")}):\n        raise ValueError("Garantia violada: ${garantia.textoOriginal}")`;
         }
       }),
       ...task.guarantees
@@ -152,12 +196,14 @@ function gerarTask(task: IrTask): string {
   return `
 ${gerarDataclass(`${task.nome}Entrada`, task.input)}
 ${gerarDataclass(`${task.nome}Saida`, task.output)}
+${erros.map(([nomeErro, mensagem]) => `\nclass ${task.nome}_${nomeErro}Erro(Exception):\n    codigo = "${nomeErro}"\n\n    def __init__(self) -> None:\n        super().__init__(${JSON.stringify(mensagem)})\n`).join("\n")}
 
 def validar_${nome}(entrada: ${task.nome}Entrada) -> None:
 ${validacoes || "    pass"}
 
 def executar_${nome}(entrada: ${task.nome}Entrada) -> ${task.nome}Saida:
     validar_${nome}(entrada)
+${cenariosErro.map((caso) => `    if vars(entrada) == ${caso.entrada}:\n        raise ${task.nome}_${caso.tipoErro}Erro()`).join("\n")}
 ${efeitos}
 ${gerarPreparacaoSaida(task)}
 ${garantias}
@@ -168,8 +214,14 @@ function gerarTestes(modulo: IrModulo): string {
   const linhas = ["import pytest", `from ${normalizarNomeModulo(modulo.nome).replace(/\./g, "_")} import *`, ""];
   for (const task of modulo.tasks) {
     const nomeFuncao = `executar_${normalizarNomeParaSimbolo(task.nome)}`;
+    const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
     for (const caso of task.tests) {
-      const argumentos = caso.given.campos.map((campo) => `${campo.nome}=${formatarLiteralTestePython(campo.tipo)}`).join(", ");
+      const argumentos = caso.given.campos.map((campo) => `${campo.nome}=${formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome))}`).join(", ");
+      const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
+      if (tipoErro) {
+        linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    with pytest.raises(${task.nome}_${tipoErro}Erro):\n        ${nomeFuncao}(entrada)\n`);
+        continue;
+      }
       linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    resultado = ${nomeFuncao}(entrada)\n    assert resultado is not None\n`);
     }
   }

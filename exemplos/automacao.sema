@@ -9,12 +9,8 @@ module exemplos.automacao {
   }
 
   flow onboarding_cliente {
-    task: executar_onboarding
-    recebe lead
-    valida dados
-    cria conta
-    envia mensagem_boas_vindas
-    registra auditoria
+    etapa receber usa executar_onboarding quando (sucesso existe ou persistencia concluida)
+    etapa auditar depende_de receber
   }
 
   task executar_onboarding {

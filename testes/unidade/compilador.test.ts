@@ -323,6 +323,51 @@ module exemplo.pagamento.avancado {
   assert.equal(resultado.ir?.states[0]?.transicoes.length, 3);
 });
 
+test("compilador formaliza expressoes compostas e etapas estruturadas de flow", () => {
+  const codigo = `
+module exemplo.flow.avancado {
+  task validar {
+    input {
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      (valor > 0 e token existe) ou token deve_ser interno
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          valor: 10
+          token: "abc"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow pipeline {
+    etapa validar_dados usa validar quando (sucesso existe ou persistencia concluida)
+    etapa auditar depende_de validar_dados
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.tasks[0]?.regrasEstruturadas[0]?.tipo, "composta");
+  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas.length, 2);
+  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.task, "validar");
+  assert.deepEqual(resultado.ir?.flows[0]?.etapasEstruturadas[1]?.dependencias, ["validar_dados"]);
+});
+
 test("compilador rejeita expressao invalida e transicao fora do enum", () => {
   const codigo = `
 module exemplo.invalido.avancado {
@@ -381,4 +426,43 @@ module exemplo.invalido.avancado {
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM024" || diagnostico.codigo === "SEM025"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM027"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM028" || diagnostico.codigo === "SEM029"));
+});
+
+test("compilador rejeita etapa de flow malformada e dependencia desconhecida", () => {
+  const codigo = `
+module exemplo.flow.invalido {
+  task validar {
+    input {
+      valor: Decimal required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          valor: 1
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow pipeline {
+    etapa quebrada usa task_inexistente quando (valor > 0)
+    etapa auditar depende_de inexistente
+    etapa
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM032" || diagnostico.codigo === "SEM034"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM036"));
 });

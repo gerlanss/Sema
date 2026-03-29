@@ -1,6 +1,6 @@
 import type { BlocoCasoTesteAst, BlocoGenericoAst, ModuloAst } from "../ast/tipos.js";
 import type { Diagnostico } from "../diagnosticos/index.js";
-import { parsearEfeitoSemantico, parsearExpressaoSemantica, parsearTransicaoEstado } from "../semantico/estruturas.js";
+import { parsearEfeitoSemantico, parsearEtapaFlow, parsearExpressaoSemantica, parsearTransicaoEstado } from "../semantico/estruturas.js";
 import type {
   IrBlocoDeclarativo,
   IrCampo,
@@ -82,6 +82,9 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
     tasksReferenciadas: flow.corpo.campos
       .filter((campo) => campo.nome === "task" || campo.nome === "tarefa")
       .map((campo) => campo.valor),
+    etapasEstruturadas: flow.corpo.linhas
+      .map((linha) => parsearEtapaFlow(linha.conteudo))
+      .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
   }));
 
   const routes: IrRoute[] = modulo.routes.map((route) => ({

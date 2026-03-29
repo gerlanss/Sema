@@ -7,7 +7,7 @@ module exemplos.tratamento.erro {
       protocolo: Id
     }
     rules {
-      chave deve_ser preenchida
+      chave existe e chave deve_ser preenchida
     }
     effects {
       acessa cofre
@@ -36,4 +36,3 @@ module exemplos.tratamento.erro {
     }
   }
 }
-
