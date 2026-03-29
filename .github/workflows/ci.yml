@@ -1,0 +1,32 @@
+name: Integracao Continua
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Validar STATUS.md
+        run: npm run status:check
+
+      - name: Executar testes
+        run: npm test

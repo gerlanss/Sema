@@ -12,6 +12,18 @@ Para sincronizar a data e o commit de referencia do status:
 npm run status:sync
 ```
 
+Para validar se o `STATUS.md` esta consistente com a estrutura esperada:
+
+```bash
+npm run status:check
+```
+
+Para preparar uma atualizacao de documentacao e status antes de commitar:
+
+```bash
+npm run docs:prepare
+```
+
 ## Por que a Sema existe
 
 Em software de negocio, o problema raramente e apenas "como programar". O problema real e tornar claro:
