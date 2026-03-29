@@ -7,7 +7,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Ultima atualizacao: 2026-03-29
 - Ultimo commit de referencia: `8f8ac34`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
+- Estagio atual: Fase 2 encerrada, com nucleo semantico operacional estabilizado e Fase 3 aberta
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
@@ -15,10 +15,66 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - geracao para Python e TypeScript
   - CLI com validacao, compilacao, teste e verificacao em lote
   - exemplos obrigatorios e documentacao-base
+  - semantica operacional do nucleo
 - Principais areas parciais:
-  - semantica de `flow`, `route` e `state` ja existe no nivel inicial, mas ainda precisa amadurecer
-  - resolucao de `use` e multiplos modulos
-  - geracao mais forte para `effects`, `guarantees` e `error`
+  - `effects`, `guarantees` e `error` ainda precisam ganhar modelo mais operacional
+  - `route` segue deliberadamente mais raso e fica para a Fase 3
+  - ferramental de adocao ainda esta em aberto
+
+## Fases do Projeto
+
+- Fase 1. Fundacao do compilador
+  - Status: `[x]` concluida
+  - Escopo: monorrepo, lexer, parser, AST, diagnosticos, IR, CLI base, geradores iniciais, exemplos e documentacao-base
+
+- Fase 2. Semantica operacional do nucleo
+  - Status: `[x]` concluida
+  - Escopo: `use`, expressoes semanticas, `state`, vinculo `task -> state`, `flow` com contexto, ramificacao e roteamento por erro
+
+- Fase 3. Operacionalizacao real da linguagem
+  - Status: `[-]` fase atual aberta
+  - Escopo: `effects` tipados, `route` mais forte, contratos publicos mais executaveis, uso guiado por caso real
+
+- Fase 4. Ferramentas de adocao
+  - Status: `[ ]` futura
+  - Escopo: `sema formatar`, saida JSON mais rica, IDE/editor, ergonomia para automacao e IA
+
+## Fase Atual
+
+- `[-]` Fase 3. Operacionalizacao real da linguagem
+- Foco atual:
+  - tipar `effects`
+  - fortalecer `route`
+  - validar a linguagem num caso de negocio real ponta a ponta
+
+## Proxima Fase
+
+- `[ ]` Proximos marcos da Fase 3
+- Prioridade sugerida:
+  - tipar `effects`
+  - fortalecer `route`
+  - validar a linguagem num caso de negocio real de ponta a ponta
+
+## Critérios de Encerramento da Fase 2
+
+- `[x]` `use` entre modulos do mesmo conjunto de compilacao funcionando
+- `[x]` expressoes semanticas com `e`, `ou`, `nao` e parenteses funcionando
+- `[x]` `state` com invariantes e transicoes validadas
+- `[x]` vinculo `task -> state` com verificacao de transicoes permitidas
+- `[x]` `flow` com `etapa`, `quando`, `depende_de`, `com`, `em_sucesso`, `em_erro` e `por_erro`
+- `[x]` geracao TypeScript e Python refletindo essas estruturas de forma rastreavel
+- `[x]` testes unitarios e de integracao cobrindo essas capacidades
+- `[x]` `sema verificar exemplos` verde como checagem de aceite da fase
+
+## Fora da Fase 2
+
+- `[ ]` fortalecimento profundo de `route`
+- `[ ]` `effects` tipados por categoria
+- `[ ]` contratos publicos executaveis mais ricos
+- `[ ]` `use` avancado com multiplos diretorios e namespaces maiores
+- `[ ]` `sema formatar`
+- `[ ]` saida JSON mais rica para automacao e IDE
+- `[ ]` caso de negocio real ponta a ponta como driver principal
 
 ## Legenda
 
@@ -29,9 +85,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Em Andamento Nesta Sprint
 
-- `[-]` Fortalecer a semantica de `flow`, `route` e `state`
-- `[x]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
-- `[x]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
+- `[x]` Encerrar formalmente a Fase 2 como marco tecnico do projeto
+- `[ ]` Iniciar a Fase 3 com `effects` tipados
+- `[ ]` Fortalecer `route` como contrato publico
 - `[-]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
 - `[ ]` Melhorar a saida estruturada para IDE, automacao e IA
 - `[x]` Formalizar o fluxo operacional de contribuicao, checagem e revisao para humanos e Codex
@@ -74,8 +130,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` `flow` com mapeamento de contexto por etapa e ramificacao basica de sucesso/erro
 - `[x]` `flow` com roteamento por tipo de erro com base no contrato da `task`
 - `[x]` `task` com vinculo explicito a `state` e validacao de transicoes permitidas
-- `[-]` Semantica profunda de `flow`, `route` e `state`
-- `[-]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
+- `[x]` Escopo semantico operacional do nucleo consolidado como criterio de encerramento da Fase 2
+- `[ ]` Fortalecimento profundo de `route` fica explicitamente para a Fase 3
+- `[ ]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
 - `[-]` Garantias, erros e efeitos ja possuem estrutura basica, com erros executaveis iniciais nos geradores
 - `[-]` Sistema de expressoes semanticas mais formal para regras, comparacoes e pos-condicoes
 
@@ -174,7 +231,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Proximos Passos do MVP
 
-- `[ ]` Fortalecer a semantica profunda de `flow`, `route` e `state`
+- `[ ]` Tipar `effects` por categoria e contrato operacional
+- `[ ]` Fortalecer `route` como contrato publico e ponte para adaptadores
+- `[ ]` Validar a linguagem em um caso de negocio real ponta a ponta
 - `[ ]` Ampliar a resolucao de `use` para multiplos diretorios e importacoes mais sofisticadas
 - `[ ]` Formalizar ainda melhor expressoes em `rules`, `effects` e `guarantees`
 - `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis

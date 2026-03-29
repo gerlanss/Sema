@@ -173,7 +173,9 @@ testes/                Testes de unidade e integracao
 
 O projeto esta em MVP funcional. A base do compilador existe, os exemplos obrigatorios foram modelados, os geradores para Python e TypeScript ja produzem esqueletos rastreaveis, e a CLI cobre validacao, AST, IR, compilacao, diagnosticos, teste e verificacao em lote.
 
-No ponto atual, o MVP ja resolve `use` entre modulos vizinhos, formaliza expressoes semanticas basicas e compostas com `e`, `ou`, `nao` e parenteses em `rules`, `effects` e `guarantees`, valida invariantes e transicoes em `state`, entende `flow` estruturado com dependencias, mapeamento de contexto, ramificacao basica e roteamento por tipo de erro, vincula `task` a `state` com transicoes declaradas e gera contratos executaveis iniciais de erro para TypeScript e Python.
+No ponto atual, a Fase 2 da Sema esta formalmente encerrada como fase de semantica operacional do nucleo. O MVP ja resolve `use` entre modulos vizinhos, formaliza expressoes semanticas basicas e compostas com `e`, `ou`, `nao` e parenteses em `rules`, `effects` e `guarantees`, valida invariantes e transicoes em `state`, entende `flow` estruturado com dependencias, mapeamento de contexto, ramificacao basica e roteamento por tipo de erro, vincula `task` a `state` com transicoes declaradas e gera contratos executaveis iniciais de erro para TypeScript e Python.
+
+O proximo marco oficial do projeto e a Fase 3, focada em operacionalizacao real da linguagem. A prioridade passa a ser `effects` tipados, fortalecimento de `route` e validacao da linguagem em um caso de negocio real de ponta a ponta.
 
 ## Roadmap resumido
 
