@@ -8,6 +8,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Ultimo commit de referencia: `1500bee`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
+- Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
   - lexer, parser, AST, diagnosticos, analise semantica inicial e IR
@@ -123,6 +124,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Secao de sprint em andamento para acompanhamento tatico
 - `[x]` Template de issue para sprint tecnica
 - `[x]` `README.md` normalizado para evitar nova bagunca de encoding no trecho corrigido
+- `[x]` Posicionamento explicito de que a linguagem prioriza entendimento por IA
 
 ## Testes e Verificacao
 

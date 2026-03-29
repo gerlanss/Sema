@@ -2,7 +2,9 @@
 
 Sema e uma DSL semantica, declarativa e orientada a intencao para descrever contratos de negocio de forma executavel. Em vez de esconder regra, efeito colateral, garantia e teste no meio de codigo imperativo, a Sema assume que esses elementos merecem cidadania de primeira classe.
 
-O projeto foi desenhado como uma camada acima de Python e TypeScript. A ideia nao e substituir essas linguagens, e sim governar a camada de especificacao, validacao e geracao de codigo com mais previsibilidade para humanos e IA.
+O projeto foi desenhado como uma camada acima de Python e TypeScript. A ideia nao e substituir essas linguagens, e sim governar a camada de especificacao, validacao e geracao de codigo com mais previsibilidade.
+
+A prioridade de design da Sema e facilitar o entendimento, a transformacao e a operacao correta por IA. A legibilidade humana continua importante, mas entra como consequencia de uma linguagem que explicita intencao, contrato, efeitos e garantias com o minimo de ambiguidade para modelos.
 
 O acompanhamento operacional do que ja foi feito e do que ainda falta esta em [STATUS.md](C:\GitHub\Sema\STATUS.md).
 
@@ -40,13 +42,14 @@ Python e TypeScript resolvem partes disso, mas deixam muita coisa espalhada entr
 
 ## Principios da linguagem
 
+- IA primeiro, humano como consequencia da clareza semantica
 - semantica antes de compactacao sintatica
 - falhar cedo diante de ambiguidade
 - contratos explicitos de entrada e saida
 - efeitos colaterais declarados, nunca escondidos
 - garantias pos-execucao como parte da linguagem
 - testes embutidos como documentacao executavel
-- legibilidade para pessoas e para IA
+- legibilidade para pessoas como efeito colateral positivo de uma estrutura pensada para IA
 
 ## Exemplo rapido
 
@@ -155,3 +158,4 @@ O projeto esta em MVP funcional. A base do compilador existe, os exemplos obriga
 ## Aviso importante
 
 Este projeto esta em MVP. Ele ja serve como base real para construir a linguagem, mas ainda nao pretende ser uma implementacao final ou completa.
+
