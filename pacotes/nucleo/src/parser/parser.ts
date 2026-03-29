@@ -29,6 +29,8 @@ type PalavraBloco =
   | "docs"
   | "comments"
   | "fields"
+  | "invariants"
+  | "transitions"
   | "input"
   | "output"
   | "rules"
@@ -345,7 +347,7 @@ class Parser {
 
       if (
         this.atual().tipo === "palavra_chave" &&
-        ["docs", "comments", "fields", "input", "output", "rules", "effects", "guarantees", "state", "tests", "error", "given", "when", "expect"].includes(this.atual().valor)
+        ["docs", "comments", "fields", "invariants", "transitions", "input", "output", "rules", "effects", "guarantees", "state", "tests", "error", "given", "when", "expect"].includes(this.atual().valor)
       ) {
         blocos.push(this.parseBlocoGenerico(this.atual().valor as PalavraBloco));
         continue;

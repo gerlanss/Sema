@@ -14,6 +14,22 @@ module exemplos.pagamento {
     }
   }
 
+  state ciclo_pagamento {
+    fields {
+      status: StatusPagamento
+      conciliado: Booleano
+    }
+    invariants {
+      status existe
+      conciliado == falso
+    }
+    transitions {
+      PENDENTE -> AUTORIZADO
+      AUTORIZADO -> PROCESSADO
+      PENDENTE -> RECUSADO
+    }
+  }
+
   task processar_pagamento {
     input {
       pagamento_id: Id required
@@ -25,7 +41,8 @@ module exemplos.pagamento {
       status: StatusPagamento
     }
     rules {
-      valor deve_ser positivo
+      valor > 0
+      token existe
       token deve_ser valido
     }
     effects {
@@ -35,8 +52,8 @@ module exemplos.pagamento {
     }
     guarantees {
       pagamento existe
-      status existe
-      estado consistente
+      status em [AUTORIZADO, PROCESSADO]
+      pagamento.status == status
     }
     error {
       autorizacao_negada: "A operacao foi recusada pelo gateway."
@@ -57,4 +74,3 @@ module exemplos.pagamento {
     }
   }
 }
-

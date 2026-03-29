@@ -25,6 +25,24 @@ test("geradores produzem artefatos para o exemplo de calculadora", async () => {
   assert.ok(arquivosPy[0]?.conteudo.includes("def executar_somar"));
 });
 
+test("geradores refletem estruturas semanticas mais ricas no exemplo de pagamento", async () => {
+  const caminho = path.resolve("exemplos/pagamento.sema");
+  const codigo = await readFile(caminho, "utf8");
+  const resultado = compilarCodigo(codigo, caminho);
+
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosTs = gerarTypeScript(resultado.ir!);
+  const arquivosPy = gerarPython(resultado.ir!);
+
+  assert.ok(arquivosTs[0]?.conteudo.includes("Regra violada"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("Garantia violada"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("transicoes=3"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("Efeito estruturado"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("Garantia violada"));
+});
+
 test("cli verifica todos os exemplos em lote", () => {
   const execucao = spawnSync(
     "node",

@@ -37,6 +37,8 @@ export const PALAVRAS_CHAVE = new Set([
   "docs",
   "comments",
   "fields",
+  "invariants",
+  "transitions",
   "given",
   "when",
   "expect",

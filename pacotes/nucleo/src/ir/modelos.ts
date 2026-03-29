@@ -1,4 +1,5 @@
 import type { Diagnostico } from "../diagnosticos/index.js";
+import type { EfeitoSemantico, ExpressaoSemantica, TransicaoEstadoSemantica } from "../semantico/estruturas.js";
 
 export interface IrCampo {
   nome: string;
@@ -39,8 +40,11 @@ export interface IrTask {
   input: IrCampo[];
   output: IrCampo[];
   rules: string[];
+  regrasEstruturadas: ExpressaoSemantica[];
   effects: string[];
+  efeitosEstruturados: EfeitoSemantico[];
   guarantees: string[];
+  garantiasEstruturadas: ExpressaoSemantica[];
   errors: Record<string, string>;
   tests: IrCasoTeste[];
 }
@@ -65,6 +69,8 @@ export interface IrState {
   nome?: string;
   campos: IrCampo[];
   linhas: string[];
+  invariantes: ExpressaoSemantica[];
+  transicoes: TransicaoEstadoSemantica[];
 }
 
 export interface IrModulo {

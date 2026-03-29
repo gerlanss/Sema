@@ -8,14 +8,116 @@ function gerarInterface(nome: string, campos: IrCampo[]): string {
   return `export interface ${nome} {\n${propriedades}\n}\n`;
 }
 
+function formatarValorTypeScript(valor: string, camposConhecidos: Set<string>, variavel: string): string {
+  const texto = valor.trim();
+  if (/^-?\d+(?:\.\d+)?$/.test(texto)) {
+    return texto;
+  }
+  if (texto === "verdadeiro") {
+    return "true";
+  }
+  if (texto === "falso") {
+    return "false";
+  }
+  if (texto === "nulo") {
+    return "null";
+  }
+  if (camposConhecidos.has(texto.split(".")[0] ?? texto)) {
+    return `${variavel}.${texto}`;
+  }
+  return JSON.stringify(texto);
+}
+
+function resolverReferenciaTypeScript(referencia: string, variavel: string): string {
+  return `${variavel}.${referencia}`;
+}
+
+function valorPadraoTypeScript(tipo: string, nomeCampo: string): string {
+  switch (tipo) {
+    case "Texto":
+    case "Id":
+    case "Email":
+    case "Url":
+      return JSON.stringify(`${nomeCampo}_exemplo`);
+    case "Numero":
+    case "Inteiro":
+    case "Decimal":
+      return "1";
+    case "Booleano":
+      return "false";
+    case "Json":
+      return "{}";
+    default:
+      return "{} as any";
+  }
+}
+
+function formatarLiteralTesteTypeScript(valor: string): string | number | boolean {
+  if (/^-?\d+(?:\.\d+)?$/.test(valor)) {
+    return Number(valor);
+  }
+  if (valor === "verdadeiro") {
+    return true;
+  }
+  if (valor === "falso") {
+    return false;
+  }
+  return valor;
+}
+
+function gerarPreparacaoSaida(task: IrTask): string {
+  const camposSaida = new Set(task.output.map((campo) => campo.nome));
+  const linhas: string[] = [];
+
+  for (const campo of task.output) {
+    linhas.push(`    ${campo.nome}: ${valorPadraoTypeScript(campo.tipo, campo.nome)},`);
+  }
+
+  const ajustes: string[] = [];
+  for (const garantia of task.garantiasEstruturadas) {
+    if (garantia.tipo === "pertencimento" && garantia.valores && camposSaida.has(garantia.alvo)) {
+      ajustes.push(`  saida.${garantia.alvo} = ${formatarValorTypeScript(garantia.valores[0] ?? "", camposSaida, "saida")} as any;`);
+    }
+    if (garantia.tipo === "comparacao" && garantia.valor && camposSaida.has(garantia.alvo.split(".")[0] ?? garantia.alvo)) {
+      ajustes.push(`  ${resolverReferenciaTypeScript(garantia.alvo, "saida")} = ${formatarValorTypeScript(garantia.valor, camposSaida, "saida")} as any;`);
+    }
+    if (garantia.tipo === "existe" && garantia.alvo.includes(".")) {
+      const [raiz, filho] = garantia.alvo.split(".", 2);
+      if (raiz && filho && camposSaida.has(raiz)) {
+        ajustes.push(`  saida.${raiz} = (saida.${raiz} ?? {}) as any;`);
+        ajustes.push(`  (saida.${raiz} as any).${filho} = (saida.${raiz} as any).${filho} ?? "valor_garantido";`);
+      }
+    }
+  }
+
+  return `  const saida = {\n${linhas.join("\n")}\n  } as ${task.nome}Saida;\n${ajustes.join("\n")}`;
+}
+
 function gerarValidacoes(task: IrTask): string {
   const linhas: string[] = [];
+  const camposEntrada = new Set(task.input.map((campo) => campo.nome));
   for (const campo of task.input) {
     if (campo.modificadores.includes("required")) {
       linhas.push(`  if (entrada.${campo.nome} === undefined || entrada.${campo.nome} === null) throw new Error("Campo obrigatorio ausente: ${campo.nome}");`);
     }
   }
-  for (const regra of task.rules) {
+  for (const regra of task.regrasEstruturadas) {
+    switch (regra.tipo) {
+      case "existe":
+        linhas.push(`  if (${resolverReferenciaTypeScript(regra.alvo, "entrada")} === undefined || ${resolverReferenciaTypeScript(regra.alvo, "entrada")} === null) throw new Error("Regra violada: ${regra.textoOriginal}");`);
+        break;
+      case "comparacao":
+        linhas.push(`  if (!(${resolverReferenciaTypeScript(regra.alvo, "entrada")} ${regra.operador} ${formatarValorTypeScript(regra.valor ?? "", camposEntrada, "entrada")})) throw new Error("Regra violada: ${regra.textoOriginal}");`);
+        break;
+      case "pertencimento":
+        linhas.push(`  if (![${(regra.valores ?? []).map((valor) => formatarValorTypeScript(valor, camposEntrada, "entrada")).join(", ")}].includes(${resolverReferenciaTypeScript(regra.alvo, "entrada")})) throw new Error("Regra violada: ${regra.textoOriginal}");`);
+        break;
+      case "predicado":
+        linhas.push(`  // Predicado declarado em Sema: ${regra.textoOriginal}`);
+        break;
+    }
+  }
+  for (const regra of task.rules.filter((regra) => !task.regrasEstruturadas.some((estruturada) => estruturada.textoOriginal === regra))) {
     linhas.push(`  // Regra declarada em Sema: ${regra}`);
   }
   return linhas.join("\n");
@@ -25,7 +127,27 @@ function gerarGarantias(task: IrTask): string {
   if (task.guarantees.length === 0) {
     return "  // Nenhuma garantia declarada.\n  return saida;";
   }
-  const linhas = task.guarantees.map((garantia) => `  // Garantia declarada em Sema: ${garantia}`);
+  const camposSaida = new Set(task.output.map((campo) => campo.nome));
+  const linhas: string[] = [];
+  for (const garantia of task.garantiasEstruturadas) {
+    switch (garantia.tipo) {
+      case "existe":
+        linhas.push(`  if (${resolverReferenciaTypeScript(garantia.alvo, "saida")} === undefined || ${resolverReferenciaTypeScript(garantia.alvo, "saida")} === null) throw new Error("Garantia violada: ${garantia.textoOriginal}");`);
+        break;
+      case "comparacao":
+        linhas.push(`  if (!(${resolverReferenciaTypeScript(garantia.alvo, "saida")} ${garantia.operador} ${formatarValorTypeScript(garantia.valor ?? "", camposSaida, "saida")})) throw new Error("Garantia violada: ${garantia.textoOriginal}");`);
+        break;
+      case "pertencimento":
+        linhas.push(`  if (![${(garantia.valores ?? []).map((valor) => formatarValorTypeScript(valor, camposSaida, "saida")).join(", ")}].includes(${resolverReferenciaTypeScript(garantia.alvo, "saida")})) throw new Error("Garantia violada: ${garantia.textoOriginal}");`);
+        break;
+      case "predicado":
+        linhas.push(`  // Predicado de garantia declarado em Sema: ${garantia.textoOriginal}`);
+        break;
+    }
+  }
+  for (const garantia of task.guarantees.filter((texto) => !task.garantiasEstruturadas.some((estruturada) => estruturada.textoOriginal === texto))) {
+    linhas.push(`  // Garantia declarada em Sema: ${garantia}`);
+  }
   linhas.push("  return saida;");
   return linhas.join("\n");
 }
@@ -46,8 +168,8 @@ ${gerarValidacoes(task)}
 export async function executar_${nomeSimbolo}(entrada: ${task.nome}Entrada): Promise<${task.nome}Saida> {
   validar_${nomeSimbolo}(entrada);
   // Efeitos declarados:
-${task.effects.map((efeito) => `  // - ${efeito}`).join("\n") || "  // - Nenhum efeito declarado."}
-  const saida = {} as ${task.nome}Saida;
+${task.efeitosEstruturados.map((efeito) => `  // - acao=${efeito.acao} alvo=${efeito.alvo}${efeito.complemento ? ` complemento=${efeito.complemento}` : ""}`).join("\n") || task.effects.map((efeito) => `  // - ${efeito}`).join("\n") || "  // - Nenhum efeito declarado."}
+${gerarPreparacaoSaida(task)}
 ${gerarGarantias(task)}
 }
 
@@ -66,7 +188,7 @@ function gerarTestes(modulo: IrModulo): string {
   for (const task of modulo.tasks) {
     const nomeFuncao = `executar_${normalizarNomeParaSimbolo(task.nome)}`;
     for (const caso of task.tests) {
-      const entrada = Object.fromEntries(caso.given.campos.map((campo) => [campo.nome, `"${campo.tipo}"`]));
+      const entrada = Object.fromEntries(caso.given.campos.map((campo) => [campo.nome, formatarLiteralTesteTypeScript(campo.tipo)]));
       linhas.push(`
 test("${task.nome} :: ${caso.nome}", async () => {
   const entrada = ${JSON.stringify(entrada, null, 2)};
@@ -89,7 +211,7 @@ export function gerarTypeScript(modulo: IrModulo): ArquivoGerado[] {
     .map((enumeracao) => `export type ${enumeracao.nome} = ${enumeracao.valores.map((valor) => `"${valor}"`).join(" | ")};\n`)
     .join("\n");
   const states = modulo.states
-    .map((state) => `// State${state.nome ? ` ${state.nome}` : ""}: campos=${state.campos.length} linhas=${state.linhas.length}`)
+    .map((state) => `// State${state.nome ? ` ${state.nome}` : ""}: campos=${state.campos.length} invariantes=${state.invariantes.length} transicoes=${state.transicoes.length}`)
     .join("\n");
   const flows = modulo.flows
     .map((flow) => `// Flow ${flow.nome}: etapas=${flow.linhas.length} tasks=${flow.tasksReferenciadas.join(", ") || "nenhuma"}`)

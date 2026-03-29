@@ -57,6 +57,8 @@ Python e TypeScript resolvem partes disso, mas deixam muita coisa espalhada entr
 - garantias pos-execucao como parte da linguagem
 - testes embutidos como documentacao executavel
 - legibilidade para pessoas como efeito colateral positivo de uma estrutura pensada para IA
+- expressoes semanticas estruturadas para `rules`, `effects` e `guarantees`
+- `state` com invariantes e transicoes declarativas no MVP atual
 
 ## Exemplo rapido
 
@@ -164,6 +166,8 @@ testes/                Testes de unidade e integracao
 ## Estagio atual
 
 O projeto esta em MVP funcional. A base do compilador existe, os exemplos obrigatorios foram modelados, os geradores para Python e TypeScript ja produzem esqueletos rastreaveis, e a CLI cobre validacao, AST, IR, compilacao, diagnosticos, teste e verificacao em lote.
+
+No ponto atual, o MVP ja resolve `use` entre modulos vizinhos, formaliza expressoes semanticas basicas em `rules`, `effects` e `guarantees`, e valida invariantes e transicoes em `state`.
 
 ## Roadmap resumido
 

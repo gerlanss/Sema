@@ -252,3 +252,133 @@ module app.invalido {
   assert.equal(temErros(resultado.diagnosticos), true);
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM019"));
 });
+
+test("compilador formaliza rules, effects, guarantees e state com transicoes", () => {
+  const codigo = `
+module exemplo.pagamento.avancado {
+  enum StatusPagamento {
+    PENDENTE,
+    AUTORIZADO,
+    RECUSADO,
+    PROCESSADO
+  }
+
+  state ciclo_pagamento {
+    fields {
+      status: StatusPagamento
+      conciliado: Booleano
+    }
+    invariants {
+      status existe
+      conciliado == falso
+    }
+    transitions {
+      PENDENTE -> AUTORIZADO
+      AUTORIZADO -> PROCESSADO
+      PENDENTE -> RECUSADO
+    }
+  }
+
+  task processar {
+    input {
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      status: StatusPagamento
+    }
+    rules {
+      valor > 0
+      token existe
+      token deve_ser valido
+    }
+    effects {
+      consulta gateway
+      registra auditoria
+    }
+    guarantees {
+      status em [AUTORIZADO, PROCESSADO]
+    }
+    tests {
+      caso "processa" {
+        given {
+          valor: 10
+          token: "ok"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.tasks[0]?.regrasEstruturadas.length, 3);
+  assert.equal(resultado.ir?.tasks[0]?.efeitosEstruturados.length, 2);
+  assert.equal(resultado.ir?.tasks[0]?.garantiasEstruturadas.length, 1);
+  assert.equal(resultado.ir?.states[0]?.invariantes.length, 2);
+  assert.equal(resultado.ir?.states[0]?.transicoes.length, 3);
+});
+
+test("compilador rejeita expressao invalida e transicao fora do enum", () => {
+  const codigo = `
+module exemplo.invalido.avancado {
+  enum StatusPagamento {
+    PENDENTE,
+    AUTORIZADO
+  }
+
+  state ciclo_pagamento {
+    fields {
+      status: StatusPagamento
+    }
+    invariants {
+      campo_inexistente existe
+    }
+    transitions {
+      PENDENTE => AUTORIZADO
+      PENDENTE -> RECUSADO
+    }
+  }
+
+  task processar {
+    input {
+      valor: Decimal required
+    }
+    output {
+      status: StatusPagamento
+    }
+    rules {
+      valor ??? 0
+    }
+    effects {
+      notifica
+    }
+    guarantees {
+      resultado existe
+    }
+    tests {
+      caso "processa" {
+        given {
+          valor: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM021"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM023"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM024" || diagnostico.codigo === "SEM025"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM027"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM028" || diagnostico.codigo === "SEM029"));
+});

@@ -12,6 +12,7 @@ export * from "./lexer/tokens.js";
 export * from "./lexer/lexer.js";
 export * from "./parser/parser.js";
 export * from "./semantico/analisador.js";
+export * from "./semantico/estruturas.js";
 export * from "./ir/modelos.js";
 export * from "./ir/conversor.js";
 export * from "./util/arquivos.js";

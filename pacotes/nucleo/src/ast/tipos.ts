@@ -20,6 +20,8 @@ export type TipoBloco =
   | "docs"
   | "comments"
   | "fields"
+  | "invariants"
+  | "transitions"
   | "given"
   | "when"
   | "expect"

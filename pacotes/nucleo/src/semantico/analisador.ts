@@ -12,6 +12,12 @@ import type {
   TaskAst,
   TypeAst,
 } from "../ast/tipos.js";
+import {
+  extrairReferenciasDaExpressao,
+  parsearEfeitoSemantico,
+  parsearExpressaoSemantica,
+  parsearTransicaoEstado,
+} from "./estruturas.js";
 
 export interface SimboloSemantico {
   nome: string;
@@ -24,6 +30,7 @@ export interface ContextoSemantico {
   tiposConhecidos: Set<string>;
   tasksConhecidas: Set<string>;
   modulosImportados: string[];
+  enumsConhecidos: Map<string, Set<string>>;
 }
 
 export interface ResultadoSemantico {
@@ -53,6 +60,14 @@ const TIPOS_PRIMITIVOS = new Set([
 function extrairReferenciasDeTipos(texto: string): string[] {
   const correspondencias = texto.match(/[A-Z][A-Za-z0-9_]*/g);
   return correspondencias ?? [];
+}
+
+function extrairRaiz(referencia: string): string {
+  return referencia.split(".")[0] ?? referencia;
+}
+
+function ehMarcadorSemantico(referencia: string): boolean {
+  return ["persistencia", "sucesso", "estado"].includes(extrairRaiz(referencia));
 }
 
 function diagnosticoDuplicado(nome: string, categoria: string, intervalo?: CampoAst["intervalo"]): Diagnostico {
@@ -93,7 +108,75 @@ function localizarBloco(corpo: BlocoGenericoAst, nome: string): BlocoGenericoAst
   return corpo.blocos.find((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === nome);
 }
 
-function validarState(state: StateAst, tiposConhecidos: Set<string>, diagnosticos: Diagnostico[]): void {
+function validarExpressoesDeclaradas(
+  linhas: BlocoGenericoAst["linhas"],
+  diagnosticos: Diagnostico[],
+  contexto: {
+    codigoErroSintaxe: string;
+    codigoErroReferencia: string;
+    nomeBloco: string;
+    simbolosPermitidos: Set<string>;
+    dicaSintaxe: string;
+    dicaReferencia: string;
+    aceitarMarcadoresSemanticos?: boolean;
+  },
+): void {
+  for (const linha of linhas) {
+    const expressao = parsearExpressaoSemantica(linha.conteudo);
+    if (!expressao) {
+      diagnosticos.push(
+        criarDiagnostico(
+          contexto.codigoErroSintaxe,
+          `Declaracao invalida em ${contexto.nomeBloco}: "${linha.conteudo}".`,
+          "erro",
+          linha.intervalo,
+          contexto.dicaSintaxe,
+        ),
+      );
+      continue;
+    }
+
+    for (const referencia of extrairReferenciasDaExpressao(expressao)) {
+      const raiz = extrairRaiz(referencia);
+      const referenciaPermitida = contexto.simbolosPermitidos.has(raiz) || (contexto.aceitarMarcadoresSemanticos && ehMarcadorSemantico(raiz));
+      if (!referenciaPermitida) {
+        diagnosticos.push(
+          criarDiagnostico(
+            contexto.codigoErroReferencia,
+            `Declaracao em ${contexto.nomeBloco} referencia "${raiz}", que nao pertence ao contexto permitido.`,
+            "erro",
+            linha.intervalo,
+            contexto.dicaReferencia,
+          ),
+        );
+      }
+    }
+  }
+}
+
+function validarEfeitosDeclarados(linhas: BlocoGenericoAst["linhas"], diagnosticos: Diagnostico[], contexto: string): void {
+  for (const linha of linhas) {
+    const efeito = parsearEfeitoSemantico(linha.conteudo);
+    if (!efeito) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM023",
+          `Declaracao invalida de efeito em ${contexto}: "${linha.conteudo}".`,
+          "erro",
+          linha.intervalo,
+          "Use o formato \"acao alvo\" ou \"acao alvo complemento\" para declarar efeitos no MVP.",
+        ),
+      );
+    }
+  }
+}
+
+function validarState(
+  state: StateAst,
+  tiposConhecidos: Set<string>,
+  enumsConhecidos: Map<string, Set<string>>,
+  diagnosticos: Diagnostico[],
+): void {
   const possuiConteudo = state.corpo.campos.length > 0 || state.corpo.linhas.length > 0 || state.corpo.blocos.length > 0;
   if (!possuiConteudo) {
     diagnosticos.push(
@@ -111,6 +194,83 @@ function validarState(state: StateAst, tiposConhecidos: Set<string>, diagnostico
   const fields = localizarBloco(state.corpo, "fields");
   if (fields) {
     validarCamposDeTipos(fields.campos, tiposConhecidos, diagnosticos, `fields do state ${state.nome ?? "<anonimo>"}`);
+  }
+
+  const nomesCampos = new Set([
+    ...state.corpo.campos.map((campo) => campo.nome),
+    ...(fields?.campos ?? []).map((campo) => campo.nome),
+  ]);
+
+  const invariants = localizarBloco(state.corpo, "invariants");
+  if (invariants) {
+    validarExpressoesDeclaradas(invariants.linhas, diagnosticos, {
+      codigoErroSintaxe: "SEM024",
+      codigoErroReferencia: "SEM025",
+      nomeBloco: `invariants do state ${state.nome ?? "<anonimo>"}`,
+      simbolosPermitidos: nomesCampos,
+      dicaSintaxe: "Use expressoes como \"campo existe\", \"campo == valor\" ou \"campo em [A, B]\".",
+      dicaReferencia: "Referencie apenas campos do proprio state nas invariantes.",
+    });
+  }
+
+  const transitions = localizarBloco(state.corpo, "transitions");
+  if (transitions) {
+    const campoTransicao = (fields?.campos ?? []).find((campo) => campo.nome === "status" || campo.nome === "estado")
+      ?? state.corpo.campos.find((campo) => campo.nome === "status" || campo.nome === "estado");
+
+    if (!campoTransicao) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM026",
+          `State ${state.nome ? `"${state.nome}" ` : ""}declarou transitions sem um campo status ou estado.`,
+          "erro",
+          transitions.intervalo,
+          "Adicione um campo status ou estado para ancorar semanticamente as transicoes.",
+        ),
+      );
+    }
+
+    const enumValores = campoTransicao ? enumsConhecidos.get(campoTransicao.valor) : undefined;
+    for (const linha of transitions.linhas) {
+      const transicao = parsearTransicaoEstado(linha.conteudo);
+      if (!transicao) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM027",
+            `Transicao invalida em state ${state.nome ?? "<anonimo>"}: "${linha.conteudo}".`,
+            "erro",
+            linha.intervalo,
+            "Use o formato \"ORIGEM -> DESTINO\" para declarar transicoes.",
+          ),
+        );
+        continue;
+      }
+
+      if (enumValores) {
+        if (!enumValores.has(transicao.origem)) {
+          diagnosticos.push(
+            criarDiagnostico(
+              "SEM028",
+              `Transicao do state ${state.nome ?? "<anonimo>"} usa origem "${transicao.origem}" fora do enum ${campoTransicao?.valor}.`,
+              "erro",
+              linha.intervalo,
+              "Use apenas valores declarados no enum associado ao campo status/estado.",
+            ),
+          );
+        }
+        if (!enumValores.has(transicao.destino)) {
+          diagnosticos.push(
+            criarDiagnostico(
+              "SEM029",
+              `Transicao do state ${state.nome ?? "<anonimo>"} usa destino "${transicao.destino}" fora do enum ${campoTransicao?.valor}.`,
+              "erro",
+              linha.intervalo,
+              "Use apenas valores declarados no enum associado ao campo status/estado.",
+            ),
+          );
+        }
+      }
+    }
   }
 }
 
@@ -220,6 +380,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
+  const enumsConhecidos = new Map<string, Set<string>>();
 
   const registrar = (nome: string, categoria: SimboloSemantico["categoria"]): void => {
     if (simbolos.has(nome)) {
@@ -241,6 +402,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   }
   for (const enumeracao of modulo.enums) {
     registrar(enumeracao.nome, "enum");
+    enumsConhecidos.set(enumeracao.nome, new Set(enumeracao.valores));
   }
   for (const task of modulo.tasks) {
     registrar(task.nome, "task");
@@ -263,6 +425,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
     tiposConhecidos,
     tasksConhecidas,
     modulosImportados: [],
+    enumsConhecidos,
   };
 }
 
@@ -310,6 +473,24 @@ function validarTask(task: TaskAst, tiposConhecidos: Set<string>, diagnosticos: 
     validarCamposDeTipos(task.output.campos, tiposConhecidos, diagnosticos, `output da task ${task.nome}`);
   }
 
+  const entradasConhecidas = new Set(task.input?.campos.map((campo) => campo.nome) ?? []);
+  const saidasConhecidas = new Set(task.output?.campos.map((campo) => campo.nome) ?? []);
+
+  if (task.rules) {
+    validarExpressoesDeclaradas(task.rules.linhas, diagnosticos, {
+      codigoErroSintaxe: "SEM021",
+      codigoErroReferencia: "SEM022",
+      nomeBloco: `rules da task ${task.nome}`,
+      simbolosPermitidos: entradasConhecidas,
+      dicaSintaxe: "Use expressoes como \"campo existe\", \"campo > 0\", \"campo em [A, B]\" ou \"campo deve_ser predicado\".",
+      dicaReferencia: "No MVP atual, rules devem referenciar apenas campos do input.",
+    });
+  }
+
+  if (task.effects) {
+    validarEfeitosDeclarados(task.effects.linhas, diagnosticos, `effects da task ${task.nome}`);
+  }
+
   if (task.tests) {
     for (const bloco of task.tests.blocos) {
       if (bloco.tipo !== "caso_teste") {
@@ -320,13 +501,22 @@ function validarTask(task: TaskAst, tiposConhecidos: Set<string>, diagnosticos: 
   }
 
   if (task.guarantees && task.output) {
-    const saidas = new Set(task.output.campos.map((campo) => campo.nome));
+    validarExpressoesDeclaradas(task.guarantees.linhas, diagnosticos, {
+      codigoErroSintaxe: "SEM030",
+      codigoErroReferencia: "SEM031",
+      nomeBloco: `guarantees da task ${task.nome}`,
+      simbolosPermitidos: saidasConhecidas,
+      dicaSintaxe: "Use expressoes como \"saida existe\", \"saida == valor\" ou \"saida em [A, B]\" nas guarantees.",
+      dicaReferencia: "No MVP atual, guarantees devem referenciar campos do output ou marcadores semanticos permitidos.",
+      aceitarMarcadoresSemanticos: true,
+    });
+
     for (const linha of task.guarantees.linhas) {
       const referenciaSaida = linha.conteudo.split(/[.\s]/)[0];
       if (
         referenciaSaida &&
-        !["persistencia", "sucesso", "estado"].includes(referenciaSaida) &&
-        !saidas.has(referenciaSaida)
+        !ehMarcadorSemantico(referenciaSaida) &&
+        !saidasConhecidas.has(referenciaSaida)
       ) {
         diagnosticos.push(
           criarDiagnostico(
@@ -394,6 +584,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
   const modulosImportados: string[] = [];
+  const enumsConhecidos = new Map<string, Set<string>>();
 
   for (const use of modulo.uses) {
     const contextoImportado = opcoes.contextosModulos?.get(use.caminho);
@@ -416,6 +607,9 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     }
     for (const task of contextoImportado.tasksConhecidas) {
       tasksConhecidas.add(task);
+    }
+    for (const [nomeEnum, valores] of contextoImportado.enumsConhecidos) {
+      enumsConhecidos.set(nomeEnum, new Set(valores));
     }
   }
 
@@ -444,6 +638,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
   for (const enumeracao of modulo.enums) {
     registrar(enumeracao.nome, "enum", enumeracao.intervalo);
+    enumsConhecidos.set(enumeracao.nome, new Set(enumeracao.valores));
   }
   for (const task of modulo.tasks) {
     registrar(task.nome, "task", task.intervalo);
@@ -498,7 +693,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
 
   for (const state of modulo.states) {
-    validarState(state, tiposConhecidos, diagnosticos);
+    validarState(state, tiposConhecidos, enumsConhecidos, diagnosticos);
   }
 
   return {
@@ -508,6 +703,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
       tiposConhecidos,
       tasksConhecidas,
       modulosImportados,
+      enumsConhecidos,
     },
     diagnosticos,
   };

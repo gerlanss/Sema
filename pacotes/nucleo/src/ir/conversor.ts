@@ -1,5 +1,6 @@
 import type { BlocoCasoTesteAst, BlocoGenericoAst, ModuloAst } from "../ast/tipos.js";
 import type { Diagnostico } from "../diagnosticos/index.js";
+import { parsearEfeitoSemantico, parsearExpressaoSemantica, parsearTransicaoEstado } from "../semantico/estruturas.js";
 import type {
   IrBlocoDeclarativo,
   IrCampo,
@@ -61,8 +62,11 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
     input: converterCampos(task.input),
     output: converterCampos(task.output),
     rules: task.rules?.linhas.map((linha) => linha.conteudo) ?? [],
+    regrasEstruturadas: (task.rules?.linhas ?? []).map((linha) => parsearExpressaoSemantica(linha.conteudo)).filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
     effects: task.effects?.linhas.map((linha) => linha.conteudo) ?? [],
+    efeitosEstruturados: (task.effects?.linhas ?? []).map((linha) => parsearEfeitoSemantico(linha.conteudo)).filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
     guarantees: task.guarantees?.linhas.map((linha) => linha.conteudo) ?? [],
+    garantiasEstruturadas: (task.guarantees?.linhas ?? []).map((linha) => parsearExpressaoSemantica(linha.conteudo)).filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
     errors: Object.fromEntries((task.error?.campos ?? []).map((campo) => [campo.nome, [campo.valor, ...campo.modificadores].join(" ").trim()])),
     tests: (task.tests?.blocos.filter((bloco): bloco is BlocoCasoTesteAst => bloco.tipo === "caso_teste") ?? []).map(converterCaso),
   }));
@@ -95,12 +99,14 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
 
   const states: IrState[] = modulo.states.map((state) => ({
     nome: state.nome,
-    campos: state.corpo.campos.map((campo) => ({
-      nome: campo.nome,
-      tipo: campo.valor,
-      modificadores: campo.modificadores,
-    })),
+    campos: converterCampos(encontrarSubBloco(state.corpo, "fields") ?? state.corpo),
     linhas: state.corpo.linhas.map((linha) => linha.conteudo),
+    invariantes: (encontrarSubBloco(state.corpo, "invariants")?.linhas ?? [])
+      .map((linha) => parsearExpressaoSemantica(linha.conteudo))
+      .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
+    transicoes: (encontrarSubBloco(state.corpo, "transitions")?.linhas ?? [])
+      .map((linha) => parsearTransicaoEstado(linha.conteudo))
+      .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
   }));
 
   return {

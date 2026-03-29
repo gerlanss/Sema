@@ -48,3 +48,56 @@ Uma `task` no MVP deve aceitar:
 
 `input`, `output` e `guarantees` formam a espinha dorsal da validacao atual. A implementacao rejeita tarefas sem esses contratos essenciais.
 
+## Expressoes semanticas do MVP atual
+
+O MVP atual ja aceita e valida formas estruturadas basicas em `rules` e `guarantees`:
+
+- `campo existe`
+- `campo > 0`
+- `campo == outro_campo`
+- `campo em [A, B, C]`
+- `campo deve_ser predicado`
+
+Em `effects`, o formato estruturado atual e:
+
+- `acao alvo`
+- `acao alvo complemento`
+
+Exemplos:
+
+- `valor > 0`
+- `token existe`
+- `status em [AUTORIZADO, PROCESSADO]`
+- `pagamento.status == status`
+- `consulta gateway_pagamento`
+- `registra auditoria`
+
+## State no MVP atual
+
+O bloco `state` agora suporta:
+
+- `fields`
+- `invariants`
+- `transitions`
+
+Exemplo:
+
+```sema
+state ciclo_pagamento {
+  fields {
+    status: StatusPagamento
+    conciliado: Booleano
+  }
+  invariants {
+    status existe
+    conciliado == falso
+  }
+  transitions {
+    PENDENTE -> AUTORIZADO
+    AUTORIZADO -> PROCESSADO
+    PENDENTE -> RECUSADO
+  }
+}
+```
+
+No MVP, quando existe um campo `status` ou `estado` ligado a um `enum`, as transicoes passam a ser validadas contra esse conjunto de valores.

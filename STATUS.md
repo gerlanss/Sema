@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `f245bca`
+- Ultimo commit de referencia: `a83f8c1`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
@@ -31,7 +31,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 - `[-]` Fortalecer a semantica de `flow`, `route` e `state`
 - `[-]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
-- `[ ]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
+- `[x]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
 - `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
 - `[ ]` Melhorar a saida estruturada para IDE, automacao e IA
 - `[x]` Formalizar o fluxo operacional de contribuicao, checagem e revisao para humanos e Codex
@@ -66,9 +66,11 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Validacao inicial de `flow` para etapas e referencias declarativas de `task`
 - `[x]` Validacao inicial de `state` para estrutura minima e consistencia de tipos
 - `[x]` Resolucao inicial de `use` entre multiplos modulos do mesmo conjunto de compilacao
+- `[x]` Expressoes estruturadas basicas em `rules`, `effects` e `guarantees`
+- `[x]` `state` com invariantes e transicoes declarativas validadas no MVP
 - `[-]` Semantica profunda de `flow`, `route` e `state`
 - `[-]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
-- `[-]` Garantias, erros e efeitos ainda estao em nivel inicial de semantica executavel
+- `[-]` Garantias e efeitos ja possuem estrutura basica, mas ainda podem ganhar modelo de execucao mais forte
 - `[ ]` Sistema de expressoes semanticas mais formal para regras, comparacoes e pos-condicoes
 
 ## Geracao de Codigo
@@ -78,8 +80,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Geracao de testes para TypeScript e Python a partir de `tests`
 - `[x]` Comentarios gerados em portugues do Brasil
 - `[x]` Saida deterministica suficiente para o MVP atual
+- `[x]` Geracao com validacoes estruturadas basicas para regras e garantias
 - `[-]` `effects` viram contratos e comentarios, mas ainda nao possuem modelo de execucao mais forte
-- `[-]` `guarantees` ainda sao refletidas como rastreabilidade e comentarios, nao como contratos executaveis ricos
+- `[-]` `guarantees` ja geram contratos basicos, mas ainda nao cobrem cenarios mais ricos e infraestrutura real
 - `[-]` `error` gera catalogo util, mas ainda nao virou modelagem robusta de falhas no codigo final
 - `[ ]` Contratos mais ricos de execucao e adaptadores neutros mais completos
 
@@ -110,6 +113,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Tratamento de erro
 - `[x]` Testes embutidos
 - `[x]` Exemplos atualizados para exercitar validacoes iniciais de `flow`, `route` e `state`
+- `[x]` Exemplo de pagamento atualizado para exercitar expressoes estruturadas, invariantes e transicoes
 - `[-]` Os exemplos ainda nao exercitam uma semantica profunda de `flow`, `route` e `state`
 
 ## Documentacao
@@ -146,6 +150,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Execucao local de testes gerados para Python com `pytest`
 - `[x]` Testes unitarios cobrindo validacoes iniciais de `flow`, `route` e `state`
 - `[x]` Testes unitarios e de integracao cobrindo `use` entre arquivos vizinhos
+- `[x]` Testes cobrindo expressoes estruturadas e validacao de transicoes em `state`
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `project:check`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida
