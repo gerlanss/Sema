@@ -4,9 +4,11 @@ Sema e uma DSL semantica, declarativa e orientada a intencao para descrever cont
 
 O projeto foi desenhado como uma camada acima de Python e TypeScript. A ideia nao e substituir essas linguagens, e sim governar a camada de especificacao, validacao e geracao de codigo com mais previsibilidade para humanos e IA.
 
+O acompanhamento operacional do que ja foi feito e do que ainda falta esta em [STATUS.md](C:\GitHub\Sema\STATUS.md).
+
 ## Por que a Sema existe
 
-Em software de negocio, o problema raramente e apenas “como programar”. O problema real e tornar claro:
+Em software de negocio, o problema raramente e apenas "como programar". O problema real e tornar claro:
 
 - o que a operacao quer fazer
 - quais entradas ela aceita
@@ -122,7 +124,7 @@ testes/                Testes de unidade e integracao
 
 ## Estagio atual
 
-O projeto esta em MVP funcional. A base do compilador existe, os exemplos obrigatorios foram modelados, os geradores para Python e TypeScript ja produzem esqueletos rastreaveis, e a CLI cobre validacao, AST, IR, compilacao, diagnosticos e teste.
+O projeto esta em MVP funcional. A base do compilador existe, os exemplos obrigatorios foram modelados, os geradores para Python e TypeScript ja produzem esqueletos rastreaveis, e a CLI cobre validacao, AST, IR, compilacao, diagnosticos, teste e verificacao em lote.
 
 ## Roadmap resumido
 
@@ -135,3 +137,4 @@ O projeto esta em MVP funcional. A base do compilador existe, os exemplos obriga
 ## Aviso importante
 
 Este projeto esta em MVP. Ele ja serve como base real para construir a linguagem, mas ainda nao pretende ser uma implementacao final ou completa.
+
