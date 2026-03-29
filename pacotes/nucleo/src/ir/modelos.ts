@@ -47,11 +47,22 @@ export interface IrTask {
 
 export interface IrFlow {
   nome: string;
+  campos: IrCampo[];
   linhas: string[];
+  tasksReferenciadas: string[];
 }
 
 export interface IrRoute {
   nome: string;
+  campos: IrCampo[];
+  linhas: string[];
+  metodo?: string;
+  caminho?: string;
+  task?: string;
+}
+
+export interface IrState {
+  nome?: string;
   campos: IrCampo[];
   linhas: string[];
 }
@@ -65,5 +76,6 @@ export interface IrModulo {
   tasks: IrTask[];
   flows: IrFlow[];
   routes: IrRoute[];
+  states: IrState[];
   diagnosticos: Diagnostico[];
 }

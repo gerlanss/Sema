@@ -88,9 +88,18 @@ export function gerarTypeScript(modulo: IrModulo): ArquivoGerado[] {
   const enums = modulo.enums
     .map((enumeracao) => `export type ${enumeracao.nome} = ${enumeracao.valores.map((valor) => `"${valor}"`).join(" | ")};\n`)
     .join("\n");
+  const states = modulo.states
+    .map((state) => `// State${state.nome ? ` ${state.nome}` : ""}: campos=${state.campos.length} linhas=${state.linhas.length}`)
+    .join("\n");
+  const flows = modulo.flows
+    .map((flow) => `// Flow ${flow.nome}: etapas=${flow.linhas.length} tasks=${flow.tasksReferenciadas.join(", ") || "nenhuma"}`)
+    .join("\n");
+  const routes = modulo.routes
+    .map((route) => `// Route ${route.nome}: metodo=${route.metodo ?? "nao_definido"} caminho=${route.caminho ?? "nao_definido"} task=${route.task ?? "nao_definida"}`)
+    .join("\n");
   const tasks = modulo.tasks.map(gerarTask).join("\n");
 
-  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n\n${entidades}\n${enums}\n${tasks}\n`;
+  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n`;
   const testes = gerarTestes(modulo);
 
   return [

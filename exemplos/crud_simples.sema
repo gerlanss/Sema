@@ -9,9 +9,10 @@ module exemplos.crud.simples {
   }
 
   route produtos {
-    metodo: Texto
-    caminho: Texto
-    finalidade: Texto
+    metodo: POST
+    caminho: /produtos
+    task: criar_produto
+    finalidade: cadastro_produto
   }
 
   task criar_produto {
@@ -75,4 +76,3 @@ module exemplos.crud.simples {
     }
   }
 }
-

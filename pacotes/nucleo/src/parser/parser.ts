@@ -13,6 +13,7 @@ import type {
   FlowAst,
   ModuloAst,
   RouteAst,
+  StateAst,
   TaskAst,
   TypeAst,
   UseAst,
@@ -126,7 +127,7 @@ class Parser {
     const tasks: TaskAst[] = [];
     const flows: FlowAst[] = [];
     const routes: RouteAst[] = [];
-    const states: BlocoGenericoAst[] = [];
+    const states: StateAst[] = [];
     const extras: BlocoGenericoAst[] = [];
     let docs: BlocoGenericoAst | undefined;
     let comments: BlocoGenericoAst | undefined;
@@ -168,7 +169,7 @@ class Parser {
           routes.push(this.parseRoute());
           break;
         case "state":
-          states.push(this.parseBlocoGenerico("state"));
+          states.push(this.parseState());
           break;
         case "tests":
           tests = this.parseBlocoGenerico("tests");
@@ -288,6 +289,22 @@ class Parser {
     const nome = this.consumirTipo("identificador", "Era esperado o nome da route.").valor;
     const corpo = this.parseBlocoComNomeOpcional("route");
     return { tipo: "route", nome, corpo, intervalo: { inicio, fim: corpo.intervalo?.fim ?? this.anterior().intervalo.fim } };
+  }
+
+  private parseState(): StateAst {
+    const inicioToken = this.avancar();
+    let nome: string | undefined;
+    if (this.atual().tipo === "identificador") {
+      nome = this.avancar().valor;
+    }
+    this.consumirValor("{", "Era esperado abrir o bloco state.");
+    const corpo = this.parseCorpoBloco("state", nome, inicioToken.intervalo.inicio);
+    return {
+      tipo: "state",
+      nome,
+      corpo,
+      intervalo: { inicio: inicioToken.intervalo.inicio, fim: corpo.intervalo?.fim ?? this.anterior().intervalo.fim },
+    };
   }
 
   private parseBlocoComNomeOpcional(nomeBloco: string): BlocoGenericoAst {

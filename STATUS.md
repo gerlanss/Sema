@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `1500bee`
+- Ultimo commit de referencia: `afeccdc`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
@@ -16,7 +16,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - CLI com validacao, compilacao, teste e verificacao em lote
   - exemplos obrigatorios e documentacao-base
 - Principais areas parciais:
-  - semantica profunda de `flow`, `route` e `state`
+  - semantica de `flow`, `route` e `state` ja existe no nivel inicial, mas ainda precisa amadurecer
   - resolucao de `use` e multiplos modulos
   - geracao mais forte para `effects`, `guarantees` e `error`
 
@@ -29,7 +29,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Em Andamento Nesta Sprint
 
-- `[ ]` Fortalecer a semantica de `flow`, `route` e `state`
+- `[-]` Fortalecer a semantica de `flow`, `route` e `state`
 - `[ ]` Ampliar a resolucao de `use` entre multiplos arquivos `.sema`
 - `[ ]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
 - `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
@@ -60,6 +60,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Validacao de tipos conhecidos, simbolos duplicados e contratos basicos de `task`
 - `[x]` Rejeicao de `task` sem `input`, `output` ou `guarantees`
 - `[x]` Validacao basica de casos de teste embutidos
+- `[x]` Validacao inicial de `route` para `metodo`, `caminho` e referencia de `task`
+- `[x]` Validacao inicial de `flow` para etapas e referencias declarativas de `task`
+- `[x]` Validacao inicial de `state` para estrutura minima e consistencia de tipos
 - `[-]` Semantica profunda de `flow`, `route` e `state`
 - `[-]` Resolucao mais completa de `use` e multiplos modulos
 - `[-]` Garantias, erros e efeitos ainda estao em nivel inicial de semantica executavel
@@ -102,7 +105,8 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Automacao
 - `[x]` Tratamento de erro
 - `[x]` Testes embutidos
-- `[-]` Os exemplos ja cobrem o MVP, mas ainda nao exercitam uma semantica mais profunda de `flow`, `route` e `state`
+- `[x]` Exemplos atualizados para exercitar validacoes iniciais de `flow`, `route` e `state`
+- `[-]` Os exemplos ainda nao exercitam uma semantica profunda de `flow`, `route` e `state`
 
 ## Documentacao
 
@@ -134,6 +138,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Verificacao em lote com `sema verificar exemplos`
 - `[x]` Execucao local de testes gerados para TypeScript
 - `[x]` Execucao local de testes gerados para Python com `pytest`
+- `[x]` Testes unitarios cobrindo validacoes iniciais de `flow`, `route` e `state`
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `status:check` e `npm test`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida

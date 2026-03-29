@@ -62,9 +62,12 @@ export function gerarPython(modulo: IrModulo): ArquivoGerado[] {
   const nomeBase = normalizarNomeModulo(modulo.nome).replace(/\./g, "_");
   const enums = modulo.enums.map((enumeracao) => `class ${enumeracao.nome}:\n${enumeracao.valores.map((valor) => `    ${valor} = "${valor}"`).join("\n")}\n`).join("\n");
   const entidades = modulo.entities.map((entity) => gerarDataclass(entity.nome, entity.campos)).join("\n");
+  const states = modulo.states.map((state) => `# State${state.nome ? ` ${state.nome}` : ""}: campos=${state.campos.length} linhas=${state.linhas.length}`).join("\n");
+  const flows = modulo.flows.map((flow) => `# Flow ${flow.nome}: etapas=${flow.linhas.length} tasks=${flow.tasksReferenciadas.join(", ") || "nenhuma"}`).join("\n");
+  const routes = modulo.routes.map((route) => `# Route ${route.nome}: metodo=${route.metodo ?? "nao_definido"} caminho=${route.caminho ?? "nao_definido"} task=${route.task ?? "nao_definida"}`).join("\n");
   const tasks = modulo.tasks.map(gerarTask).join("\n");
 
-  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\n\nfrom dataclasses import dataclass\n\n${enums}\n${entidades}\n${tasks}\n`;
+  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\n\nfrom dataclasses import dataclass\n\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n`;
   const testes = gerarTestes(modulo);
 
   return [

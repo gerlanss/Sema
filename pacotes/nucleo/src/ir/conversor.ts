@@ -8,6 +8,7 @@ import type {
   IrFlow,
   IrModulo,
   IrRoute,
+  IrState,
   IrTask,
   IrType,
 } from "./modelos.js";
@@ -68,7 +69,15 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
 
   const flows: IrFlow[] = modulo.flows.map((flow) => ({
     nome: flow.nome,
+    campos: flow.corpo.campos.map((campo) => ({
+      nome: campo.nome,
+      tipo: campo.valor,
+      modificadores: campo.modificadores,
+    })),
     linhas: flow.corpo.linhas.map((linha) => linha.conteudo),
+    tasksReferenciadas: flow.corpo.campos
+      .filter((campo) => campo.nome === "task" || campo.nome === "tarefa")
+      .map((campo) => campo.valor),
   }));
 
   const routes: IrRoute[] = modulo.routes.map((route) => ({
@@ -79,6 +88,19 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
       modificadores: campo.modificadores,
     })),
     linhas: route.corpo.linhas.map((linha) => linha.conteudo),
+    metodo: route.corpo.campos.find((campo) => campo.nome === "metodo")?.valor,
+    caminho: route.corpo.campos.find((campo) => campo.nome === "caminho")?.valor,
+    task: route.corpo.campos.find((campo) => campo.nome === "task" || campo.nome === "tarefa")?.valor,
+  }));
+
+  const states: IrState[] = modulo.states.map((state) => ({
+    nome: state.nome,
+    campos: state.corpo.campos.map((campo) => ({
+      nome: campo.nome,
+      tipo: campo.valor,
+      modificadores: campo.modificadores,
+    })),
+    linhas: state.corpo.linhas.map((linha) => linha.conteudo),
   }));
 
   return {
@@ -90,7 +112,7 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
     tasks,
     flows,
     routes,
+    states,
     diagnosticos,
   };
 }
-

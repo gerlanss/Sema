@@ -115,6 +115,12 @@ export interface RouteAst extends NoAstBase {
   corpo: BlocoGenericoAst;
 }
 
+export interface StateAst extends NoAstBase {
+  tipo: "state";
+  nome?: string;
+  corpo: BlocoGenericoAst;
+}
+
 export interface ModuloAst extends NoAstBase {
   tipo: "module";
   nome: string;
@@ -127,7 +133,7 @@ export interface ModuloAst extends NoAstBase {
   tasks: TaskAst[];
   flows: FlowAst[];
   routes: RouteAst[];
-  states: BlocoGenericoAst[];
+  states: StateAst[];
   tests?: BlocoGenericoAst;
   extras: BlocoGenericoAst[];
 }
@@ -141,5 +147,5 @@ export type BlocoAst =
   | EntityAst
   | TaskAst
   | FlowAst
-  | RouteAst;
-
+  | RouteAst
+  | StateAst;

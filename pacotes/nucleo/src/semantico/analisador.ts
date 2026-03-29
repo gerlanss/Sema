@@ -5,14 +5,17 @@ import type {
   CampoAst,
   EntityAst,
   EnumAst,
+  FlowAst,
   ModuloAst,
+  RouteAst,
+  StateAst,
   TaskAst,
   TypeAst,
 } from "../ast/tipos.js";
 
 export interface SimboloSemantico {
   nome: string;
-  categoria: "tipo" | "entity" | "enum" | "task";
+  categoria: "tipo" | "entity" | "enum" | "task" | "flow" | "route" | "state";
 }
 
 export interface ContextoSemantico {
@@ -82,6 +85,129 @@ function validarCamposDeTipos(
 
 function localizarBloco(corpo: BlocoGenericoAst, nome: string): BlocoGenericoAst | undefined {
   return corpo.blocos.find((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === nome);
+}
+
+function validarState(state: StateAst, tiposConhecidos: Set<string>, diagnosticos: Diagnostico[]): void {
+  const possuiConteudo = state.corpo.campos.length > 0 || state.corpo.linhas.length > 0 || state.corpo.blocos.length > 0;
+  if (!possuiConteudo) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM011",
+        `Bloco state${state.nome ? ` "${state.nome}"` : ""} precisa declarar campos, linhas ou subblocos.`,
+        "erro",
+        state.intervalo,
+        "Use state para modelar informacao ou transicao observavel, nao como bloco vazio.",
+      ),
+    );
+  }
+
+  validarCamposDeTipos(state.corpo.campos, tiposConhecidos, diagnosticos, `state ${state.nome ?? "<anonimo>"}`);
+  const fields = localizarBloco(state.corpo, "fields");
+  if (fields) {
+    validarCamposDeTipos(fields.campos, tiposConhecidos, diagnosticos, `fields do state ${state.nome ?? "<anonimo>"}`);
+  }
+}
+
+function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: Diagnostico[]): void {
+  const possuiEtapas = flow.corpo.linhas.length > 0 || flow.corpo.campos.length > 0 || flow.corpo.blocos.length > 0;
+  if (!possuiEtapas) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM012",
+        `Flow "${flow.nome}" precisa declarar ao menos uma etapa.`,
+        "erro",
+        flow.intervalo,
+        "Adicione linhas declarativas, campos ou subblocos dentro de flow.",
+      ),
+    );
+  }
+
+  const tarefasReferenciadas = flow.corpo.campos
+    .filter((campo) => campo.nome === "task" || campo.nome === "tarefa")
+    .map((campo) => campo.valor);
+
+  for (const tarefa of tarefasReferenciadas) {
+    if (!tasksConhecidas.has(tarefa)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM013",
+          `Flow "${flow.nome}" referencia task "${tarefa}" que nao existe.`,
+          "erro",
+          flow.intervalo,
+          "Declare a task no mesmo modulo ou ajuste a referencia do flow.",
+        ),
+      );
+    }
+  }
+}
+
+function validarRoute(route: RouteAst, tasksConhecidas: Set<string>, diagnosticos: Diagnostico[]): void {
+  const metodo = route.corpo.campos.find((campo) => campo.nome === "metodo");
+  const caminho = route.corpo.campos.find((campo) => campo.nome === "caminho");
+  const task = route.corpo.campos.find((campo) => campo.nome === "task" || campo.nome === "tarefa");
+
+  if (!metodo) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM014",
+        `Route "${route.nome}" precisa declarar o campo metodo.`,
+        "erro",
+        route.intervalo,
+        "Use um campo como metodo: GET, POST, PUT, PATCH ou DELETE.",
+      ),
+    );
+  }
+
+  if (!caminho) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM015",
+        `Route "${route.nome}" precisa declarar o campo caminho.`,
+        "erro",
+        route.intervalo,
+        "Use um campo como caminho: \"/recurso\".",
+      ),
+    );
+  }
+
+  if (metodo) {
+    const metodosValidos = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
+    if (!metodosValidos.has(metodo.valor.toUpperCase())) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM016",
+          `Route "${route.nome}" usa metodo invalido "${metodo.valor}".`,
+          "erro",
+          metodo.intervalo,
+          "Use apenas GET, POST, PUT, PATCH ou DELETE no MVP.",
+        ),
+      );
+    }
+  }
+
+  if (caminho && !caminho.valor.startsWith("/")) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM017",
+        `Route "${route.nome}" precisa usar um caminho iniciando com '/'.`,
+        "erro",
+        caminho.intervalo,
+        "Exemplo valido: caminho: \"/produtos\".",
+      ),
+    );
+  }
+
+  if (task && !tasksConhecidas.has(task.valor)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM018",
+        `Route "${route.nome}" referencia task "${task.valor}" que nao existe.`,
+        "erro",
+        task.intervalo,
+        "Ajuste o campo task da route para apontar para uma task declarada no modulo.",
+      ),
+    );
+  }
 }
 
 function validarTask(task: TaskAst, tiposConhecidos: Set<string>, diagnosticos: Diagnostico[]): void {
@@ -242,6 +368,17 @@ export function analisarSemantica(modulo: ModuloAst): ResultadoSemantico {
       simbolos.set(task.nome, { nome: task.nome, categoria: "task" });
     }
   }
+  for (const flow of modulo.flows) {
+    registrar(flow.nome, "flow", flow.intervalo);
+  }
+  for (const route of modulo.routes) {
+    registrar(route.nome, "route", route.intervalo);
+  }
+  for (const state of modulo.states) {
+    if (state.nome) {
+      registrar(state.nome, "state", state.intervalo);
+    }
+  }
 
   for (const type of modulo.types) {
     validarCamposDeTipos(type.corpo.campos, tiposConhecidos, diagnosticos, `type ${type.nome}`);
@@ -270,6 +407,20 @@ export function analisarSemantica(modulo: ModuloAst): ResultadoSemantico {
 
   for (const task of modulo.tasks) {
     validarTask(task, tiposConhecidos, diagnosticos);
+  }
+
+  const tasksConhecidas = new Set(modulo.tasks.map((task) => task.nome));
+
+  for (const flow of modulo.flows) {
+    validarFlow(flow, tasksConhecidas, diagnosticos);
+  }
+
+  for (const route of modulo.routes) {
+    validarRoute(route, tasksConhecidas, diagnosticos);
+  }
+
+  for (const state of modulo.states) {
+    validarState(state, tiposConhecidos, diagnosticos);
   }
 
   return {

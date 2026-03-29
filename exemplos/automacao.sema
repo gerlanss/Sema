@@ -1,5 +1,15 @@
 module exemplos.automacao {
+  state onboarding_status {
+    fields {
+      lead_id: Id
+      etapa_atual: Texto
+      concluido: Booleano
+    }
+    origem: automacao
+  }
+
   flow onboarding_cliente {
+    task: executar_onboarding
     recebe lead
     valida dados
     cria conta
@@ -42,4 +52,3 @@ module exemplos.automacao {
     }
   }
 }
-
