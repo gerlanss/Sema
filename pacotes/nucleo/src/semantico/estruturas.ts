@@ -1,4 +1,4 @@
-export type TipoExpressaoSemantica = "existe" | "comparacao" | "predicado" | "pertencimento" | "composta";
+export type TipoExpressaoSemantica = "existe" | "comparacao" | "predicado" | "pertencimento" | "composta" | "negacao";
 
 export interface ExpressaoBaseSemantica {
   tipo: TipoExpressaoSemantica;
@@ -36,12 +36,18 @@ export interface ExpressaoCompostaSemantica extends ExpressaoBaseSemantica {
   termos: ExpressaoSemantica[];
 }
 
+export interface ExpressaoNegacaoSemantica extends ExpressaoBaseSemantica {
+  tipo: "negacao";
+  termo: ExpressaoSemantica;
+}
+
 export type ExpressaoSemantica =
   | ExpressaoExisteSemantica
   | ExpressaoComparacaoSemantica
   | ExpressaoPredicadoSemantica
   | ExpressaoPertencimentoSemantica
-  | ExpressaoCompostaSemantica;
+  | ExpressaoCompostaSemantica
+  | ExpressaoNegacaoSemantica;
 
 export interface EfeitoSemantico {
   textoOriginal: string;
@@ -67,25 +73,30 @@ export interface EtapaFlowSemantica {
 const OPERADORES_COMPARACAO = new Set(["==", "!=", ">", ">=", "<", "<="]);
 
 function removerParentesesExternos(texto: string): string {
-  const normalizado = texto.trim();
-  if (!(normalizado.startsWith("(") && normalizado.endsWith(")"))) {
-    return normalizado;
-  }
-
-  let profundidade = 0;
-  for (let indice = 0; indice < normalizado.length; indice += 1) {
-    const caractere = normalizado[indice]!;
-    if (caractere === "(") {
-      profundidade += 1;
-    } else if (caractere === ")") {
-      profundidade -= 1;
-      if (profundidade === 0 && indice < normalizado.length - 1) {
-        return normalizado;
+  let atual = texto.trim();
+  while (atual.startsWith("(") && atual.endsWith(")")) {
+    let profundidade = 0;
+    let removeu = true;
+    for (let indice = 0; indice < atual.length; indice += 1) {
+      const caractere = atual[indice]!;
+      if (caractere === "(") {
+        profundidade += 1;
+      } else if (caractere === ")") {
+        profundidade -= 1;
+        if (profundidade === 0 && indice < atual.length - 1) {
+          removeu = false;
+          break;
+        }
       }
     }
+
+    if (!removeu) {
+      break;
+    }
+    atual = atual.slice(1, -1).trim();
   }
 
-  return normalizado.slice(1, -1).trim();
+  return atual;
 }
 
 function dividirNoNivelRaiz(texto: string, operador: " e " | " ou "): string[] {
@@ -137,6 +148,13 @@ export function parsearExpressaoSemantica(texto: string): ExpressaoSemantica | u
     const termos = partesE.map((parte) => parsearExpressaoSemantica(parte)).filter((parte): parte is ExpressaoSemantica => Boolean(parte));
     return termos.length === partesE.length
       ? { tipo: "composta", textoOriginal: normalizado, operadorLogico: "e", termos }
+      : undefined;
+  }
+
+  if (normalizado.startsWith("nao ")) {
+    const termo = parsearExpressaoSemantica(normalizado.slice("nao ".length).trim());
+    return termo
+      ? { tipo: "negacao", textoOriginal: normalizado, termo }
       : undefined;
   }
 
@@ -278,6 +296,10 @@ export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined 
 export function extrairReferenciasDaExpressao(expressao: ExpressaoSemantica): string[] {
   if (expressao.tipo === "composta") {
     return expressao.termos.flatMap(extrairReferenciasDaExpressao);
+  }
+
+  if (expressao.tipo === "negacao") {
+    return extrairReferenciasDaExpressao(expressao.termo);
   }
 
   const referencias = [expressao.alvo];

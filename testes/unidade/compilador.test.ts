@@ -368,6 +368,48 @@ module exemplo.flow.avancado {
   assert.deepEqual(resultado.ir?.flows[0]?.etapasEstruturadas[1]?.dependencias, ["validar_dados"]);
 });
 
+test("compilador formaliza negacao e agrupamento semantico com parenteses aninhados", () => {
+  const codigo = `
+module exemplo.expressoes.negacao {
+  task validar {
+    input {
+      ativo: Booleano required
+      valor: Decimal required
+      token: Texto
+    }
+    output {
+      aprovado: Booleano
+    }
+    rules {
+      nao ativo == falso
+      nao (token existe e (valor <= 0 ou ativo == falso))
+    }
+    guarantees {
+      nao (aprovado == falso)
+    }
+    tests {
+      caso "ok" {
+        given {
+          ativo: verdadeiro
+          valor: 10
+          token: "abc"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.tasks[0]?.regrasEstruturadas[0]?.tipo, "negacao");
+  assert.equal(resultado.ir?.tasks[0]?.regrasEstruturadas[1]?.tipo, "negacao");
+  assert.equal(resultado.ir?.tasks[0]?.garantiasEstruturadas[0]?.tipo, "negacao");
+});
+
 test("compilador rejeita expressao invalida e transicao fora do enum", () => {
   const codigo = `
 module exemplo.invalido.avancado {
@@ -465,4 +507,40 @@ module exemplo.flow.invalido {
   assert.equal(temErros(resultado.diagnosticos), true);
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM032" || diagnostico.codigo === "SEM034"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM036"));
+});
+
+test("compilador rejeita negacao incompleta e parenteses quebrados", () => {
+  const codigo = `
+module exemplo.expressoes.invalidas {
+  task validar {
+    input {
+      valor: Decimal required
+    }
+    output {
+      aprovado: Booleano
+    }
+    rules {
+      nao
+      nao (valor > 0
+    }
+    guarantees {
+      aprovado existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          valor: 1
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.filter((diagnostico) => diagnostico.codigo === "SEM021").length >= 2);
 });

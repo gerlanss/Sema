@@ -64,6 +64,49 @@ test("geradores refletem contrato executavel de erro e fluxo estruturado", async
   assert.ok(arquivosTsFlow[0]?.conteudo.includes("estruturadas=2"));
 });
 
+test("geradores refletem negacao semantica em TypeScript e Python", () => {
+  const codigo = `
+module exemplo.geracao.negacao {
+  task validar {
+    input {
+      ativo: Booleano required
+      valor: Decimal required
+    }
+    output {
+      aprovado: Booleano
+    }
+    rules {
+      nao (ativo == falso ou valor <= 0)
+    }
+    guarantees {
+      nao (aprovado == falso)
+    }
+    tests {
+      caso "ok" {
+        given {
+          ativo: verdadeiro
+          valor: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosTs = gerarTypeScript(resultado.ir!);
+  const arquivosPy = gerarPython(resultado.ir!);
+
+  assert.ok(arquivosTs[0]?.conteudo.includes("!("));
+  assert.ok(arquivosPy[0]?.conteudo.includes("not ("));
+});
+
 test("cli verifica todos os exemplos em lote", () => {
   const execucao = spawnSync(
     "node",

@@ -44,6 +44,8 @@ function gerarExpressaoTypeScript(expressao: ExpressaoSemantica, camposConhecido
       return "true";
     case "composta":
       return `(${expressao.termos.map((termo) => gerarExpressaoTypeScript(termo, camposConhecidos, variavel)).join(expressao.operadorLogico === "e" ? " && " : " || ")})`;
+    case "negacao":
+      return `(!${gerarExpressaoTypeScript(expressao.termo, camposConhecidos, variavel)})`;
   }
 }
 

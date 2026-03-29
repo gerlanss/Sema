@@ -594,25 +594,6 @@ function validarTask(task: TaskAst, tiposConhecidos: Set<string>, diagnosticos: 
       dicaReferencia: "No MVP atual, guarantees devem referenciar campos do output ou marcadores semanticos permitidos.",
       aceitarMarcadoresSemanticos: true,
     });
-
-    for (const linha of task.guarantees.linhas) {
-      const referenciaSaida = linha.conteudo.split(/[.\s]/)[0];
-      if (
-        referenciaSaida &&
-        !ehMarcadorSemantico(referenciaSaida) &&
-        !saidasConhecidas.has(referenciaSaida)
-      ) {
-        diagnosticos.push(
-          criarDiagnostico(
-            "SEM006",
-            `Garantia "${linha.conteudo}" referencia "${referenciaSaida}", que nao pertence ao output da task "${task.nome}".`,
-            "erro",
-            linha.intervalo,
-            "Garanta que cada linha de guarantees aponte para uma saida declarada ou para um marcador semantico valido.",
-          ),
-        );
-      }
-    }
   }
 
   if (task.error) {

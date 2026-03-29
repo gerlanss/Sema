@@ -54,7 +54,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Diagnosticos estruturados com codigo, mensagem, severidade e contexto
 - `[x]` IR semantica independente de linguagem-alvo
 - `[-]` Gramatica ainda pragmatica e enxuta, com espaco para expressoes mais ricas
-- `[-]` Expressoes compostas com `e`, `ou` e parenteses no nivel inicial do MVP
+- `[-]` Expressoes compostas com `e`, `ou`, `nao` e parenteses no nivel inicial do MVP
 - `[!]` O parser e a gramatica ainda precisam amadurecer para reduzir mais texto livre em `rules`, `effects` e `guarantees`
 
 ## Semantica da Linguagem
@@ -68,7 +68,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Validacao inicial de `state` para estrutura minima e consistencia de tipos
 - `[x]` Resolucao inicial de `use` entre multiplos modulos do mesmo conjunto de compilacao
 - `[x]` Expressoes estruturadas basicas em `rules`, `effects` e `guarantees`
-- `[x]` Expressoes compostas com `e`, `ou` e parenteses para regras e garantias no MVP atual
+- `[x]` Expressoes compostas com `e`, `ou`, `nao` e parenteses para regras e garantias no MVP atual
 - `[x]` `state` com invariantes e transicoes declarativas validadas no MVP
 - `[x]` `flow` com etapas estruturadas, `quando` e `depende_de` validados no MVP
 - `[-]` Semantica profunda de `flow`, `route` e `state`
@@ -156,7 +156,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Testes unitarios cobrindo validacoes iniciais de `flow`, `route` e `state`
 - `[x]` Testes unitarios e de integracao cobrindo `use` entre arquivos vizinhos
 - `[x]` Testes cobrindo expressoes estruturadas e validacao de transicoes em `state`
-- `[x]` Testes cobrindo expressoes compostas, `flow` estruturado e contratos executaveis de erro
+- `[x]` Testes cobrindo expressoes compostas, negacao semantica, `flow` estruturado e contratos executaveis de erro
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `project:check`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida

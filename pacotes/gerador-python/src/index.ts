@@ -46,6 +46,8 @@ function resolverExpressaoPython(expressao: ExpressaoSemantica, camposConhecidos
       return "True";
     case "composta":
       return `(${expressao.termos.map((termo) => resolverExpressaoPython(termo, camposConhecidos, variavel)).join(expressao.operadorLogico === "e" ? " and " : " or ")})`;
+    case "negacao":
+      return `(not ${resolverExpressaoPython(expressao.termo, camposConhecidos, variavel)})`;
   }
 }
 
