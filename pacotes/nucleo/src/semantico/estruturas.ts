@@ -68,6 +68,9 @@ export interface EtapaFlowSemantica {
   task?: string;
   condicao?: ExpressaoSemantica;
   dependencias: string[];
+  mapeamentos: Array<{ campo: string; valor: string }>;
+  emSucesso?: string;
+  emErro?: string;
 }
 
 const OPERADORES_COMPARACAO = new Set(["==", "!=", ">", ">=", "<", "<="]);
@@ -270,16 +273,34 @@ export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined 
 
   const resto = semPrefixo.slice(nome.length).trim();
   const task = resto.match(/\busa\s+([A-Za-z_][A-Za-z0-9_.]*)/)?.[1];
+  const comTexto = resto.match(/\bcom\s+(.+?)(?=\s+(quando|depende_de|em_sucesso|em_erro)\b|$)/)?.[1];
   const dependenciasTexto = resto.match(/\bdepende_de\s+([A-Za-z0-9_.,\s]+)/)?.[1];
   const dependencias = dependenciasTexto
     ? dependenciasTexto.split(",").map((parte) => parte.trim()).filter(Boolean)
     : [];
+  const emSucesso = resto.match(/\bem_sucesso\s+([A-Za-z_][A-Za-z0-9_]*)/)?.[1];
+  const emErro = resto.match(/\bem_erro\s+([A-Za-z_][A-Za-z0-9_]*)/)?.[1];
+  const mapeamentos = (comTexto
+    ? comTexto.split(",").map((parte) => parte.trim()).filter(Boolean)
+    : [])
+    .map((parte) => {
+      const [campo, ...restoValor] = parte.split("=");
+      return {
+        campo: campo?.trim() ?? "",
+        valor: restoValor.join("=").trim(),
+      };
+    })
+    .filter((item) => item.campo && item.valor);
 
   const indiceQuando = resto.indexOf(" quando ");
-  const indiceDepende = resto.indexOf(" depende_de ");
+  const indicesTerminoCondicao = [
+    resto.indexOf(" depende_de "),
+    resto.indexOf(" em_sucesso "),
+    resto.indexOf(" em_erro "),
+  ].filter((indice) => indice !== -1 && indice > indiceQuando);
   let condicao: ExpressaoSemantica | undefined;
   if (indiceQuando !== -1) {
-    const fimCondicao = indiceDepende !== -1 && indiceDepende > indiceQuando ? indiceDepende : resto.length;
+    const fimCondicao = indicesTerminoCondicao.length > 0 ? Math.min(...indicesTerminoCondicao) : resto.length;
     const textoCondicao = resto.slice(indiceQuando + " quando ".length, fimCondicao).trim();
     condicao = parsearExpressaoSemantica(textoCondicao);
   }
@@ -290,6 +311,9 @@ export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined 
     task,
     condicao,
     dependencias,
+    mapeamentos,
+    emSucesso,
+    emErro,
   };
 }
 

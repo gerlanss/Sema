@@ -9,8 +9,11 @@ module exemplos.automacao {
   }
 
   flow onboarding_cliente {
-    etapa receber usa executar_onboarding quando (sucesso existe ou persistencia concluida)
-    etapa auditar depende_de receber
+    lead_id: Id
+    email: Email
+    etapa receber usa executar_onboarding com lead_id=lead_id, email=email quando (sucesso existe ou persistencia concluida) em_sucesso auditar em_erro registrar_falha
+    etapa auditar usa registrar_auditoria com protocolo=receber.protocolo depende_de receber
+    etapa registrar_falha usa registrar_falha_onboarding com lead_id=lead_id depende_de receber
   }
 
   task executar_onboarding {
@@ -40,6 +43,50 @@ module exemplos.automacao {
         given {
           lead_id: "lead_1"
           email: "cliente@empresa.com"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task registrar_auditoria {
+    input {
+      protocolo: Id required
+    }
+    output {
+      auditoria_id: Id
+    }
+    guarantees {
+      auditoria_id existe
+    }
+    tests {
+      caso "auditoria registrada" {
+        given {
+          protocolo: "prot_1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task registrar_falha_onboarding {
+    input {
+      lead_id: Id required
+    }
+    output {
+      protocolo_falha: Id
+    }
+    guarantees {
+      protocolo_falha existe
+    }
+    tests {
+      caso "falha registrada" {
+        given {
+          lead_id: "lead_1"
         }
         expect {
           sucesso: verdadeiro

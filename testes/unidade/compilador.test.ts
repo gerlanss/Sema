@@ -361,9 +361,56 @@ module exemplo.flow.avancado {
     }
   }
 
+  task auditar {
+    input {
+      protocolo: Id required
+    }
+    output {
+      auditoria_id: Id
+    }
+    guarantees {
+      auditoria_id existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          protocolo: "p-1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task falhar {
+    input {
+      valor: Decimal required
+    }
+    output {
+      protocolo_falha: Id
+    }
+    guarantees {
+      protocolo_falha existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          valor: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
   flow pipeline {
-    etapa validar_dados usa validar quando (sucesso existe ou persistencia concluida)
-    etapa auditar depende_de validar_dados
+    valor: Decimal
+    token: Texto
+    etapa validar_dados usa validar com valor=valor, token=token quando (sucesso existe ou persistencia concluida) em_sucesso auditar_log em_erro registrar_falha
+    etapa auditar_log usa auditar com protocolo=validar_dados.protocolo depende_de validar_dados
+    etapa registrar_falha usa falhar com valor=valor depende_de validar_dados
   }
 }
 `;
@@ -371,8 +418,11 @@ module exemplo.flow.avancado {
   const resultado = compilarCodigo(codigo, "memoria.sema");
   assert.equal(temErros(resultado.diagnosticos), false);
   assert.equal(resultado.ir?.tasks[0]?.regrasEstruturadas[0]?.tipo, "composta");
-  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas.length, 2);
+  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas.length, 3);
   assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.task, "validar");
+  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.mapeamentos.length, 2);
+  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.emSucesso, "auditar_log");
+  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.emErro, "registrar_falha");
   assert.deepEqual(resultado.ir?.flows[0]?.etapasEstruturadas[1]?.dependencias, ["validar_dados"]);
 });
 
@@ -503,9 +553,32 @@ module exemplo.flow.invalido {
     }
   }
 
+  task auditar {
+    input {
+      protocolo: Id required
+    }
+    output {
+      auditoria_id: Id
+    }
+    guarantees {
+      auditoria_id existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          protocolo: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
   flow pipeline {
-    etapa quebrada usa task_inexistente quando (valor > 0)
-    etapa auditar depende_de inexistente
+    valor: Decimal
+    etapa quebrada usa task_inexistente com entrada=campo_inexistente quando (valor > 0) em_erro ausente
+    etapa auditar usa auditar com protocolo=quebrada.saida_inexistente depende_de inexistente
     etapa
   }
 }
@@ -515,6 +588,7 @@ module exemplo.flow.invalido {
   assert.equal(temErros(resultado.diagnosticos), true);
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM032" || diagnostico.codigo === "SEM034"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM036"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM042" || diagnostico.codigo === "SEM043" || diagnostico.codigo === "SEM044" || diagnostico.codigo === "SEM045"));
 });
 
 test("compilador rejeita negacao incompleta e parenteses quebrados", () => {

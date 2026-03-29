@@ -63,7 +63,11 @@ test("geradores refletem contrato executavel de erro e fluxo estruturado", async
   const resultadoFlow = compilarCodigo(codigoFlow, caminhoFlow);
   assert.equal(temErros(resultadoFlow.diagnosticos), false);
   const arquivosTsFlow = gerarTypeScript(resultadoFlow.ir!);
-  assert.ok(arquivosTsFlow[0]?.conteudo.includes("estruturadas=2"));
+  const arquivosPyFlow = gerarPython(resultadoFlow.ir!);
+  assert.ok(arquivosTsFlow[0]?.conteudo.includes("estruturadas=3"));
+  assert.ok(arquivosTsFlow[0]?.conteudo.includes("ramificacoes=1"));
+  assert.ok(arquivosTsFlow[0]?.conteudo.includes("mapeamentos=4"));
+  assert.ok(arquivosPyFlow[0]?.conteudo.includes("ramificacoes=1"));
 });
 
 test("geradores refletem negacao semantica em TypeScript e Python", () => {

@@ -71,6 +71,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Expressoes compostas com `e`, `ou`, `nao` e parenteses para regras e garantias no MVP atual
 - `[x]` `state` com invariantes e transicoes declarativas validadas no MVP
 - `[x]` `flow` com etapas estruturadas, `quando` e `depende_de` validados no MVP
+- `[x]` `flow` com mapeamento de contexto por etapa e ramificacao basica de sucesso/erro
 - `[x]` `task` com vinculo explicito a `state` e validacao de transicoes permitidas
 - `[-]` Semantica profunda de `flow`, `route` e `state`
 - `[-]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
@@ -87,6 +88,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Geracao com validacoes estruturadas basicas para regras e garantias
 - `[x]` Geracao inicial de contratos executaveis de erro em TypeScript e Python
 - `[x]` Geracao inicial de rastreabilidade do vinculo `task -> state` nos alvos
+- `[x]` Geracao inicial de rastreabilidade de `flow` com ramificacoes e mapeamentos
 - `[-]` `effects` viram contratos e comentarios, mas ainda nao possuem modelo de execucao mais forte
 - `[-]` `guarantees` ja geram contratos basicos, mas ainda nao cobrem cenarios mais ricos e infraestrutura real
 - `[-]` `error` ja gera classes e cenarios executaveis basicos, mas ainda nao virou modelagem robusta de falhas no codigo final
@@ -121,6 +123,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Exemplos atualizados para exercitar validacoes iniciais de `flow`, `route` e `state`
 - `[x]` Exemplo de pagamento atualizado para exercitar expressoes estruturadas, invariantes e transicoes
 - `[x]` Exemplos atualizados para exercitar `flow` estruturado e contratos executaveis de erro
+- `[x]` Exemplo de automacao atualizado para exercitar contexto entre etapas e ramificacao de erro
 - `[-]` Os exemplos ainda nao exercitam uma semantica profunda de `flow`, `route` e `state`
 
 ## Documentacao
@@ -160,6 +163,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Testes cobrindo expressoes estruturadas e validacao de transicoes em `state`
 - `[x]` Testes cobrindo expressoes compostas, negacao semantica, `flow` estruturado e contratos executaveis de erro
 - `[x]` Testes cobrindo vinculo entre `task` e `state` com rejeicao de transicoes invalidas
+- `[x]` Testes cobrindo `flow` com mapeamento de entrada, saida entre etapas e ramificacao
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `project:check`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida

@@ -60,6 +60,7 @@ Python e TypeScript resolvem partes disso, mas deixam muita coisa espalhada entr
 - expressoes semanticas estruturadas para `rules`, `effects` e `guarantees`
 - expressoes compostas com `e`, `ou`, `nao` e parenteses no MVP atual
 - `flow` com etapas estruturadas, `quando` e `depende_de` no MVP atual
+- `flow` com mapeamento de contexto por etapa e ramificacao basica de sucesso/erro
 - `state` com invariantes e transicoes declarativas no MVP atual
 - `task` com vinculo explicito a `state` e validacao inicial de transicoes permitidas
 - contratos executaveis de erro gerados de forma inicial para TypeScript e Python
@@ -171,7 +172,7 @@ testes/                Testes de unidade e integracao
 
 O projeto esta em MVP funcional. A base do compilador existe, os exemplos obrigatorios foram modelados, os geradores para Python e TypeScript ja produzem esqueletos rastreaveis, e a CLI cobre validacao, AST, IR, compilacao, diagnosticos, teste e verificacao em lote.
 
-No ponto atual, o MVP ja resolve `use` entre modulos vizinhos, formaliza expressoes semanticas basicas e compostas com `e`, `ou`, `nao` e parenteses em `rules`, `effects` e `guarantees`, valida invariantes e transicoes em `state`, entende `flow` estruturado com dependencias, vincula `task` a `state` com transicoes declaradas e gera contratos executaveis iniciais de erro para TypeScript e Python.
+No ponto atual, o MVP ja resolve `use` entre modulos vizinhos, formaliza expressoes semanticas basicas e compostas com `e`, `ou`, `nao` e parenteses em `rules`, `effects` e `guarantees`, valida invariantes e transicoes em `state`, entende `flow` estruturado com dependencias, mapeamento de contexto e ramificacao basica, vincula `task` a `state` com transicoes declaradas e gera contratos executaveis iniciais de erro para TypeScript e Python.
 
 ## Roadmap resumido
 

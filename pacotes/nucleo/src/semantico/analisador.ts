@@ -30,6 +30,7 @@ export interface ContextoSemantico {
   simbolos: Map<string, SimboloSemantico>;
   tiposConhecidos: Set<string>;
   tasksConhecidas: Set<string>;
+  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string> }>;
   statesConhecidos: Map<string, { transicoes: Set<string> }>;
   modulosImportados: string[];
   enumsConhecidos: Map<string, Set<string>>;
@@ -280,7 +281,12 @@ function validarState(
   }
 }
 
-function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: Diagnostico[]): void {
+function validarFlow(
+  flow: FlowAst,
+  tasksConhecidas: Set<string>,
+  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string> }>,
+  diagnosticos: Diagnostico[],
+): void {
   const possuiEtapas = flow.corpo.linhas.length > 0 || flow.corpo.campos.length > 0 || flow.corpo.blocos.length > 0;
   if (!possuiEtapas) {
     diagnosticos.push(
@@ -317,6 +323,8 @@ function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: 
     .filter((item) => item.linha.conteudo.trim().startsWith("etapa "));
 
   const nomesEtapas = new Set<string>();
+  const contextoFlow = new Set(flow.corpo.campos.map((campo) => campo.nome));
+  const etapasValidas = new Map<string, NonNullable<(typeof etapas)[number]["etapa"]>>();
   for (const item of etapas) {
     if (!item.etapa) {
       diagnosticos.push(
@@ -345,6 +353,7 @@ function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: 
     }
 
     nomesEtapas.add(item.etapa.nome);
+    etapasValidas.set(item.etapa.nome, item.etapa);
 
     if (item.etapa.task && !tasksConhecidas.has(item.etapa.task)) {
       diagnosticos.push(
@@ -356,6 +365,58 @@ function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: 
           "Ajuste a task da etapa para apontar para uma task declarada ou importada.",
         ),
       );
+    }
+
+    if (item.etapa.task) {
+      const detalhesTask = tarefasDetalhadas.get(item.etapa.task);
+      if (detalhesTask) {
+        for (const mapeamento of item.etapa.mapeamentos) {
+          if (!detalhesTask.input.has(mapeamento.campo)) {
+            diagnosticos.push(
+              criarDiagnostico(
+                "SEM042",
+                `Etapa "${item.etapa.nome}" do flow "${flow.nome}" mapeia o campo "${mapeamento.campo}", que nao existe no input da task "${item.etapa.task}".`,
+                "erro",
+                item.linha.intervalo,
+                "Use apenas campos declarados no input da task associada a etapa.",
+              ),
+            );
+          }
+
+          const raizValor = extrairRaiz(mapeamento.valor);
+          const ehLiteral = ["verdadeiro", "falso", "nulo"].includes(mapeamento.valor)
+            || /^-?\d+(?:\.\d+)?$/.test(mapeamento.valor)
+            || /^".*"$/.test(mapeamento.valor);
+          if (!ehLiteral && !contextoFlow.has(raizValor) && !nomesEtapas.has(raizValor)) {
+            diagnosticos.push(
+              criarDiagnostico(
+                "SEM043",
+                `Etapa "${item.etapa.nome}" do flow "${flow.nome}" referencia "${mapeamento.valor}" fora do contexto conhecido.`,
+                "erro",
+                item.linha.intervalo,
+                "Mapeie usando campos do proprio flow, saidas de etapas anteriores ou literais simples.",
+              ),
+            );
+          }
+
+          if (mapeamento.valor.includes(".")) {
+            const [etapaOrigem, campoSaida] = mapeamento.valor.split(".", 2);
+            const etapaReferenciada = etapaOrigem ? etapasValidas.get(etapaOrigem) : undefined;
+            const taskReferenciada = etapaReferenciada?.task ? tarefasDetalhadas.get(etapaReferenciada.task) : undefined;
+            if (etapaOrigem && campoSaida && etapaReferenciada && taskReferenciada && !taskReferenciada.output.has(campoSaida)) {
+              diagnosticos.push(
+                criarDiagnostico(
+                  "SEM044",
+                  `Etapa "${item.etapa.nome}" do flow "${flow.nome}" referencia a saida "${campoSaida}" da etapa "${etapaOrigem}", mas essa saida nao existe na task associada.`,
+                  "erro",
+                  item.linha.intervalo,
+                  "Use apenas campos declarados no output da task da etapa de origem.",
+                ),
+              );
+            }
+          }
+        }
+      }
     }
 
     if (item.etapa.condicao) {
@@ -389,6 +450,20 @@ function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: 
             "erro",
             item.linha.intervalo,
             "Declare a etapa dependente no mesmo flow antes de referencia-la.",
+          ),
+        );
+      }
+    }
+
+    for (const destino of [item.etapa.emSucesso, item.etapa.emErro].filter(Boolean)) {
+      if (destino && !nomesEtapas.has(destino)) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM045",
+            `Etapa "${item.etapa.nome}" do flow "${flow.nome}" aponta para "${destino}" em ramificacao, mas essa etapa nao foi declarada.`,
+            "erro",
+            item.linha.intervalo,
+            "Declare a etapa de destino no mesmo flow antes de usa-la em em_sucesso ou em_erro.",
           ),
         );
       }
@@ -550,6 +625,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
+  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string> }>();
   const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const enumsConhecidos = new Map<string, Set<string>>();
 
@@ -577,6 +653,10 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   }
   for (const task of modulo.tasks) {
     registrar(task.nome, "task");
+    tarefasDetalhadas.set(task.nome, {
+      input: new Set((task.input?.campos ?? []).map((campo) => campo.nome)),
+      output: new Set((task.output?.campos ?? []).map((campo) => campo.nome)),
+    });
   }
   for (const flow of modulo.flows) {
     registrar(flow.nome, "flow");
@@ -602,6 +682,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
     simbolos,
     tiposConhecidos,
     tasksConhecidas,
+    tarefasDetalhadas,
     statesConhecidos,
     modulosImportados: [],
     enumsConhecidos,
@@ -750,6 +831,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
+  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string> }>();
   const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const modulosImportados: string[] = [];
   const enumsConhecidos = new Map<string, Set<string>>();
@@ -775,6 +857,12 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     }
     for (const task of contextoImportado.tasksConhecidas) {
       tasksConhecidas.add(task);
+    }
+    for (const [nomeTask, detalhesTask] of contextoImportado.tarefasDetalhadas) {
+      tarefasDetalhadas.set(nomeTask, {
+        input: new Set(detalhesTask.input),
+        output: new Set(detalhesTask.output),
+      });
     }
     for (const [nomeState, metadadosState] of contextoImportado.statesConhecidos) {
       statesConhecidos.set(nomeState, { transicoes: new Set(metadadosState.transicoes) });
@@ -813,6 +901,10 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
   for (const task of modulo.tasks) {
     registrar(task.nome, "task", task.intervalo);
+    tarefasDetalhadas.set(task.nome, {
+      input: new Set((task.input?.campos ?? []).map((campo) => campo.nome)),
+      output: new Set((task.output?.campos ?? []).map((campo) => campo.nome)),
+    });
   }
   for (const flow of modulo.flows) {
     registrar(flow.nome, "flow", flow.intervalo);
@@ -863,7 +955,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
 
   for (const flow of modulo.flows) {
-    validarFlow(flow, tasksConhecidas, diagnosticos);
+    validarFlow(flow, tasksConhecidas, tarefasDetalhadas, diagnosticos);
   }
 
   for (const route of modulo.routes) {
@@ -880,6 +972,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
       simbolos,
       tiposConhecidos,
       tasksConhecidas,
+      tarefasDetalhadas,
       statesConhecidos,
       modulosImportados,
       enumsConhecidos,
