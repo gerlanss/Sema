@@ -25,8 +25,5 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Validar STATUS.md
-        run: npm run status:check
-
-      - name: Executar testes
-        run: npm test
+      - name: Executar verificacao completa do projeto
+        run: npm run project:check

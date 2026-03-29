@@ -7,6 +7,7 @@ O projeto foi desenhado como uma camada acima de Python e TypeScript. A ideia na
 A prioridade de design da Sema e facilitar o entendimento, a transformacao e a operacao correta por IA. A legibilidade humana continua importante, mas entra como consequencia de uma linguagem que explicita intencao, contrato, efeitos e garantias com o minimo de ambiguidade para modelos.
 
 O acompanhamento operacional do que ja foi feito e do que ainda falta esta em [STATUS.md](C:\GitHub\Sema\STATUS.md).
+As regras de colaboracao e o fluxo de contribuicao estao em [CONTRIBUTING.md](C:\GitHub\Sema\CONTRIBUTING.md).
 
 Para sincronizar a data e o commit de referencia do status:
 
@@ -24,6 +25,12 @@ Para preparar uma atualizacao de documentacao e status antes de commitar:
 
 ```bash
 npm run docs:prepare
+```
+
+Para rodar a checagem operacional completa do projeto:
+
+```bash
+npm run project:check
 ```
 
 ## Por que a Sema existe
@@ -112,6 +119,12 @@ node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo typescr
 npm test
 ```
 
+Para fazer a verificacao completa que o projeto usa como fluxo principal de qualidade:
+
+```bash
+npm run project:check
+```
+
 Para validar, compilar e testar todos os exemplos em lote:
 
 ```bash
@@ -123,6 +136,7 @@ O comando imprime um resumo final por modulo e por alvo, incluindo:
 - quantidade de arquivos gerados
 - quantidade de testes executados
 - pasta de saida usada em cada alvo
+- uso recomendado como checagem completa antes de commit ou PR
 
 Para testar um modulo `.sema` gerando codigo temporario:
 
@@ -158,4 +172,3 @@ O projeto esta em MVP funcional. A base do compilador existe, os exemplos obriga
 ## Aviso importante
 
 Este projeto esta em MVP. Ele ja serve como base real para construir a linguagem, mas ainda nao pretende ser uma implementacao final ou completa.
-

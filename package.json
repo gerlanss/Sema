@@ -15,7 +15,8 @@
     "dev:cli": "node scripts/dev-cli.mjs",
     "status:sync": "node scripts/sync-status.mjs",
     "status:check": "node scripts/check-status.mjs",
-    "docs:prepare": "npm run status:sync && npm run status:check"
+    "docs:prepare": "npm run status:sync && npm run status:check",
+    "project:check": "npm run status:check && npm test && node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",

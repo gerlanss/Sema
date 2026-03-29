@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `afeccdc`
+- Ultimo commit de referencia: `bc09ada`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: MVP funcional com compilador base, geradores, CLI, exemplos e verificacao em lote
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
@@ -34,6 +34,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[ ]` Formalizar melhor expressoes em `rules`, `effects` e `guarantees`
 - `[ ]` Evoluir a geracao de erros, efeitos e garantias para contratos mais executaveis
 - `[ ]` Melhorar a saida estruturada para IDE, automacao e IA
+- `[x]` Formalizar o fluxo operacional de contribuicao, checagem e revisao para humanos e Codex
 
 ## Fundacao do Projeto
 
@@ -43,6 +44,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Scripts operacionais `status:sync`, `status:check` e `docs:prepare`
 - `[x]` Repositorio Git criado, commit inicial realizado e remoto privado publicado
 - `[x]` `.gitignore` ajustado para evitar build temporario e artefatos indevidos no versionamento
+- `[x]` Fluxo operacional documentado para contribuicao, PR e execucao pelo Codex
 
 ## Nucleo do Compilador
 
@@ -93,6 +95,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` `sema verificar`
 - `[x]` Resumo final de verificacao por modulo e por alvo
 - `[x]` Scripts auxiliares para manutencao de status e checklist operacional
+- `[x]` Script canonico `project:check` para verificacao completa do projeto
 - `[ ]` `sema formatar`
 - `[ ]` Saida JSON dedicada para o resumo do comando `verificar`
 
@@ -124,9 +127,11 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Comparacao com Python e TypeScript
 - `[x]` Gramatica inicial
 - `[x]` Documento operacional de status
+- `[x]` Guia de contribuicao com fluxo orientado a issue, status, verificacao e PR
 - `[x]` Convencao de ultima atualizacao e commit de referencia
 - `[x]` Secao de sprint em andamento para acompanhamento tatico
 - `[x]` Template de issue para sprint tecnica
+- `[x]` Template de pull request
 - `[x]` `README.md` normalizado para evitar nova bagunca de encoding no trecho corrigido
 - `[x]` Posicionamento explicito de que a linguagem prioriza entendimento por IA
 
@@ -140,7 +145,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Execucao local de testes gerados para Python com `pytest`
 - `[x]` Testes unitarios cobrindo validacoes iniciais de `flow`, `route` e `state`
 - `[x]` Validacao automatizada de `STATUS.md`
-- `[x]` Workflow de CI para `status:check` e `npm test`
+- `[x]` Workflow de CI para `project:check`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida
 
 ## Proximos Passos do MVP
