@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `8f8ac34`
+- Ultimo commit de referencia: `e47512f`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: Fase 2 encerrada, com nucleo semantico operacional estabilizado e Fase 3 aberta
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
