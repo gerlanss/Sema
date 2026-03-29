@@ -57,6 +57,8 @@ test("geradores refletem contrato executavel de erro e fluxo estruturado", async
   assert.ok(arquivosPyErro[0]?.conteudo.includes("acesso_negadoErro"));
   assert.ok(arquivosTsErro[1]?.conteudo.includes("assert.rejects"));
   assert.ok(arquivosPyErro[1]?.conteudo.includes("pytest.raises"));
+  assert.ok(arquivosTsErro[0]?.conteudo.includes("rotas_erro=2"));
+  assert.ok(arquivosPyErro[0]?.conteudo.includes("rotas_erro=2"));
 
   const caminhoFlow = path.resolve("exemplos/automacao.sema");
   const codigoFlow = await readFile(caminhoFlow, "utf8");

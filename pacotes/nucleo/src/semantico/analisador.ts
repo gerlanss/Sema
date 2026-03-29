@@ -30,7 +30,7 @@ export interface ContextoSemantico {
   simbolos: Map<string, SimboloSemantico>;
   tiposConhecidos: Set<string>;
   tasksConhecidas: Set<string>;
-  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string> }>;
+  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>;
   statesConhecidos: Map<string, { transicoes: Set<string> }>;
   modulosImportados: string[];
   enumsConhecidos: Map<string, Set<string>>;
@@ -284,7 +284,7 @@ function validarState(
 function validarFlow(
   flow: FlowAst,
   tasksConhecidas: Set<string>,
-  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string> }>,
+  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>,
   diagnosticos: Diagnostico[],
 ): void {
   const possuiEtapas = flow.corpo.linhas.length > 0 || flow.corpo.campos.length > 0 || flow.corpo.blocos.length > 0;
@@ -468,6 +468,35 @@ function validarFlow(
         );
       }
     }
+
+    if (item.etapa.task) {
+      const detalhesTask = tarefasDetalhadas.get(item.etapa.task);
+      for (const rotaErro of item.etapa.porErro) {
+        if (!detalhesTask?.errors.has(rotaErro.tipo)) {
+          diagnosticos.push(
+            criarDiagnostico(
+              "SEM046",
+              `Etapa "${item.etapa.nome}" do flow "${flow.nome}" roteia o erro "${rotaErro.tipo}", mas esse erro nao pertence ao contrato da task "${item.etapa.task}".`,
+              "erro",
+              item.linha.intervalo,
+              "Use apenas erros declarados pela task ou cobertos por testes de erro do contrato atual.",
+            ),
+          );
+        }
+
+        if (!nomesEtapas.has(rotaErro.destino)) {
+          diagnosticos.push(
+            criarDiagnostico(
+              "SEM047",
+              `Etapa "${item.etapa.nome}" do flow "${flow.nome}" aponta o erro "${rotaErro.tipo}" para "${rotaErro.destino}", mas essa etapa nao foi declarada.`,
+              "erro",
+              item.linha.intervalo,
+              "Declare a etapa de destino no mesmo flow antes de usa-la em por_erro.",
+            ),
+          );
+        }
+      }
+    }
   }
 }
 
@@ -625,7 +654,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
-  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string> }>();
+  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>();
   const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const enumsConhecidos = new Map<string, Set<string>>();
 
@@ -656,6 +685,13 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
     tarefasDetalhadas.set(task.nome, {
       input: new Set((task.input?.campos ?? []).map((campo) => campo.nome)),
       output: new Set((task.output?.campos ?? []).map((campo) => campo.nome)),
+      errors: new Set([
+        ...(task.error?.campos ?? []).map((campo) => campo.nome),
+        ...(task.tests?.blocos
+          .filter((bloco): bloco is BlocoCasoTesteAst => bloco.tipo === "caso_teste")
+          .flatMap((bloco) => bloco.error?.campos.find((campo) => campo.nome === "tipo")?.valor ? [bloco.error.campos.find((campo) => campo.nome === "tipo")!.valor] : [])
+          ?? []),
+      ]),
     });
   }
   for (const flow of modulo.flows) {
@@ -831,7 +867,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
-  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string> }>();
+  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>();
   const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const modulosImportados: string[] = [];
   const enumsConhecidos = new Map<string, Set<string>>();
@@ -862,6 +898,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
       tarefasDetalhadas.set(nomeTask, {
         input: new Set(detalhesTask.input),
         output: new Set(detalhesTask.output),
+        errors: new Set(detalhesTask.errors),
       });
     }
     for (const [nomeState, metadadosState] of contextoImportado.statesConhecidos) {
@@ -904,6 +941,13 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     tarefasDetalhadas.set(task.nome, {
       input: new Set((task.input?.campos ?? []).map((campo) => campo.nome)),
       output: new Set((task.output?.campos ?? []).map((campo) => campo.nome)),
+      errors: new Set([
+        ...(task.error?.campos ?? []).map((campo) => campo.nome),
+        ...(task.tests?.blocos
+          .filter((bloco): bloco is BlocoCasoTesteAst => bloco.tipo === "caso_teste")
+          .flatMap((bloco) => bloco.error?.campos.find((campo) => campo.nome === "tipo")?.valor ? [bloco.error.campos.find((campo) => campo.nome === "tipo")!.valor] : [])
+          ?? []),
+      ]),
     });
   }
   for (const flow of modulo.flows) {

@@ -71,6 +71,7 @@ export interface EtapaFlowSemantica {
   mapeamentos: Array<{ campo: string; valor: string }>;
   emSucesso?: string;
   emErro?: string;
+  porErro: Array<{ tipo: string; destino: string }>;
 }
 
 const OPERADORES_COMPARACAO = new Set(["==", "!=", ">", ">=", "<", "<="]);
@@ -280,6 +281,7 @@ export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined 
     : [];
   const emSucesso = resto.match(/\bem_sucesso\s+([A-Za-z_][A-Za-z0-9_]*)/)?.[1];
   const emErro = resto.match(/\bem_erro\s+([A-Za-z_][A-Za-z0-9_]*)/)?.[1];
+  const porErroTexto = resto.match(/\bpor_erro\s+(.+?)(?=\s+(quando|depende_de|em_sucesso|em_erro)\b|$)/)?.[1];
   const mapeamentos = (comTexto
     ? comTexto.split(",").map((parte) => parte.trim()).filter(Boolean)
     : [])
@@ -291,12 +293,24 @@ export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined 
       };
     })
     .filter((item) => item.campo && item.valor);
+  const porErro = (porErroTexto
+    ? porErroTexto.split(",").map((parte) => parte.trim()).filter(Boolean)
+    : [])
+    .map((parte) => {
+      const [tipo, ...restoDestino] = parte.split("=");
+      return {
+        tipo: tipo?.trim() ?? "",
+        destino: restoDestino.join("=").trim(),
+      };
+    })
+    .filter((item) => item.tipo && item.destino);
 
   const indiceQuando = resto.indexOf(" quando ");
   const indicesTerminoCondicao = [
     resto.indexOf(" depende_de "),
     resto.indexOf(" em_sucesso "),
     resto.indexOf(" em_erro "),
+    resto.indexOf(" por_erro "),
   ].filter((indice) => indice !== -1 && indice > indiceQuando);
   let condicao: ExpressaoSemantica | undefined;
   if (indiceQuando !== -1) {
@@ -314,6 +328,7 @@ export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined 
     mapeamentos,
     emSucesso,
     emErro,
+    porErro,
   };
 }
 

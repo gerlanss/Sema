@@ -591,6 +591,163 @@ module exemplo.flow.invalido {
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM042" || diagnostico.codigo === "SEM043" || diagnostico.codigo === "SEM044" || diagnostico.codigo === "SEM045"));
 });
 
+test("compilador valida flow com roteamento por tipo de erro", () => {
+  const codigo = `
+module exemplo.flow.erro {
+  task principal {
+    input {
+      chave: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      acesso_negado: "sem permissao"
+      recurso_indisponivel: "fora do ar"
+    }
+    tests {
+      caso "falha por acesso" {
+        given {
+          chave: "negada"
+        }
+        expect {
+          sucesso: falso
+        }
+        error {
+          tipo: "acesso_negado"
+        }
+      }
+    }
+  }
+
+  task tratar_acesso {
+    input {
+      chave: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          chave: "negada"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task registrar {
+    input {
+      chave: Texto required
+    }
+    output {
+      auditoria_id: Id
+    }
+    guarantees {
+      auditoria_id existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          chave: "negada"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task concluir {
+    input {
+      protocolo: Id required
+    }
+    output {
+      registro_id: Id
+    }
+    guarantees {
+      registro_id existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          protocolo: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow resposta {
+    chave: Texto
+    etapa tentar usa principal com chave=chave em_sucesso concluir_fluxo em_erro registrar_falha por_erro acesso_negado=tratar_acesso_negado, recurso_indisponivel=registrar_falha
+    etapa tratar_acesso_negado usa tratar_acesso com chave=chave depende_de tentar
+    etapa registrar_falha usa registrar com chave=chave depende_de tentar
+    etapa concluir_fluxo usa concluir com protocolo=tentar.protocolo depende_de tentar
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.porErro.length, 2);
+});
+
+test("compilador rejeita flow com roteamento para erro inexistente", () => {
+  const codigo = `
+module exemplo.flow.erro.invalido {
+  task principal {
+    input {
+      chave: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      acesso_negado: "sem permissao"
+    }
+    tests {
+      caso "falha" {
+        given {
+          chave: "negada"
+        }
+        expect {
+          sucesso: falso
+        }
+        error {
+          tipo: "acesso_negado"
+        }
+      }
+    }
+  }
+
+  flow resposta {
+    chave: Texto
+    etapa tentar usa principal com chave=chave por_erro timeout_gateway=destino_inexistente
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM046"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM047"));
+});
+
 test("compilador rejeita negacao incompleta e parenteses quebrados", () => {
   const codigo = `
 module exemplo.expressoes.invalidas {
