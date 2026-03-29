@@ -30,6 +30,7 @@ export interface ContextoSemantico {
   simbolos: Map<string, SimboloSemantico>;
   tiposConhecidos: Set<string>;
   tasksConhecidas: Set<string>;
+  statesConhecidos: Map<string, { transicoes: Set<string> }>;
   modulosImportados: string[];
   enumsConhecidos: Map<string, Set<string>>;
 }
@@ -107,6 +108,10 @@ function validarCamposDeTipos(
 
 function localizarBloco(corpo: BlocoGenericoAst, nome: string): BlocoGenericoAst | undefined {
   return corpo.blocos.find((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === nome);
+}
+
+function serializarTransicao(origem: string, destino: string): string {
+  return `${origem}->${destino}`;
 }
 
 function validarExpressoesDeclaradas(
@@ -391,6 +396,87 @@ function validarFlow(flow: FlowAst, tasksConhecidas: Set<string>, diagnosticos: 
   }
 }
 
+function validarVinculoEstadoDaTask(
+  task: TaskAst,
+  statesConhecidos: Map<string, { transicoes: Set<string> }>,
+  diagnosticos: Diagnostico[],
+): void {
+  if (!task.state) {
+    return;
+  }
+
+  const nomeEstado = task.state.nome ?? task.state.campos.find((campo) => campo.nome === "state" || campo.nome === "estado")?.valor;
+  if (!nomeEstado) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM037",
+        `Task "${task.nome}" declarou state sem indicar qual estado ela governa.`,
+        "erro",
+        task.state.intervalo,
+        "Use \"state nome_do_estado { ... }\" ou declare \"estado: nome_do_estado\" dentro do bloco state da task.",
+      ),
+    );
+    return;
+  }
+
+  const estadoConhecido = statesConhecidos.get(nomeEstado);
+  if (!estadoConhecido) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM038",
+        `Task "${task.nome}" referencia state "${nomeEstado}", mas esse state nao foi encontrado.`,
+        "erro",
+        task.state.intervalo,
+        "Declare o state no mesmo modulo ou importe um modulo que exponha esse state.",
+      ),
+    );
+    return;
+  }
+
+  const blocoTransitions = localizarBloco(task.state, "transitions");
+  const linhasTransicao = blocoTransitions?.linhas ?? task.state.linhas;
+  if (linhasTransicao.length === 0) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM039",
+        `Task "${task.nome}" referencia state "${nomeEstado}" sem declarar transicoes.`,
+        "erro",
+        task.state.intervalo,
+        "Declare ao menos uma transicao para explicitar como a task altera o estado.",
+      ),
+    );
+    return;
+  }
+
+  for (const linha of linhasTransicao) {
+    const transicao = parsearTransicaoEstado(linha.conteudo);
+    if (!transicao) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM040",
+          `Task "${task.nome}" declarou uma transicao invalida no state "${nomeEstado}": "${linha.conteudo}".`,
+          "erro",
+          linha.intervalo,
+          "Use o formato \"ORIGEM -> DESTINO\" dentro do bloco transitions da task.",
+        ),
+      );
+      continue;
+    }
+
+    if (!estadoConhecido.transicoes.has(serializarTransicao(transicao.origem, transicao.destino))) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM041",
+          `Task "${task.nome}" declarou a transicao "${transicao.origem} -> ${transicao.destino}" fora do contrato do state "${nomeEstado}".`,
+          "erro",
+          linha.intervalo,
+          "Use apenas transicoes declaradas no state associado a task.",
+        ),
+      );
+    }
+  }
+}
+
 function validarRoute(route: RouteAst, tasksConhecidas: Set<string>, diagnosticos: Diagnostico[]): void {
   const metodo = route.corpo.campos.find((campo) => campo.nome === "metodo");
   const caminho = route.corpo.campos.find((campo) => campo.nome === "caminho");
@@ -464,6 +550,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
+  const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const enumsConhecidos = new Map<string, Set<string>>();
 
   const registrar = (nome: string, categoria: SimboloSemantico["categoria"]): void => {
@@ -500,6 +587,13 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   for (const state of modulo.states) {
     if (state.nome) {
       registrar(state.nome, "state");
+      const transicoes = new Set(
+        (localizarBloco(state.corpo, "transitions")?.linhas ?? [])
+          .map((linha) => parsearTransicaoEstado(linha.conteudo))
+          .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha))
+          .map((linha) => serializarTransicao(linha.origem, linha.destino)),
+      );
+      statesConhecidos.set(state.nome, { transicoes });
     }
   }
 
@@ -508,12 +602,18 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
     simbolos,
     tiposConhecidos,
     tasksConhecidas,
+    statesConhecidos,
     modulosImportados: [],
     enumsConhecidos,
   };
 }
 
-function validarTask(task: TaskAst, tiposConhecidos: Set<string>, diagnosticos: Diagnostico[]): void {
+function validarTask(
+  task: TaskAst,
+  tiposConhecidos: Set<string>,
+  statesConhecidos: Map<string, { transicoes: Set<string> }>,
+  diagnosticos: Diagnostico[],
+): void {
   if (!task.input) {
     diagnosticos.push(
       criarDiagnostico(
@@ -618,6 +718,8 @@ function validarTask(task: TaskAst, tiposConhecidos: Set<string>, diagnosticos: 
       ),
     );
   }
+
+  validarVinculoEstadoDaTask(task, statesConhecidos, diagnosticos);
 }
 
 function validarCasoTeste(task: TaskAst, caso: BlocoCasoTesteAst, diagnosticos: Diagnostico[]): void {
@@ -648,6 +750,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
+  const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const modulosImportados: string[] = [];
   const enumsConhecidos = new Map<string, Set<string>>();
 
@@ -672,6 +775,9 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     }
     for (const task of contextoImportado.tasksConhecidas) {
       tasksConhecidas.add(task);
+    }
+    for (const [nomeState, metadadosState] of contextoImportado.statesConhecidos) {
+      statesConhecidos.set(nomeState, { transicoes: new Set(metadadosState.transicoes) });
     }
     for (const [nomeEnum, valores] of contextoImportado.enumsConhecidos) {
       enumsConhecidos.set(nomeEnum, new Set(valores));
@@ -717,6 +823,13 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   for (const state of modulo.states) {
     if (state.nome) {
       registrar(state.nome, "state", state.intervalo);
+      const transicoes = new Set(
+        (localizarBloco(state.corpo, "transitions")?.linhas ?? [])
+          .map((linha) => parsearTransicaoEstado(linha.conteudo))
+          .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha))
+          .map((linha) => serializarTransicao(linha.origem, linha.destino)),
+      );
+      statesConhecidos.set(state.nome, { transicoes });
     }
   }
 
@@ -746,7 +859,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
 
   for (const task of modulo.tasks) {
-    validarTask(task, tiposConhecidos, diagnosticos);
+    validarTask(task, tiposConhecidos, statesConhecidos, diagnosticos);
   }
 
   for (const flow of modulo.flows) {
@@ -767,6 +880,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
       simbolos,
       tiposConhecidos,
       tasksConhecidas,
+      statesConhecidos,
       modulosImportados,
       enumsConhecidos,
     },

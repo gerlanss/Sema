@@ -296,6 +296,12 @@ module exemplo.pagamento.avancado {
       consulta gateway
       registra auditoria
     }
+    state ciclo_pagamento {
+      transitions {
+        PENDENTE -> AUTORIZADO
+        AUTORIZADO -> PROCESSADO
+      }
+    }
     guarantees {
       status em [AUTORIZADO, PROCESSADO]
     }
@@ -319,6 +325,8 @@ module exemplo.pagamento.avancado {
   assert.equal(resultado.ir?.tasks[0]?.regrasEstruturadas.length, 3);
   assert.equal(resultado.ir?.tasks[0]?.efeitosEstruturados.length, 2);
   assert.equal(resultado.ir?.tasks[0]?.garantiasEstruturadas.length, 1);
+  assert.equal(resultado.ir?.tasks[0]?.stateContract?.nomeEstado, "ciclo_pagamento");
+  assert.equal(resultado.ir?.tasks[0]?.stateContract?.transicoes.length, 2);
   assert.equal(resultado.ir?.states[0]?.invariantes.length, 2);
   assert.equal(resultado.ir?.states[0]?.transicoes.length, 3);
 });
@@ -543,4 +551,56 @@ module exemplo.expressoes.invalidas {
   const resultado = compilarCodigo(codigo, "memoria.sema");
   assert.equal(temErros(resultado.diagnosticos), true);
   assert.ok(resultado.diagnosticos.filter((diagnostico) => diagnostico.codigo === "SEM021").length >= 2);
+});
+
+test("compilador rejeita task com transicao fora do contrato do state", () => {
+  const codigo = `
+module exemplo.state.task.invalido {
+  enum StatusPedido {
+    ABERTO,
+    PAGO,
+    CANCELADO
+  }
+
+  state ciclo_pedido {
+    fields {
+      status: StatusPedido
+    }
+    transitions {
+      ABERTO -> PAGO
+    }
+  }
+
+  task cancelar {
+    input {
+      id: Id required
+    }
+    output {
+      status: StatusPedido
+    }
+    state ciclo_pedido {
+      transitions {
+        ABERTO -> CANCELADO
+      }
+    }
+    guarantees {
+      status existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM041"));
 });

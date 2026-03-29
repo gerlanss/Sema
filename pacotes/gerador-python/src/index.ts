@@ -206,6 +206,7 @@ ${validacoes || "    pass"}
 def executar_${nome}(entrada: ${task.nome}Entrada) -> ${task.nome}Saida:
     validar_${nome}(entrada)
 ${cenariosErro.map((caso) => `    if vars(entrada) == ${caso.entrada}:\n        raise ${task.nome}_${caso.tipoErro}Erro()`).join("\n")}
+${task.stateContract ? `    # Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n    # Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
 ${efeitos}
 ${gerarPreparacaoSaida(task)}
 ${garantias}

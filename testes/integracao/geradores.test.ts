@@ -38,8 +38,10 @@ test("geradores refletem estruturas semanticas mais ricas no exemplo de pagament
 
   assert.ok(arquivosTs[0]?.conteudo.includes("Regra violada"));
   assert.ok(arquivosTs[0]?.conteudo.includes("Garantia violada"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("Vinculo de estado: ciclo_pagamento"));
   assert.ok(arquivosTs[0]?.conteudo.includes("transicoes=3"));
   assert.ok(arquivosPy[0]?.conteudo.includes("Efeito estruturado"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("Vinculo de estado: ciclo_pagamento"));
   assert.ok(arquivosPy[0]?.conteudo.includes("Garantia violada"));
 });
 

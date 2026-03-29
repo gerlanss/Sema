@@ -71,6 +71,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Expressoes compostas com `e`, `ou`, `nao` e parenteses para regras e garantias no MVP atual
 - `[x]` `state` com invariantes e transicoes declarativas validadas no MVP
 - `[x]` `flow` com etapas estruturadas, `quando` e `depende_de` validados no MVP
+- `[x]` `task` com vinculo explicito a `state` e validacao de transicoes permitidas
 - `[-]` Semantica profunda de `flow`, `route` e `state`
 - `[-]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
 - `[-]` Garantias, erros e efeitos ja possuem estrutura basica, com erros executaveis iniciais nos geradores
@@ -85,6 +86,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Saida deterministica suficiente para o MVP atual
 - `[x]` Geracao com validacoes estruturadas basicas para regras e garantias
 - `[x]` Geracao inicial de contratos executaveis de erro em TypeScript e Python
+- `[x]` Geracao inicial de rastreabilidade do vinculo `task -> state` nos alvos
 - `[-]` `effects` viram contratos e comentarios, mas ainda nao possuem modelo de execucao mais forte
 - `[-]` `guarantees` ja geram contratos basicos, mas ainda nao cobrem cenarios mais ricos e infraestrutura real
 - `[-]` `error` ja gera classes e cenarios executaveis basicos, mas ainda nao virou modelagem robusta de falhas no codigo final
@@ -157,6 +159,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Testes unitarios e de integracao cobrindo `use` entre arquivos vizinhos
 - `[x]` Testes cobrindo expressoes estruturadas e validacao de transicoes em `state`
 - `[x]` Testes cobrindo expressoes compostas, negacao semantica, `flow` estruturado e contratos executaveis de erro
+- `[x]` Testes cobrindo vinculo entre `task` e `state` com rejeicao de transicoes invalidas
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `project:check`
 - `[-]` A cobertura atual valida bem o MVP, mas ainda nao protege cenarios mais avancados de multiplos modulos e semantica expandida

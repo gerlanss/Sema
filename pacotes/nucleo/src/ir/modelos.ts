@@ -46,7 +46,15 @@ export interface IrTask {
   guarantees: string[];
   garantiasEstruturadas: ExpressaoSemantica[];
   errors: Record<string, string>;
+  stateContract?: IrTaskStateContract;
   tests: IrCasoTeste[];
+}
+
+export interface IrTaskStateContract {
+  nomeEstado?: string;
+  campos: IrCampo[];
+  linhas: string[];
+  transicoes: TransicaoEstadoSemantica[];
 }
 
 export interface IrFlow {

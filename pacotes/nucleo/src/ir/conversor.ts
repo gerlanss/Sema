@@ -68,6 +68,14 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
     guarantees: task.guarantees?.linhas.map((linha) => linha.conteudo) ?? [],
     garantiasEstruturadas: (task.guarantees?.linhas ?? []).map((linha) => parsearExpressaoSemantica(linha.conteudo)).filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
     errors: Object.fromEntries((task.error?.campos ?? []).map((campo) => [campo.nome, [campo.valor, ...campo.modificadores].join(" ").trim()])),
+    stateContract: task.state ? {
+      nomeEstado: task.state.nome ?? task.state.campos.find((campo) => campo.nome === "state" || campo.nome === "estado")?.valor,
+      campos: converterCampos(task.state),
+      linhas: task.state.linhas.map((linha) => linha.conteudo),
+      transicoes: (encontrarSubBloco(task.state, "transitions")?.linhas ?? task.state.linhas)
+        .map((linha) => parsearTransicaoEstado(linha.conteudo))
+        .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
+    } : undefined,
     tests: (task.tests?.blocos.filter((bloco): bloco is BlocoCasoTesteAst => bloco.tipo === "caso_teste") ?? []).map(converterCaso),
   }));
 
