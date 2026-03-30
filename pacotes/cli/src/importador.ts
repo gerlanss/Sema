@@ -9,7 +9,12 @@ import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
 import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
 import { extrairParametrosCaminhoFlask, extrairRotasFlaskDecoradas } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
-import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
+import {
+  extrairRotasTypeScriptHttp,
+  inferirSemanticaHandlerTypeScriptHttp,
+  localizarExportacaoTypeScriptHttp,
+  type CampoInferidoTypeScriptHttp,
+} from "./typescript-http.js";
 
 export type FonteImportacao =
   | "nestjs"
@@ -157,6 +162,35 @@ const DIRETORIOS_IGNORADOS = new Set([
 ]);
 
 const SUFIXOS_WRAPPER = ["Entrada", "Saida", "Dto", "Request", "Response", "Payload", "Body", "Input", "Output"];
+const NOMES_RESERVADOS_CAMPO = new Set([
+  "module",
+  "use",
+  "type",
+  "entity",
+  "enum",
+  "task",
+  "input",
+  "output",
+  "rules",
+  "effects",
+  "impl",
+  "guarantees",
+  "state",
+  "flow",
+  "route",
+  "tests",
+  "error",
+  "docs",
+  "comments",
+  "fields",
+  "invariants",
+  "transitions",
+  "given",
+  "when",
+  "expect",
+  "caso",
+  "required",
+]);
 
 function escaparTexto(texto: string): string {
   return texto.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -173,6 +207,13 @@ function paraSnakeCase(valor: string): string {
 
 function paraIdentificadorModulo(valor: string): string {
   return normalizarSegmentoModulo(valor).replace(/_+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
+}
+
+function normalizarNomeCampoImportado(valor: string): string {
+  const normalizado = paraSnakeCase(valor);
+  return NOMES_RESERVADOS_CAMPO.has(normalizado)
+    ? `${normalizado}_campo`
+    : normalizado;
 }
 
 function nomeProjetoPadrao(diretorio: string): string {
@@ -398,7 +439,7 @@ function camposDeParametrosRotaBackend(
   parametros: Array<{ nome: string; tipoSema: "Texto" | "Inteiro" | "Decimal" | "Id" }>,
 ): CampoImportado[] {
   return parametros.map((parametro) => ({
-    nome: paraSnakeCase(parametro.nome),
+    nome: normalizarNomeCampoImportado(parametro.nome),
     tipo: parametro.tipoSema,
     obrigatorio: true,
   }));
@@ -577,7 +618,7 @@ function expandirCamposTs(
   obrigatorio: boolean,
 ): CampoImportado[] {
   if (!tipoTexto) {
-    return [{ nome: paraSnakeCase(nomeParametro), tipo: "Json", obrigatorio }];
+    return [{ nome: normalizarNomeCampoImportado(nomeParametro), tipo: "Json", obrigatorio }];
   }
 
   const limpo = tipoTexto
@@ -592,14 +633,14 @@ function expandirCamposTs(
   const descoberto = tipos.get(limpo);
   if (descoberto?.tipo === "objeto" && pareceWrapperTipo(descoberto.nome)) {
     return descoberto.campos.map((campo) => ({
-      nome: paraSnakeCase(campo.nome),
+      nome: normalizarNomeCampoImportado(campo.nome),
       tipo: mapearTipoTsParaSema(campo.tipoTexto, tipos, entidadesReferenciadas, enumsReferenciados),
       obrigatorio: campo.obrigatorio,
     }));
   }
 
   return [{
-    nome: paraSnakeCase(nomeParametro),
+    nome: normalizarNomeCampoImportado(nomeParametro),
     tipo: mapearTipoTsParaSema(tipoTexto, tipos, entidadesReferenciadas, enumsReferenciados),
     obrigatorio,
   }];
@@ -625,14 +666,14 @@ function criarEntidadesReferenciadas(
       continue;
     }
 
-    const entidade: EntidadeImportada = {
-      nome: tipo.nome,
-      campos: tipo.campos.map((campo) => ({
-        nome: paraSnakeCase(campo.nome),
-        tipo: mapearTipoTsParaSema(campo.tipoTexto, tipos, entidadesReferenciadas, enumsReferenciados),
-        obrigatorio: campo.obrigatorio,
-      })),
-    };
+      const entidade: EntidadeImportada = {
+        nome: tipo.nome,
+        campos: tipo.campos.map((campo) => ({
+          nome: normalizarNomeCampoImportado(campo.nome),
+          tipo: mapearTipoTsParaSema(campo.tipoTexto, tipos, entidadesReferenciadas, enumsReferenciados),
+          obrigatorio: campo.obrigatorio,
+        })),
+      };
     entities.push(entidade);
 
     for (const referenciado of entidadesReferenciadas) {
@@ -660,38 +701,102 @@ function caminhoImplTs(diretorioBase: string, arquivo: string, simbolo: string):
   return [...segmentos, simbolo].join(".");
 }
 
-function localizarExportacaoTypeScript(
-  sourceFile: ts.SourceFile,
-  nomeExportado: string,
-): { corpo?: ts.Block; retorno?: string; parametros: readonly ts.ParameterDeclaration[] } | undefined {
-  for (const node of sourceFile.statements) {
-    if (ts.isFunctionDeclaration(node) && node.name?.text === nomeExportado && node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
-      return {
-        corpo: node.body,
-        retorno: node.type?.getText(sourceFile),
-        parametros: node.parameters,
-      };
-    }
+function mapearCampoInferidoTypeScriptHttp(
+  campo: CampoInferidoTypeScriptHttp,
+  tipos: Map<string, TipoDescoberto>,
+  entidadesReferenciadas: Set<string>,
+  enumsReferenciados: Set<string>,
+): CampoImportado {
+  const tipoBasico = campo.tipoTexto ? mapearTipoPrimitivo(campo.tipoTexto) : "Json";
+  return {
+    nome: paraSnakeCase(campo.nome),
+    tipo: ["Texto", "Decimal", "Inteiro", "Booleano", "Data", "DataHora", "Id", "Json", "Vazio"].includes(tipoBasico)
+      ? tipoBasico
+      : campo.tipoTexto
+        ? mapearTipoTsParaSema(campo.tipoTexto, tipos, entidadesReferenciadas, enumsReferenciados)
+        : "Json",
+    obrigatorio: campo.obrigatorio,
+  };
+}
 
-    if (!ts.isVariableStatement(node) || !node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
-      continue;
-    }
+function camposDeSemanticaTypeScriptHttp(
+  campos: CampoInferidoTypeScriptHttp[],
+  tipos: Map<string, TipoDescoberto>,
+  entidadesReferenciadas: Set<string>,
+  enumsReferenciados: Set<string>,
+): CampoImportado[] {
+  return campos.map((campo) => mapearCampoInferidoTypeScriptHttp(campo, tipos, entidadesReferenciadas, enumsReferenciados));
+}
 
-    for (const declaracao of node.declarationList.declarations) {
-      if (!ts.isIdentifier(declaracao.name) || declaracao.name.text !== nomeExportado || !declaracao.initializer) {
-        continue;
-      }
-      if (ts.isArrowFunction(declaracao.initializer) || ts.isFunctionExpression(declaracao.initializer)) {
-        return {
-          corpo: ts.isBlock(declaracao.initializer.body) ? declaracao.initializer.body : undefined,
-          retorno: declaracao.initializer.type?.getText(sourceFile),
-          parametros: declaracao.initializer.parameters,
-        };
-      }
+function errosPorStatusHttp(statuses: number[]): ErroImportado[] {
+  return [...new Set(statuses)].map((status) => {
+    switch (status) {
+      case 401:
+        return { nome: "nao_autorizado", mensagem: "Falha HTTP importada automaticamente com status 401." };
+      case 403:
+        return { nome: "acesso_negado", mensagem: "Falha HTTP importada automaticamente com status 403." };
+      case 404:
+        return { nome: "nao_encontrado", mensagem: "Falha HTTP importada automaticamente com status 404." };
+      case 409:
+        return { nome: "conflito", mensagem: "Falha HTTP importada automaticamente com status 409." };
+      case 422:
+        return { nome: "entrada_invalida", mensagem: "Falha HTTP importada automaticamente com status 422." };
+      case 500:
+        return { nome: "erro_interno", mensagem: "Falha HTTP importada automaticamente com status 500." };
+      default:
+        return { nome: `erro_http_${status}`, mensagem: `Falha HTTP importada automaticamente com status ${status}.` };
     }
+  });
+}
+
+function resolverEscopoImportacaoNextJs(diretorioEntrada: string): { baseProjeto: string; diretorioEscopo: string } {
+  const resolvido = path.resolve(diretorioEntrada);
+  const partes = path.parse(resolvido);
+  const relativoSemRaiz = resolvido.slice(partes.root.length);
+  const segmentos = relativoSemRaiz.split(path.sep).filter(Boolean);
+  const procurarSequencia = (sequencia: string[]): number =>
+    segmentos.findIndex((segmento, indice) => sequencia.every((item, deslocamento) => segmentos[indice + deslocamento]?.toLowerCase() === item));
+  const montarBase = (indice: number) =>
+    indice <= 0
+      ? partes.root
+      : path.join(partes.root, ...segmentos.slice(0, indice));
+
+  const indiceSrcAppApi = procurarSequencia(["src", "app", "api"]);
+  if (indiceSrcAppApi >= 0) {
+    return {
+      baseProjeto: montarBase(indiceSrcAppApi),
+      diretorioEscopo: resolvido,
+    };
   }
 
-  return undefined;
+  const indiceAppApi = procurarSequencia(["app", "api"]);
+  if (indiceAppApi >= 0) {
+    return {
+      baseProjeto: montarBase(indiceAppApi),
+      diretorioEscopo: resolvido,
+    };
+  }
+
+  const indiceSrcApp = procurarSequencia(["src", "app"]);
+  if (indiceSrcApp >= 0) {
+    return {
+      baseProjeto: montarBase(indiceSrcApp),
+      diretorioEscopo: resolvido,
+    };
+  }
+
+  const indiceApp = procurarSequencia(["app"]);
+  if (indiceApp >= 0) {
+    return {
+      baseProjeto: montarBase(indiceApp),
+      diretorioEscopo: resolvido,
+    };
+  }
+
+  return {
+    baseProjeto: resolvido,
+    diretorioEscopo: resolvido,
+  };
 }
 
 function extrairChamadaServiceTs(node: ts.Node): string | undefined {
@@ -813,7 +918,7 @@ function renderizarCampos(bloco: string, campos: CampoImportado[], indentacao = 
   }
   return [
     `${indentacao}${bloco} {`,
-    ...campos.map((campo) => `${indentacao}  ${campo.nome}: ${campo.tipo}${campo.obrigatorio ? " required" : ""}`),
+    ...campos.map((campo) => `${indentacao}  ${normalizarNomeCampoImportado(campo.nome)}: ${campo.tipo}${campo.obrigatorio ? " required" : ""}`),
     `${indentacao}}`,
     "",
   ];
@@ -878,7 +983,7 @@ function renderizarTask(task: TarefaImportada): string[] {
 
   linhas.push("    guarantees {");
   for (const campo of task.output) {
-    linhas.push(`      ${campo.nome} existe`);
+    linhas.push(`      ${normalizarNomeCampoImportado(campo.nome)} existe`);
   }
   linhas.push("    }");
   linhas.push("");
@@ -922,7 +1027,7 @@ function renderizarEntidade(entity: EntidadeImportada): string[] {
   return [
     `  entity ${entity.nome} {`,
     "    fields {",
-    ...entity.campos.map((campo) => `      ${campo.nome}: ${campo.tipo}`),
+    ...entity.campos.map((campo) => `      ${normalizarNomeCampoImportado(campo.nome)}: ${campo.tipo}`),
     "    }",
     "  }",
     "",
@@ -1272,7 +1377,8 @@ function extrairColecoesFirebaseImportacao(texto: string): string[] {
 }
 
 async function importarNextJsBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
-  const arquivos = await listarArquivosRecursivos(diretorio, [".ts", ".tsx", ".js", ".jsx"]);
+  const escopo = resolverEscopoImportacaoNextJs(diretorio);
+  const arquivos = await listarArquivosRecursivos(escopo.diretorioEscopo, [".ts", ".tsx", ".js", ".jsx"]);
   const uteis = arquivos.filter((arquivo) =>
     !arquivo.endsWith(".spec.ts")
     && !arquivo.endsWith(".test.ts")
@@ -1285,7 +1391,7 @@ async function importarNextJsBase(diretorio: string, namespaceBase: string): Pro
     return {
       sourceFile: ts.createSourceFile(arquivo, texto, ts.ScriptTarget.Latest, true, scriptKind),
       texto,
-      relacao: path.relative(diretorio, arquivo),
+      relacao: path.relative(escopo.baseProjeto, arquivo),
     };
   }));
   const tiposGlobais = consolidarTiposTs(contextos);
@@ -1301,39 +1407,58 @@ async function importarNextJsBase(diretorio: string, namespaceBase: string): Pro
     const tasks: TarefaImportada[] = [];
     const routes: RotaImportada[] = [];
 
-    for (const rota of extrairRotasTypeScriptHttp(contexto.sourceFile, contexto.relacao).filter((item) => item.origem === "nextjs")) {
-      const taskNome = nomeTaskParaRotaTypeScript(rota.caminho, rota.metodo);
-      const exportacao = localizarExportacaoTypeScript(contexto.sourceFile, rota.simbolo);
-      const input = deduplicarCampos(camposDeParametrosRotaTypeScript(rota.parametros));
-      const output = exportacao?.retorno && mapearTipoPrimitivo(exportacao.retorno) === "Vazio"
-        ? []
-        : deduplicarCampos(expandirCamposTs("resultado", exportacao?.retorno, tiposGlobais, entitiesRef, enumsRef, false));
-      const taskOutput = output.length > 0 ? output : [{ nome: "resultado", tipo: "Json", obrigatorio: false }];
-      const resumoBase = `Rota Next.js App Router importada automaticamente de ${contexto.relacao}#${rota.simbolo}.`;
+      for (const rota of extrairRotasTypeScriptHttp(contexto.sourceFile, contexto.relacao).filter((item) => item.origem === "nextjs")) {
+        const taskNome = nomeTaskParaRotaTypeScript(rota.caminho, rota.metodo);
+        const exportacao = localizarExportacaoTypeScriptHttp(contexto.sourceFile, rota.simbolo);
+        const semantica = inferirSemanticaHandlerTypeScriptHttp(contexto.sourceFile, rota.simbolo);
+        const input = deduplicarCampos([
+          ...camposDeParametrosRotaTypeScript(rota.parametros),
+          ...camposDeSemanticaTypeScriptHttp(semantica?.query ?? [], tiposGlobais, entitiesRef, enumsRef),
+          ...(
+            (semantica?.body ?? []).length > 0
+              ? camposDeSemanticaTypeScriptHttp(semantica?.body ?? [], tiposGlobais, entitiesRef, enumsRef)
+              : semantica?.bodyTipoTexto
+                ? expandirCamposTs("body", semantica.bodyTipoTexto, tiposGlobais, entitiesRef, enumsRef, false)
+                : []
+          ),
+        ]);
+        const output = semantica && semantica.response.length > 0
+          ? deduplicarCampos(camposDeSemanticaTypeScriptHttp(semantica.response, tiposGlobais, entitiesRef, enumsRef))
+          : semantica?.responseTipoTexto
+            ? deduplicarCampos(expandirCamposTs("resultado", semantica.responseTipoTexto, tiposGlobais, entitiesRef, enumsRef, false))
+            : exportacao?.retorno && mapearTipoPrimitivo(exportacao.retorno) === "Vazio"
+              ? []
+              : deduplicarCampos(expandirCamposTs("resultado", exportacao?.retorno, tiposGlobais, entitiesRef, enumsRef, false));
+        const taskOutput = output.length > 0 ? output : [{ nome: "resultado", tipo: "Json", obrigatorio: false }];
+        const resumoBase = `Rota Next.js App Router importada automaticamente de ${contexto.relacao}#${rota.simbolo}.`;
+        const errors = deduplicarErros([
+          ...(exportacao?.corpo ? extrairErrosTs(exportacao.corpo, contexto.sourceFile) : []),
+          ...errosPorStatusHttp(semantica?.errorStatuses ?? []),
+        ]);
 
-      tasks.push({
-        nome: taskNome,
-        resumo: `Task derivada automaticamente de ${contexto.relacao}#${rota.simbolo}.`,
-        input,
-        output: taskOutput,
-        errors: exportacao?.corpo ? extrairErrosTs(exportacao.corpo, contexto.sourceFile) : [],
-        effects: exportacao?.corpo ? descreverEfeitosPorHeuristica(exportacao.corpo.getText(contexto.sourceFile)) : descreverEfeitosPorHeuristica(contexto.texto),
-        impl: { ts: caminhoImplTs(diretorio, path.join(diretorio, contexto.relacao), rota.simbolo) },
-        origemArquivo: contexto.relacao,
-        origemSimbolo: rota.simbolo,
-      });
+        tasks.push({
+          nome: taskNome,
+          resumo: `Task derivada automaticamente de ${contexto.relacao}#${rota.simbolo}.`,
+          input,
+          output: taskOutput,
+          errors,
+          effects: exportacao?.corpo ? descreverEfeitosPorHeuristica(exportacao.corpo.getText(contexto.sourceFile)) : descreverEfeitosPorHeuristica(contexto.texto),
+          impl: { ts: caminhoImplTs(escopo.baseProjeto, path.join(escopo.baseProjeto, contexto.relacao), rota.simbolo) },
+          origemArquivo: contexto.relacao,
+          origemSimbolo: rota.simbolo,
+        });
 
       routes.push({
         nome: `${taskNome}_publico`,
         resumo: resumoBase,
         metodo: rota.metodo,
-        caminho: rota.caminho,
-        task: taskNome,
-        input,
-        output: taskOutput,
-        errors: exportacao?.corpo ? extrairErrosTs(exportacao.corpo, contexto.sourceFile) : [],
-      });
-    }
+          caminho: rota.caminho,
+          task: taskNome,
+          input,
+          output: taskOutput,
+          errors,
+        });
+      }
 
     if (!tasks.length && !routes.length) {
       continue;
@@ -1406,7 +1531,7 @@ async function importarFirebaseBase(diretorio: string, namespaceBase: string): P
 
     for (const rota of extrairRotasTypeScriptHttp(contexto.sourceFile, contexto.relacao).filter((item) => item.origem === "firebase")) {
       const taskNome = nomeTaskParaRotaTypeScript(rota.caminho, rota.metodo);
-      const exportacao = localizarExportacaoTypeScript(contexto.sourceFile, rota.simbolo);
+      const exportacao = localizarExportacaoTypeScriptHttp(contexto.sourceFile, rota.simbolo);
       const input = deduplicarCampos(camposDeParametrosRotaTypeScript(rota.parametros));
       const output = exportacao?.retorno && mapearTipoPrimitivo(exportacao.retorno) === "Vazio"
         ? []

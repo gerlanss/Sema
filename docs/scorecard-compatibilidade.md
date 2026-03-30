@@ -25,6 +25,21 @@ Regras duras:
 - `generic bridge/symbol first-class`
 - `inventariado/backlog`
 
+## Nivel de genericidade
+
+Esta e a outra metade da conversa. A classe diz **onde** a Sema atua; o nivel de genericidade diz **quao amplo** e o slice oficial dessa atuacao.
+
+- `framework slice oficial`: a familia tem um recorte publico fechado, com surface concreta de framework e `drift` da borda principal
+- `generic backend`: a familia entra por simbolo, bridge, service ou recurso vivo, sem fingir que todo framework do ecossistema esta coberto
+- `consumer bridge oficial`: a familia consumidora entra por bridge/consumer formal e contexto acionavel para IA
+- `inventariado`: a familia foi mapeada e documentada, mas ainda nao tem promessa first-class
+
+Regra de honestidade:
+
+- o nivel generico pode subir com o tempo
+- a nota so acompanha quando o escopo oficial realmente aumentar
+- o produto promete o slice atual, nao a fantasia do “qualquer coisa deve funcionar”
+
 ## Linha publica atual
 
 - linha backend publica: `0.8.x`
@@ -45,24 +60,24 @@ Regras duras:
 
 ## Matriz oficial
 
-| Familia | Classe | Criacao | Importar | Drift principal | Contexto-IA | Nota |
-| --- | --- | --- | --- | --- | --- | --- |
-| NestJS | HTTP first-class | scaffold oficial | sim | rota publica | forte | 9.2 |
-| FastAPI | HTTP first-class | scaffold oficial | sim | rota publica | forte | 9.2 |
-| Flask | HTTP first-class | starter/adocao incremental | sim | rota publica | forte | 9.5 |
-| Next.js App Router | HTTP first-class | `nextjs-api` | sim | rota publica | forte | 9.1 |
-| ASP.NET Core | HTTP first-class | `aspnet-api` | sim | rota publica | forte | 9.0 |
-| Spring Boot | HTTP first-class | `springboot-api` | sim | rota publica | forte | 9.0 |
-| Go net/http + Gin | HTTP first-class | `go-http-api` | sim | rota publica | forte | 9.0 |
-| Rust Axum | HTTP first-class | `rust-axum-api` | sim | rota publica | forte | 9.0 |
-| Node / Firebase worker | dados/eventos first-class | `node-firebase-worker` | sim | recurso vivo + rota worker | forte | 9.1 |
-| TypeScript generico | generic bridge/symbol first-class | base | sim | simbolo/bridge | forte | 9.0 |
-| Python generico | generic bridge/symbol first-class | base | sim | simbolo/bridge | forte | 9.0 |
-| Dart generico | generic bridge/symbol first-class | base | sim | simbolo/bridge | forte | 9.0 |
-| C++ bridge/service | generic bridge/symbol first-class | `cpp-service-bridge` | sim | simbolo/bridge | forte | 9.0 |
-| Flutter / Dart consumidor | generic bridge/symbol first-class | base + bridge | parcial forte | bridge/consumer | forte | 9.0 |
-| Angular consumidor | inventariado/backlog | nao | parcial por TypeScript | bridge parcial | medio | 7.5 |
-| .NET desktop/MAUI/WPF | inventariado/backlog | nao | parcial por `cs:` | bridge parcial | medio | 7.5 |
+| Familia | Classe | Nivel de genericidade | Slice oficial hoje | Criacao | Importar | Drift principal | Contexto-IA | Nota |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| NestJS | HTTP first-class | framework slice oficial | controller/route NestJS | scaffold oficial | sim | rota publica | forte | 9.2 |
+| FastAPI | HTTP first-class | framework slice oficial | route/handler FastAPI | scaffold oficial | sim | rota publica | forte | 9.2 |
+| Flask | HTTP first-class | framework slice oficial | `Blueprint`, `url_prefix`, `@route` | starter/adocao incremental | sim | rota publica | forte | 9.5 |
+| Next.js App Router | HTTP first-class | framework slice oficial | `app/api/**/route.ts` | `nextjs-api` | sim | rota publica + bootstrap semantico forte | forte | 9.1 |
+| ASP.NET Core | HTTP first-class | framework slice oficial | controller + Minimal API | `aspnet-api` | sim | rota publica | forte | 9.0 |
+| Spring Boot | HTTP first-class | framework slice oficial | `@RestController` + `@*Mapping` | `springboot-api` | sim | rota publica | forte | 9.0 |
+| Go net/http + Gin | HTTP first-class | framework slice oficial | `HandleFunc`, `ServeMux`, `Gin` | `go-http-api` | sim | rota publica | forte | 9.0 |
+| Rust Axum | HTTP first-class | framework slice oficial | `Router::route` + `nest` simples | `rust-axum-api` | sim | rota publica | forte | 9.0 |
+| Node / Firebase worker | dados/eventos first-class | generic backend | worker + bridge + recurso persistido | `node-firebase-worker` | sim | recurso vivo + rota worker | forte | 9.1 |
+| TypeScript generico | generic bridge/symbol first-class | generic backend | simbolo, classe, bridge e service | base | sim | simbolo/bridge | forte | 9.0 |
+| Python generico | generic bridge/symbol first-class | generic backend | simbolo, classe, metodo e bridge | base | sim | simbolo/bridge | forte | 9.0 |
+| Dart generico | generic bridge/symbol first-class | generic backend | simbolo, classe e consumer bridge | base | sim | simbolo/bridge | forte | 9.0 |
+| C++ bridge/service | generic bridge/symbol first-class | generic backend | namespace, classe, metodo e service bridge | `cpp-service-bridge` | sim | simbolo/bridge | forte | 9.0 |
+| Flutter / Dart consumidor | generic bridge/symbol first-class | consumer bridge oficial | bridge/consumer formal do app | base + bridge | parcial forte | bridge/consumer | forte | 9.0 |
+| Angular consumidor | inventariado/backlog | inventariado | consumer TypeScript com bridge parcial | nao | parcial por TypeScript | bridge parcial | medio | 7.5 |
+| .NET desktop/MAUI/WPF | inventariado/backlog | inventariado | `cs:` generico fora do slice HTTP | nao | parcial por `cs:` | bridge parcial | medio | 7.5 |
 
 ## Limites honestos por familia
 
@@ -70,6 +85,8 @@ Regras duras:
 
 - cobre `app/api/**/route.ts` e `src/app/api/**/route.ts`
 - cobre `[id]`, `[...slug]` e `[[...slug]]`
+- `importar nextjs` aceita raiz do repo, `app/`, `src/app/`, `app/api/`, `src/app/api/` e subpastas de rota
+- o bootstrap puxa melhor `params`, `query`, `body`, `status` e `response` quando houver sinal forte
 - `Pages API`, `Express`, `Hono` e derivados continuam fora desta fatia oficial
 
 ### Node / Firebase worker

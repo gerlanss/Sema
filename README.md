@@ -79,7 +79,7 @@ Se voce quer entender por que isso e mais util do que `OpenAPI + DTO + comentari
 - `NestJS`: importacao de rotas + `drift` de rota publica
 - `FastAPI`: importacao de rotas + `drift` de rota publica
 - `Flask`: importacao de rotas + `drift` de rota publica com `Blueprint`, `url_prefix` e `@app.route`/`@bp.route`
-- `Next.js App Router`: importacao de rotas + `drift` de rota publica por `route.ts`, incluindo segmentos dinamicos
+- `Next.js App Router`: importacao de rotas + `drift` de rota publica por `route.ts`, incluindo segmentos dinamicos e bootstrap melhor de `params/query/body/status/response`
 - `ASP.NET Core`: importacao de controllers e Minimal API + `drift` de rota publica via `cs:`
 - `Spring Boot`: importacao de controllers + `drift` de rota publica via `java:`
 - `Go net/http + Gin`: importacao de handlers + `drift` de rota publica via `go:`
@@ -89,6 +89,13 @@ Se voce quer entender por que isso e mais util do que `OpenAPI + DTO + comentari
 - `TypeScript`, `Python`, `Dart`: resolucao de simbolo e importacao generica
 
 Observacao importante: `flask`, `nextjs`, `firebase`, `dotnet`, `java`, `go`, `rust` e `cpp` entram como **fontes legado** para `importar` e `drift`; eles nao viram frameworks novos de geracao. A geracao continua `base`, `nestjs` e `fastapi`, enquanto as outras familias entram via starter e adocao incremental.
+
+Outra observacao importante: a compatibilidade publica agora explicita tambem o **nivel de genericidade** de cada familia. Em bom portugues:
+
+- `framework slice oficial`: cobrimos um recorte concreto do framework, com promessa clara e `drift` da borda principal
+- `generic backend`: cobrimos simbolo, bridge, service ou recurso vivo, sem vender a mentira de que todo framework daquela linguagem ja esta coberto
+- `consumer bridge oficial`: cobrimos o lado consumidor com bridge formal e contexto de IA acionavel
+- `inventariado`: a familia esta mapeada, mas ainda nao virou compromisso first-class
 
 Para a regua oficial por familia de stack, benchmarks reais e criterio de nota `9/10`, veja [docs/scorecard-compatibilidade.md](./docs/scorecard-compatibilidade.md).
 
@@ -238,7 +245,7 @@ npm run extensao:empacotar
 
 Pacote gerado:
 
-- `.tmp/editor-vscode/sema-language-tools-0.8.0.vsix`
+- `.tmp/editor-vscode/sema-language-tools-0.8.1.vsix`
 
 Para instalar localmente:
 
@@ -249,7 +256,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.0.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.1.vsix --force
 ```
 
 ## Observacao honesta

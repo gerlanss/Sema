@@ -12,6 +12,7 @@ import {
   criarProjetoFlaskEstiloGestech,
   criarProjetoGoHttp,
   criarProjetoNextJsAppRouter,
+  criarProjetoNextJsAppRouterSemantico,
   criarProjetoRustAxum,
   criarProjetoSpringBoot,
 } from "./futebot-fixture.ts";
@@ -216,11 +217,11 @@ test("cli importa projeto Flask legado e gera rascunho Sema valido", async () =>
   }
 });
 
-test("cli importa projeto Next.js App Router legado e gera route + task com impl ts", async () => {
+test("cli importa projeto Next.js App Router legado com bootstrap semantico mais forte", async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-nextjs-"));
 
   try {
-    await criarProjetoNextJsAppRouter(base);
+    await criarProjetoNextJsAppRouterSemantico(base);
 
     const execucao = executarImportacao(["importar", "nextjs", base, "--saida", path.join(base, "sema"), "--json"]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
@@ -231,13 +232,75 @@ test("cli importa projeto Next.js App Router legado e gera route + task com impl
     assert.equal(json.resumo.rotas >= 4, true);
     assert.equal(json.resumo.tarefas >= 4, true);
 
-    const arquivo = await readFile(path.join(base, "sema", "api", "reposicao.sema"), "utf8");
-    assert.match(arquivo, /route api_reposicao_get_publico/);
-    assert.match(arquivo, /caminho: \/api\/reposicao/);
-    assert.match(arquivo, /ts: src\.app\.api\.reposicao\.route\.GET/);
+    const arquivoSessao = await readFile(path.join(base, "sema", "api", "auth", "session.sema"), "utf8");
+    assert.match(arquivoSessao, /route api_auth_session_get_publico/);
+    assert.match(arquivoSessao, /expand: Texto/);
+    assert.match(arquivoSessao, /refresh_id: Id/);
+    assert.match(arquivoSessao, /email: Texto required/);
+    assert.match(arquivoSessao, /password: Texto required/);
+    assert.match(arquivoSessao, /remember: Booleano/);
+    assert.match(arquivoSessao, /session_id: Id/);
+    assert.match(arquivoSessao, /user_id: Id/);
+    assert.match(arquivoSessao, /nao_autorizado/);
+    assert.match(arquivoSessao, /entrada_invalida/);
+    assert.match(arquivoSessao, /acesso_negado/);
+    assert.match(arquivoSessao, /ts: src\.app\.api\.auth\.session\.route\.POST/);
+
+    const arquivoBusca = await readFile(path.join(base, "sema", "api", "catalogo", "busca.sema"), "utf8");
+    assert.match(arquivoBusca, /termo: Texto/);
+    assert.match(arquivoBusca, /limite: Decimal/);
+    assert.match(arquivoBusca, /total: Decimal/);
 
     const arquivoDinamico = await readFile(path.join(base, "sema", "api", "reposicao", "itemid.sema"), "utf8");
     assert.match(arquivoDinamico, /caminho: "\/api\/reposicao\/\{itemId\}"/);
+    assert.match(arquivoDinamico, /item_id: Id required/);
+
+    const arquivoFallback = await readFile(path.join(base, "sema", "api", "fallback.sema"), "utf8");
+    assert.match(arquivoFallback, /resultado: Json/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli importa projeto Next.js App Router a partir de app, api e subpasta concreta", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-nextjs-scope-"));
+
+  try {
+    await criarProjetoNextJsAppRouterSemantico(base);
+
+    const saidaApp = path.join(base, "sema-app");
+    const execucaoApp = executarImportacao(["importar", "nextjs", path.join(base, "src", "app"), "--saida", saidaApp, "--json"]);
+    assert.equal(execucaoApp.status, 0, execucaoApp.stderr || execucaoApp.stdout);
+    const jsonApp = JSON.parse(execucaoApp.stdout);
+    assert.equal(jsonApp.resumo.sucesso, true);
+    assert.equal(jsonApp.resumo.modulos >= 4, true);
+
+    const saidaApi = path.join(base, "sema-api");
+    const execucaoApi = executarImportacao(["importar", "nextjs", path.join(base, "src", "app", "api"), "--saida", saidaApi, "--json"]);
+    assert.equal(execucaoApi.status, 0, execucaoApi.stderr || execucaoApi.stdout);
+    const jsonApi = JSON.parse(execucaoApi.stdout);
+    assert.equal(jsonApi.resumo.sucesso, true);
+    assert.equal(jsonApi.resumo.modulos >= 4, true);
+
+    const saidaSubpasta = path.join(base, "sema-subpasta");
+    const execucaoSubpasta = executarImportacao([
+      "importar",
+      "nextjs",
+      path.join(base, "src", "app", "api", "auth", "session"),
+      "--saida",
+      saidaSubpasta,
+      "--json",
+    ]);
+    assert.equal(execucaoSubpasta.status, 0, execucaoSubpasta.stderr || execucaoSubpasta.stdout);
+    const jsonSubpasta = JSON.parse(execucaoSubpasta.stdout);
+    assert.equal(jsonSubpasta.resumo.sucesso, true);
+    assert.equal(jsonSubpasta.resumo.modulos, 1);
+    assert.equal(jsonSubpasta.resumo.rotas, 2);
+    assert.equal(jsonSubpasta.resumo.tarefas, 2);
+
+    const arquivoSessao = await readFile(path.join(saidaSubpasta, "api", "auth", "session.sema"), "utf8");
+    assert.match(arquivoSessao, /route api_auth_session_get_publico/);
+    assert.doesNotMatch(arquivoSessao, /route api_catalogo_busca_get_publico/);
   } finally {
     await rm(base, { recursive: true, force: true });
   }
@@ -506,6 +569,53 @@ if (existsSync("C:\\GitHub\\Teste2\\backend")) {
       assert.equal(json.resumo.tarefas >= 1, true);
     } finally {
       await rm(baseSaida, { recursive: true, force: true });
+    }
+  });
+}
+
+if (existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")) {
+  test("smoke real: importa Next.js do Gestech pela raiz, pelo api root e por subpasta concreta", async () => {
+    const baseRaiz = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-next-root-"));
+    const baseApi = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-next-api-"));
+    const baseSubpasta = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-next-sub-"));
+
+    try {
+      const diretorioRaiz = "C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard";
+      const diretorioApi = path.join(diretorioRaiz, "src", "app", "api");
+      const diretorioSubpasta = path.join(diretorioApi, "auth", "session");
+
+      const execucaoRaiz = executarImportacao(["importar", "nextjs", diretorioRaiz, "--saida", baseRaiz, "--json"], path.resolve("."));
+      assert.equal(execucaoRaiz.status, 0, execucaoRaiz.stderr || execucaoRaiz.stdout);
+      const jsonRaiz = JSON.parse(execucaoRaiz.stdout);
+      assert.equal(jsonRaiz.resumo.sucesso, true);
+      assert.equal(jsonRaiz.resumo.modulos >= 1, true);
+      assert.equal(jsonRaiz.resumo.rotas >= 1, true);
+
+      const execucaoApi = executarImportacao(["importar", "nextjs", diretorioApi, "--saida", baseApi, "--json"], path.resolve("."));
+      assert.equal(execucaoApi.status, 0, execucaoApi.stderr || execucaoApi.stdout);
+      const jsonApi = JSON.parse(execucaoApi.stdout);
+      assert.equal(jsonApi.resumo.sucesso, true);
+      assert.equal(jsonApi.resumo.modulos >= 1, true);
+      assert.equal(jsonApi.resumo.rotas >= 1, true);
+
+      const execucaoSubpasta = executarImportacao(["importar", "nextjs", diretorioSubpasta, "--saida", baseSubpasta, "--json"], path.resolve("."));
+      assert.equal(execucaoSubpasta.status, 0, execucaoSubpasta.stderr || execucaoSubpasta.stdout);
+      const jsonSubpasta = JSON.parse(execucaoSubpasta.stdout);
+      assert.equal(jsonSubpasta.resumo.sucesso, true);
+      assert.equal(jsonSubpasta.resumo.modulos, 1);
+      assert.equal(jsonSubpasta.resumo.rotas >= 1, true);
+
+      const arquivoSessao = path.join(baseSubpasta, "api", "auth", "session.sema");
+      assert.equal(existsSync(arquivoSessao), true);
+
+      const validacaoSubpasta = executarImportacao(["validar", baseSubpasta, "--json"], path.resolve("."));
+      assert.equal(validacaoSubpasta.status, 0, validacaoSubpasta.stderr || validacaoSubpasta.stdout);
+      const jsonValidacao = JSON.parse(validacaoSubpasta.stdout);
+      assert.equal(jsonValidacao.sucesso, true);
+    } finally {
+      await rm(baseRaiz, { recursive: true, force: true });
+      await rm(baseApi, { recursive: true, force: true });
+      await rm(baseSubpasta, { recursive: true, force: true });
     }
   });
 }

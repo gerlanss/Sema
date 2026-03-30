@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- melhora o importador `nextjs` com bootstrap semantico mais forte para `params`, `query`, `body`, `status` e `response`
+- aceita importacao a partir da raiz do projeto, de `app/`, `src/app/api/` e de subpastas concretas de rota
+- mantem o draft revisavel, mas reduz o fallback preguiçoso em handlers que ja carregam sinal forte
+
 ## 0.8.0
 
 - alinha a extensao com a linha publica `0.8.x` da Sema

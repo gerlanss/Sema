@@ -1,6 +1,6 @@
 {
   "name": "sema",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "Sema e um Protocolo de Governanca de Intencao para IA e backend vivo, com contrato explicito, drift e scaffold semantico.",
   "icon": "logo.png",

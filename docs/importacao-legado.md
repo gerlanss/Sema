@@ -19,6 +19,11 @@ Leitura honesta:
 - `flask`
 - `nextjs`
 - `firebase`
+- `dotnet`
+- `java`
+- `go`
+- `rust`
+- `cpp`
 - `typescript`
 - `python`
 - `dart`
@@ -26,7 +31,7 @@ Leitura honesta:
 ## Comando
 
 ```bash
-sema importar <nestjs|fastapi|flask|nextjs|firebase|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
+sema importar <nestjs|fastapi|flask|nextjs|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
 ```
 
 ## O que a importacao tenta puxar
@@ -44,6 +49,13 @@ sema importar <nestjs|fastapi|flask|nextjs|firebase|typescript|python|dart> <dir
 - dar um ponto de partida semantico coerente
 - transformar service/controller/router/funcao em rascunho de contrato
 - acelerar a adocao da Sema em projeto vivo
+
+No caso de `Next.js App Router`, o bootstrap automatico ficou mais forte:
+
+- aceita raiz do repo, `app/`, `src/app/`, `app/api/`, `src/app/api/` e subpasta concreta de rota
+- puxa `params`, `query`, `body`, `status` e `response` quando o handler entrega sinal forte
+- entende melhor `request.json()`, `searchParams`, `NextResponse.json(...)` e schema local simples com `zod`
+- continua caindo em `Json` so quando nao houver informacao confiavel
 
 ## O que ela nao promete
 
@@ -106,8 +118,16 @@ sema importar flask ./Gestech --saida ./sema/importado --json
 ### Next.js App Router
 
 ```bash
-sema importar nextjs ./app --saida ./sema/importado --json
+sema importar nextjs ./src/app/api --saida ./sema/importado --json
 ```
+
+Tambem funciona a partir de:
+
+- raiz do projeto Next
+- `app/`
+- `src/app/`
+- `app/api/`
+- subpasta concreta como `src/app/api/auth/session`
 
 ### Firebase worker
 
@@ -140,6 +160,7 @@ sema importar dart ./lib --saida ./sema/importado
 - migracao incremental para NestJS ou FastAPI governados por contrato
 - migracao incremental para Flask governado por contrato sem perder `Blueprint` e `url_prefix`
 - migracao incremental para `Next.js App Router` sem perder inventario real de rota publica
+- bootstrap forte de contrato HTTP em `Next.js App Router`, mesmo quando o handler ainda nao esta bonitinho
 - migracao incremental para worker `Node/Firebase` sem ficar cego para bridge, health endpoint e recurso persistido
 - onboarding de IA em projeto velho sem jogar a coitada no pantano sem mapa
 
