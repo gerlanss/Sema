@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-30
-- Ultimo commit de referencia: `2e0a974`
+- Ultimo commit de referencia: `9aa29d3`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: marco publico `0.8.x backend generico` em consolidacao, com foco oficial em familias backend first-class e adocao incremental de projeto vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
@@ -34,6 +34,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - instaladores oficiais `install-sema.sh` e `install-sema.ps1`
   - importador `Next.js App Router` com bootstrap semantico mais forte para `params`, `query`, `body`, `status` e `response`
   - importador `Next.js App Router` com inferencia melhor de body via `request.json()` tipado/cast inline e resposta HTTP retornada por variavel local
+  - fluxo pronto para `npm publish` da CLI com dry-run verificavel e metadados publicos mais completos
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
@@ -143,6 +144,8 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Registrar feedback externo do FuteBot como validacao de valor e ajuste de prioridade para a ultima milha entre contrato e implementacao viva
 - `[x]` Alinhar release publica `0.8.2` entre CLI, pacotes e extensao
 - `[x]` Fortalecer o bootstrap semantico de `importar nextjs` sem degradar o fallback honesto
+- `[x]` Revisar o `README` como landing page publica mais clara para instalacao, showcase e compatibilidade
+- `[x]` Deixar a CLI pronta para `npm publish` com script oficial de dry-run
 - `[x]` Entregar pacote publico da CLI instalavel fora do monorrepo
 - `[x]` Publicar showcase oficial reproduzivel para demonstrar valor em backend Flask vivo
 - `[x]` Tratar `Next.js App Router` como fonte legado de primeira classe

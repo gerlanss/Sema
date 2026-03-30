@@ -10,6 +10,8 @@ A trilha publica principal da Sema passa a ser:
 2. instalar o `.tgz`
 3. rodar `sema`
 
+O pacote da CLI tambem ja fica **pronto para npm registry**. A publicacao so depende de autenticacao da conta e do comando de publish.
+
 Instalacao sem clone em Linux, Windows PowerShell e macOS:
 
 ```bash
@@ -39,6 +41,27 @@ Cada release publica entrega:
 - `install-sema.sh`
 - `install-sema.ps1`
 
+## Fluxo pronto para npm
+
+Dry-run de publicacao:
+
+```bash
+npm run cli:publicar-npm-dry-run
+```
+
+Publicacao real:
+
+```bash
+npm run cli:publicar-npm
+```
+
+Notas importantes:
+
+- o pacote preparado para npm continua sendo `@sema/cli`
+- o script publica o tarball gerado em `.tmp/pacotes-publicos`
+- a conta desta maquina precisa estar autenticada com `npm adduser` ou `npm login`
+- o package name `@sema/cli` hoje nao aparece publicado no registry, entao a trilha esta pronta sem colisao obvia de nome
+
 ## O que esse pacote resolve
 
 O tarball publico agora carrega os pacotes internos de runtime junto, sem depender de `file:` quebrado no `package.json`.
@@ -60,6 +83,8 @@ Esse smoke:
 - roda `sema --help`
 - roda `sema validar` contra um `.sema` real do repo
 - falha se o tarball ainda carregar dependencia `file:`
+
+Se voce quiser validar tambem a trilha de npm sem publicar de verdade, use o dry-run acima.
 
 ## Como a release e publicada
 

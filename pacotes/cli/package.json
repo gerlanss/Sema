@@ -3,6 +3,30 @@
   "version": "0.8.2",
   "type": "module",
   "description": "CLI do Protocolo de Governanca de Intencao Sema para validar contratos, medir drift e operar backend vivo.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gerlanss/Sema.git"
+  },
+  "homepage": "https://github.com/gerlanss/Sema",
+  "bugs": {
+    "url": "https://github.com/gerlanss/Sema/issues"
+  },
+  "keywords": [
+    "sema",
+    "ai",
+    "contracts",
+    "governance",
+    "backend",
+    "drift",
+    "dsl"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "icon": "logo.png",
   "bin": {
     "sema": "dist/index.js"

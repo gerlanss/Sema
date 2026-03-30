@@ -82,14 +82,30 @@ async function prepararManifestPublico() {
     description: manifestCli.description,
     type: manifestCli.type,
     icon: manifestCli.icon,
-    license: "MIT",
-    repository: {
+    license: manifestCli.license ?? "MIT",
+    repository: manifestCli.repository ?? {
       type: "git",
       url: "https://github.com/gerlanss/Sema.git",
     },
-    homepage: "https://github.com/gerlanss/Sema",
-    bugs: {
+    homepage: manifestCli.homepage ?? "https://github.com/gerlanss/Sema",
+    bugs: manifestCli.bugs ?? {
       url: "https://github.com/gerlanss/Sema/issues",
+    },
+    keywords: manifestCli.keywords ?? [
+      "sema",
+      "ai",
+      "contracts",
+      "governance",
+      "backend",
+      "drift",
+      "dsl",
+    ],
+    engines: manifestCli.engines ?? {
+      node: ">=20",
+    },
+    publishConfig: {
+      access: "public",
+      ...(manifestCli.publishConfig ?? {}),
     },
     bin: manifestCli.bin,
     main: manifestCli.main,
@@ -122,13 +138,33 @@ Este pacote entrega a CLI oficial para:
 - importar legado
 - preparar contexto para IA
 
-## Instalacao
+## Instalacao pelo npm registry
+
+\`\`\`bash
+npm install -g @sema/cli
+sema --help
+\`\`\`
+
+## Instalacao via tarball da release
 
 \`\`\`bash
 npm install -g ./${tgz}
 \`\`\`
 
-Ou em projeto local:
+Ou direto da GitHub Release:
+
+\`\`\`bash
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+\`\`\`
+
+## Instalacao local ao projeto
+
+\`\`\`bash
+npm install @sema/cli
+npx sema --help
+\`\`\`
+
+Ou, se voce estiver testando um tarball local:
 
 \`\`\`bash
 npm install ./${tgz}

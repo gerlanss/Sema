@@ -6,7 +6,15 @@ Sema e um **Protocolo de Governanca de Intencao para IA e backend vivo**.
 
 Ele nao tenta substituir TypeScript, Python, Dart, Flask, FastAPI ou NestJS. A proposta e mais util do que isso: governar a camada de significado acima da stack, com contrato explicito, fluxo, erro, efeito, garantia, `impl`, `drift` e contexto operacional para IA.
 
-Tecnicamente, a Sema continua sendo uma **linguagem de intencao**. Publicamente, o posicionamento agora fica mais honesto: ela e o protocolo que impede IA e humano de codarem no escuro feito dois animais bem intencionados.
+Tecnicamente, a Sema continua sendo uma **linguagem de intencao**. Publicamente, o posicionamento fica mais honesto: ela e o protocolo que ajuda IA e humano a editar sistema vivo com menos adivinhacao e mais verificacao.
+
+## O que ela entrega
+
+- contrato semantico explicito para operacoes, bordas HTTP, erros, efeitos e garantias
+- vinculo com implementacao real via `impl`
+- medicao de divergencia real entre contrato e codigo vivo via `drift`
+- importacao incremental de legado
+- contexto acionavel para IA antes de editar projeto real
 
 ## O problema que resolve
 
@@ -30,9 +38,11 @@ A Sema junta isso num ponto governavel:
 - vinculo com implementacao real via `impl`
 - divergencia real entre contrato e codigo vivo via `drift`
 
+Nao e so “mais uma DSL”. E uma camada semantica para governar o que a stack costuma deixar espalhado, opaco ou velho.
+
 ## Quickstart em 2 minutos
 
-Hoje voce **nao precisa clonar o repo** para instalar a CLI. A distribuicao publica passa a acontecer por GitHub Release com um tarball estavel.
+Hoje voce **nao precisa clonar o repo** para instalar a CLI. O canal oficial de instalacao continua sendo a GitHub Release com um tarball estavel.
 
 Linux, Windows PowerShell e macOS:
 
@@ -51,6 +61,8 @@ Se quiser instalar local ao projeto:
 npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
 npx sema --help
 ```
+
+Se voce quer empacotamento pronto para npm registry, o fluxo tambem ja esta preparado. Falta so autenticar a conta do npm e rodar a publicacao.
 
 Se depois voce quiser ver a Sema em backend vivo, ai sim entre no repo e rode o case oficial:
 
@@ -101,7 +113,7 @@ Para a regua oficial por familia de stack, benchmarks reais e criterio de nota `
 
 ## Backend-first em 30 segundos
 
-Hoje a Sema ja faz bem estas porras aqui:
+Hoje a Sema ja faz bem estas coisas:
 
 - modela dominio, contrato, borda publica, erro, garantia, efeito e fluxo
 - gera scaffold base para TypeScript, Python e Dart
@@ -127,6 +139,17 @@ Se quiser instalar sem decorar a novela toda:
 
 - Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
 - Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
+
+## Distribuicao publica
+
+Hoje a distribuicao publica da Sema fica assim:
+
+- GitHub Release como canal oficial de instalacao
+- tarball da CLI instalavel sem clone
+- VSIX da extensao para VS Code
+- fluxo pronto para `npm publish` da CLI quando a conta estiver autenticada
+
+Para a trilha de distribuicao e publicacao, veja [docs/distribuicao-da-cli.md](./docs/distribuicao-da-cli.md).
 
 ## Exemplo rapido
 

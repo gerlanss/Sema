@@ -18,6 +18,8 @@
     "cli:empacotar": "npm run build && node -e \"require('node:fs').mkdirSync('.tmp/pacotes',{recursive:true})\" && npm pack --workspace @sema/cli --pack-destination ./.tmp/pacotes",
     "cli:empacotar-publica": "npm run build && node scripts/empacotar-cli-publica.mjs",
     "cli:testar-pacote-publico": "npm run cli:empacotar-publica && node scripts/testar-pacote-cli-publico.mjs",
+    "cli:publicar-npm-dry-run": "npm run cli:empacotar-publica && node scripts/publicar-cli-npm.mjs --dry-run",
+    "cli:publicar-npm": "npm run cli:empacotar-publica && node scripts/publicar-cli-npm.mjs",
     "extensao:empacotar": "npm run build && node scripts/empacotar-extensao-vscode.mjs",
     "extensao:instalar-local": "node scripts/instalar-extensao-vscode.mjs",
     "release:verificar-versao": "node scripts/verificar-versao-release.mjs",
