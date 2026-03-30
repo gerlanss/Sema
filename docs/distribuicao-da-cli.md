@@ -12,6 +12,8 @@ A trilha publica principal da Sema passa a ser:
 
 O pacote da CLI tambem ja fica **pronto para npm registry**. A publicacao so depende de autenticacao da conta e do comando de publish.
 
+Se voce precisa anunciar a release sem ficar improvisando texto em cima da hora, use tambem o [kit de lancamento publico](./kit-lancamento-publico.md).
+
 Instalacao sem clone em Linux, Windows PowerShell e macOS:
 
 ```bash

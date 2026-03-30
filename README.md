@@ -151,6 +151,8 @@ Hoje a distribuicao publica da Sema fica assim:
 
 Para a trilha de distribuicao e publicacao, veja [docs/distribuicao-da-cli.md](./docs/distribuicao-da-cli.md).
 
+Para texto de anuncio, release note curta, pitch e checklist de lancamento, veja [docs/kit-lancamento-publico.md](./docs/kit-lancamento-publico.md).
+
 ## Exemplo rapido
 
 ```sema
@@ -222,6 +224,7 @@ Na pratica:
 - [docs/cli.md](./docs/cli.md)
 - [docs/integracao-com-ia.md](./docs/integracao-com-ia.md)
 - [docs/distribuicao-da-cli.md](./docs/distribuicao-da-cli.md)
+- [docs/kit-lancamento-publico.md](./docs/kit-lancamento-publico.md)
 - [docs/da-sema-para-codigo.md](./docs/da-sema-para-codigo.md)
 - [docs/importacao-legado.md](./docs/importacao-legado.md)
 - [docs/feedback-futebot.md](./docs/feedback-futebot.md)
