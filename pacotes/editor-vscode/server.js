@@ -1,6 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { fileURLToPath } = require("node:url");
+const { fileURLToPath, pathToFileURL } = require("node:url");
 const {
   createConnection,
   ProposedFeatures,
@@ -51,7 +51,10 @@ let nucleoCarregado;
 
 async function obterNucleo() {
   if (!nucleoCarregado) {
-    nucleoCarregado = import("@sema/nucleo");
+    nucleoCarregado = import("@sema/nucleo").catch(async () => {
+      const caminhoLocal = pathToFileURL(path.join(__dirname, "vendor", "nucleo", "dist", "index.js")).href;
+      return import(caminhoLocal);
+    });
   }
   return nucleoCarregado;
 }

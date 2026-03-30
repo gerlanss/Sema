@@ -43,6 +43,17 @@ export interface ResumoTaskSemantico {
   output: CampoSemantico[];
   errors: ErroSemanticoTask[];
   guarantees: string[];
+  implementacoes: ImplementacaoTaskSemantica[];
+}
+
+export interface InteropSemantico {
+  origem: "ts" | "py" | "dart";
+  caminho: string;
+}
+
+export interface ImplementacaoTaskSemantica {
+  origem: "ts" | "py" | "dart";
+  caminho: string;
 }
 
 export interface ContextoSemantico {
@@ -53,6 +64,7 @@ export interface ContextoSemantico {
   tarefasDetalhadas: Map<string, ResumoTaskSemantico>;
   statesConhecidos: Map<string, { transicoes: Set<string> }>;
   modulosImportados: string[];
+  interoperabilidades: InteropSemantico[];
   enumsConhecidos: Map<string, Set<string>>;
 }
 
@@ -63,6 +75,12 @@ export interface ResultadoSemantico {
 
 export interface OpcoesAnaliseSemantica {
   contextosModulos?: Map<string, ContextoSemantico>;
+}
+
+function ehUseInterop(
+  use: ModuloAst["uses"][number],
+): use is ModuloAst["uses"][number] & { origem: InteropSemantico["origem"] } {
+  return use.origem !== "sema";
 }
 
 const TIPOS_PRIMITIVOS = new Set([
@@ -79,6 +97,23 @@ const TIPOS_PRIMITIVOS = new Set([
   "Json",
   "Vazio",
 ]);
+
+const PADRAO_CAMINHO_INTEROP = /^[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)*$/;
+
+function normalizarOrigemImplementacao(valor: string): ImplementacaoTaskSemantica["origem"] | undefined {
+  switch (valor.toLowerCase()) {
+    case "ts":
+    case "typescript":
+      return "ts";
+    case "py":
+    case "python":
+      return "py";
+    case "dart":
+      return "dart";
+    default:
+      return undefined;
+  }
+}
 
 function extrairReferenciasDeTipos(texto: string): string[] {
   const correspondencias = texto.match(/[A-Z][A-Za-z0-9_]*/g);
@@ -182,7 +217,62 @@ function coletarResumoTask(task: TaskAst): ResumoTaskSemantico {
     output: (task.output?.campos ?? []).map(converterCampoSemantico),
     errors: coletarErrosTask(task),
     guarantees: (task.guarantees?.linhas ?? []).map((linha) => linha.conteudo),
+    implementacoes: (task.impl?.campos ?? [])
+      .map((campo) => {
+        const origem = normalizarOrigemImplementacao(campo.nome);
+        return origem ? { origem, caminho: campo.valor } : undefined;
+      })
+      .filter((item): item is ImplementacaoTaskSemantica => Boolean(item)),
   };
+}
+
+function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnostico[]): void {
+  if (!task.impl) {
+    return;
+  }
+
+  const origens = new Set<string>();
+  for (const campo of task.impl.campos) {
+    const origem = normalizarOrigemImplementacao(campo.nome);
+    if (!origem) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM059",
+          `Task "${task.nome}" declarou implementacao externa invalida em impl: "${campo.nome}".`,
+          "erro",
+          campo.intervalo,
+          "Use apenas ts, py ou dart dentro do bloco impl.",
+        ),
+      );
+      continue;
+    }
+
+    if (origens.has(origem)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM060",
+          `Task "${task.nome}" declarou mais de uma implementacao ${origem} no bloco impl.`,
+          "erro",
+          campo.intervalo,
+          "Cada origem externa deve aparecer no maximo uma vez dentro de impl.",
+        ),
+      );
+      continue;
+    }
+    origens.add(origem);
+
+    if (!PADRAO_CAMINHO_INTEROP.test(campo.valor)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM061",
+          `Task "${task.nome}" declarou caminho invalido para impl ${origem}: "${campo.valor}".`,
+          "erro",
+          campo.intervalo,
+          "Use um identificador de implementacao como pacote.modulo.funcao ou app.servico.metodo.",
+        ),
+      );
+    }
+  }
 }
 
 function recomporCaminhoRoute(campo?: CampoAst): string | undefined {
@@ -200,6 +290,72 @@ function serializarTransicao(origem: string, destino: string): string {
   return `${origem}->${destino}`;
 }
 
+function descreverSugestoes(valores: Iterable<string>, prefixo: string): string | undefined {
+  const lista = [...new Set([...valores].filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  if (lista.length === 0) {
+    return undefined;
+  }
+  const recorte = lista.slice(0, 6).join(", ");
+  return `${prefixo}: ${recorte}${lista.length > 6 ? ", ..." : ""}.`;
+}
+
+function listarCandidatosUseRelativo(moduloAtual: string, caminhoImportado: string): string[] {
+  const segmentos = moduloAtual.split(".").filter(Boolean);
+  const caminhoNormalizado = caminhoImportado.replace(/^\.+/u, "").trim();
+  if (!caminhoNormalizado || segmentos.length <= 1) {
+    return [];
+  }
+
+  const candidatos: string[] = [];
+  for (let tamanho = segmentos.length - 1; tamanho >= 1; tamanho -= 1) {
+    const candidato = [...segmentos.slice(0, tamanho), caminhoNormalizado].join(".");
+    if (candidato !== caminhoImportado) {
+      candidatos.push(candidato);
+    }
+  }
+
+  return [...new Set(candidatos)];
+}
+
+function resolverUseSema(
+  moduloAtual: string,
+  caminhoImportado: string,
+  contextosModulos?: Map<string, ContextoSemantico>,
+): { caminhoResolvido?: string; candidatosRelativos: string[] } {
+  if (!contextosModulos) {
+    return { caminhoResolvido: undefined, candidatosRelativos: [] };
+  }
+
+  if (contextosModulos.has(caminhoImportado)) {
+    return { caminhoResolvido: caminhoImportado, candidatosRelativos: [] };
+  }
+
+  const candidatosRelativos = listarCandidatosUseRelativo(moduloAtual, caminhoImportado);
+  const caminhoResolvido = candidatosRelativos.find((candidato) => contextosModulos.has(candidato));
+  return { caminhoResolvido, candidatosRelativos };
+}
+
+function descreverDicaSintaxeExpressao(texto: string, dicaPadrao: string): string {
+  const normalizado = texto.trim();
+  if (
+    /\sou\s/u.test(normalizado)
+    && (
+      normalizado.includes("\"")
+      || normalizado.includes("'")
+      || /^[A-Za-z_][A-Za-z0-9_.]*\s*(==|!=|>|<|>=|<=)\s+.+\s+ou\s+.+$/u.test(normalizado)
+    )
+    && !/\bem\s+\[/u.test(normalizado)
+  ) {
+    const alvo = normalizado.match(/^([A-Za-z_][A-Za-z0-9_.]*)\s*(==|!=|>|<|>=|<=)/u)?.[1];
+    if (alvo) {
+      return `${dicaPadrao} Se a ideia era comparar ${alvo} contra varios valores, repita o campo em cada comparacao ou prefira "${alvo} em [A, B]".`;
+    }
+    return `${dicaPadrao} Se a ideia era comparar um campo contra varios valores, repita o campo em cada comparacao ou prefira "campo em [A, B]".`;
+  }
+
+  return dicaPadrao;
+}
+
 function validarExpressoesDeclaradas(
   linhas: BlocoGenericoAst["linhas"],
   diagnosticos: Diagnostico[],
@@ -211,6 +367,7 @@ function validarExpressoesDeclaradas(
     dicaSintaxe: string;
     dicaReferencia: string;
     aceitarMarcadoresSemanticos?: boolean;
+    dicaReferenciaPersonalizada?: (raiz: string, linha: string) => string | undefined;
   },
 ): void {
   for (const linha of linhas) {
@@ -222,7 +379,7 @@ function validarExpressoesDeclaradas(
           `Declaracao invalida em ${contexto.nomeBloco}: "${linha.conteudo}".`,
           "erro",
           linha.intervalo,
-          contexto.dicaSintaxe,
+          descreverDicaSintaxeExpressao(linha.conteudo, contexto.dicaSintaxe),
         ),
       );
       continue;
@@ -238,7 +395,7 @@ function validarExpressoesDeclaradas(
             `Declaracao em ${contexto.nomeBloco} referencia "${raiz}", que nao pertence ao contexto permitido.`,
             "erro",
             linha.intervalo,
-            contexto.dicaReferencia,
+            contexto.dicaReferenciaPersonalizada?.(raiz, linha.conteudo) ?? contexto.dicaReferencia,
           ),
         );
       }
@@ -448,7 +605,7 @@ function validarFlow(
           `Linha de etapa invalida em flow "${flow.nome}": "${item.linha.conteudo}".`,
           "erro",
           item.linha.intervalo,
-          "Use o formato \"etapa nome usa task quando expressao depende_de etapa_a, etapa_b\".",
+          "Use o formato \"etapa nome usa task com campo=valor quando expressao depende_de etapa_a, etapa_b em_sucesso proxima em_erro falha\".",
         ),
       );
       continue;
@@ -471,13 +628,14 @@ function validarFlow(
     etapasValidas.set(item.etapa.nome, item.etapa);
 
     if (item.etapa.task && !tasksConhecidas.has(item.etapa.task)) {
+      const sugestoesTasks = descreverSugestoes(tasksConhecidas, "Tasks conhecidas no contexto");
       diagnosticos.push(
         criarDiagnostico(
           "SEM034",
           `Etapa "${item.etapa.nome}" do flow "${flow.nome}" usa task "${item.etapa.task}" que nao existe.`,
           "erro",
           item.linha.intervalo,
-          "Ajuste a task da etapa para apontar para uma task declarada ou importada.",
+          sugestoesTasks ?? "Ajuste a task da etapa para apontar para uma task declarada ou importada.",
         ),
       );
     }
@@ -512,13 +670,17 @@ function validarFlow(
             && !nomesEtapas.has(raizValor),
           );
           if (!ehLiteral && !aceitaLiteralTextual && !contextoFlow.has(raizValor) && !nomesEtapas.has(raizValor)) {
+            const sugestoesContexto = [
+              descreverSugestoes(contextoFlow, "Campos do flow"),
+              descreverSugestoes(nomesEtapas, "Etapas conhecidas"),
+            ].filter(Boolean).join(" ");
             diagnosticos.push(
               criarDiagnostico(
                 "SEM043",
                 `Etapa "${item.etapa.nome}" do flow "${flow.nome}" referencia "${mapeamento.valor}" fora do contexto conhecido.`,
                 "erro",
                 item.linha.intervalo,
-                "Mapeie usando campos do proprio flow, saidas de etapas anteriores ou literais simples.",
+                sugestoesContexto || "Mapeie usando campos do proprio flow, saidas de etapas anteriores ou literais simples.",
               ),
             );
           }
@@ -568,13 +730,14 @@ function validarFlow(
     }
     for (const dependencia of item.etapa.dependencias) {
       if (!nomesEtapas.has(dependencia)) {
+        const sugestoesEtapas = descreverSugestoes(nomesEtapas, "Etapas declaradas");
         diagnosticos.push(
           criarDiagnostico(
             "SEM036",
             `Etapa "${item.etapa.nome}" do flow "${flow.nome}" depende de "${dependencia}", que nao foi declarada.`,
             "erro",
             item.linha.intervalo,
-            "Declare a etapa dependente no mesmo flow antes de referencia-la.",
+            sugestoesEtapas ?? "Declare a etapa dependente no mesmo flow antes de referencia-la.",
           ),
         );
       }
@@ -582,13 +745,14 @@ function validarFlow(
 
     for (const destino of [item.etapa.emSucesso, item.etapa.emErro].filter(Boolean)) {
       if (destino && !nomesEtapas.has(destino)) {
+        const sugestoesEtapas = descreverSugestoes(nomesEtapas, "Etapas declaradas");
         diagnosticos.push(
           criarDiagnostico(
             "SEM045",
             `Etapa "${item.etapa.nome}" do flow "${flow.nome}" aponta para "${destino}" em ramificacao, mas essa etapa nao foi declarada.`,
             "erro",
             item.linha.intervalo,
-            "Declare a etapa de destino no mesmo flow antes de usa-la em em_sucesso ou em_erro.",
+            sugestoesEtapas ?? "Declare a etapa de destino no mesmo flow antes de usa-la em em_sucesso ou em_erro.",
           ),
         );
       }
@@ -599,25 +763,27 @@ function validarFlow(
       const indiceErrors = indiceErros(detalhesTask?.errors ?? []);
       for (const rotaErro of item.etapa.porErro) {
         if (!indiceErrors.has(rotaErro.tipo)) {
+          const sugestoesErros = descreverSugestoes(indiceErrors.keys(), "Erros declarados pela task");
           diagnosticos.push(
             criarDiagnostico(
               "SEM046",
               `Etapa "${item.etapa.nome}" do flow "${flow.nome}" roteia o erro "${rotaErro.tipo}", mas esse erro nao pertence ao contrato da task "${item.etapa.task}".`,
               "erro",
               item.linha.intervalo,
-              "Use apenas erros declarados pela task ou cobertos por testes de erro do contrato atual.",
+              sugestoesErros ?? "Use apenas erros declarados pela task ou cobertos por testes de erro do contrato atual.",
             ),
           );
         }
 
         if (!nomesEtapas.has(rotaErro.destino)) {
+          const sugestoesEtapas = descreverSugestoes(nomesEtapas, "Etapas declaradas");
           diagnosticos.push(
             criarDiagnostico(
               "SEM047",
               `Etapa "${item.etapa.nome}" do flow "${flow.nome}" aponta o erro "${rotaErro.tipo}" para "${rotaErro.destino}", mas essa etapa nao foi declarada.`,
               "erro",
               item.linha.intervalo,
-              "Declare a etapa de destino no mesmo flow antes de usa-la em por_erro.",
+              sugestoesEtapas ?? "Declare a etapa de destino no mesmo flow antes de usa-la em por_erro.",
             ),
           );
         }
@@ -949,6 +1115,9 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
     tarefasDetalhadas,
     statesConhecidos,
     modulosImportados: [],
+    interoperabilidades: modulo.uses
+      .filter(ehUseInterop)
+      .map((use) => ({ origem: use.origem, caminho: use.caminho })),
     enumsConhecidos,
   };
 }
@@ -1013,12 +1182,19 @@ function validarTask(
       simbolosPermitidos: entradasConhecidas,
       dicaSintaxe: "Use expressoes como \"campo existe\", \"campo > 0\", \"campo em [A, B]\" ou \"campo deve_ser predicado\".",
       dicaReferencia: "No MVP atual, rules devem referenciar apenas campos do input.",
+      dicaReferenciaPersonalizada: (raiz) => (
+        saidasConhecidas.has(raiz)
+          ? `\"${raiz}\" parece vir do output. Rules devem validar entrada; se a intencao era afirmar pos-condicao, mova isso para guarantees.`
+          : undefined
+      ),
     });
   }
 
   if (task.effects) {
     validarEfeitosDeclarados(task.effects.linhas, diagnosticos, `effects da task ${task.nome}`);
   }
+
+  validarImplementacoesTask(task, diagnosticos);
 
   if (task.tests) {
     for (const bloco of task.tests.blocos) {
@@ -1038,6 +1214,11 @@ function validarTask(
       dicaSintaxe: "Use expressoes como \"saida existe\", \"saida == valor\" ou \"saida em [A, B]\" nas guarantees.",
       dicaReferencia: "No MVP atual, guarantees devem referenciar campos do output ou marcadores semanticos permitidos.",
       aceitarMarcadoresSemanticos: true,
+      dicaReferenciaPersonalizada: (raiz) => (
+        entradasConhecidas.has(raiz)
+          ? `\"${raiz}\" parece vir do input. Guarantees devem afirmar output, estado ou marcadores semanticos; se a intencao era validar entrada, mova isso para rules.`
+          : undefined
+      ),
     });
   }
 
@@ -1098,24 +1279,51 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   const tarefasDetalhadas = new Map<string, ResumoTaskSemantico>();
   const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const modulosImportados: string[] = [];
+  const interoperabilidades: InteropSemantico[] = [];
   const enumsConhecidos = new Map<string, Set<string>>();
 
   for (const use of modulo.uses) {
-    const contextoImportado = opcoes.contextosModulos?.get(use.caminho);
+    if (use.origem !== "sema") {
+      if (!PADRAO_CAMINHO_INTEROP.test(use.caminho)) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM058",
+            `Interop externa "${use.origem} ${use.caminho}" e invalida no modulo "${modulo.nome}".`,
+            "erro",
+            use.intervalo,
+            "Use um identificador de modulo externo como pacote.servico, app.modulo ou dominio.executor.",
+          ),
+        );
+        continue;
+      }
+      interoperabilidades.push({ origem: use.origem, caminho: use.caminho });
+      continue;
+    }
+
+    const resolucaoUse = resolverUseSema(modulo.nome, use.caminho, opcoes.contextosModulos);
+    const contextoImportado = resolucaoUse.caminhoResolvido
+      ? opcoes.contextosModulos?.get(resolucaoUse.caminhoResolvido)
+      : undefined;
     if (!contextoImportado) {
+      const candidatosEncontrados = resolucaoUse.candidatosRelativos
+        .filter((candidato) => opcoes.contextosModulos?.has(candidato))
+        .slice(0, 4);
+      const sugestoesModulos = descreverSugestoes(opcoes.contextosModulos?.keys() ?? [], "Modulos disponiveis neste contexto");
       diagnosticos.push(
         criarDiagnostico(
           "SEM019",
           `Modulo "${modulo.nome}" usa "${use.caminho}", mas esse modulo nao foi encontrado no projeto atual.`,
           "erro",
           use.intervalo,
-          "Garanta que o arquivo .sema importado esteja presente no mesmo conjunto de compilacao.",
+          candidatosEncontrados.length > 0
+            ? `Se a intencao era um import relativo ao namespace atual, tente um caminho como ${candidatosEncontrados.join(", ")}.`
+            : (sugestoesModulos ?? "Garanta que o arquivo .sema importado esteja presente no mesmo conjunto de compilacao."),
         ),
       );
       continue;
     }
 
-    modulosImportados.push(use.caminho);
+    modulosImportados.push(resolucaoUse.caminhoResolvido ?? use.caminho);
     for (const tipo of contextoImportado.tiposConhecidos) {
       tiposConhecidos.add(tipo);
     }
@@ -1128,6 +1336,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
         output: detalhesTask.output.map((campo) => ({ ...campo, modificadores: [...campo.modificadores] })),
         errors: detalhesTask.errors.map((erro) => ({ ...erro })),
         guarantees: [...detalhesTask.guarantees],
+        implementacoes: detalhesTask.implementacoes.map((impl) => ({ ...impl })),
       });
     }
     for (const [nomeState, metadadosState] of contextoImportado.statesConhecidos) {
@@ -1135,6 +1344,9 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     }
     for (const [nomeEnum, valores] of contextoImportado.enumsConhecidos) {
       enumsConhecidos.set(nomeEnum, new Set(valores));
+    }
+    for (const interop of contextoImportado.interoperabilidades) {
+      interoperabilidades.push({ ...interop });
     }
   }
 
@@ -1262,6 +1474,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
       tarefasDetalhadas,
       statesConhecidos,
       modulosImportados,
+      interoperabilidades,
       enumsConhecidos,
     },
     diagnosticos,

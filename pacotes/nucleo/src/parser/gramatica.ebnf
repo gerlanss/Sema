@@ -27,4 +27,4 @@ valor_modificador   = identificador ;
 identificador       = ? token de identificador ? ;
 numero              = ? token numerico ? ;
 texto               = ? token textual ? ;
-palavra_chave       = "input" | "output" | "rules" | "effects" | "guarantees" | "state" | "fields" | "tests" | "error" | "docs" | "comments" | "given" | "when" | "expect" ;
+palavra_chave       = "input" | "output" | "rules" | "effects" | "impl" | "guarantees" | "state" | "fields" | "tests" | "error" | "docs" | "comments" | "given" | "when" | "expect" ;

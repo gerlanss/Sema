@@ -52,6 +52,80 @@ module exemplo.invalido {
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM005"));
 });
 
+test("compilador aceita atalho de comparacao multi-valor em rules", () => {
+  const codigo = `
+module exemplo.rules.multi_valor {
+  task notificar {
+    input {
+      canal: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      canal == "sms" ou "email"
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          canal: "sms"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  const regra = resultado.ir?.tasks[0]?.regrasEstruturadas[0];
+  assert.equal(regra?.tipo, "composta");
+  if (regra?.tipo === "composta") {
+    assert.equal(regra.termos.length, 2);
+    assert.equal(regra.termos[0]?.tipo, "comparacao");
+    assert.equal(regra.termos[1]?.tipo, "comparacao");
+  }
+});
+
+test("compilador orienta mover validacao de input para rules quando ela aparece em guarantees", () => {
+  const codigo = `
+module exemplo.guarantees.input {
+  task autenticar {
+    input {
+      metodo: Texto required
+    }
+    output {
+      token: Texto
+    }
+    guarantees {
+      metodo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          metodo: "sms"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  const diagnostico = resultado.diagnosticos.find((item) => item.codigo === "SEM031");
+  assert.ok(diagnostico);
+  assert.match(diagnostico.dica ?? "", /mova isso para rules/);
+});
+
 test("compilador valida route, flow e state no MVP atual", () => {
   const codigo = `
 module exemplo.rotas {
@@ -261,6 +335,219 @@ module app.invalido {
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM019"));
 });
 
+test("compilador resolve use relativo ao namespace atual", () => {
+  const dominio = `
+module app.ingressos.dominio {
+  entity Ingresso {
+    fields {
+      id: Id
+      codigo: Texto
+    }
+  }
+}
+`;
+
+  const api = `
+module app.ingressos.api {
+  use dominio
+
+  task consultar {
+    input {
+      ingresso: Ingresso required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          ingresso: "ing-1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarProjeto([
+    { caminho: "dominio.sema", codigo: dominio },
+    { caminho: "api.sema", codigo: api },
+  ]);
+
+  assert.equal(temErros(resultado.diagnosticos), false);
+  const moduloApi = resultado.modulos.find((modulo) => modulo.modulo?.nome === "app.ingressos.api");
+  assert.deepEqual(moduloApi?.ir?.uses, ["app.ingressos.dominio"]);
+});
+
+test("compilador aceita interop externo com ts, py e dart sem exigir modulo sema local", () => {
+  const codigo = `
+module app.interop {
+  use ts app.gateway.pagamentos
+  use py servicos.conciliacao
+  use dart app.mobile.pagamentos
+
+  task consultar_status {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      status: Texto
+    }
+    guarantees {
+      status existe
+    }
+    tests {
+      caso "consulta" {
+        given {
+          pagamento_id: "p-1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.deepEqual(resultado.ir?.uses, []);
+  assert.deepEqual(resultado.ir?.imports.map((item) => `${item.origem}:${item.caminho}`), [
+    "ts:app.gateway.pagamentos",
+    "py:servicos.conciliacao",
+    "dart:app.mobile.pagamentos",
+  ]);
+  assert.deepEqual(resultado.ir?.interoperabilidades.map((item) => `${item.origem}:${item.caminho}`), [
+    "ts:app.gateway.pagamentos",
+    "py:servicos.conciliacao",
+    "dart:app.mobile.pagamentos",
+  ]);
+});
+
+test("compilador rejeita interop externo com identificador invalido", () => {
+  const codigo = `
+module app.interop.invalido {
+  use ts app..gateway
+
+  task eco {
+    input {
+      mensagem: Texto required
+    }
+    output {
+      mensagem: Texto
+    }
+    guarantees {
+      mensagem existe
+    }
+    tests {
+      caso "eco" {
+        given {
+          mensagem: "oi"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM058"));
+});
+
+test("compilador vincula task a implementacoes externas explicitas", () => {
+  const codigo = `
+module app.impl {
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      protocolo: Id
+    }
+    effects {
+      consulta gateway_pagamento
+    }
+    impl {
+      ts: app.gateway.pagamentos.processar
+      py: servicos.pagamentos.processar
+      dart: app.mobile.pagamentos.processar
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          pagamento_id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.deepEqual(resultado.ir?.tasks[0]?.implementacoesExternas.map((impl) => `${impl.origem}:${impl.caminho}`), [
+    "ts:app.gateway.pagamentos.processar",
+    "py:servicos.pagamentos.processar",
+    "dart:app.mobile.pagamentos.processar",
+  ]);
+});
+
+test("compilador rejeita impl com origem duplicada ou caminho invalido", () => {
+  const codigo = `
+module app.impl.invalido {
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      protocolo: Id
+    }
+    impl {
+      ts: app.gateway.pagamentos.processar
+      py: app..gateway.invalido
+      typescript: app.gateway.duplicado
+      java: app.gateway.legacy
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          pagamento_id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM059"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM060"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM061"));
+});
+
 test("compilador formaliza rules, effects, guarantees e state com transicoes", () => {
   const codigo = `
 module exemplo.pagamento.avancado {
@@ -434,6 +721,115 @@ module exemplo.flow.avancado {
   assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.emSucesso, "auditar_log");
   assert.equal(resultado.ir?.flows[0]?.etapasEstruturadas[0]?.emErro, "registrar_falha");
   assert.deepEqual(resultado.ir?.flows[0]?.etapasEstruturadas[1]?.dependencias, ["validar_dados"]);
+});
+
+test("compilador aceita flow com depende_de seguido de em_sucesso e em_erro", () => {
+  const codigo = `
+module exemplo.flow.ordem {
+  task preparar {
+    input {
+      chave: Texto required
+    }
+    output {
+      contexto: Texto
+    }
+    guarantees {
+      contexto existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          chave: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task executar {
+    input {
+      chave: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          chave: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task concluir {
+    input {
+      protocolo: Id required
+    }
+    output {
+      sucesso_final: Texto
+    }
+    guarantees {
+      sucesso_final existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          protocolo: "p-1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task falhar {
+    input {
+      chave: Texto required
+    }
+    output {
+      falha: Texto
+    }
+    guarantees {
+      falha existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          chave: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow orquestracao {
+    chave: Texto
+    etapa preparar_contexto usa preparar com chave=chave
+    etapa executar_fluxo usa executar com chave=chave depende_de preparar_contexto em_sucesso concluir_fluxo em_erro registrar_falha
+    etapa concluir_fluxo usa concluir com protocolo=executar_fluxo.protocolo depende_de executar_fluxo
+    etapa registrar_falha usa falhar com chave=chave depende_de executar_fluxo
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  const etapa = resultado.ir?.flows[0]?.etapasEstruturadas.find((item) => item.nome === "executar_fluxo");
+  assert.deepEqual(etapa?.dependencias, ["preparar_contexto"]);
+  assert.equal(etapa?.emSucesso, "concluir_fluxo");
+  assert.equal(etapa?.emErro, "registrar_falha");
 });
 
 test("compilador formaliza negacao e agrupamento semantico com parenteses aninhados", () => {

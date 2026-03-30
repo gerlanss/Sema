@@ -5,17 +5,28 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   compilarCodigo,
-  compilarProjeto,
   formatarCodigo,
   formatarDiagnosticos,
   lerArquivoTexto,
-  listarArquivosSema,
   temErros,
   type IrModulo,
-  type ResultadoCompilacaoProjetoModulo,
 } from "@sema/nucleo";
+import { descreverEstruturaModulo, type AlvoGeracao, type FrameworkGeracao } from "@sema/padroes";
+import { gerarDart } from "@sema/gerador-dart";
 import { gerarPython } from "@sema/gerador-python";
 import { gerarTypeScript } from "@sema/gerador-typescript";
+import {
+  carregarConfiguracaoProjeto,
+  carregarProjeto,
+  resolverAlvoPadrao,
+  resolverAlvosVerificacao,
+  resolverEstruturaSaidaPadrao,
+  resolverFrameworkPadrao,
+  resolverSaidaPadrao,
+  type ContextoProjetoCarregado,
+} from "./projeto.js";
+import type { EstruturaSaida } from "./tipos.js";
+import { importarProjetoLegado, resumoImportacao, type FonteImportacao } from "./importador.js";
 
 type Comando =
   | "iniciar"
@@ -27,6 +38,8 @@ type Comando =
   | "testar"
   | "diagnosticos"
   | "verificar"
+  | "inspecionar"
+  | "importar"
   | "formatar"
   | "ajuda-ia"
   | "starter-ia"
@@ -43,7 +56,7 @@ interface ResultadoExecucaoTestes {
 }
 
 interface ResumoAlvoVerificacao {
-  alvo: "typescript" | "python";
+  alvo: AlvoGeracao;
   arquivosGerados: number;
   quantidadeTestes: number;
   pastaSaida: string;
@@ -84,10 +97,11 @@ interface DescobertaDocsIa {
   documentos: Array<{ nome: string; caminho: string }>;
 }
 
-const STARTER_IA = `Voce esta trabalhando com Sema, uma DSL semantica orientada a contrato e desenhada para ser entendida por IA.
+const STARTER_IA = `Voce esta trabalhando com Sema, uma linguagem estruturada para IA, voltada a modelagem explicita de contratos e intencao.
 
 Importante:
 - a Sema modela contratos, estados, fluxos, erros, efeitos e garantias
+- a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
 - a Sema pode servir de base para interfaces graficas elegantes e coerentes
 - a Sema nao gera uma interface completa sozinha no estado atual
 - trate a Sema como cerebro semantico da aplicacao, nao como gerador magico de front-end pronto
@@ -101,6 +115,16 @@ Regras:
 - use \`sema formatar\` como fonte unica de estilo
 - preserve a intencao do contrato
 
+Comandos essenciais:
+- contexto completo do modulo: \`sema contexto-ia <arquivo.sema>\`
+- estrutura sintatica: \`sema ast <arquivo.sema> --json\`
+- estrutura semantica: \`sema ir <arquivo.sema> --json\`
+- validacao: \`sema validar <arquivo.sema> --json\`
+- diagnosticos: \`sema diagnosticos <arquivo.sema> --json\`
+- formatacao: \`sema formatar <arquivo.sema>\`
+- geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>\`
+- verificacao final: \`sema verificar <arquivo-ou-pasta> [--json]\`
+
 Antes de editar:
 1. leia README, docs de IA e um exemplo oficial parecido
 2. consulte AST e IR do modulo alvo
@@ -109,7 +133,8 @@ Depois de editar:
 1. rode \`sema formatar\`
 2. rode \`sema validar --json\`
 3. se houver falha, use \`diagnosticos --json\`
-4. feche com \`sema verificar\` ou \`npm run project:check\`
+4. se a tarefa pedir codigo derivado, rode \`sema compilar\`
+5. feche com \`sema verificar\` ou \`npm run project:check\`
 
 Priorize sempre:
 - exemplos oficiais
@@ -349,11 +374,13 @@ Comandos:
   sema validar <arquivo-ou-pasta>
   sema ast <arquivo.sema>
   sema ir <arquivo.sema>
-  sema compilar <arquivo-ou-pasta> --alvo <python|typescript> --saida <diretorio>
-  sema gerar <python|typescript> <arquivo-ou-pasta> --saida <diretorio>
-  sema testar <arquivo.sema> --alvo <python|typescript> --saida <diretorio-temporario>
+  sema compilar <arquivo-ou-pasta> --alvo <python|typescript|dart> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]
+  sema gerar <python|typescript|dart> <arquivo-ou-pasta> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]
+  sema testar <arquivo.sema> --alvo <python|typescript|dart> --saida <diretorio-temporario> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]
   sema diagnosticos <arquivo.sema> [--json]
   sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]
+  sema inspecionar [arquivo-ou-pasta] [--json]
+  sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
   sema formatar <arquivo-ou-pasta> [--check] [--json]
   sema ajuda-ia
   sema starter-ia
@@ -366,31 +393,8 @@ Comandos:
 `;
 }
 
-async function carregarModulos(entrada: string): Promise<Array<{ caminho: string; codigo: string; resultado: ReturnType<typeof compilarCodigo> }>> {
-  const entradaResolvida = path.resolve(entrada);
-  const estatisticas = await stat(entradaResolvida);
-  const baseProjeto = estatisticas.isFile() ? path.dirname(entradaResolvida) : entradaResolvida;
-  const arquivosProjeto = await listarArquivosSema(baseProjeto);
-  const arquivosSelecionados = estatisticas.isFile() ? new Set([entradaResolvida]) : new Set(arquivosProjeto.map((arquivo) => path.resolve(arquivo)));
-
-  const fontes = [];
-  for (const arquivo of arquivosProjeto) {
-    const codigo = await lerArquivoTexto(arquivo);
-    fontes.push({ caminho: arquivo, codigo });
-  }
-
-  const resultadoProjeto = compilarProjeto(fontes);
-  const resultados = new Map<string, ResultadoCompilacaoProjetoModulo>(
-    resultadoProjeto.modulos.map((modulo) => [path.resolve(modulo.caminho), modulo]),
-  );
-
-  return fontes
-    .filter((fonte) => arquivosSelecionados.has(path.resolve(fonte.caminho)))
-    .map((fonte) => ({
-      caminho: fonte.caminho,
-      codigo: fonte.codigo,
-      resultado: resultados.get(path.resolve(fonte.caminho)) ?? compilarCodigo(fonte.codigo, fonte.caminho),
-    }));
+async function carregarModulos(entrada: string | undefined, cwd = process.cwd()): Promise<ContextoProjetoCarregado["modulosSelecionados"]> {
+  return (await carregarProjeto(entrada, cwd)).modulosSelecionados;
 }
 
 async function escreverArquivos(base: string, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): Promise<void> {
@@ -414,6 +418,57 @@ function possuiFlag(args: string[], nome: string): boolean {
   return args.includes(nome);
 }
 
+function obterPosicionais(args: string[]): string[] {
+  const posicionais: string[] = [];
+  for (let indice = 0; indice < args.length; indice += 1) {
+    const atual = args[indice]!;
+    if (atual.startsWith("--")) {
+      indice += 1;
+      continue;
+    }
+    posicionais.push(atual);
+  }
+  return posicionais;
+}
+
+function validarCompatibilidadeFramework(alvo: AlvoGeracao, framework: FrameworkGeracao): string | undefined {
+  if (framework === "base") {
+    return undefined;
+  }
+  if (framework === "nestjs" && alvo !== "typescript") {
+    return `Framework "${framework}" so pode ser usado com o alvo typescript.`;
+  }
+  if (framework === "fastapi" && alvo !== "python") {
+    return `Framework "${framework}" so pode ser usado com o alvo python.`;
+  }
+  if (alvo === "dart") {
+    return `Framework "${framework}" nao e suportado para o alvo dart.`;
+  }
+  return undefined;
+}
+
+function normalizarFonteImportacao(valor: string | undefined): FonteImportacao | undefined {
+  if (!valor) {
+    return undefined;
+  }
+  if (valor === "ts") {
+    return "typescript";
+  }
+  if (valor === "py") {
+    return "python";
+  }
+  if (valor === "nest") {
+    return "nestjs";
+  }
+  if (valor === "api") {
+    return "fastapi";
+  }
+  if (valor === "nestjs" || valor === "fastapi" || valor === "typescript" || valor === "python" || valor === "dart") {
+    return valor;
+  }
+  return undefined;
+}
+
 function garantirIr(resultado: ReturnType<typeof compilarCodigo>, caminho: string): IrModulo {
   if (!resultado.ir) {
     throw new Error(`Nao foi possivel gerar IR para ${caminho}.\n${formatarDiagnosticos(resultado.diagnosticos)}`);
@@ -421,11 +476,61 @@ function garantirIr(resultado: ReturnType<typeof compilarCodigo>, caminho: strin
   return resultado.ir;
 }
 
-function gerarArquivosPorAlvo(ir: IrModulo, alvo: string) {
-  return alvo === "python" ? gerarPython(ir) : gerarTypeScript(ir);
+function gerarArquivosPorAlvo(ir: IrModulo, alvo: AlvoGeracao, framework: FrameworkGeracao) {
+  if (alvo === "python") {
+    return gerarPython(ir, { framework });
+  }
+  if (alvo === "dart") {
+    return gerarDart(ir);
+  }
+  return gerarTypeScript(ir, { framework });
 }
 
-function contarCasosDeTesteGerados(alvo: string, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): number {
+function aplicarEstruturaSaida(
+  arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
+  ir: IrModulo,
+  estrutura: EstruturaSaida,
+): Array<{ caminhoRelativo: string; conteudo: string }> {
+  if (estrutura === "flat" || estrutura === "backend") {
+    return arquivos;
+  }
+
+  const estruturaModulo = descreverEstruturaModulo(ir.nome);
+  const pastaModulo = estruturaModulo.contextoSegmentos.join(path.sep);
+  const nomeArquivo = estruturaModulo.nomeArquivo;
+  const nomeBaseAntigo = estruturaModulo.nomeBase;
+
+  return arquivos.map((arquivo) => {
+    const basename = path.basename(arquivo.caminhoRelativo);
+    let novoBasename = basename;
+    let conteudo = arquivo.conteudo;
+
+    if (basename === `${nomeBaseAntigo}.ts`) {
+      novoBasename = `${nomeArquivo}.ts`;
+    } else if (basename === `${nomeBaseAntigo}.test.ts`) {
+      novoBasename = `${nomeArquivo}.test.ts`;
+      conteudo = conteudo.replace(`./${nomeBaseAntigo}.ts`, `./${nomeArquivo}.ts`);
+    } else if (basename === `${nomeBaseAntigo}.py`) {
+      novoBasename = `${nomeArquivo}.py`;
+    } else if (basename === `test_${nomeBaseAntigo}.py`) {
+      novoBasename = `test_${nomeArquivo}.py`;
+      conteudo = conteudo.replace(`from ${nomeBaseAntigo} import *`, `from ${nomeArquivo} import *`);
+    } else if (basename === `${nomeBaseAntigo}.dart`) {
+      novoBasename = `${nomeArquivo}.dart`;
+    }
+
+    return {
+      caminhoRelativo: pastaModulo ? path.join(pastaModulo, novoBasename) : novoBasename,
+      conteudo,
+    };
+  });
+}
+
+function contarCasosDeTesteGerados(alvo: AlvoGeracao, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): number {
+  if (alvo === "dart") {
+    return 0;
+  }
+
   if (alvo === "typescript") {
     const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.endsWith(".test.ts"));
     if (!arquivoTeste) {
@@ -434,7 +539,7 @@ function contarCasosDeTesteGerados(alvo: string, arquivos: Array<{ caminhoRelati
     return (arquivoTeste.conteudo.match(/\btest\(/g) ?? []).length;
   }
 
-  const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.startsWith("test_"));
+  const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_"));
   if (!arquivoTeste) {
     return 0;
   }
@@ -442,7 +547,7 @@ function contarCasosDeTesteGerados(alvo: string, arquivos: Array<{ caminhoRelati
 }
 
 function executarTestesGerados(
-  alvo: string,
+  alvo: AlvoGeracao,
   baseSaida: string,
   arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
   silencioso = false,
@@ -475,7 +580,7 @@ function executarTestesGerados(
     };
   }
 
-  const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.startsWith("test_"))?.caminhoRelativo;
+  const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_"))?.caminhoRelativo;
   if (!arquivoTeste) {
     if (!silencioso) {
       console.log("Nenhum teste Python foi gerado.");
@@ -597,17 +702,8 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
 
   await mkdir(pastaBase, { recursive: true });
 
-  const pastaProjeto = path.dirname(arquivo);
-  const arquivosProjeto = await listarArquivosSema(pastaProjeto);
-  const fontes = [];
-
-  for (const caminho of arquivosProjeto) {
-    const codigo = await lerArquivoTexto(caminho);
-    fontes.push({ caminho, codigo });
-  }
-
-  const resultadoProjeto = compilarProjeto(fontes);
-  const resultadoModulo = resultadoProjeto.modulos.find((item) => path.resolve(item.caminho) === arquivo);
+  const contextoProjeto = await carregarProjeto(arquivo, process.cwd());
+  const resultadoModulo = contextoProjeto.modulosSelecionados.find((item) => path.resolve(item.caminho) === arquivo)?.resultado;
 
   if (!resultadoModulo) {
     falharContextoIa(`Nao foi possivel encontrar o modulo correspondente ao arquivo ${arquivo}.`);
@@ -700,24 +796,147 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
   };
 }
 
-async function comandoIniciar(cwd: string): Promise<number> {
-  const arquivos = [
-    { caminhoRelativo: "sema.config.json", conteudo: '{\n  "origem": "./exemplos",\n  "saida": "./saida",\n  "alvos": ["typescript", "python"],\n  "modoEstrito": true\n}\n' },
-    { caminhoRelativo: "exemplos/exemplo_minimo.sema", conteudo: 'module exemplo.minimo {\n  task eco {\n    input {\n      mensagem: Texto required\n    }\n    output {\n      mensagem: Texto\n    }\n    guarantees {\n      mensagem existe\n    }\n    tests {\n      caso "eco simples" {\n        given {\n          mensagem: "oi"\n        }\n        expect {\n          sucesso: verdadeiro\n        }\n      }\n    }\n  }\n}\n' },
+async function comandoIniciar(cwd: string, template: FrameworkGeracao): Promise<number> {
+  const arquivosBase = [
+    {
+      caminhoRelativo: "contratos/pedidos.sema",
+      conteudo: `module app.pedidos {
+  entity Pedido {
+    fields {
+      id: Id
+      status: Texto
+      total: Decimal
+    }
+  }
+
+  task criar_pedido {
+    input {
+      cliente_id: Id required
+      total: Decimal required
+    }
+    output {
+      pedido_id: Id
+      status: Texto
+    }
+    rules {
+      total > 0
+    }
+    effects {
+      persistencia Pedido criticidade=alta
+      auditoria pedidos
+    }
+    guarantees {
+      pedido_id existe
+      status existe
+    }
+    tests {
+      caso "pedido valido" {
+        given {
+          cliente_id: "cli-1"
+          total: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route criar_pedido_publico {
+    metodo: POST
+    caminho: /pedidos
+    task: criar_pedido
+  }
+}
+`,
+    },
   ];
+
+  let arquivos = arquivosBase;
+  if (template === "nestjs") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated/nestjs",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "backend",
+  "framework": "nestjs",
+  "modoEstrito": true,
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/nestjs"
+  },
+  "convencoesGeracaoPorProjeto": "backend"
+}
+`,
+      },
+      { caminhoRelativo: "src/.gitkeep", conteudo: "" },
+      { caminhoRelativo: "test/.gitkeep", conteudo: "" },
+      ...arquivosBase,
+    ];
+  } else if (template === "fastapi") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated/fastapi",
+  "alvos": ["python"],
+  "alvoPadrao": "python",
+  "estruturaSaida": "backend",
+  "framework": "fastapi",
+  "modoEstrito": true,
+  "diretoriosSaidaPorAlvo": {
+    "python": "./generated/fastapi"
+  },
+  "convencoesGeracaoPorProjeto": "backend"
+}
+`,
+      },
+      { caminhoRelativo: "app/.gitkeep", conteudo: "" },
+      { caminhoRelativo: "tests/.gitkeep", conteudo: "" },
+      ...arquivosBase,
+    ];
+  } else {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript", "python", "dart"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript",
+    "python": "./generated/python",
+    "dart": "./generated/dart"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      ...arquivosBase,
+    ];
+  }
+
   await escreverArquivos(cwd, arquivos);
-  console.log("Projeto Sema inicializado.");
+  console.log(`Projeto Sema inicializado com template ${template}.`);
   return 0;
 }
 
-async function comandoValidar(entrada: string): Promise<number> {
+async function comandoValidar(entrada?: string): Promise<number> {
   const modulos = await carregarModulos(entrada);
   const diagnosticos = modulos.flatMap((item) => item.resultado.diagnosticos);
   console.log(formatarDiagnosticos(diagnosticos));
   return temErros(diagnosticos) ? 1 : 0;
 }
 
-async function comandoValidarJson(entrada: string): Promise<number> {
+async function comandoValidarJson(entrada?: string): Promise<number> {
   const modulos = await carregarModulos(entrada);
   const resultados = modulos.map((item) => ({
     caminho: item.caminho,
@@ -731,6 +950,142 @@ async function comandoValidarJson(entrada: string): Promise<number> {
     resultados,
   }, null, 2));
   return resultados.every((resultado) => resultado.sucesso) ? 0 : 1;
+}
+
+async function comandoInspecionar(entrada: string | undefined, emJson: boolean, cwd = process.cwd()): Promise<number> {
+  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const framework = resolverFrameworkPadrao(undefined, contextoProjeto.configCarregada);
+  const estruturaSaida = resolverEstruturaSaidaPadrao(undefined, framework, contextoProjeto.configCarregada);
+  const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const saidas = Object.fromEntries(alvos.map((alvo) => [alvo, resolverSaidaPadrao(undefined, alvo, contextoProjeto.configCarregada)]));
+  const payload = {
+    comando: "inspecionar",
+    entrada: contextoProjeto.entradaResolvida,
+    configuracao: {
+      caminho: contextoProjeto.configCarregada?.caminho ?? null,
+      framework,
+      estruturaSaida,
+      alvos,
+      saidas,
+      origens: contextoProjeto.origensProjeto,
+    },
+    projeto: {
+      arquivos: contextoProjeto.arquivosProjeto,
+      modulos: contextoProjeto.modulosSelecionados.map((item) => ({
+        caminho: item.caminho,
+        modulo: item.resultado.modulo?.nome ?? null,
+        sucesso: !temErros(item.resultado.diagnosticos),
+        diagnosticos: item.resultado.diagnosticos.length,
+      })),
+    },
+  };
+
+  if (emJson) {
+    console.log(JSON.stringify(payload, null, 2));
+    return 0;
+  }
+
+  console.log("Inspecao de projeto Sema");
+  console.log(`- Entrada: ${payload.entrada}`);
+  console.log(`- Configuracao: ${payload.configuracao.caminho ?? "nenhuma"}`);
+  console.log(`- Framework: ${payload.configuracao.framework}`);
+  console.log(`- Estrutura de saida: ${payload.configuracao.estruturaSaida}`);
+  console.log(`- Alvos: ${payload.configuracao.alvos.join(", ")}`);
+  console.log("- Saidas por alvo:");
+  for (const [alvo, saida] of Object.entries(payload.configuracao.saidas)) {
+    console.log(`  - ${alvo}: ${saida}`);
+  }
+  console.log("- Origens do projeto:");
+  for (const origem of payload.configuracao.origens) {
+    console.log(`  - ${origem}`);
+  }
+  console.log("- Modulos selecionados:");
+  for (const modulo of payload.projeto.modulos) {
+    console.log(`  - ${modulo.modulo ?? "(sem modulo)"} :: ${modulo.caminho} :: diagnosticos=${modulo.diagnosticos}`);
+  }
+  return 0;
+}
+
+async function comandoImportar(
+  fonte: FonteImportacao,
+  diretorio: string,
+  saida: string,
+  namespaceBase: string | undefined,
+  emJson: boolean,
+): Promise<number> {
+  const resultado = await importarProjetoLegado(fonte, diretorio, namespaceBase);
+  const resumo = resumoImportacao(resultado);
+
+  if (!resumo.sucesso) {
+    const payloadErro = {
+      comando: "importar",
+      fonte,
+      diretorio: path.resolve(diretorio),
+      namespaceBase: resultado.namespaceBase,
+      resumo,
+      arquivos: resultado.arquivos.map((arquivo) => ({
+        caminho: path.join(path.resolve(saida), arquivo.caminhoRelativo),
+        modulo: arquivo.modulo,
+        tarefas: arquivo.tarefas,
+        rotas: arquivo.rotas,
+        entidades: arquivo.entidades,
+        enums: arquivo.enums,
+      })),
+      diagnosticos: resultado.diagnosticos,
+    };
+
+    if (emJson) {
+      console.log(JSON.stringify(payloadErro, null, 2));
+    } else {
+      console.error("Falha na importacao assistida. O rascunho gerado ainda nao ficou semanticamente valido.");
+      console.error(formatarDiagnosticos(resultado.diagnosticos));
+    }
+    return 1;
+  }
+
+  await escreverArquivos(saida, resultado.arquivos.map((arquivo) => ({
+    caminhoRelativo: arquivo.caminhoRelativo,
+    conteudo: arquivo.conteudo,
+  })));
+
+  const payload = {
+    comando: "importar",
+    fonte,
+    diretorio: path.resolve(diretorio),
+    saida: path.resolve(saida),
+    namespaceBase: resultado.namespaceBase,
+    resumo,
+    arquivos: resultado.arquivos.map((arquivo) => ({
+      caminho: path.join(path.resolve(saida), arquivo.caminhoRelativo),
+      modulo: arquivo.modulo,
+      tarefas: arquivo.tarefas,
+      rotas: arquivo.rotas,
+      entidades: arquivo.entidades,
+      enums: arquivo.enums,
+    })),
+  };
+
+  if (emJson) {
+    console.log(JSON.stringify(payload, null, 2));
+    return 0;
+  }
+
+  console.log("Importacao assistida para Sema concluida.");
+  console.log(`- Fonte: ${fonte}`);
+  console.log(`- Diretorio analisado: ${payload.diretorio}`);
+  console.log(`- Namespace base: ${payload.namespaceBase}`);
+  console.log(`- Saida: ${payload.saida}`);
+  console.log(`- Modulos: ${resumo.modulos}`);
+  console.log(`- Tarefas: ${resumo.tarefas}`);
+  console.log(`- Rotas: ${resumo.rotas}`);
+  console.log(`- Entidades: ${resumo.entidades}`);
+  console.log(`- Enums: ${resumo.enums}`);
+  console.log("- Arquivos gerados:");
+  for (const arquivo of payload.arquivos) {
+    console.log(`  - ${arquivo.caminho} :: modulo=${arquivo.modulo} tarefas=${arquivo.tarefas} rotas=${arquivo.rotas}`);
+  }
+  console.log("Ajuste os rascunhos .sema, rode `sema formatar`, `sema validar --json` e depois `sema compilar`.");
+  return 0;
 }
 
 async function comandoAst(arquivo: string): Promise<number> {
@@ -775,8 +1130,21 @@ async function comandoIrJson(arquivo: string): Promise<number> {
   return temErros(resultado.diagnosticos) ? 1 : 0;
 }
 
-async function comandoCompilar(entrada: string, alvo: string, saida: string): Promise<number> {
-  const modulos = await carregarModulos(entrada);
+async function comandoCompilar(
+  entrada: string | undefined,
+  alvo: AlvoGeracao,
+  saida: string,
+  estrutura: EstruturaSaida,
+  framework: FrameworkGeracao,
+  cwd = process.cwd(),
+): Promise<number> {
+  const incompatibilidade = validarCompatibilidadeFramework(alvo, framework);
+  if (incompatibilidade) {
+    console.error(incompatibilidade);
+    return 1;
+  }
+
+  const modulos = await carregarModulos(entrada, cwd);
   const diagnosticos = modulos.flatMap((item) => item.resultado.diagnosticos);
   if (temErros(diagnosticos)) {
     console.error(formatarDiagnosticos(diagnosticos));
@@ -785,10 +1153,10 @@ async function comandoCompilar(entrada: string, alvo: string, saida: string): Pr
 
   for (const modulo of modulos) {
     const ir = garantirIr(modulo.resultado, modulo.caminho);
-    const arquivos = gerarArquivosPorAlvo(ir, alvo);
+    const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
     await escreverArquivos(saida, arquivos);
   }
-  console.log(`Compilacao concluida para o alvo ${alvo}.`);
+  console.log(`Compilacao concluida para o alvo ${alvo} com estrutura ${estrutura} e framework ${framework}.`);
   return 0;
 }
 
@@ -803,10 +1171,13 @@ async function comandoDiagnosticos(arquivo: string, emJson: boolean): Promise<nu
   return temErros(resultado.diagnosticos) ? 1 : 0;
 }
 
-async function comandoFormatar(entrada: string, verificarApenas: boolean, emJson: boolean): Promise<number> {
-  const entradaResolvida = path.resolve(entrada);
+async function comandoFormatar(entrada: string | undefined, verificarApenas: boolean, emJson: boolean): Promise<number> {
+  const contextoProjeto = await carregarProjeto(entrada, process.cwd());
+  const entradaResolvida = contextoProjeto.entradaResolvida;
   const estatisticas = await stat(entradaResolvida);
-  const arquivos = estatisticas.isFile() ? [entradaResolvida] : await listarArquivosSema(entradaResolvida);
+  const arquivos = estatisticas.isFile()
+    ? [entradaResolvida]
+    : contextoProjeto.arquivosProjeto.filter((arquivo) => arquivo.startsWith(path.resolve(entradaResolvida)));
   const resultados: ResultadoFormatacaoArquivo[] = [];
 
   for (const arquivo of arquivos) {
@@ -889,6 +1260,7 @@ async function comandoAjudaIa(): Promise<number> {
   console.log("- Use `sema prompt-ia-sema-primeiro` para forcar modelagem semantica antes da implementacao.");
   console.log("- Use `sema exemplos-prompt-ia` para pegar modelos prontos de prompt.");
   console.log("- Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR e diagnosticos do modulo alvo.");
+  console.log("- Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>` quando a tarefa pedir codigo derivado.");
   console.log("");
   console.log("Regra pratica");
   console.log("- Se voce quer testar a Sema de verdade, nao peca so HTML solto.");
@@ -961,7 +1333,18 @@ async function comandoContextoIa(arquivo: string, pastaSaida: string | undefined
   return 0;
 }
 
-async function comandoTestar(arquivo: string, alvo: string, saida: string): Promise<number> {
+async function comandoTestar(
+  arquivo: string,
+  alvo: AlvoGeracao,
+  saida: string,
+  estrutura: EstruturaSaida,
+  framework: FrameworkGeracao,
+): Promise<number> {
+  const incompatibilidade = validarCompatibilidadeFramework(alvo, framework);
+  if (incompatibilidade) {
+    console.error(incompatibilidade);
+    return 1;
+  }
   const codigo = await lerArquivoTexto(arquivo);
   const resultado = compilarCodigo(codigo, arquivo);
   if (temErros(resultado.diagnosticos)) {
@@ -969,8 +1352,12 @@ async function comandoTestar(arquivo: string, alvo: string, saida: string): Prom
     return 1;
   }
   const ir = garantirIr(resultado, arquivo);
-  const arquivos = gerarArquivosPorAlvo(ir, alvo);
+  const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
   await escreverArquivos(saida, arquivos);
+  if (framework !== "base") {
+    console.log(`Scaffold ${framework} gerado em ${saida}. A execucao automatica de testes continua focada no framework base da Sema.`);
+    return 0;
+  }
   return executarTestesGerados(alvo, saida, arquivos).codigoSaida;
 }
 
@@ -995,15 +1382,20 @@ function imprimirResumoVerificacao(resumos: ResumoModuloVerificacao[]): void {
   console.log(`Totais: modulos=${resumos.length} alvos=${totalAlvos} arquivos=${totalArquivos} testes=${totalTestes}`);
 }
 
-async function comandoVerificar(entrada: string, baseSaida: string): Promise<number> {
-  const modulos = await carregarModulos(entrada);
+async function comandoVerificar(
+  entrada: string | undefined,
+  baseSaida: string,
+  cwd = process.cwd(),
+): Promise<number> {
+  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const modulos = contextoProjeto.modulosSelecionados;
   const diagnosticos = modulos.flatMap((item) => item.resultado.diagnosticos);
   if (temErros(diagnosticos)) {
     console.error(formatarDiagnosticos(diagnosticos));
     return 1;
   }
 
-  const alvos = ["typescript", "python"] as const;
+  const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
   const resumos: ResumoModuloVerificacao[] = [];
   for (const modulo of modulos) {
     const ir = garantirIr(modulo.resultado, modulo.caminho);
@@ -1015,7 +1407,8 @@ async function comandoVerificar(entrada: string, baseSaida: string): Promise<num
     };
     for (const alvo of alvos) {
       const pastaAlvo = path.join(baseSaida, alvo, nomeSubpastaModulo(modulo.caminho));
-      const arquivos = gerarArquivosPorAlvo(ir, alvo);
+      const framework = alvo === "typescript" ? "base" : alvo === "python" ? "base" : "base";
+      const arquivos = gerarArquivosPorAlvo(ir, alvo, framework);
       await escreverArquivos(pastaAlvo, arquivos);
       const execucao = executarTestesGerados(alvo, pastaAlvo, arquivos);
       resumoModulo.alvos.push({
@@ -1039,8 +1432,13 @@ async function comandoVerificar(entrada: string, baseSaida: string): Promise<num
   return 0;
 }
 
-async function comandoVerificarJson(entrada: string, baseSaida: string): Promise<number> {
-  const modulos = await carregarModulos(entrada);
+async function comandoVerificarJson(
+  entrada: string | undefined,
+  baseSaida: string,
+  cwd = process.cwd(),
+): Promise<number> {
+  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const modulos = contextoProjeto.modulosSelecionados;
   const diagnosticos = modulos.flatMap((item) => item.resultado.diagnosticos);
   if (temErros(diagnosticos)) {
     console.log(JSON.stringify({
@@ -1053,7 +1451,7 @@ async function comandoVerificarJson(entrada: string, baseSaida: string): Promise
     return 1;
   }
 
-  const alvos = ["typescript", "python"] as const;
+  const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
   const resumos: Array<ResumoModuloVerificacao & { saidaTestes?: Array<{ alvo: string; stdout: string; stderr: string }> }> = [];
   let codigoSaida = 0;
 
@@ -1068,7 +1466,7 @@ async function comandoVerificarJson(entrada: string, baseSaida: string): Promise
 
     for (const alvo of alvos) {
       const pastaAlvo = path.join(baseSaida, alvo, nomeSubpastaModulo(modulo.caminho));
-      const arquivos = gerarArquivosPorAlvo(ir, alvo);
+      const arquivos = gerarArquivosPorAlvo(ir, alvo, "base");
       await escreverArquivos(pastaAlvo, arquivos);
       const execucao = executarTestesGerados(alvo, pastaAlvo, arquivos, true);
       resumoModulo.alvos.push({
@@ -1112,15 +1510,16 @@ async function principal(): Promise<void> {
   }
 
   const cwd = process.cwd();
+  const posicionais = obterPosicionais(resto);
   let codigoSaida = 0;
   switch (comando) {
     case "iniciar":
-      codigoSaida = await comandoIniciar(cwd);
+      codigoSaida = await comandoIniciar(cwd, resolverFrameworkPadrao(obterOpcao(resto, "--template"), undefined));
       break;
     case "validar":
       codigoSaida = possuiFlag(resto, "--json")
-        ? await comandoValidarJson(resto[0] ?? "exemplos")
-        : await comandoValidar(resto[0] ?? "exemplos");
+        ? await comandoValidarJson(posicionais[0])
+        : await comandoValidar(posicionais[0]);
       break;
     case "ast":
       codigoSaida = possuiFlag(resto, "--json")
@@ -1133,43 +1532,80 @@ async function principal(): Promise<void> {
         : await comandoIr(resto[0] ?? "");
       break;
     case "compilar":
-      codigoSaida = await comandoCompilar(
-        resto[0] ?? "exemplos",
-        obterOpcao(resto, "--alvo", "typescript") ?? "typescript",
-        obterOpcao(resto, "--saida", "./saida") ?? "./saida",
-      );
+      {
+        const config = await carregarConfiguracaoProjeto(posicionais[0] ? path.resolve(cwd, posicionais[0]) : cwd);
+        const alvo = resolverAlvoPadrao(obterOpcao(resto, "--alvo"), config);
+        const framework = resolverFrameworkPadrao(obterOpcao(resto, "--framework"), config);
+        const estrutura = resolverEstruturaSaidaPadrao(obterOpcao(resto, "--estrutura"), framework, config);
+        const saida = resolverSaidaPadrao(obterOpcao(resto, "--saida"), alvo, config);
+        codigoSaida = await comandoCompilar(posicionais[0], alvo, saida, estrutura, framework, cwd);
+      }
       break;
     case "gerar":
-      codigoSaida = await comandoCompilar(
-        resto[1] ?? "exemplos",
-        resto[0] ?? "typescript",
-        obterOpcao(resto, "--saida", "./saida") ?? "./saida",
-      );
+      {
+        const config = await carregarConfiguracaoProjeto(posicionais[1] ? path.resolve(cwd, posicionais[1]) : cwd);
+        const alvo = resolverAlvoPadrao(posicionais[0] ?? obterOpcao(resto, "--alvo"), config);
+        const framework = resolverFrameworkPadrao(obterOpcao(resto, "--framework"), config);
+        const estrutura = resolverEstruturaSaidaPadrao(obterOpcao(resto, "--estrutura"), framework, config);
+        const saida = resolverSaidaPadrao(obterOpcao(resto, "--saida"), alvo, config);
+        codigoSaida = await comandoCompilar(posicionais[1], alvo, saida, estrutura, framework, cwd);
+      }
       break;
     case "diagnosticos":
-      codigoSaida = await comandoDiagnosticos(resto[0] ?? "", resto.includes("--json"));
+      codigoSaida = await comandoDiagnosticos(posicionais[0] ?? "", resto.includes("--json"));
       break;
     case "testar":
-      codigoSaida = await comandoTestar(
-        resto[0] ?? "",
-        obterOpcao(resto, "--alvo", "typescript") ?? "typescript",
-        obterOpcao(resto, "--saida", "./.tmp/sema-testes") ?? "./.tmp/sema-testes",
-      );
+      {
+        const config = await carregarConfiguracaoProjeto(posicionais[0] ? path.resolve(cwd, posicionais[0]) : cwd);
+        const alvo = resolverAlvoPadrao(obterOpcao(resto, "--alvo"), config);
+        const framework = resolverFrameworkPadrao(obterOpcao(resto, "--framework"), config);
+        const estrutura = resolverEstruturaSaidaPadrao(obterOpcao(resto, "--estrutura"), framework, config);
+        const saida = resolverSaidaPadrao(obterOpcao(resto, "--saida", "./.tmp/sema-testes"), alvo, config);
+        codigoSaida = await comandoTestar(
+          path.resolve(cwd, posicionais[0] ?? ""),
+          alvo,
+          saida,
+          estrutura,
+          framework,
+        );
+      }
       break;
     case "verificar":
       codigoSaida = possuiFlag(resto, "--json")
         ? await comandoVerificarJson(
-          resto[0] ?? "exemplos",
-          obterOpcao(resto, "--saida", "./.tmp/sema-verificar") ?? "./.tmp/sema-verificar",
+          posicionais[0],
+          resolverSaidaPadrao(obterOpcao(resto, "--saida", "./.tmp/sema-verificar"), "typescript", await carregarConfiguracaoProjeto(posicionais[0] ? path.resolve(cwd, posicionais[0]) : cwd)),
+          cwd,
         )
         : await comandoVerificar(
-          resto[0] ?? "exemplos",
-          obterOpcao(resto, "--saida", "./.tmp/sema-verificar") ?? "./.tmp/sema-verificar",
+          posicionais[0],
+          resolverSaidaPadrao(obterOpcao(resto, "--saida", "./.tmp/sema-verificar"), "typescript", await carregarConfiguracaoProjeto(posicionais[0] ? path.resolve(cwd, posicionais[0]) : cwd)),
+          cwd,
         );
+      break;
+    case "inspecionar":
+      codigoSaida = await comandoInspecionar(posicionais[0], possuiFlag(resto, "--json"), cwd);
+      break;
+    case "importar":
+      {
+        const fonte = normalizarFonteImportacao(posicionais[0]);
+        if (!fonte || !posicionais[1]) {
+          console.error("Uso: sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
+          codigoSaida = 1;
+          break;
+        }
+        codigoSaida = await comandoImportar(
+          fonte,
+          path.resolve(cwd, posicionais[1]),
+          path.resolve(cwd, obterOpcao(resto, "--saida", "./sema/importado")!),
+          obterOpcao(resto, "--namespace"),
+          possuiFlag(resto, "--json"),
+        );
+      }
       break;
     case "formatar":
       codigoSaida = await comandoFormatar(
-        resto[0] ?? "exemplos",
+        posicionais[0],
         possuiFlag(resto, "--check"),
         possuiFlag(resto, "--json"),
       );
@@ -1197,7 +1633,7 @@ async function principal(): Promise<void> {
       break;
     case "contexto-ia":
       codigoSaida = await comandoContextoIa(
-        resto[0] ?? "",
+        posicionais[0] ?? "",
         obterOpcao(resto, "--saida"),
         possuiFlag(resto, "--json"),
       );

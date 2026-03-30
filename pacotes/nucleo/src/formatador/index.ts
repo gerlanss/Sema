@@ -39,11 +39,12 @@ const ORDEM_SUBBLOCOS_TASK = new Map<string, number>([
   ["output", 3],
   ["rules", 4],
   ["effects", 5],
-  ["state", 6],
-  ["guarantees", 7],
-  ["error", 8],
-  ["tests", 9],
-  ["desconhecido", 10],
+  ["impl", 6],
+  ["state", 7],
+  ["guarantees", 8],
+  ["error", 9],
+  ["tests", 10],
+  ["desconhecido", 11],
 ]);
 
 const ORDEM_SUBBLOCOS_ROUTE = new Map<string, number>([
@@ -196,7 +197,7 @@ function renderizarBlocoAst(bloco: BlocoAst, nivel: number): string {
     case "bloco_generico":
       return renderizarBlocoGenerico(bloco, nivel);
     case "use":
-      return `${indentacao(nivel)}use ${bloco.caminho}`;
+      return `${indentacao(nivel)}use ${bloco.origem === "sema" ? "" : `${bloco.origem} `}${bloco.caminho}`.trimEnd();
     case "enum":
       return renderizarEnum(bloco, nivel);
     case "type":

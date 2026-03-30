@@ -13,6 +13,11 @@ export interface IrCampo {
   modificadores: string[];
 }
 
+export interface IrImplementacaoTask {
+  origem: "ts" | "py" | "dart";
+  caminho: string;
+}
+
 export interface IrBlocoDeclarativo {
   campos: IrCampo[];
   linhas: string[];
@@ -41,6 +46,17 @@ export interface IrEnum {
   valores: string[];
 }
 
+export interface IrUse {
+  origem: "sema" | "ts" | "py" | "dart";
+  caminho: string;
+  externo: boolean;
+}
+
+export interface IrInteropExterno {
+  origem: "ts" | "py" | "dart";
+  caminho: string;
+}
+
 export interface IrTask {
   nome: string;
   input: IrCampo[];
@@ -49,6 +65,7 @@ export interface IrTask {
   regrasEstruturadas: ExpressaoSemantica[];
   effects: string[];
   efeitosEstruturados: EfeitoSemantico[];
+  implementacoesExternas: IrImplementacaoTask[];
   guarantees: string[];
   garantiasEstruturadas: ExpressaoSemantica[];
   errors: Record<string, string>;
@@ -117,6 +134,8 @@ export interface IrState {
 export interface IrModulo {
   nome: string;
   uses: string[];
+  imports: IrUse[];
+  interoperabilidades: IrInteropExterno[];
   types: IrType[];
   entities: IrEntity[];
   enums: IrEnum[];

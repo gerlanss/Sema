@@ -1,5 +1,17 @@
+import path from "node:path";
 import type { ExpressaoSemantica, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
-import { mapearTipoParaPython, normalizarNomeModulo, normalizarNomeParaSimbolo, type ArquivoGerado } from "@sema/padroes";
+import {
+  descreverEstruturaModulo,
+  mapearTipoParaPython,
+  normalizarNomeModulo,
+  normalizarNomeParaSimbolo,
+  type ArquivoGerado,
+  type FrameworkGeracao,
+} from "@sema/padroes";
+
+export interface OpcoesGeracaoPython {
+  framework?: FrameworkGeracao;
+}
 
 const TIPOS_PRIMITIVOS_SEMA = new Set(["Texto", "Numero", "Inteiro", "Decimal", "Booleano", "Data", "DataHora", "Id", "Email", "Url", "Json", "Vazio"]);
 
@@ -142,6 +154,14 @@ function gerarMapaLiteralPython(campos: Array<{ nome: string; valor: string }>):
   return `{${campos.map((campo) => `${JSON.stringify(campo.nome)}: ${campo.valor}`).join(", ")}}`;
 }
 
+function paraPascalCase(valor: string): string {
+  return valor
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((parte) => parte[0]!.toUpperCase() + parte.slice(1))
+    .join("");
+}
+
 function gerarPreparacaoSaida(task: IrTask): string {
   const camposSaida = new Set(task.output.map((campo) => campo.nome));
   const argumentos = task.output.map((campo) => `${campo.nome}=${valorPadraoPython(campo.tipo, campo.nome)}`).join(", ");
@@ -196,12 +216,16 @@ function gerarMetadadosTask(task: IrTask): string {
   const efeitos = task.efeitosEstruturados.length === 0
     ? "[]"
     : `[\n${task.efeitosEstruturados.map((efeito) => `    {"categoria": "${efeito.categoria}", "alvo": "${efeito.alvo}"${efeito.detalhe ? `, "detalhe": ${JSON.stringify(efeito.detalhe)}` : ""}${efeito.criticidade ? `, "criticidade": "${efeito.criticidade}"` : ""}},`).join("\n")}\n]`;
+  const implementacoes = task.implementacoesExternas.length === 0
+    ? "[]"
+    : `[\n${task.implementacoesExternas.map((impl) => `    {"origem": "${impl.origem}", "caminho": "${impl.caminho}"},`).join("\n")}\n]`;
 
   return `contrato_${normalizarNomeParaSimbolo(task.nome)} = {
     "nome": "${task.nome}",
     "input": ${gerarListaCamposPython(task.input)},
     "output": ${gerarListaCamposPython(task.output)},
     "effects": ${efeitos},
+    "impl": ${implementacoes},
     "errors": ${gerarMapaErrosPython(task.errors)},
     "guarantees": ${JSON.stringify(task.guarantees, null, 2)},
 }
@@ -327,6 +351,9 @@ function gerarTask(task: IrTask): string {
     : task.effects.length === 0
     ? "    # Nenhum efeito declarado."
     : task.effects.map((efeito) => `    # Efeito declarado: ${efeito}`).join("\n");
+  const implementacoes = task.implementacoesExternas.length > 0
+    ? task.implementacoesExternas.map((impl) => `    # Implementacao externa vinculada: origem=${impl.origem} caminho=${impl.caminho}`).join("\n")
+    : "";
 
   const garantias = `    verificar_garantias_${nome}(saida)\n    return saida`;
 
@@ -345,6 +372,7 @@ def executar_${nome}(entrada: ${task.nome}Entrada) -> ${task.nome}Saida:
     validar_${nome}(entrada)
 ${cenariosErro.map((caso) => `    if vars(entrada) == ${caso.entrada}:\n        raise ${task.nome}_${caso.tipoErro}Erro()`).join("\n")}
 ${task.stateContract ? `    # Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n    # Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
+${implementacoes}
 ${efeitos}
 ${gerarPreparacaoSaida(task)}
 ${garantias}
@@ -369,8 +397,11 @@ function gerarTestes(modulo: IrModulo): string {
   return linhas.join("\n");
 }
 
-export function gerarPython(modulo: IrModulo): ArquivoGerado[] {
+function gerarPythonBase(modulo: IrModulo): ArquivoGerado[] {
   const nomeBase = normalizarNomeModulo(modulo.nome).replace(/\./g, "_");
+  const interoperabilidades = modulo.interoperabilidades
+    .map((interop) => `# Interop externo ${interop.origem}: ${interop.caminho}`)
+    .join("\n");
   const tiposExternos = coletarTiposExternos(modulo)
     .map((tipo) => `class ${tipo}(SimpleNamespace):\n    pass\n`)
     .join("\n");
@@ -382,11 +413,148 @@ export function gerarPython(modulo: IrModulo): ArquivoGerado[] {
   const tasks = modulo.tasks.map(gerarTask).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
-  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\n\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
+  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
   const testes = gerarTestes(modulo);
 
   return [
     { caminhoRelativo: `${nomeBase}.py`, conteudo: codigo },
     { caminhoRelativo: `test_${nomeBase}.py`, conteudo: testes },
   ];
+}
+
+function gerarFastApiSchemas(modulo: IrModulo, caminhoContrato: string): string {
+  const linhas = [
+    "from pydantic import BaseModel",
+    `from ${caminhoContrato} import *`,
+    "",
+  ];
+
+  for (const task of modulo.tasks) {
+    linhas.push(`class ${task.nome}EntradaSchema(BaseModel):
+${task.input.length === 0 ? "    pass" : task.input.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+`);
+    linhas.push(`class ${task.nome}SaidaSchema(BaseModel):
+${task.output.length === 0 ? "    pass" : task.output.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+`);
+  }
+
+  for (const route of modulo.routes) {
+    linhas.push(`class ${route.nome}EntradaPublicaSchema(BaseModel):
+${route.inputPublico.length === 0 ? "    pass" : route.inputPublico.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+`);
+    linhas.push(`class ${route.nome}SaidaPublicaSchema(BaseModel):
+${route.outputPublico.length === 0 ? "    pass" : route.outputPublico.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+`);
+  }
+
+  return linhas.join("\n");
+}
+
+function gerarFastApiService(modulo: IrModulo, caminhoContrato: string): string {
+  const nomeClasse = `${paraPascalCase(descreverEstruturaModulo(modulo.nome).nomeArquivo)}Service`;
+  const metodos = [
+    `class ${nomeClasse}:`,
+    ...(modulo.tasks.length === 0
+      ? ["    pass"]
+      : modulo.tasks.flatMap((task) => [
+        `    def ${normalizarNomeParaSimbolo(task.nome)}(self, entrada: ${task.nome}Entrada) -> ${task.nome}Saida:`,
+        ...(task.implementacoesExternas.length > 0
+          ? task.implementacoesExternas.map((impl) => `        # impl ${impl.origem}: ${impl.caminho}`)
+          : ["        # TODO: conectar a implementacao real do projeto."]),
+        `        return executar_${normalizarNomeParaSimbolo(task.nome)}(entrada)`,
+        "",
+      ])),
+  ];
+  return [`from ${caminhoContrato} import *`, "", ...metodos].join("\n");
+}
+
+function gerarFastApiRouter(modulo: IrModulo, caminhoSchemas: string, caminhoService: string): string {
+  const nomeClasse = `${paraPascalCase(descreverEstruturaModulo(modulo.nome).nomeArquivo)}Service`;
+  const imports = [
+    "from fastapi import APIRouter",
+    `from ${caminhoSchemas} import *`,
+    `from ${caminhoService} import ${nomeClasse}`,
+    "",
+    "router = APIRouter()",
+    `service = ${nomeClasse}()`,
+    "",
+  ];
+
+  const rotas = modulo.routes
+    .filter((route) => route.task)
+    .map((route) => {
+      const metodo = (route.metodo ?? "post").toLowerCase();
+      const schemaEntrada = `${route.nome}EntradaPublicaSchema`;
+      return `@router.${metodo}(${JSON.stringify(route.caminho ?? "/")})
+def ${normalizarNomeParaSimbolo(route.nome)}(entrada: ${schemaEntrada}):
+    return adaptar_${normalizarNomeParaSimbolo(route.nome)}(${route.inputPublico.length > 0 ? `entrada` : `${schemaEntrada}()`})`;
+    }).join("\n\n");
+
+  return `${imports.join("\n")}${rotas}\n`;
+}
+
+function gerarFastApiTests(modulo: IrModulo, caminhoRouter: string): string {
+  return `from fastapi.testclient import TestClient
+from ${caminhoRouter} import router
+from fastapi import FastAPI
+
+app = FastAPI()
+app.include_router(router)
+client = TestClient(app)
+
+def test_scaffold_${normalizarNomeParaSimbolo(descreverEstruturaModulo(modulo.nome).nomeArquivo)}() -> None:
+    assert client is not None
+`;
+}
+
+function gerarPythonFastApi(modulo: IrModulo): ArquivoGerado[] {
+  const base = gerarPythonBase(modulo);
+  const contrato = base.find((arquivo) => arquivo.caminhoRelativo.endsWith(".py") && !path.posix.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  const testeContrato = base.find((arquivo) => path.posix.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  const estrutura = descreverEstruturaModulo(modulo.nome);
+  const contexto = estrutura.contextoRelativo;
+  const contratoPath = `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}_contract.py`;
+  const schemasPath = `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}_schemas.py`;
+  const servicePath = `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}_service.py`;
+  const routerPath = `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}_router.py`;
+  const testContractPath = path.posix.join("tests", `${contexto ? `${contexto}/` : ""}test_${estrutura.nomeArquivo}_contract.py`);
+  const testRouterPath = path.posix.join("tests", `${contexto ? `${contexto}/` : ""}test_${estrutura.nomeArquivo}_router.py`);
+  const contratoModulo = path.posix.basename(contratoPath, ".py");
+  const schemasModulo = path.posix.basename(schemasPath, ".py");
+  const serviceModulo = path.posix.basename(servicePath, ".py");
+  const routerModulo = path.posix.basename(routerPath, ".py");
+
+  return [
+    {
+      caminhoRelativo: path.posix.join("app", contratoPath),
+      conteudo: contrato?.conteudo ?? "# Nenhum contrato base gerado.\n",
+    },
+    {
+      caminhoRelativo: path.posix.join("app", schemasPath),
+      conteudo: gerarFastApiSchemas(modulo, `.${contratoModulo}`),
+    },
+    {
+      caminhoRelativo: path.posix.join("app", servicePath),
+      conteudo: gerarFastApiService(modulo, `.${contratoModulo}`),
+    },
+    {
+      caminhoRelativo: path.posix.join("app", routerPath),
+      conteudo: gerarFastApiRouter(modulo, `.${schemasModulo}`, `.${serviceModulo}`),
+    },
+    {
+      caminhoRelativo: testContractPath,
+      conteudo: (testeContrato?.conteudo ?? "").replace(`from ${estrutura.nomeBase} import *`, `from app.${(contexto ? `${contexto.replace(/\//g, ".")}.` : "")}${contratoModulo} import *`),
+    },
+    {
+      caminhoRelativo: testRouterPath,
+      conteudo: gerarFastApiTests(modulo, `app.${(contexto ? `${contexto.replace(/\//g, ".")}.` : "")}${routerModulo}`),
+    },
+  ];
+}
+
+export function gerarPython(modulo: IrModulo, opcoes: OpcoesGeracaoPython = {}): ArquivoGerado[] {
+  if (opcoes.framework === "fastapi") {
+    return gerarPythonFastApi(modulo);
+  }
+  return gerarPythonBase(modulo);
 }

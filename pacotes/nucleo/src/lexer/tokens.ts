@@ -28,6 +28,7 @@ export const PALAVRAS_CHAVE = new Set([
   "output",
   "rules",
   "effects",
+  "impl",
   "guarantees",
   "state",
   "flow",

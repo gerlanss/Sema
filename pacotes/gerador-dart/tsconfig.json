@@ -7,9 +7,6 @@
   },
   "references": [
     { "path": "../nucleo" },
-    { "path": "../gerador-dart" },
-    { "path": "../gerador-python" },
-    { "path": "../gerador-typescript" },
     { "path": "../padroes" }
   ],
   "include": ["src/**/*"]

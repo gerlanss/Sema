@@ -2,6 +2,7 @@
   "name": "@sema/cli",
   "version": "0.1.0",
   "type": "module",
+  "description": "CLI da Sema para validar contratos, compilar scaffolding backend e operar a linguagem em projetos reais.",
   "icon": "logo.png",
   "bin": {
     "sema": "dist/index.js"
@@ -13,6 +14,7 @@
   },
   "dependencies": {
     "@sema/nucleo": "file:../nucleo",
+    "@sema/gerador-dart": "file:../gerador-dart",
     "@sema/gerador-python": "file:../gerador-python",
     "@sema/gerador-typescript": "file:../gerador-typescript",
     "@sema/padroes": "file:../padroes"

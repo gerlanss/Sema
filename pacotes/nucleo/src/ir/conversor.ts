@@ -66,6 +66,12 @@ function recomporCaminho(campo?: { valor: string; modificadores: string[] }): st
     .trim();
 }
 
+function ehUseInterop(
+  use: ModuloAst["uses"][number],
+): use is ModuloAst["uses"][number] & { origem: "ts" | "py" | "dart" } {
+  return use.origem !== "sema";
+}
+
 export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], contexto?: ContextoSemantico): IrModulo {
   const types: IrType[] = modulo.types.map((type) => ({
     nome: type.nome,
@@ -85,6 +91,21 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
     regrasEstruturadas: (task.rules?.linhas ?? []).map((linha) => parsearExpressaoSemantica(linha.conteudo)).filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
     effects: task.effects?.linhas.map((linha) => linha.conteudo) ?? [],
     efeitosEstruturados: (task.effects?.linhas ?? []).map((linha) => parsearEfeitoSemantico(linha.conteudo)).filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
+    implementacoesExternas: (task.impl?.campos ?? [])
+      .map((campo) => {
+        const origem = campo.nome.toLowerCase();
+        if (origem === "ts" || origem === "typescript") {
+          return { origem: "ts" as const, caminho: campo.valor };
+        }
+        if (origem === "py" || origem === "python") {
+          return { origem: "py" as const, caminho: campo.valor };
+        }
+        if (origem === "dart") {
+          return { origem: "dart" as const, caminho: campo.valor };
+        }
+        return undefined;
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item)),
     guarantees: task.guarantees?.linhas.map((linha) => linha.conteudo) ?? [],
     garantiasEstruturadas: (task.guarantees?.linhas ?? []).map((linha) => parsearExpressaoSemantica(linha.conteudo)).filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
     errors: Object.fromEntries((task.error?.campos ?? []).map((campo) => [campo.nome, [campo.valor, ...campo.modificadores].join(" ").trim()])),
@@ -208,7 +229,17 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
 
   return {
     nome: modulo.nome,
-    uses: modulo.uses.map((use) => use.caminho),
+    uses: contexto?.modulosImportados.length
+      ? [...contexto.modulosImportados]
+      : modulo.uses.filter((use) => use.origem === "sema").map((use) => use.caminho),
+    imports: modulo.uses.map((use) => ({
+      origem: use.origem,
+      caminho: use.caminho,
+      externo: use.origem !== "sema",
+    })),
+    interoperabilidades: contexto?.interoperabilidades.map((interop) => ({ ...interop })) ?? modulo.uses
+      .filter(ehUseInterop)
+      .map((use) => ({ origem: use.origem, caminho: use.caminho })),
     types,
     entities,
     enums: modulo.enums.map((enumeracao) => ({ nome: enumeracao.nome, valores: enumeracao.valores })),

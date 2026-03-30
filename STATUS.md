@@ -4,24 +4,28 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Quadro-resumo
 
-- Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `a378402`
+- Ultima atualizacao: 2026-03-30
+- Ultimo commit de referencia: `98ae431`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: Fase 4 encerrada, com MVP base completo e marco `0.5` de utilidade real controlada atingido
+- Estagio atual: marco `0.6 backend-first` fechado, com foco oficial em criacao e edicao de projetos backend reais
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
+- Posicionamento atual: linguagem estruturada para IA, mantida como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
   - lexer, parser, AST, diagnosticos, analise semantica e IR
-  - geracao para Python e TypeScript
-  - CLI com validacao, compilacao, teste, verificacao em lote e formatacao
+  - geracao para Python, TypeScript e Dart
+  - CLI com validacao, compilacao, inspecao de projeto, teste, verificacao em lote e formatacao
   - exemplos obrigatorios e documentacao-base
   - semantica operacional do nucleo
   - operacionalizacao real inicial da linguagem
   - ferramentas de adocao com JSON estavel, formatador, extensao de editor e servidor de linguagem inicial
   - vertical oficial de pagamento modularizado como referencia do `0.5`
+  - modo backend-first com scaffold para NestJS e FastAPI
+  - `sema.config.json` com defaults de projeto e multiplas origens
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
-  - `use` avancado para projetos maiores ainda nao esta maduro
+  - `use` avancado para projetos ainda maiores pode amadurecer mais
+  - orquestracao backend ainda pode ficar mais forte sem inflar a linguagem
   - contratos de execucao, efeitos e erros ainda podem ficar mais fortes no pos-MVP
 
 ## Fases do Projeto
@@ -46,19 +50,21 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 - `[x]` Fase 4 encerrada como marco tecnico do MVP base
 - `[x]` Marco `0.5` util de verdade fechado com o vertical oficial de pagamento
+- `[x]` Marco `0.6 backend-first` fechado com scaffold backend, configuracao de projeto e integracao inicial com frameworks
 - Foco imediato:
-  - amadurecimento de ecossistema
+  - aprofundar criacao e edicao de backends reais
+  - amadurecer orquestracao backend
   - suporte de editor mais profundo
   - automacao e IA em cima dos contratos ja estabilizados
 
 ## Proxima Fase
 
-- `[ ]` Pos-Fase 4
+- `[ ]` Pos-0.6 backend-first
 - Prioridade sugerida:
-  - aprofundar suporte de editor alem da extensao basica
+  - aprofundar criacao de backend em projeto vivo
   - amadurecer `use` para projetos maiores
   - enriquecer contratos de execucao, efeitos e erros
-  - ampliar integracao com IA sobre JSON estavel e formatacao canonica
+  - ampliar integracao com IA sobre JSON estavel, formatacao canonica e scaffold backend
 
 ## Criterios de Fechamento do Marco 0.5
 
@@ -101,12 +107,13 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Em Andamento Nesta Sprint
 
-- `[x]` Encerrar formalmente a Fase 4 como marco tecnico do MVP base
-- `[x]` Adicionar `sema formatar` com estilo canonico oficial
-- `[x]` Formalizar saida JSON estavel nos comandos-chave da CLI
-- `[x]` Entregar extensao basica de VS Code sem duplicar a regra de formatacao
-- `[x]` Integrar `format:check` ao fluxo `project:check`
-- `[x]` Atualizar a documentacao operacional de CLI e IA para a Fase 4
+- `[x]` Reposicionar a Sema como linguagem backend-first para criacao e edicao de projeto real
+- `[x]` Adicionar `sema.config.json` com defaults de backend e multiplas origens
+- `[x]` Entregar scaffold backend para NestJS
+- `[x]` Entregar scaffold backend para FastAPI
+- `[x]` Adicionar `sema inspecionar` para diagnostico nao destrutivo de projeto
+- `[x]` Melhorar diagnosticos de `use` e `flow` para contexto real de backend
+- `[x]` Atualizar a documentacao operacional para o marco `0.6 backend-first`
 
 ## Fundacao do Projeto
 
@@ -144,6 +151,10 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` `effects` com `criticidade` opcional e validada
 - `[x]` `route` fortalecido como contrato publico semantico com `input`, `output` e `error` opcionais
 - `[x]` `route` com defaults publicos coerentes, validacao de tipos publicos e assinatura publica unica por metodo+caminho
+- `[x]` `use` com multiplas origens declaradas em `sema.config.json`
+- `[x]` `use ts|py|dart` tratado como interop declarado e rastreavel
+- `[x]` `impl` como bloco estavel para vincular `task` a implementacoes externas em TypeScript, Python e Dart
+- `[x]` Diagnosticos de `use` e `flow` com sugestoes mais explicaveis para contexto real de backend
 - `[x]` Garantias, erros e efeitos com contratos executaveis iniciais e rastreabilidade consistente nos geradores
 - `[ ]` Resolucao mais completa de `use` para projetos maiores, multiplos diretorios e importacao mais sofisticada
 - `[-]` Sistema de expressoes semanticas mais formal para regras, comparacoes e pos-condicoes ainda pode amadurecer
@@ -163,6 +174,11 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` `guarantees` viram validadores dedicados e reuso executavel nos alvos
 - `[x]` Contratos publicos executaveis iniciais e adaptadores neutros de borda
 - `[x]` Tipos externos referenciados por `use` sao tratados de forma segura nos alvos gerados
+- `[x]` Scaffold backend para NestJS com contrato, DTO, service, controller e testes iniciais
+- `[x]` Scaffold backend para FastAPI com contrato, schemas, service, router e testes iniciais
+- `[x]` Estrutura de saida `backend` para organizacao mais util de projeto real
+- `[x]` Gatilho de `impl` refletido de forma mais clara no scaffold gerado
+- `[-]` Os scaffolds backend ainda sao intencionais e uteis, mas nao substituem implementacao real do framework
 
 ## CLI
 
@@ -176,11 +192,16 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` `sema diagnosticos`
 - `[x]` `sema verificar`
 - `[x]` `sema formatar`
+- `[x]` `sema inspecionar`
 - `[x]` Resumo final de verificacao por modulo e por alvo
 - `[x]` Saida JSON dedicada e estavel para `validar`, `diagnosticos`, `ast`, `ir`, `verificar` e `formatar`
 - `[x]` Scripts auxiliares para manutencao de status e checklist operacional
 - `[x]` Script canonico `project:check` para verificacao completa do projeto
 - `[x]` Verificacao dedicada do vertical de pagamento com modularizacao por `use`
+- `[x]` `sema iniciar --template <base|nestjs|fastapi>`
+- `[x]` `sema compilar`, `sema gerar` e `sema testar` com `--framework <base|nestjs|fastapi>`
+- `[x]` `sema compilar`, `sema gerar` e `sema testar` com `--estrutura <flat|modulos|backend>`
+- `[x]` `sema.config.json` com defaults de projeto para alvo, estrutura, framework e multiplas origens
 
 ## Exemplos Obrigatorios
 
@@ -222,6 +243,10 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Guia de instalacao e primeiro uso com requisitos, comandos e problemas comuns
 - `[x]` Fluxo de distribuicao inicial da CLI com instalacao local por `npm link` e empacotamento `.tgz`
 - `[x]` Comandos nativos da CLI para onboarding de IA: `starter-ia`, `prompt-ia` e `contexto-ia`
+- `[x]` Guia do ciclo `0.6 backend-first`
+- `[x]` Guias de adocao incremental para NestJS e FastAPI existentes
+- `[x]` Guia pratico de uso da Sema com NestJS + Prisma em backend critico
+- `[x]` Documentacao de CLI e instalacao atualizada para scaffold backend, `inspecionar` e `sema.config.json`
 
 ## Testes e Verificacao
 
@@ -240,21 +265,27 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Validacao automatizada de `STATUS.md`
 - `[x]` Workflow de CI para `project:check`
 - `[x]` Pacote de aceite da Fase 4 com `npm run build`, `npm test`, `npm run status:check`, `sema formatar exemplos --check` e `sema verificar exemplos --json`
+- `[x]` Testes cobrindo scaffold backend para NestJS
+- `[x]` Testes cobrindo scaffold backend para FastAPI
+- `[x]` Testes cobrindo `sema.config.json` com multiplas origens e compile por projeto
+- `[x]` Testes cobrindo `sema inspecionar --json`
 - `[-]` A cobertura atual fecha bem o MVP base, mas ainda pode crescer para cenarios maiores no pos-Fase 4
 
 ## Proximos Passos do MVP
 
-- `[x]` Tipar `effects` por categoria e contrato operacional
-- `[x]` Fortalecer `route` como contrato publico e ponte inicial para adaptadores neutros
-- `[x]` Validar a linguagem em um caso de negocio real ponta a ponta
-- `[x]` Adicionar `sema formatar`
-- `[x]` Melhorar a saida estruturada para IDE, automacao e IA
-- `[x]` Entregar ergonomia inicial de editor com extensao basica de VS Code
-- `[ ]` Ampliar a resolucao de `use` para multiplos diretorios e importacoes mais sofisticadas
-- `[ ]` Formalizar ainda melhor expressoes em `rules`, `effects` e `guarantees`
+- `[x]` Reposicionar a Sema como linguagem backend-first para criacao e edicao de projeto real
+- `[x]` Entregar `sema.config.json` com defaults de backend e multiplas origens
+- `[x]` Gerar scaffold backend util para NestJS
+- `[x]` Gerar scaffold backend util para FastAPI
+- `[x]` Adicionar `sema inspecionar` para diagnostico nao destrutivo de projeto
+- `[x]` Melhorar diagnosticos de `use` e `flow` para contexto real de backend
+- `[ ]` Aprofundar adocao incremental em projeto backend existente
+- `[ ]` Amadurecer `flow` para orquestracao backend mais rica sem inflar a linguagem
+- `[ ]` Fortalecer ainda mais `use` para projeto grande e multiplos diretorios
+- `[ ]` Enriquecer contratos de execucao, efeitos, erros e garantias no pos-`0.6`
 
 ## Observacoes
 
-- O projeto ja saiu faz tempo da fase de ideia e agora tem o MVP base fechado em quatro fases.
-- O maior risco agora nao e falta de fundacao; e crescer sem criterio depois que a base finalmente ficou redonda.
+- O projeto ja saiu faz tempo da fase de ideia, fechou o MVP base em quatro fases e agora entrou no ciclo `0.6 backend-first`.
+- O maior risco agora nao e falta de fundacao; e crescer sem criterio, especialmente em orquestracao, editor e integracao com framework, depois que a base finalmente ficou redonda.
 - Este documento deve ser atualizado sempre que um item mudar de `[-]` ou `[ ]` para `[x]`.

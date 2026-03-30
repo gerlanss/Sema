@@ -132,3 +132,77 @@ module exemplo.ir.preservada {
   assert.equal(temErros(depois.diagnosticos), false);
   assert.deepEqual(depois.ir, antes.ir);
 });
+
+test("formatador preserva origem explicita de use externo", () => {
+  const codigo = `
+module exemplo.interop.formatado {
+use ts app.gateway.pagamentos
+use py servicos.conciliacao
+  task eco {
+    output {
+      mensagem: Texto
+    }
+    input {
+      mensagem: Texto required
+    }
+    guarantees {
+      mensagem existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          mensagem: "oi"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = formatarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.match(resultado.codigoFormatado ?? "", /use ts app\.gateway\.pagamentos/);
+  assert.match(resultado.codigoFormatado ?? "", /use py servicos\.conciliacao/);
+});
+
+test("formatador ordena bloco impl dentro da task", () => {
+  const codigo = `
+module exemplo.impl.formatado {
+  task processar {
+    guarantees {
+      protocolo existe
+    }
+    impl {
+      py: servicos.pagamentos.processar
+      ts: app.gateway.pagamentos.processar
+    }
+    effects {
+      consulta gateway_pagamento
+    }
+    output {
+      protocolo: Id
+    }
+    input {
+      pagamento_id: Id required
+    }
+    tests {
+      caso "ok" {
+        given {
+          pagamento_id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = formatarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.match(resultado.codigoFormatado ?? "", /effects \{\n\s+consulta gateway_pagamento\n\s+\}\n\s+impl \{/);
+});

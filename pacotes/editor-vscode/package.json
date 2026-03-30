@@ -1,11 +1,29 @@
 {
-  "name": "sema-vscode",
-  "displayName": "Sema",
-  "description": "Suporte basico de editor para a linguagem Sema.",
-  "version": "0.1.0",
-  "publisher": "sema",
+  "name": "sema-language-tools",
+  "displayName": "Sema Language Tools",
+  "description": "Suporte de editor para a linguagem Sema com diagnosticos, hover, formatacao, snippets e LSP inicial.",
+  "version": "0.1.1",
+  "publisher": "OtimiTare",
   "private": true,
   "icon": "logo.png",
+  "license": "MIT",
+  "keywords": [
+    "sema",
+    "dsl",
+    "linguagem",
+    "semantica",
+    "ia",
+    "contracts",
+    "lsp"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gerlanss/Sema.git"
+  },
+  "homepage": "https://github.com/gerlanss/Sema",
+  "bugs": {
+    "url": "https://github.com/gerlanss/Sema/issues"
+  },
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -13,6 +31,10 @@
     "Programming Languages",
     "Formatters"
   ],
+  "galleryBanner": {
+    "color": "#0b1220",
+    "theme": "dark"
+  },
   "extensionKind": [
     "workspace"
   ],

@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
+
+const CLI = path.resolve("pacotes/cli/dist/index.js");
 
 test("cli validar suporta saida json estavel", () => {
   const execucao = spawnSync(
@@ -116,8 +118,9 @@ test("cli expoe starter e prompt de ia", () => {
   assert.match(starter.stdout, /Origem da instalacao:/);
   assert.match(starter.stdout, /Documentos locais encontrados:/);
   assert.match(starter.stdout, /AGENT_STARTER\.md/);
-  assert.match(starter.stdout, /Sema, uma DSL semantica orientada a contrato/);
+  assert.match(starter.stdout, /Sema, uma linguagem estruturada para IA/);
   assert.match(starter.stdout, /nao invente sintaxe/);
+  assert.match(starter.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
 
   const prompt = spawnSync(
     "node",
@@ -142,6 +145,7 @@ test("cli expoe ajuda de ia com mapa de comandos", () => {
   assert.match(ajuda.stdout, /Ajuda de IA da Sema/);
   assert.match(ajuda.stdout, /sema starter-ia/);
   assert.match(ajuda.stdout, /sema prompt-ia-react/);
+  assert.match(ajuda.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
   assert.match(ajuda.stdout, /nao peca so HTML solto/);
 });
 
@@ -216,6 +220,200 @@ test("cli gera pacote de contexto de ia para modulo com use", async () => {
     assert.match(readme, /Contexto de IA para exemplos.pagamento/);
     assert.match(readme, /sema starter-ia/);
     assert.match(readme, /sema prompt-ia/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto backend-first com configuracao carregada", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-"));
+
+  try {
+    await writeFile(
+      path.join(baseTemporaria, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        saida: "./generated/nestjs",
+        alvos: ["typescript"],
+        alvoPadrao: "typescript",
+        estruturaSaida: "backend",
+        framework: "nestjs",
+      }, null, 2),
+      "utf8",
+    );
+    await mkdir(path.join(baseTemporaria, "contratos"), { recursive: true });
+    await writeFile(
+      path.join(baseTemporaria, "contratos", "pedidos.sema"),
+      `module app.pedidos {
+  task criar_pedido {
+    input {
+      total: Decimal required
+    }
+    output {
+      pedido_id: Id
+    }
+    guarantees {
+      pedido_id existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          total: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.comando, "inspecionar");
+    assert.equal(json.configuracao.framework, "nestjs");
+    assert.equal(json.configuracao.estruturaSaida, "backend");
+    assert.equal(json.projeto.modulos[0].modulo, "app.pedidos");
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli compila usando sema.config para scaffold NestJS sem precisar de flags completas", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-backend-nest-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "nestjs"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const compilar = spawnSync(
+      "node",
+      [CLI, "compilar"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(compilar.status, 0, compilar.stderr || compilar.stdout);
+    assert.match(compilar.stdout, /framework nestjs/);
+    const contract = await readFile(path.join(baseTemporaria, "generated", "nestjs", "src", "app", "pedidos.contract.ts"), "utf8");
+    const controller = await readFile(path.join(baseTemporaria, "generated", "nestjs", "src", "app", "pedidos.controller.ts"), "utf8");
+    assert.match(contract, /Arquivo gerado automaticamente pela Sema/);
+    assert.match(controller, /@Controller\(\)/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli compila usando sema.config para scaffold FastAPI sem precisar de flags completas", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-backend-fastapi-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "fastapi"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const compilar = spawnSync(
+      "node",
+      [CLI, "compilar"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(compilar.status, 0, compilar.stderr || compilar.stdout);
+    assert.match(compilar.stdout, /framework fastapi/);
+    const router = await readFile(path.join(baseTemporaria, "generated", "fastapi", "app", "app", "pedidos_router.py"), "utf8");
+    const schemas = await readFile(path.join(baseTemporaria, "generated", "fastapi", "app", "app", "pedidos_schemas.py"), "utf8");
+    assert.match(router, /APIRouter/);
+    assert.match(schemas, /BaseModel/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli resolve use em multiplas origens declaradas no sema.config", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-multiorigem-"));
+
+  try {
+    await mkdir(path.join(baseTemporaria, "contratos", "shared"), { recursive: true });
+    await mkdir(path.join(baseTemporaria, "contratos", "app"), { recursive: true });
+    await writeFile(
+      path.join(baseTemporaria, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos/shared", "./contratos/app"],
+        saida: "./generated",
+        alvos: ["typescript"],
+        framework: "base",
+        estruturaSaida: "modulos",
+      }, null, 2),
+      "utf8",
+    );
+    await writeFile(
+      path.join(baseTemporaria, "contratos", "shared", "tipos.sema"),
+      `module shared.tipos {
+  entity Usuario {
+    fields {
+      id: Id
+      nome: Texto
+    }
+  }
+}
+`,
+      "utf8",
+    );
+    await writeFile(
+      path.join(baseTemporaria, "contratos", "app", "cadastro.sema"),
+      `module app.cadastro {
+  use shared.tipos
+
+  task registrar {
+    input {
+      usuario: Usuario required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          usuario: "u-1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "compilar"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const contrato = await readFile(path.join(baseTemporaria, "generated", "app", "cadastro.ts"), "utf8");
+    assert.match(contrato, /export type Usuario = any/);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
   }

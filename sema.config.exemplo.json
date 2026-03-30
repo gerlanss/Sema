@@ -1,7 +1,14 @@
 {
-  "origem": "./exemplos",
-  "saida": "./saida",
+  "origens": ["./contratos"],
+  "saida": "./generated",
   "alvos": ["typescript", "python"],
-  "modoEstrito": true
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "backend",
+  "framework": "nestjs",
+  "modoEstrito": true,
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/nestjs",
+    "python": "./generated/fastapi"
+  },
+  "convencoesGeracaoPorProjeto": "backend"
 }
-

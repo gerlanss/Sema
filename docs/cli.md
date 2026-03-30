@@ -2,27 +2,47 @@
 
 ## Visao geral
 
-A CLI da Sema e a interface oficial para validacao, compilacao, formatacao, inspecao semantica e verificacao operacional do projeto.
-
-No estado atual do MVP, ela cobre:
+A CLI da Sema e a interface oficial para:
 
 - validacao semantica
 - exportacao de AST e IR
-- compilacao para Python e TypeScript
-- execucao de testes gerados
-- verificacao em lote
+- compilacao e scaffold de codigo
 - formatacao canonica
-- saida JSON estavel para automacao, IDE e IA
+- verificacao em lote
+- inspecao de projeto
+- onboarding de IA
+
+No marco `0.6 backend-first`, ela tambem virou a fonte de verdade para:
+
+- configuracao de projeto via `sema.config.json`
+- scaffold orientado a framework para NestJS e FastAPI
+- resolucao de multiplas origens `.sema`
+- importacao assistida de legado para rascunho `.sema`
+- inspecao nao destrutiva de projeto antes de gerar qualquer coisa
 
 ## Comandos disponiveis
 
-### `sema iniciar`
+### `sema iniciar [--template <base|nestjs|fastapi>]`
 
-Cria uma estrutura minima de projeto com configuracao e um exemplo inicial.
+Cria uma estrutura inicial de projeto.
+
+Templates:
+
+- `base`: projeto minimo neutro
+- `nestjs`: projeto voltado a scaffold backend TypeScript/NestJS
+- `fastapi`: projeto voltado a scaffold backend Python/FastAPI
+
+Artefatos iniciais tipicos:
+
+- `sema.config.json`
+- `contratos/pedidos.sema`
+- pastas base para `src/` e `test/` ou `app/` e `tests/`, conforme o template
 
 ### `sema validar <arquivo-ou-pasta> [--json]`
 
 Executa lexer, parser e analise semantica sem gerar codigo.
+
+Quando existir `sema.config.json`, a CLI carrega o projeto pelo contexto configurado.
 
 ### `sema ast <arquivo.sema> [--json]`
 
@@ -38,30 +58,57 @@ Imprime a representacao intermediaria semantica.
 - sem `--json`, imprime a IR diretamente
 - com `--json`, envolve a IR em um envelope estavel com metadados do comando
 
-### `sema compilar <entrada> --alvo <python|typescript> --saida <diretorio>`
+### `sema compilar [arquivo-ou-pasta] --alvo <python|typescript|dart> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]`
 
 Gera artefatos compilados para o alvo escolhido.
 
-### `sema gerar <python|typescript> <entrada> --saida <diretorio>`
+Estruturas disponiveis:
+
+- `flat`: tudo direto dentro da pasta de saida
+- `modulos`: organiza por namespace do modulo `.sema`
+- `backend`: usa convencoes de scaffold backend por contexto de dominio
+
+Frameworks:
+
+- `base`: scaffold neutro
+- `nestjs`: scaffold TypeScript com controller, service, dto e testes iniciais
+- `fastapi`: scaffold Python com router, service, schemas e testes iniciais
+
+Regras de compatibilidade:
+
+- `nestjs` exige alvo `typescript`
+- `fastapi` exige alvo `python`
+- `dart` hoje so aceita `framework base`
+
+Se houver `sema.config.json`, a CLI aceita rodar sem argumento de entrada e usa o projeto atual.
+
+### `sema gerar <python|typescript|dart> [arquivo-ou-pasta] --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]`
 
 Atalho para compilacao por alvo.
 
-### `sema testar <arquivo.sema> --alvo <python|typescript> --saida <diretorio>`
+### `sema testar [arquivo-ou-pasta] --alvo <python|typescript|dart> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]`
 
 Gera os artefatos de teste e tenta executa-los.
+
+Observacao importante:
+
+- para `framework base`, a CLI tenta executar os testes gerados
+- para `framework nestjs` e `framework fastapi`, a CLI gera o scaffold e encerra sem rodar a suite do framework por voce
 
 ### `sema diagnosticos <arquivo.sema> [--json]`
 
 Imprime diagnosticos em texto ou JSON estruturado.
 
-### `sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]`
+### `sema verificar [arquivo-ou-pasta] [--saida <diretorio-base>] [--json]`
 
 Executa o fluxo completo de verificacao em lote:
 
-- valida todos os arquivos `.sema`
-- gera artefatos para TypeScript e Python
-- executa os testes gerados para cada modulo
+- valida os arquivos `.sema`
+- gera artefatos para os alvos configurados
+- executa os testes gerados dos scaffolds base
 - imprime um resumo final com modulos, alvos, arquivos gerados e quantidade de testes
+
+Quando existir `sema.config.json`, os alvos de verificacao passam a respeitar a configuracao do projeto.
 
 ### `sema formatar <arquivo-ou-pasta> [--check] [--json]`
 
@@ -83,6 +130,44 @@ Comportamento:
 - com `--check`, falha com codigo de saida nao zero quando houver diferencas
 - com `--json`, emite relatorio estruturado por arquivo
 
+### `sema inspecionar [arquivo-ou-pasta] [--json]`
+
+Mostra como a CLI esta enxergando o projeto atual antes de gerar scaffold.
+
+Campos tipicos:
+
+- arquivo de configuracao encontrado
+- framework ativo
+- estrutura de saida
+- alvos
+- origens resolvidas
+- modulos encontrados
+
+Esse comando existe para evitar aquela merda de “a CLI nao achou meu modulo” sem ninguem saber qual contexto ela estava usando.
+
+### `sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]`
+
+Importa um projeto legado e gera um **rascunho Sema revisavel**.
+
+O comando:
+
+- analisa codigo existente
+- infere tasks, routes, entities, enums, errors e `impl`
+- grava modulos `.sema` formatados na pasta de saida
+- valida o rascunho gerado antes de encerrar
+
+Leitura correta:
+
+- `importar` nao promete converter toda a intencao do projeto automaticamente
+- ele entrega um ponto de partida forte para migracao incremental
+- a ideia e revisar, lapidar e depois conectar com codigo vivo usando `impl`
+
+Casos praticos:
+
+- `nestjs`: controller, service e DTO para rascunho backend TypeScript
+- `fastapi`: router, service e schema para rascunho backend Python
+- `typescript`, `python`, `dart`: importacao generica focada em funcoes, classes e contratos basicos
+
 ### `sema starter-ia`
 
 Imprime o texto curto de onboarding para colar em qualquer agente antes de editar arquivos `.sema`.
@@ -91,44 +176,35 @@ Tambem informa:
 
 - origem da instalacao atual da CLI
 - base detectada da instalacao
-- documentos locais encontrados, quando existirem na instalacao atual
+- documentos locais encontrados, quando existirem
 
 ### `sema ajuda-ia`
 
 Imprime um guia curto e direto explicando qual comando de IA usar em cada situacao.
 
-Esse comando serve como porta de entrada unica para nao deixar onboarding, prompting e contexto espalhados igual bagunca de feira.
-
 ### `sema prompt-ia`
 
 Imprime o prompt-base oficial para orientar uma IA a trabalhar com a Sema sem improvisar sintaxe ou semantica.
 
-Assim como `starter-ia`, tambem mostra a origem da instalacao e os documentos locais detectados.
-
 ### `sema prompt-ia-ui`
 
-Imprime um prompt oficial para tarefas em que a Sema deve ser usada junto com interface grafica, especialmente em combinacao com React + TypeScript.
-
-Esse comando existe para evitar aquela cagada classica de pedir "um app bonito" e a IA devolver so um `index.html` solto, ignorando a camada semantica.
+Imprime um prompt oficial para tarefas em que a Sema deve ser usada junto com interface grafica.
 
 ### `sema prompt-ia-react`
 
-Imprime um prompt mais especifico para projeto com Sema + React + TypeScript, incluindo orientacao de arquitetura, componentes e separacao entre contrato semantico e interface.
+Imprime um prompt especifico para projeto com Sema + React + TypeScript.
 
 ### `sema prompt-ia-sema-primeiro`
 
 Imprime um prompt oficial para forcar a estrategia "Sema primeiro".
 
-Esse modo exige que a IA modele primeiro o dominio em `.sema` e so depois gere interface, backend ou qualquer implementacao derivada.
-
 ### `sema exemplos-prompt-ia`
 
-Imprime exemplos prontos de prompt para:
+Imprime exemplos prontos de prompt para estrategias como:
 
-- estrategia `Sema primeiro`
+- `Sema primeiro`
 - `Sema + React + TypeScript`
 - revisao e correcao de modulo `.sema`
-- casos de UI sem perder a ancora semantica
 
 ### `sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--json]`
 
@@ -167,14 +243,13 @@ Com `--json`, retorna um envelope estruturado com arquivo, modulo, pasta de said
 4. `output`
 5. `rules`
 6. `effects`
-7. `state`
-8. `guarantees`
-9. `error`
-10. `tests`
+7. `impl`
+8. `state`
+9. `guarantees`
+10. `error`
+11. `tests`
 
 ## Saida JSON estavel
-
-Na Fase 4, `--json` passou a ser contrato publico nos comandos-chave da CLI.
 
 ### `validar --json`
 
@@ -193,7 +268,7 @@ Cada item de `resultados` inclui:
 
 ### `diagnosticos --json`
 
-Retorna uma lista estruturada de diagnosticos com, no minimo:
+Campos minimos:
 
 - `codigo`
 - `mensagem`
@@ -272,18 +347,70 @@ Cada item de `arquivos` inclui:
 - `sucesso`
 - `diagnosticos`
 
+### `inspecionar --json`
+
+Campos tipicos:
+
+- `comando`
+- `sucesso`
+- `configuracao`
+- `framework`
+- `estruturaSaida`
+- `alvos`
+- `origens`
+- `modulos`
+
 ## Exemplos de uso
 
-### Validar em modo humano
+### Iniciar um projeto backend
 
 ```bash
-node pacotes/cli/dist/index.js validar exemplos
+sema iniciar --template nestjs
+sema iniciar --template fastapi
 ```
 
-### Validar em modo JSON
+### Inspecionar a configuracao resolvida
 
 ```bash
-node pacotes/cli/dist/index.js validar exemplos --json
+sema inspecionar --json
+```
+
+### Compilar scaffold base
+
+```bash
+node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo typescript --saida ./generated --estrutura modulos
+```
+
+### Compilar scaffold NestJS
+
+```bash
+node pacotes/cli/dist/index.js compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
+```
+
+### Compilar scaffold FastAPI
+
+```bash
+node pacotes/cli/dist/index.js compilar contratos/pagamentos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
+```
+
+### Importar um backend NestJS legado
+
+```bash
+sema importar nestjs ./backend --saida ./sema/importado --json
+```
+
+### Importar um backend FastAPI legado
+
+```bash
+sema importar fastapi ./app --saida ./sema/importado --json
+```
+
+### Importar projeto TypeScript, Python ou Dart generico
+
+```bash
+sema importar typescript ./src --saida ./sema/importado
+sema importar python ./servicos --saida ./sema/importado
+sema importar dart ./lib --saida ./sema/importado
 ```
 
 ### Starter, prompts e exemplos para IA
@@ -313,12 +440,12 @@ node pacotes/cli/dist/index.js formatar exemplos --check
 ### Rodar verificacao completa com saida JSON
 
 ```bash
-node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-fase4
+node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-0-6
 ```
 
 ## Fluxo canonico do projeto
 
-O fluxo operacional recomendado da Sema agora e:
+Fluxo operacional recomendado:
 
 ```bash
 npm run status:check
@@ -327,7 +454,7 @@ npm run format:check
 node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check
 ```
 
-Na pratica, isso ja esta consolidado no script:
+Na pratica, isso ja esta consolidado em:
 
 ```bash
 npm run project:check

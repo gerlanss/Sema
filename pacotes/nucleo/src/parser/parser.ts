@@ -35,6 +35,7 @@ type PalavraBloco =
   | "output"
   | "rules"
   | "effects"
+  | "impl"
   | "guarantees"
   | "state"
   | "tests"
@@ -206,9 +207,18 @@ class Parser {
 
   private parseUse(): UseAst {
     const inicio = this.avancar().intervalo.inicio;
-    const caminho = this.consumirTipo("identificador", "Era esperado o caminho do use.").valor;
+    const primeiro = this.consumirTipo("identificador", "Era esperado o caminho do use.");
+    let origem: UseAst["origem"] = "sema";
+    let caminho = primeiro.valor;
+
+    const origemNormalizada = normalizarOrigemUse(primeiro.valor);
+    if (origemNormalizada && this.atual().tipo === "identificador") {
+      origem = origemNormalizada;
+      caminho = this.avancar().valor;
+    }
+
     const fim = this.anterior().intervalo.fim;
-    return { tipo: "use", caminho, intervalo: { inicio, fim } };
+    return { tipo: "use", origem, caminho, intervalo: { inicio, fim } };
   }
 
   private parseType(): TypeAst {
@@ -269,6 +279,7 @@ class Parser {
       output: localizar("output"),
       rules: localizar("rules"),
       effects: localizar("effects"),
+      impl: localizar("impl"),
       guarantees: localizar("guarantees"),
       state: localizar("state"),
       tests: localizar("tests"),
@@ -347,7 +358,7 @@ class Parser {
 
       if (
         this.atual().tipo === "palavra_chave" &&
-        ["docs", "comments", "fields", "invariants", "transitions", "input", "output", "rules", "effects", "guarantees", "state", "tests", "error", "given", "when", "expect"].includes(this.atual().valor)
+        ["docs", "comments", "fields", "invariants", "transitions", "input", "output", "rules", "effects", "impl", "guarantees", "state", "tests", "error", "given", "when", "expect"].includes(this.atual().valor)
       ) {
         blocos.push(this.parseBlocoGenerico(this.atual().valor as PalavraBloco));
         continue;
@@ -473,6 +484,23 @@ class Parser {
       comments,
       intervalo: { inicio, fim },
     };
+  }
+}
+
+function normalizarOrigemUse(valor: string): UseAst["origem"] | undefined {
+  switch (valor.toLowerCase()) {
+    case "sema":
+      return "sema";
+    case "ts":
+    case "typescript":
+      return "ts";
+    case "py":
+    case "python":
+      return "py";
+    case "dart":
+      return "dart";
+    default:
+      return undefined;
   }
 }
 

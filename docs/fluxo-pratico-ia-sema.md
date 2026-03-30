@@ -91,6 +91,21 @@ Se houver falha:
 - usar os diagnosticos estruturados como contrato de correcao
 - nao insistir em leitura manual teimosa quando a CLI ja disse onde esta a merda
 
+### Etapa 6.5. Compilar quando a tarefa pedir codigo derivado
+
+Se a tarefa nao for so editar contrato, mas tambem gerar base de implementacao, a IA deve rodar explicitamente:
+
+```bash
+node pacotes/cli/dist/index.js compilar caminho\\arquivo.sema --alvo typescript --saida .\\saida\\typescript
+```
+
+Ou trocar o alvo para `python` ou `dart`, conforme o caso.
+
+Regra pratica:
+
+- se a entrega inclui codigo derivado, `sema compilar` nao e opcional
+- se a IA ignorar `compilar`, ela pode acabar reescrevendo na mao coisa que a Sema ja gera sozinha, que e burrice operacional
+
 ### Etapa 7. Verificar
 
 No fechamento:
@@ -116,6 +131,15 @@ node pacotes/cli/dist/index.js validar caminho\\arquivo.sema --json
 ```
 
 Mas, sendo sincero, o fluxo bom mesmo e fechar com `verificar`.
+
+Se a tarefa envolver codigo derivado, o fluxo minimo aceitavel vira:
+
+```bash
+node pacotes/cli/dist/index.js ir caminho\\arquivo.sema --json
+node pacotes/cli/dist/index.js formatar caminho\\arquivo.sema
+node pacotes/cli/dist/index.js validar caminho\\arquivo.sema --json
+node pacotes/cli/dist/index.js compilar caminho\\arquivo.sema --alvo typescript --saida .\\saida\\typescript
+```
 
 ## Checklist de saida
 

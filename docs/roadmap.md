@@ -18,35 +18,43 @@
 - `state` com invariantes e transicoes
 - vinculo `task -> state`
 - `flow` com contexto, ramificacao e roteamento por erro
-- diagnosticos em portugues mais detalhados
 
 ## Fase 3. Operacionalizacao real da linguagem
 
 - status: concluida
 - `effects` tipados por categoria
 - `route` forte como contrato publico
-- uso guiado por caso de negocio real ponta a ponta no dominio de pagamento
-- contratos publicos executaveis iniciais
-- amadurecimento inicial de `error`, `effects` e `guarantees` alem da pura rastreabilidade
+- caso piloto de pagamento ponta a ponta
 
 ## Fase 4. Ferramentas de adocao
 
 - status: concluida
-- `sema formatar` como estilo canonico oficial
-- saida JSON estavel em `validar`, `diagnosticos`, `ast`, `ir` e `verificar`
-- extensao basica de VS Code com associacao `.sema`, gramática, snippets e comando de formatacao
-- fluxo operacional consolidado com `format:check` e `project:check`
-- documentacao de CLI e integracao com IA alinhadas ao contrato publico da fase
+- `sema formatar`
+- JSON estavel na CLI
+- extensao de VS Code
+- fluxo consolidado com `project:check`
 
-## Pos-Fase 4
+## Marco 0.6 Backend-First
 
-- marco atual: `0.5` util de verdade atingido com vertical oficial de pagamento
-- suporte de editor mais profundo, com possibilidade de LSP quando fizer sentido
-- resolucao mais avancada de `use` para projetos maiores
-- enriquecimento adicional do sistema de expressoes
-- contratos mais fortes de execucao, efeitos e erros
-- ampliacao do ecossistema de adocao alem do MVP atual
+- status: concluido
+- reposicionamento oficial para criacao e edicao de backend real
+- `sema.config.json` com defaults de projeto
+- `sema inspecionar` para resolucao nao destrutiva
+- scaffold backend para NestJS
+- scaffold backend para FastAPI
+- `sema iniciar --template nestjs|fastapi`
+- resolucao de `use` em multiplas origens de projeto
+- `impl` reforcado como ponte entre contrato e implementacao viva
+- diagnosticos melhores para `flow` e `use`
+
+## Proximo Ciclo
+
+- criacao de scaffolding ainda mais util para projeto vivo
+- aprofundar edicao assistida de backends existentes
+- ampliar `use` para cenarios ainda maiores
+- fortalecer orquestracao backend sem inflar a linguagem
+- amadurecer editor e automacao em cima da camada backend-first
 
 ## Observacao
 
-O fechamento da Fase 4 nao expande a semantica central da linguagem. Ele fecha a camada de adocao do MVP: formatacao, JSON estavel, automacao e editor basico. O proximo ciclo deixa de ser "fundar" a ferramenta e passa a ser "amadurecer" a experiencia e o ecossistema.
+A Sema continua sendo linguagem de intencao. O roadmap backend-first fortalece a capacidade de governar projeto real sem transformar a linguagem em framework ou runtime.

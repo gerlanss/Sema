@@ -17,6 +17,7 @@ export interface ExpressaoComparacaoSemantica extends ExpressaoBaseSemantica {
   alvo: string;
   operador: "==" | "!=" | ">" | ">=" | "<" | "<=";
   valor: string;
+  valorLiteral?: boolean;
 }
 
 export interface ExpressaoPredicadoSemantica extends ExpressaoBaseSemantica {
@@ -182,6 +183,25 @@ function dividirNoNivelRaiz(texto: string, operador: " e " | " ou "): string[] {
   return partes;
 }
 
+function criarComparacaoDerivada(
+  base: ExpressaoComparacaoSemantica,
+  valor: string,
+): ExpressaoComparacaoSemantica | undefined {
+  const valorNormalizado = removerParentesesExternos(valor.trim());
+  if (!valorNormalizado) {
+    return undefined;
+  }
+
+  return {
+    tipo: "comparacao",
+    textoOriginal: `${base.alvo} ${base.operador} ${valorNormalizado}`,
+    alvo: base.alvo,
+    operador: base.operador,
+    valor: valorNormalizado,
+    valorLiteral: ehValorLiteralSemantico(valorNormalizado),
+  };
+}
+
 export function parsearExpressaoSemantica(texto: string): ExpressaoSemantica | undefined {
   const normalizado = removerParentesesExternos(texto.trim());
   if (!normalizado) {
@@ -190,10 +210,42 @@ export function parsearExpressaoSemantica(texto: string): ExpressaoSemantica | u
 
   const partesOu = dividirNoNivelRaiz(normalizado, " ou ");
   if (partesOu.length > 1) {
-    const termos = partesOu.map((parte) => parsearExpressaoSemantica(parte)).filter((parte): parte is ExpressaoSemantica => Boolean(parte));
-    return termos.length === partesOu.length
-      ? { tipo: "composta", textoOriginal: normalizado, operadorLogico: "ou", termos }
-      : undefined;
+    const termos: ExpressaoSemantica[] = [];
+    let comparacaoBase: ExpressaoComparacaoSemantica | undefined;
+    let usouAtalhoComparacao = false;
+
+    for (const parte of partesOu) {
+      const termo = parsearExpressaoSemantica(parte);
+      if (termo) {
+        termos.push(termo);
+        if (termo.tipo === "comparacao" && (termo.operador === "==" || termo.operador === "!=")) {
+          comparacaoBase = termo;
+        }
+        continue;
+      }
+
+      if (comparacaoBase) {
+        const derivada = criarComparacaoDerivada(comparacaoBase, parte);
+        if (derivada) {
+          comparacaoBase.valorLiteral = true;
+          usouAtalhoComparacao = true;
+          termos.push(derivada);
+          continue;
+        }
+      }
+
+      return undefined;
+    }
+
+    if (usouAtalhoComparacao) {
+      for (const termo of termos) {
+        if (termo.tipo === "comparacao" && termo.alvo === comparacaoBase?.alvo && termo.operador === comparacaoBase?.operador) {
+          termo.valorLiteral = true;
+        }
+      }
+    }
+
+    return { tipo: "composta", textoOriginal: normalizado, operadorLogico: "ou", termos };
   }
 
   const partesE = dividirNoNivelRaiz(normalizado, " e ");
@@ -260,12 +312,14 @@ export function parsearExpressaoSemantica(texto: string): ExpressaoSemantica | u
 
   const partes = normalizado.split(/\s+/).filter(Boolean);
   if (partes.length >= 3 && OPERADORES_COMPARACAO.has(partes[1]!)) {
+    const valorComparacao = partes.slice(2).join(" ");
     return {
       tipo: "comparacao",
       textoOriginal: normalizado,
       alvo: partes[0]!,
       operador: partes[1] as ExpressaoComparacaoSemantica["operador"],
-      valor: partes.slice(2).join(" "),
+      valor: valorComparacao,
+      valorLiteral: ehValorLiteralSemantico(valorComparacao),
     };
   }
 
@@ -374,8 +428,8 @@ export function parsearEtapaFlow(texto: string): EtapaFlowSemantica | undefined 
 
   const resto = semPrefixo.slice(nome.length).trim();
   const task = resto.match(/\busa\s+([A-Za-z_][A-Za-z0-9_.]*)/)?.[1];
-  const comTexto = resto.match(/\bcom\s+(.+?)(?=\s+(quando|depende_de|em_sucesso|em_erro)\b|$)/)?.[1];
-  const dependenciasTexto = resto.match(/\bdepende_de\s+([A-Za-z0-9_.,\s]+)/)?.[1];
+  const comTexto = resto.match(/\bcom\s+(.+?)(?=\s+(quando|depende_de|em_sucesso|em_erro|por_erro)\b|$)/)?.[1];
+  const dependenciasTexto = resto.match(/\bdepende_de\s+(.+?)(?=\s+(quando|com|em_sucesso|em_erro|por_erro)\b|$)/)?.[1];
   const dependencias = dependenciasTexto
     ? dependenciasTexto.split(",").map((parte) => parte.trim()).filter(Boolean)
     : [];
@@ -443,7 +497,12 @@ export function extrairReferenciasDaExpressao(expressao: ExpressaoSemantica): st
 
   const referencias = [expressao.alvo];
 
-  if (expressao.tipo === "comparacao" && expressao.valor && pareceReferenciaSemantica(expressao.valor)) {
+  if (
+    expressao.tipo === "comparacao"
+    && expressao.valor
+    && !expressao.valorLiteral
+    && pareceReferenciaSemantica(expressao.valor)
+  ) {
     referencias.push(expressao.valor);
   }
 
@@ -456,19 +515,35 @@ export function pareceReferenciaSemantica(valor: string): boolean {
     return false;
   }
 
-  if (/^-?\d+(?:\.\d+)?$/.test(normalizado)) {
-    return false;
-  }
-
-  if (["verdadeiro", "falso", "nulo"].includes(normalizado)) {
-    return false;
-  }
-
-  if (/^[A-Z][A-Z0-9_]*$/.test(normalizado)) {
+  if (ehValorLiteralSemantico(normalizado)) {
     return false;
   }
 
   return /^[A-Za-z_][A-Za-z0-9_.]*$/.test(normalizado);
+}
+
+function ehValorLiteralSemantico(valor: string): boolean {
+  const normalizado = valor.trim();
+  if (!normalizado) {
+    return false;
+  }
+
+  if (
+    (normalizado.startsWith("\"") && normalizado.endsWith("\""))
+    || (normalizado.startsWith("'") && normalizado.endsWith("'"))
+  ) {
+    return true;
+  }
+
+  if (/^-?\d+(?:\.\d+)?$/.test(normalizado)) {
+    return true;
+  }
+
+  if (["verdadeiro", "falso", "nulo"].includes(normalizado)) {
+    return true;
+  }
+
+  return /^[A-Z][A-Z0-9_]*$/.test(normalizado);
 }
 
 export function ehCategoriaEfeitoSemantico(valor: string): valor is CategoriaEfeitoSemantico {

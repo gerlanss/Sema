@@ -2,7 +2,7 @@
   "name": "sema",
   "version": "0.1.0",
   "private": true,
-  "description": "Sema e uma DSL semantica para especificacao executavel de regras de negocio.",
+  "description": "Sema e uma linguagem estruturada para IA, focada em contrato, intencao e geracao de scaffolding backend.",
   "icon": "logo.png",
   "type": "module",
   "workspaces": [
@@ -16,6 +16,8 @@
     "cli:instalar-local": "npm run build && node scripts/garantir-path-cli-windows.mjs && npm link --workspace @sema/cli",
     "cli:desinstalar-local": "npm unlink -g @sema/cli",
     "cli:empacotar": "npm run build && node -e \"require('node:fs').mkdirSync('.tmp/pacotes',{recursive:true})\" && npm pack --workspace @sema/cli --pack-destination ./.tmp/pacotes",
+    "extensao:empacotar": "npm run build && node scripts/empacotar-extensao-vscode.mjs",
+    "extensao:instalar-local": "node scripts/instalar-extensao-vscode.mjs",
     "dev:cli": "node scripts/dev-cli.mjs",
     "format:check": "node pacotes/cli/dist/index.js formatar exemplos --check",
     "ia:preparar-contexto": "node scripts/preparar-contexto-ia.mjs",

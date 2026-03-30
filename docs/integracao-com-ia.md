@@ -2,16 +2,19 @@
 
 A Sema foi desenhada para reduzir ambiguidade na colaboracao com IA. A prioridade de design do projeto e permitir que modelos entendam, validem, transformem e operem sobre contratos semanticos explicitos.
 
-Na Fase 4, essa integracao deixou de ser so uma boa ideia e ganhou contrato operacional de verdade via CLI JSON, formatacao canonica e suporte basico de editor. No marco `0.5`, essa direcao passou a ter uma prova concreta no vertical oficial de pagamento.
+No marco `0.6 backend-first`, essa integracao deixa de ser so leitura de contrato e passa a incluir **geracao de scaffold backend util**. Em bom portugues: se a tarefa pedir codigo derivado, a IA tem que parar de agir como jumento e colocar `sema compilar` no fluxo.
 
-Documentos complementares para onboarding de agente:
+## Documentos de apoio
 
 - [AGENT_STARTER.md](./AGENT_STARTER.md)
 - [como-ensinar-a-sema-para-ia.md](./como-ensinar-a-sema-para-ia.md)
 - [prompt-base-ia-sema.md](./prompt-base-ia-sema.md)
 - [fluxo-pratico-ia-sema.md](./fluxo-pratico-ia-sema.md)
+- [da-sema-para-codigo.md](./da-sema-para-codigo.md)
+- [importacao-legado.md](./importacao-legado.md)
+- [backend-first.md](./backend-first.md)
 
-Comandos dedicados da CLI para onboarding e prompting:
+## Comandos dedicados da CLI
 
 - `sema ajuda-ia`
 - `sema starter-ia`
@@ -22,6 +25,18 @@ Comandos dedicados da CLI para onboarding e prompting:
 - `sema exemplos-prompt-ia`
 - `sema contexto-ia <arquivo.sema>`
 
+## Comandos essenciais que a IA nao deveria ignorar
+
+- `sema ast <arquivo.sema> --json`
+- `sema ir <arquivo.sema> --json`
+- `sema validar <arquivo.sema> --json`
+- `sema diagnosticos <arquivo.sema> --json`
+- `sema formatar <arquivo.sema>`
+- `sema inspecionar [arquivo-ou-pasta] --json`
+- `sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--json]`
+- `sema compilar [arquivo-ou-pasta] --alvo <typescript|python|dart> --framework <base|nestjs|fastapi> --estrutura <flat|modulos|backend> --saida <diretorio>`
+- `sema verificar <arquivo-ou-pasta> --json`
+
 ## O que a Sema ja oferece para IA
 
 - AST exportavel em JSON
@@ -29,8 +44,11 @@ Comandos dedicados da CLI para onboarding e prompting:
 - diagnosticos estruturados
 - verificacao em lote com resumo estruturado
 - formatacao canonica verificavel por CLI
+- scaffold base para TypeScript, Python e Dart
+- scaffold backend para NestJS e FastAPI
+- importacao assistida de legado para rascunho `.sema`
 - blocos explicitos para regra, efeito, garantia, estado, fluxo, erro e teste
-- um caso oficial de negocio ponta a ponta para orientar agentes: pagamento
+- `impl` para ligar contrato a implementacao real
 
 ## Comandos que expoem JSON
 
@@ -43,6 +61,7 @@ Os comandos abaixo devem ser tratados como contrato publico principal para IA e 
 - `sema verificar --json`
 - `sema formatar --json`
 - `sema contexto-ia --json`
+- `sema inspecionar --json`
 
 ## Como consumir cada comando
 
@@ -55,25 +74,17 @@ Fluxo recomendado:
 1. executar `validar --json`
 2. ler `sucesso`
 3. se houver falha, usar `diagnosticos` como fonte de correcao
+4. se a tarefa pedir codigo derivado, seguir com `compilar`
 
 ### `diagnosticos --json`
 
 Use quando a IA ja sabe que existe problema e precisa atuar como reparadora.
 
-Cada diagnostico deve ser lido como contrato de erro semantico, nao como simples log textual.
-
-Campos esperados:
-
-- codigo
-- mensagem
-- severidade
-- intervalo
-- dica
-- contexto
+Cada diagnostico deve ser lido como contrato de erro semantico, nao como log textual perdido.
 
 ### `ast --json`
 
-Use quando a IA precisar entender a estrutura sintatica do modulo como foi escrita, sem depender do gerador final.
+Use quando a IA precisar entender a estrutura sintatica do modulo como foi escrita.
 
 ### `ir --json`
 
@@ -83,14 +94,26 @@ Na pratica, `ir --json` e o melhor ponto para:
 
 - compreender contratos internos
 - compreender contratos publicos de `route`
-- inspecionar `effects` tipados
+- inspecionar `effects`
 - navegar por `flow`, `state` e `task`
+- ver `impl` e imports externos declarados
+
+### `inspecionar --json`
+
+Use quando a IA precisar saber:
+
+- qual `sema.config.json` foi encontrado
+- quais origens estao ativas
+- quais modulos foram resolvidos
+- qual framework/estrutura de saida esta em jogo
+
+Esse comando evita muito diagnostico burro em projeto com multiplas pastas.
 
 ### `verificar --json`
 
 Use quando a IA precisar de uma visao operacional da saude do projeto.
 
-Esse comando deve ser preferido para responder perguntas como:
+Esse comando deve ser preferido para perguntas como:
 
 - quais modulos passaram ou falharam
 - quantos arquivos foram gerados
@@ -105,28 +128,59 @@ Use quando a IA precisar integrar reformatacao, auditoria de estilo ou checagem 
 
 O formatador e a fonte unica de estilo da linguagem.
 
-Fluxo recomendado para IA:
+Fluxo recomendado:
 
 1. aplicar mudancas no codigo `.sema`
 2. executar `sema formatar <arquivo-ou-pasta>`
 3. executar `sema formatar <arquivo-ou-pasta> --check`
 4. se o `--check` falhar, a IA ainda nao terminou o trabalho direito
 
-Em pipelines automatizados, o modo mais seguro e:
+## Fluxo recomendado para agentes
+
+### Quando a tarefa for so modelagem/edicao de contrato
 
 ```bash
-node pacotes/cli/dist/index.js formatar exemplos --check
+sema ast arquivo.sema --json
+sema ir arquivo.sema --json
+sema formatar arquivo.sema
+sema validar arquivo.sema --json
+sema diagnosticos arquivo.sema --json
 ```
 
-## Fluxo recomendado para agentes e automacao
+### Quando a tarefa pedir codigo derivado
 
-Para manutencao de projeto, o fluxo recomendado agora e:
+```bash
+sema inspecionar --json
+sema ast contratos/pedidos.sema --json
+sema ir contratos/pedidos.sema --json
+sema formatar contratos/pedidos.sema
+sema validar contratos/pedidos.sema --json
+sema compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
+```
+
+### Quando a tarefa comecar num projeto legado
+
+```bash
+sema importar nestjs ./backend --saida ./sema/importado --json
+sema formatar ./sema/importado
+sema validar ./sema/importado --json
+```
+
+### Quando a tarefa for Python/FastAPI
+
+```bash
+sema inspecionar --json
+sema validar contratos/pagamentos.sema --json
+sema compilar contratos/pagamentos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
+```
+
+### Fechamento operacional
 
 ```bash
 npm run status:check
 npm test
 npm run format:check
-node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-fase4
+node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-0-6
 ```
 
 Ou, de forma consolidada:
@@ -135,24 +189,9 @@ Ou, de forma consolidada:
 npm run project:check
 ```
 
-## Pagamento como regua do `0.5`
-
-O vertical oficial de pagamento e a demonstracao pratica de que a Sema deixou de ser so uma boa DSL de laboratorio.
-
-Ele serve como referencia para:
-
-- contrato publico via `route`
-- `effects` operacionais com `criticidade`
-- `flow` com ramificacao de erro
-- `state` e transicoes
-- erros publicos e garantias finais
-- geracao coerente em Python e TypeScript
-
-O guia oficial desse fluxo esta em [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md).
-
 ## Preparar contexto para um agente
 
-Quando a IA for atuar em um modulo especifico, o caminho mais seguro e gerar um pacote de contexto dedicado:
+Quando a IA for atuar num modulo especifico, o caminho mais seguro e gerar um pacote dedicado:
 
 ```bash
 sema contexto-ia exemplos/pagamento.sema
@@ -166,13 +205,11 @@ Esse comando gera um pacote em `.tmp/contexto-ia/...` com:
 - `ir.json`
 - `README.md` com o fluxo operacional recomendado
 
-Na pratica, esse pacote reduz bastante a chance de a IA sair inventando regra onde deveria estar lendo contrato.
-
 ## Quando a tarefa envolve interface grafica
 
 Se a tarefa envolver UI, o caminho certo nao e pedir um `index.html` solto e torcer.
 
-O fluxo recomendado e:
+Fluxo recomendado:
 
 1. usar `sema starter-ia`
 2. usar `sema prompt-ia-react` quando a tarefa for `Sema + React + TypeScript`
@@ -185,35 +222,31 @@ Regra pratica:
 - se o objetivo for testar a Sema de verdade, peca `.sema` + arquitetura de app
 - nao peca apenas HTML unico quando a camada semantica for parte central da solucao
 
-Se voce preferir integrar isso em automacao, use:
-
-```bash
-sema contexto-ia exemplos/pagamento.sema --json
-```
-
 ## Beneficios praticos para IA
 
 - modelos conseguem identificar onde uma entrada foi declarada
 - efeitos colaterais ficam visiveis em vez de enterrados
 - garantias podem ser auditadas
 - contratos publicos de `route` ficam rastreaveis
-- o vertical oficial de pagamento do `0.5` serve como caso de uso completo para orientar geracao, revisao e automacao
-- casos de teste servem como ancora para geracao e revisao
+- `impl` mostra onde a implementacao real vive
+- `sema.config.json` e `inspecionar` reduzem erro de contexto
 - o formatador reduz ruido e diffs idiotas
 - a saida JSON elimina boa parte da adivinhacao de parsing textual
+- o scaffold backend reduz trabalho manual real
 
 ## Limites atuais
 
 - o servidor de linguagem atual cobre diagnosticos, hover e formatacao, mas ainda nao entrega navegacao simbolica profunda, code actions ou completions ricos
-- a extensao de editor melhorou bastante, mas ainda pode crescer em ergonomia e inteligencia contextual
-- `use` avancado para projetos maiores ainda nao esta maduro
-- a linguagem ainda pode ganhar expressoes e contratos mais ricos no pos-MVP
+- `use` avancado para projetos maiores ainda pode amadurecer mais
+- `flow` ainda pode ficar melhor para orquestracao backend mais rica
+- a Sema gera scaffold forte, mas ainda nao substitui implementacao real de framework sozinha
 
 ## Direcao futura
 
-Depois da Fase 4 e do marco `0.5`, a integracao com IA deve evoluir principalmente em:
+Depois do marco `0.6`, a integracao com IA deve evoluir principalmente em:
 
+- adocao incremental em projetos backend existentes
 - diagnosticos ainda mais acionaveis
-- fluxos de correcao automatizada
+- melhor uso de `flow` em orquestracao backend real
 - traducao parcial de codigo legado para `.sema`
-- ferramentas de editor mais profundas
+- suporte de editor mais profundo

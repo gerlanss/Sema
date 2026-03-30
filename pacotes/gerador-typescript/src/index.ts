@@ -1,7 +1,32 @@
+import path from "node:path";
 import type { ExpressaoSemantica, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
-import { normalizarNomeModulo, normalizarNomeParaSimbolo, mapearTipoParaTypeScript, type ArquivoGerado } from "@sema/padroes";
+import {
+  descreverEstruturaModulo,
+  mapearTipoParaTypeScript,
+  normalizarNomeModulo,
+  normalizarNomeParaSimbolo,
+  type ArquivoGerado,
+  type FrameworkGeracao,
+} from "@sema/padroes";
+
+export interface OpcoesGeracaoTypeScript {
+  framework?: FrameworkGeracao;
+}
 
 const TIPOS_PRIMITIVOS_SEMA = new Set(["Texto", "Numero", "Inteiro", "Decimal", "Booleano", "Data", "DataHora", "Id", "Email", "Url", "Json", "Vazio"]);
+
+const TIPOS_TYPESCRIPT_NATIVOS = new Set([
+  "string",
+  "number",
+  "boolean",
+  "Date",
+  "unknown",
+  "void",
+  "null",
+  "undefined",
+  "any",
+  "Record<string, unknown>",
+]);
 
 function gerarInterface(nome: string, campos: IrCampo[]): string {
   const propriedades = campos.length === 0
@@ -218,12 +243,16 @@ function gerarMetadadosTask(task: IrTask): string {
   const efeitos = task.efeitosEstruturados.length === 0
     ? "[]"
     : `[\n${task.efeitosEstruturados.map((efeito) => `  { categoria: "${efeito.categoria}", alvo: "${efeito.alvo}"${efeito.detalhe ? `, detalhe: ${JSON.stringify(efeito.detalhe)}` : ""}${efeito.criticidade ? `, criticidade: "${efeito.criticidade}"` : ""} },`).join("\n")}\n]`;
+  const implementacoes = task.implementacoesExternas.length === 0
+    ? "[]"
+    : `[\n${task.implementacoesExternas.map((impl) => `  { origem: "${impl.origem}", caminho: "${impl.caminho}" },`).join("\n")}\n]`;
 
   return `export const contrato_${normalizarNomeParaSimbolo(task.nome)} = {
   nome: "${task.nome}",
   input: ${gerarLiteralCamposTypeScript(task.input)},
   output: ${gerarLiteralCamposTypeScript(task.output)},
   effects: ${efeitos},
+  impl: ${implementacoes},
   errors: ${gerarLiteralErrosTypeScript(task.errors)},
   guarantees: ${JSON.stringify(task.guarantees, null, 2)},
 } as const;
@@ -345,6 +374,7 @@ export async function executar_${nomeSimbolo}(entrada: ${task.nome}Entrada): Pro
   validar_${nomeSimbolo}(entrada);
 ${cenariosErro.map((caso) => `  if (JSON.stringify(entrada) === JSON.stringify(${JSON.stringify(caso.entrada)})) throw new ${task.nome}_${caso.tipoErro}Erro();`).join("\n")}
 ${task.stateContract ? `  // Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n  // Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
+${task.implementacoesExternas.length > 0 ? `  // Implementacoes externas vinculadas:\n${task.implementacoesExternas.map((impl) => `  // - ${impl.origem}: ${impl.caminho}`).join("\n")}` : ""}
   // Efeitos declarados:
 ${task.efeitosEstruturados.map((efeito) => `  // - categoria=${efeito.categoria} alvo=${efeito.alvo}${efeito.detalhe ? ` detalhe=${efeito.detalhe}` : ""}${efeito.criticidade ? ` criticidade=${efeito.criticidade}` : ""}`).join("\n") || task.effects.map((efeito) => `  // - ${efeito}`).join("\n") || "  // - Nenhum efeito declarado."}
 ${gerarPreparacaoSaida(task)}
@@ -401,8 +431,11 @@ test("${task.nome} :: ${caso.nome}", async () => {
   return linhas.join("\n");
 }
 
-export function gerarTypeScript(modulo: IrModulo): ArquivoGerado[] {
+function gerarTypeScriptBase(modulo: IrModulo): ArquivoGerado[] {
   const nomeBase = normalizarNomeModulo(modulo.nome).replace(/\./g, "_");
+  const interoperabilidades = modulo.interoperabilidades
+    .map((interop) => `// Interop externo ${interop.origem}: ${interop.caminho}`)
+    .join("\n");
   const tiposExternos = coletarTiposExternos(modulo)
     .map((tipo) => `export type ${tipo} = any; // Tipo externo referenciado por use ou por contrato compartilhado.\n`)
     .join("\n");
@@ -424,11 +457,245 @@ export function gerarTypeScript(modulo: IrModulo): ArquivoGerado[] {
   const tasks = modulo.tasks.map(gerarTask).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
-  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n\n${tiposExternos}\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
+  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\n${tiposExternos}\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
   const testes = gerarTestes(modulo);
 
   return [
     { caminhoRelativo: `${nomeBase}.ts`, conteudo: codigo },
     { caminhoRelativo: `${nomeBase}.test.ts`, conteudo: testes },
   ];
+}
+
+function paraPascalCase(valor: string): string {
+  return valor
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((parte) => parte[0]!.toUpperCase() + parte.slice(1))
+    .join("");
+}
+
+function limparPrefixoRota(caminho?: string): string {
+  return (caminho ?? "/").replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function gerarNestJsDtos(modulo: IrModulo, caminhoContrato: string): string {
+  const tiposReferenciados = new Set<string>();
+  const registrarTipos = (campos: IrCampo[]) => {
+    for (const campo of campos) {
+      const tipoMapeado = mapearTipoParaTypeScript(campo.tipo);
+      if (
+        !TIPOS_TYPESCRIPT_NATIVOS.has(tipoMapeado)
+        && /^[A-Za-z_][A-Za-z0-9_]*$/.test(tipoMapeado)
+      ) {
+        tiposReferenciados.add(tipoMapeado);
+      }
+    }
+  };
+
+  for (const task of modulo.tasks) {
+    registrarTipos(task.input);
+    registrarTipos(task.output);
+  }
+  for (const route of modulo.routes) {
+    registrarTipos(route.inputPublico);
+    registrarTipos(route.outputPublico);
+  }
+
+  const linhas: string[] = [];
+  if (tiposReferenciados.size > 0) {
+    linhas.push(`import type { ${[...tiposReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")).join(", ")} } from "${caminhoContrato}";`);
+    linhas.push("");
+  }
+
+  const gerarClasseDto = (nomeClasse: string, campos: IrCampo[]) => {
+    linhas.push(`export class ${nomeClasse} {`);
+    if (campos.length === 0) {
+      linhas.push("  // Sem campos declarados.");
+    } else {
+      for (const campo of campos) {
+        linhas.push(`  ${campo.nome}${campo.modificadores.includes("required") ? "!" : "?"}: ${mapearTipoParaTypeScript(campo.tipo)};`);
+      }
+    }
+    linhas.push("}");
+    linhas.push("");
+  };
+
+  for (const task of modulo.tasks) {
+    gerarClasseDto(`${paraPascalCase(task.nome)}EntradaDto`, task.input);
+    gerarClasseDto(`${paraPascalCase(task.nome)}SaidaDto`, task.output);
+  }
+  for (const route of modulo.routes) {
+    gerarClasseDto(`${paraPascalCase(route.nome)}EntradaPublicaDto`, route.inputPublico);
+    gerarClasseDto(`${paraPascalCase(route.nome)}SaidaPublicaDto`, route.outputPublico);
+  }
+
+  return `${linhas.join("\n").trim()}\n`;
+}
+
+function gerarNestJsService(modulo: IrModulo, caminhoContrato: string): string {
+  const nomeClasse = `${paraPascalCase(descreverEstruturaModulo(modulo.nome).nomeArquivo)}Service`;
+  const imports = [
+    `import { Injectable } from "@nestjs/common";`,
+    `import {`,
+    ...modulo.tasks.flatMap((task) => [`  executar_${normalizarNomeParaSimbolo(task.nome)},`, `  type ${task.nome}Entrada,`, `  type ${task.nome}Saida,`]),
+    ...modulo.routes.flatMap((route) => route.task ? [
+      `  adaptar_${normalizarNomeParaSimbolo(route.nome)},`,
+      `  type ${route.nome}EntradaPublica,`,
+      `  type ${route.nome}RespostaPublica,`,
+    ] : []),
+    `} from "${caminhoContrato}";`,
+  ];
+
+  const metodosTask = modulo.tasks.map((task) => `  async ${normalizarNomeParaSimbolo(task.nome)}(entrada: ${task.nome}Entrada): Promise<${task.nome}Saida> {
+${task.implementacoesExternas.length > 0 ? task.implementacoesExternas.map((impl) => `    // impl ${impl.origem}: ${impl.caminho}`).join("\n") : "    // TODO: ajustar a implementacao real e preencher dependencias do framework."}
+    return executar_${normalizarNomeParaSimbolo(task.nome)}(entrada);
+  }`).join("\n\n");
+
+  const metodosRota = modulo.routes
+    .filter((route) => route.task)
+    .map((route) => `  async ${normalizarNomeParaSimbolo(route.nome)}(entrada: ${route.nome}EntradaPublica): Promise<${route.nome}RespostaPublica> {
+    return adaptar_${normalizarNomeParaSimbolo(route.nome)}(entrada);
+  }`).join("\n\n");
+
+  return `${imports.join("\n")}
+
+@Injectable()
+export class ${nomeClasse} {
+${metodosTask}${metodosTask && metodosRota ? "\n\n" : ""}${metodosRota}
+}
+`;
+}
+
+function gerarNestJsController(modulo: IrModulo, caminhoDto: string, caminhoService: string): string {
+  const nomeArquivo = descreverEstruturaModulo(modulo.nome).nomeArquivo;
+  const nomeClasse = `${paraPascalCase(nomeArquivo)}Controller`;
+  const nomeService = `${paraPascalCase(nomeArquivo)}Service`;
+  const decoratorsImport = new Set<string>(["Controller"]);
+  const metodos = modulo.routes
+    .filter((route) => route.task)
+    .map((route) => {
+      const metodo = (route.metodo ?? "POST").toUpperCase();
+      if (metodo === "GET") {
+        decoratorsImport.add("Get");
+      } else if (metodo === "PUT") {
+        decoratorsImport.add("Put");
+      } else if (metodo === "PATCH") {
+        decoratorsImport.add("Patch");
+      } else if (metodo === "DELETE") {
+        decoratorsImport.add("Delete");
+      } else {
+        decoratorsImport.add("Post");
+      }
+      if ((route.inputPublico ?? []).length > 0) {
+        decoratorsImport.add("Body");
+      }
+      const decorator = metodo === "GET" ? "Get" : metodo === "PUT" ? "Put" : metodo === "PATCH" ? "Patch" : metodo === "DELETE" ? "Delete" : "Post";
+      const caminhoDecorador = limparPrefixoRota(route.caminho);
+      const bodyArg = route.inputPublico.length > 0
+        ? `@Body() entrada: ${paraPascalCase(route.nome)}EntradaPublicaDto`
+        : "";
+      const tipoResposta = `${route.nome}RespostaPublica`;
+      return `  @${decorator}(${JSON.stringify(caminhoDecorador)})
+  async ${normalizarNomeParaSimbolo(route.nome)}(${bodyArg}): Promise<${tipoResposta}> {
+    return this.service.${normalizarNomeParaSimbolo(route.nome)}(${route.inputPublico.length > 0 ? "entrada" : "{}"});
+  }`;
+    }).join("\n\n");
+
+  const dtosImportados = [...new Set(modulo.routes
+    .filter((route) => route.task && route.inputPublico.length > 0)
+    .map((route) => `${paraPascalCase(route.nome)}EntradaPublicaDto`))];
+
+  const contratosImportados = [...new Set(modulo.routes
+    .filter((route) => route.task)
+    .map((route) => `type ${route.nome}RespostaPublica`))];
+
+  return `import { ${[...decoratorsImport].join(", ")} } from "@nestjs/common";
+import { ${nomeService} } from "${caminhoService}";
+${dtosImportados.length > 0 ? `import { ${dtosImportados.join(", ")} } from "${caminhoDto}";` : ""}
+${contratosImportados.length > 0 ? `import { ${contratosImportados.join(", ")} } from "./${descreverEstruturaModulo(modulo.nome).nomeArquivo}.contract";` : ""}
+
+@Controller()
+export class ${nomeClasse} {
+  constructor(private readonly service: ${nomeService}) {}
+
+${metodos || "  // Nenhuma route publica declarada no modulo."}
+}
+`;
+}
+
+function gerarNestJsSpec(modulo: IrModulo, caminhoService: string, caminhoController: string): string {
+  const nomeArquivo = descreverEstruturaModulo(modulo.nome).nomeArquivo;
+  const nomeService = `${paraPascalCase(nomeArquivo)}Service`;
+  const nomeController = `${paraPascalCase(nomeArquivo)}Controller`;
+
+  return `import { describe, it } from "@jest/globals";
+import { ${nomeService} } from "${caminhoService}";
+import { ${nomeController} } from "${caminhoController}";
+
+describe("${nomeController}", () => {
+  it("mantem o scaffold inicial em pe", () => {
+    const service = new ${nomeService}();
+    const controller = new ${nomeController}(service);
+    expect(controller).toBeDefined();
+  });
+});
+`;
+}
+
+function gerarTypeScriptNestJs(modulo: IrModulo): ArquivoGerado[] {
+  const base = gerarTypeScriptBase(modulo);
+  const contrato = base.find((arquivo) => arquivo.caminhoRelativo.endsWith(".ts") && !arquivo.caminhoRelativo.endsWith(".test.ts"));
+  const testeContrato = base.find((arquivo) => arquivo.caminhoRelativo.endsWith(".test.ts"));
+  const estrutura = descreverEstruturaModulo(modulo.nome);
+  const contexto = estrutura.contextoRelativo;
+  const contratoPath = `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}.contract.ts`;
+  const dtoPath = `${contexto ? `${contexto}/` : ""}dto/${estrutura.nomeArquivo}.dto.ts`;
+  const servicePath = `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}.service.ts`;
+  const controllerPath = `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}.controller.ts`;
+  const caminhoImportDto = `./dto/${estrutura.nomeArquivo}.dto`;
+  const caminhoImportContrato = `./${estrutura.nomeArquivo}.contract`;
+  const caminhoImportService = `./${estrutura.nomeArquivo}.service`;
+  const caminhoContratoTeste = path.posix.join("test", `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}.contract.test.ts`);
+  const caminhoControllerSpec = path.posix.join("test", `${contexto ? `${contexto}/` : ""}${estrutura.nomeArquivo}.controller.spec.ts`);
+  const relativoContratoDoTeste = path.posix.relative(path.posix.dirname(caminhoContratoTeste), path.posix.join("src", contratoPath).replace(/\.ts$/, ""));
+  const relativoServiceDoSpec = path.posix.relative(path.posix.dirname(caminhoControllerSpec), path.posix.join("src", servicePath).replace(/\.ts$/, ""));
+  const relativoControllerDoSpec = path.posix.relative(path.posix.dirname(caminhoControllerSpec), path.posix.join("src", controllerPath).replace(/\.ts$/, ""));
+
+  const arquivos: ArquivoGerado[] = [
+    {
+      caminhoRelativo: path.posix.join("src", contratoPath),
+      conteudo: contrato?.conteudo ?? "// Nenhum contrato base gerado.\n",
+    },
+    {
+      caminhoRelativo: path.posix.join("src", dtoPath),
+      conteudo: gerarNestJsDtos(modulo, `../${path.posix.basename(contratoPath, ".ts")}`),
+    },
+    {
+      caminhoRelativo: path.posix.join("src", servicePath),
+      conteudo: gerarNestJsService(modulo, caminhoImportContrato),
+    },
+    {
+      caminhoRelativo: path.posix.join("src", controllerPath),
+      conteudo: gerarNestJsController(modulo, caminhoImportDto, caminhoImportService),
+    },
+    {
+      caminhoRelativo: caminhoContratoTeste,
+      conteudo: (testeContrato?.conteudo ?? "")
+        .replace(`./${estrutura.nomeBase}.ts`, relativoContratoDoTeste)
+        .replace(`./${estrutura.nomeArquivo}.ts`, relativoContratoDoTeste),
+    },
+    {
+      caminhoRelativo: caminhoControllerSpec,
+      conteudo: gerarNestJsSpec(modulo, relativoServiceDoSpec, relativoControllerDoSpec),
+    },
+  ];
+
+  return arquivos;
+}
+
+export function gerarTypeScript(modulo: IrModulo, opcoes: OpcoesGeracaoTypeScript = {}): ArquivoGerado[] {
+  if (opcoes.framework === "nestjs") {
+    return gerarTypeScriptNestJs(modulo);
+  }
+  return gerarTypeScriptBase(modulo);
 }

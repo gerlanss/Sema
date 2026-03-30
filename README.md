@@ -2,49 +2,131 @@
 
 ![Logo da Sema](./logo.png)
 
-Sema e uma DSL semantica, declarativa e orientada a intencao para descrever contratos de negocio de forma executavel. Em vez de esconder regra, efeito colateral, garantia e teste no meio de codigo imperativo, a Sema assume que esses elementos merecem cidadania de primeira classe.
+Sema e uma linguagem estruturada para IA, voltada a modelagem explicita de contratos e intencao. Ela existe para reduzir ambiguidade semantica e permitir que IA e humanos operem sobre significado explicito.
 
-O projeto foi desenhado como uma camada acima de Python e TypeScript. A ideia nao e substituir essas linguagens, e sim governar a camada de especificacao, validacao e geracao de codigo com mais previsibilidade.
+Na pratica, a Sema nasce como linguagem de intencao. Ela nao quer substituir TypeScript, Python, Dart ou framework nenhum. Ela governa a camada de significado acima deles: contrato, fluxo, estado, erro, efeito, garantia e teste.
 
-A prioridade de design da Sema e facilitar o entendimento, a transformacao e a operacao correta por IA. A legibilidade humana continua importante, mas entra como consequencia de uma linguagem que explicita intencao, contrato, efeitos e garantias com o minimo de ambiguidade para modelos.
+No marco atual, `0.6 backend-first`, o foco deixou de ser so “fechar MVP” e virou algo bem mais util: **criar e editar projetos backend reais** com scaffold forte, configuracao de projeto, integracao com frameworks e adocao incremental em codigo vivo.
 
-O acompanhamento operacional do que ja foi feito e do que ainda falta esta em [STATUS.md](C:\GitHub\Sema\STATUS.md).
-As regras de colaboracao e o fluxo de contribuicao estao em [CONTRIBUTING.md](C:\GitHub\Sema\CONTRIBUTING.md).
-O guia oficial do vertical de referencia esta em [docs/pagamento-ponta-a-ponta.md](C:\GitHub\Sema\docs\pagamento-ponta-a-ponta.md).
-O guia para ensinar a linguagem a agentes esta em [docs/como-ensinar-a-sema-para-ia.md](C:\GitHub\Sema\docs\como-ensinar-a-sema-para-ia.md).
-O prompt-base oficial para IA esta em [docs/prompt-base-ia-sema.md](C:\GitHub\Sema\docs\prompt-base-ia-sema.md).
-O fluxo pratico de onboarding de agente esta em [docs/fluxo-pratico-ia-sema.md](C:\GitHub\Sema\docs\fluxo-pratico-ia-sema.md).
-O starter curto para colar em qualquer agente esta em [docs/AGENT_STARTER.md](C:\GitHub\Sema\docs\AGENT_STARTER.md).
-O guia de instalacao e primeiro uso esta em [docs/instalacao-e-primeiro-uso.md](C:\GitHub\Sema\docs\instalacao-e-primeiro-uso.md).
-O guia de distribuicao da CLI esta em [docs/distribuicao-da-cli.md](C:\GitHub\Sema\docs\distribuicao-da-cli.md).
+## O que significa ser uma linguagem estruturada para IA
 
-Para sincronizar a data e o commit de referencia do status:
+Significa que a Sema nao foi desenhada para obrigar a IA a adivinhar o sistema.
+
+Ela explicita:
+
+- intencao da operacao
+- contrato de entrada e saida
+- regras obrigatorias
+- efeitos operacionais
+- erros esperados
+- garantias finais
+- fluxo e estado do dominio
+
+Ou seja: a Sema nao existe para substituir stacks maduras. Ela existe para governar significado acima delas.
+
+## Backend-first em 30 segundos
+
+Hoje a Sema ja faz bem estas porras aqui:
+
+- modela dominio, contrato, borda publica, erro, garantia, efeito e fluxo
+- gera scaffold base para TypeScript, Python e Dart
+- gera scaffold orientado a framework para NestJS e FastAPI
+- organiza projeto via `sema.config.json`
+- resolve `use` em multiplas origens de projeto
+- vincula `task` a implementacao real via `impl`
+- ajuda IA e humanos a editar backend sem virar pantano semantico
+
+### Iniciar um backend NestJS
 
 ```bash
-npm run status:sync
+sema iniciar --template nestjs
+sema inspecionar --json
+sema compilar --framework nestjs
 ```
 
-Para validar se o `STATUS.md` esta consistente com a estrutura esperada:
+Saida tipica:
+
+- `src/<contexto>/<modulo>.contract.ts`
+- `src/<contexto>/dto/<modulo>.dto.ts`
+- `src/<contexto>/<modulo>.service.ts`
+- `src/<contexto>/<modulo>.controller.ts`
+- `test/<contexto>/<modulo>.contract.test.ts`
+- `test/<contexto>/<modulo>.controller.spec.ts`
+
+### Iniciar um backend FastAPI
 
 ```bash
-npm run status:check
+sema iniciar --template fastapi
+sema inspecionar --json
+sema compilar --framework fastapi
 ```
 
-Para preparar uma atualizacao de documentacao e status antes de commitar:
+Saida tipica:
+
+- `app/<contexto>/<modulo>_contract.py`
+- `app/<contexto>/<modulo>_schemas.py`
+- `app/<contexto>/<modulo>_service.py`
+- `app/<contexto>/<modulo>_router.py`
+- `tests/<contexto>/test_<modulo>_contract.py`
+- `tests/<contexto>/test_<modulo>_router.py`
+
+### Importar um backend legado para rascunho Sema
+
+Se o projeto nao nasceu com Sema, a CLI agora consegue puxar um rascunho inicial a partir de codigo vivo.
+
+Exemplos:
 
 ```bash
-npm run docs:prepare
+sema importar nestjs ./backend --saida ./sema/importado
+sema importar fastapi ./app --saida ./sema/importado
+sema importar python ./servicos --saida ./sema/importado
+sema importar typescript ./src --saida ./sema/importado
+sema importar dart ./lib --saida ./sema/importado
 ```
 
-Para rodar a checagem operacional completa do projeto:
+Fluxo recomendado:
 
-```bash
-npm run project:check
-```
+1. importar o legado para `.sema`
+2. revisar e lapidar o contrato
+3. rodar `sema formatar` e `sema validar --json`
+4. conectar implementacoes reais via `impl`
+5. compilar scaffold quando fizer sentido
 
-## Instalar no Windows
+Regra pratica:
 
-Se voce esta no Windows e quer sair usando sem dor de cabeca, o fluxo certo e este:
+- `importar` gera um **rascunho Sema valido para revisao**
+- ele nao promete reconstruir toda a intencao do projeto sozinho
+- ele serve para cortar o trabalho bruto de migracao e dar um ponto de partida coerente
+
+## Documentacao principal
+
+- [STATUS.md](./STATUS.md)
+- [docs/backend-first.md](./docs/backend-first.md)
+- [docs/arquitetura.md](./docs/arquitetura.md)
+- [docs/roadmap.md](./docs/roadmap.md)
+- [docs/instalacao-e-primeiro-uso.md](./docs/instalacao-e-primeiro-uso.md)
+- [docs/cli.md](./docs/cli.md)
+- [docs/integracao-com-ia.md](./docs/integracao-com-ia.md)
+- [docs/da-sema-para-codigo.md](./docs/da-sema-para-codigo.md)
+- [docs/importacao-legado.md](./docs/importacao-legado.md)
+- [docs/adocao-nestjs-existente.md](./docs/adocao-nestjs-existente.md)
+- [docs/adocao-fastapi-existente.md](./docs/adocao-fastapi-existente.md)
+- [docs/nestjs-prisma-sema.md](./docs/nestjs-prisma-sema.md)
+- [docs/pagamento-ponta-a-ponta.md](./docs/pagamento-ponta-a-ponta.md)
+- [docs/AGENT_STARTER.md](./docs/AGENT_STARTER.md)
+- [docs/prompt-base-ia-sema.md](./docs/prompt-base-ia-sema.md)
+
+## Instalar a CLI da Sema no Windows
+
+Esse fluxo instala a **CLI da Sema a partir deste repositorio**. Ele **nao baixa o projeto sozinho**, **nao instala a extensao do VS Code** e **nao publica nada na sua maquina alem do comando linkado da CLI**.
+
+Pre-requisitos:
+
+- Node.js instalado
+- npm funcionando
+- este repositorio ja clonado ou baixado
+
+Na raiz do projeto:
 
 ```powershell
 npm install
@@ -52,14 +134,12 @@ npm run build
 npm run cli:instalar-local
 ```
 
-Esse script agora faz duas coisas:
+O `cli:instalar-local`:
 
 1. garante que o prefixo global do npm entre no `PATH` do usuario no Windows
 2. executa o `npm link` da CLI da Sema
 
-Ou seja: ele tenta deixar o comando `sema` visivel no PowerShell sem voce precisar catar `PATH` na mao igual um corno.
-
-Depois disso, feche e abra o terminal de novo para o PowerShell recarregar o `PATH`.
+Depois disso, feche e abra o terminal para o PowerShell recarregar o `PATH`.
 
 Teste assim:
 
@@ -74,91 +154,45 @@ Se o comando `sema` ainda nao aparecer, use a CLI direto por arquivo enquanto o 
 node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
 ```
 
-Para remover o comando global linkado no Windows:
+Para remover o comando linkado:
 
 ```powershell
 npm run cli:desinstalar-local
 ```
 
-## Instalar a CLI localmente como comando `sema`
-
-```bash
-npm run cli:instalar-local
-```
-
-No Windows, esse script tambem tenta colocar automaticamente o prefixo global do npm no `PATH` do usuario.
-
-Depois disso, voce pode usar:
-
-```bash
-sema validar exemplos/calculadora.sema
-sema ajuda-ia
-sema starter-ia
-sema prompt-ia
-sema prompt-ia-ui
-sema prompt-ia-react
-sema prompt-ia-sema-primeiro
-sema exemplos-prompt-ia
-sema contexto-ia exemplos/pagamento.sema
-```
-
 ## Extensao VS Code
 
-A extensao da Sema para VS Code ja esta num ponto bem mais util do que antes.
-
-Ela hoje oferece:
+A extensao da Sema para VS Code ja tem:
 
 - associacao automatica de `.sema`
-- destaque de sintaxe
+- highlight de sintaxe
 - snippets
 - comando `Sema: Formatar Documento`
 - servidor de linguagem com diagnosticos semanticos
-- hover basico para palavras-chave centrais
+- hover basico
 - formatacao via servidor e via CLI
 
-Para resolver a dor de uso fora do repositorio da Sema, a extensao tenta localizar a CLI nesta ordem:
+Para empacotar:
 
-1. `sema.cliPath`, se voce configurar manualmente
-2. bin `sema` no sistema
-3. `node_modules/.bin/sema` do projeto atual
-4. CLI local do proprio repositorio da Sema, quando existir
+```bash
+npm run extensao:empacotar
+```
 
-O pacote da extensao tambem ja usa o logo oficial da Sema como icone.
+Pacote gerado:
 
-## Por que a Sema existe
+- `.tmp/editor-vscode/sema-language-tools-0.1.1.vsix`
 
-Em software de negocio, o problema raramente e apenas "como programar". O problema real e tornar claro:
+Para instalar localmente:
 
-- o que a operacao quer fazer
-- quais entradas ela aceita
-- quais saidas ela promete
-- quais regras precisam ser respeitadas
-- quais efeitos colaterais podem acontecer
-- quais garantias devem ser verdadeiras no final
-- como esse comportamento deve ser testado
+```bash
+npm run extensao:instalar-local
+```
 
-Python e TypeScript resolvem partes disso, mas deixam muita coisa espalhada entre comentarios, convencoes, testes externos e memoria tribal. A Sema puxa isso para o centro.
+Ou manualmente:
 
-## Principios da linguagem
-
-- IA primeiro, humano como consequencia da clareza semantica
-- semantica antes de compactacao sintatica
-- falhar cedo diante de ambiguidade
-- contratos explicitos de entrada e saida
-- efeitos colaterais declarados, nunca escondidos
-- garantias pos-execucao como parte da linguagem
-- testes embutidos como documentacao executavel
-- legibilidade para pessoas como efeito colateral positivo de uma estrutura pensada para IA
-- expressoes semanticas estruturadas para `rules`, `effects` e `guarantees`
-- expressoes compostas com `e`, `ou`, `nao` e parenteses no MVP atual
-- `flow` com etapas estruturadas, `quando` e `depende_de` no MVP atual
-- `flow` com mapeamento de contexto por etapa e ramificacao basica de sucesso/erro
-- `flow` com roteamento por tipo de erro no MVP atual
-- `state` com invariantes e transicoes declarativas no MVP atual
-- `task` com vinculo explicito a `state` e validacao inicial de transicoes permitidas
-- contratos executaveis de erro gerados de forma inicial para TypeScript e Python
-- `effects` tipados por categoria com taxonomia inicial de Fase 3
-- `route` como contrato publico semantico com `input`, `output` e `error` opcionais
+```bash
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.1.1.vsix --force
+```
 
 ## Exemplo rapido
 
@@ -190,176 +224,261 @@ module exemplos.calculadora {
 }
 ```
 
-## Instalar dependencias
+## Configuracao de projeto
 
-```bash
-npm install
-npm run build
+A Sema agora tem um `sema.config.json` pensado para projeto real:
+
+```json
+{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript", "python"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "backend",
+  "framework": "nestjs",
+  "modoEstrito": true,
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/nestjs",
+    "python": "./generated/fastapi"
+  },
+  "convencoesGeracaoPorProjeto": "backend"
+}
 ```
 
-No Windows, se voce so quiser o caminho mais objetivo, use a secao `Instalar no Windows` ali em cima e pronto.
+Isso controla:
 
-## Validar um arquivo
+- onde a CLI procura os `.sema`
+- qual alvo usar por padrao
+- qual estrutura de saida usar
+- qual framework guiar o scaffold
+- para onde cada stack gera arquivo
+
+Para ver exatamente o que a CLI esta resolvendo no projeto atual:
 
 ```bash
-node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
+sema inspecionar --json
 ```
 
-Quando o arquivo usa `use`, a CLI passa a carregar os outros arquivos `.sema` da mesma pasta de projeto como contexto de compilacao. No MVP atual, isso cobre bem multiplos modulos vizinhos no mesmo conjunto de trabalho.
+## Modularizacao e interop
 
-## Gerar Python
+A Sema suporta dois niveis de conexao:
+
+- `use modulo.outro` para importar outro modulo `.sema`
+- `use ts ...`, `use py ...`, `use dart ...` para declarar interoperabilidade externa
+
+Exemplo:
+
+```sema
+module app.pagamentos {
+  use base.contratos
+  use ts app.gateway.pagamentos
+  use py servicos.conciliacao
+  use dart app.mobile.pagamentos
+}
+```
+
+No estado atual:
+
+- `use` entre arquivos `.sema` participa da resolucao semantica real
+- `use ts|py|dart` registra contrato externo de interop
+- a Sema continua governando o significado; ela nao vira serva da stack ao redor
+
+## Vincular uma task a implementacoes externas
+
+Quando fizer sentido dizer onde a implementacao concreta mora, use `impl`:
+
+```sema
+task processar_pagamento {
+  input {
+    pagamento_id: Id required
+  }
+  output {
+    protocolo: Id
+  }
+  impl {
+    ts: app.gateway.pagamentos.processar
+    py: servicos.pagamentos.processar
+    dart: app.mobile.pagamentos.processar
+  }
+  guarantees {
+    protocolo existe
+  }
+}
+```
+
+Leitura pratica:
+
+- `use ts|py|dart ...` declara interoperabilidade do modulo
+- `impl` liga a `task` a implementacoes concretas
+- a Sema continua mandando no contrato; a stack concreta executa
+
+## Gerar scaffold base
+
+### Python
 
 ```bash
 node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo python --saida ./saida/python
 ```
 
-## Gerar TypeScript
+### TypeScript
 
 ```bash
 node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo typescript --saida ./saida/typescript
 ```
 
-## Rodar testes
+### Dart
+
+```bash
+node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo dart --saida ./saida/dart
+```
+
+## Gerar scaffold backend
+
+Se voce quiser saida organizada por namespace:
+
+```bash
+node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo typescript --saida ./generated --estrutura modulos
+```
+
+Isso gera algo como:
+
+- `generated/exemplos/calculadora.ts`
+- `generated/exemplos/calculadora.test.ts`
+
+Se a ideia for scaffold orientado a framework:
+
+### NestJS
+
+```bash
+node pacotes/cli/dist/index.js compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
+```
+
+### FastAPI
+
+```bash
+node pacotes/cli/dist/index.js compilar contratos/pagamentos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
+```
+
+Regra pratica:
+
+- `framework base`: scaffold sem framework
+- `framework nestjs`: scaffold TypeScript para controller/service/dto
+- `framework fastapi`: scaffold Python para router/service/schema
+
+## Rodar testes e verificacoes
 
 ```bash
 npm test
 ```
 
-Para fazer a verificacao completa que o projeto usa como fluxo principal de qualidade:
+Fluxo completo do projeto:
 
 ```bash
 npm run project:check
 ```
 
-Para validar, compilar e testar todos os exemplos em lote:
+Verificacao em lote dos exemplos:
 
 ```bash
 node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao
 ```
 
-Para verificar se os arquivos `.sema` ja estao no formato canonico:
-
-```bash
-node pacotes/cli/dist/index.js formatar exemplos --check
-```
-
-Para aplicar a formatacao canonica:
+Formatacao canonica:
 
 ```bash
 node pacotes/cli/dist/index.js formatar exemplos
+node pacotes/cli/dist/index.js formatar exemplos --check
 ```
 
-Para integrar com automacao, IDE ou IA em JSON:
+JSON para automacao, IDE e IA:
 
 ```bash
 node pacotes/cli/dist/index.js validar exemplos --json
 node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-json
 ```
 
-Para preparar um pacote de contexto para uma IA trabalhar em um modulo especifico:
+Se a tarefa pedir codigo derivado, esse comando tem que entrar no fluxo:
 
 ```bash
-npm run ia:preparar-contexto -- exemplos/pagamento.sema
+node pacotes/cli/dist/index.js compilar contratos/pagamentos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./saida/nestjs
 ```
 
-Esse comando gera, em `.tmp/contexto-ia/...`, um pacote com:
+## Onboarding para IA
 
-- `validar.json`
-- `diagnosticos.json`
-- `ast.json`
-- `ir.json`
-- `README.md` com o fluxo recomendado para o agente
-
-O comando imprime um resumo final por modulo e por alvo, incluindo:
-
-- quantidade de arquivos gerados
-- quantidade de testes executados
-- pasta de saida usada em cada alvo
-- uso recomendado como checagem completa antes de commit ou PR
-
-Quando a entrada for um unico arquivo `.sema`, os comandos `validar`, `compilar`, `testar`, `ast`, `ir` e `diagnosticos` passam a considerar os outros arquivos `.sema` vizinhos como contexto para resolver `use`, mas mantem a saida focada no arquivo solicitado.
-
-Para testar um modulo `.sema` gerando codigo temporario:
+A Sema ja tem um fluxo nativo bem menos burro para agentes:
 
 ```bash
-node pacotes/cli/dist/index.js testar exemplos/calculadora.sema --alvo typescript --saida ./.tmp/testes-ts
+sema ajuda-ia
+sema starter-ia
+sema prompt-ia
+sema prompt-ia-ui
+sema prompt-ia-react
+sema prompt-ia-sema-primeiro
+sema exemplos-prompt-ia
+sema contexto-ia exemplos/pagamento.sema
+```
+
+Se a IA for gerar backend a partir do contrato, nao vacile:
+
+```bash
+sema ast contratos/pedidos.sema --json
+sema ir contratos/pedidos.sema --json
+sema validar contratos/pedidos.sema --json
+sema compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
 ```
 
 ## Estrutura do repositorio
 
 ```text
-docs/                  Documentacao conceitual e tecnica
-exemplos/              Modulos .sema completos
-pacotes/nucleo/        Lexer, parser, AST, semantica e IR
+docs/                        Documentacao conceitual e tecnica
+exemplos/                    Modulos .sema completos
+pacotes/nucleo/              Lexer, parser, AST, semantica e IR
 pacotes/gerador-python/      Geracao de codigo Python
 pacotes/gerador-typescript/  Geracao de codigo TypeScript
-pacotes/cli/           Interface de linha de comando
-pacotes/editor-vscode/ Extensao basica de VS Code para `.sema`
-pacotes/padroes/       Funcoes auxiliares compartilhadas
-testes/                Testes de unidade e integracao
+pacotes/gerador-dart/        Geracao de codigo Dart
+pacotes/cli/                 Interface de linha de comando
+pacotes/editor-vscode/       Extensao de VS Code para `.sema`
+pacotes/padroes/             Funcoes auxiliares compartilhadas
+testes/                      Testes de unidade e integracao
 ```
-
-## Extensao VS Code
-
-O repositorio agora inclui uma extensao basica de VS Code em `pacotes/editor-vscode` com:
-
-- associacao automatica de arquivos `.sema`
-- destaque de sintaxe
-- configuracao basica da linguagem
-- snippets iniciais
-- comando de formatacao delegando para a CLI oficial da Sema
-
-Instalacao manual, no estado atual:
-
-1. abrir a pasta `pacotes/editor-vscode` no VS Code
-2. executar o empacotamento/extensao conforme o fluxo padrao do VS Code para extensoes locais
-3. instalar a extensao local gerada no ambiente de teste
-
-O objetivo desta fase nao foi entregar LSP, e sim uma base de ergonomia real para editor sem duplicar regra de formatacao.
 
 ## Estagio atual
 
-O projeto esta em MVP funcional e com a Fase 4 formalmente concluida. Isso significa que a Sema ja nao tem so compilador e semantica central; ela agora tambem tem camada real de adocao para time, automacao, IDE e IA.
-
-As quatro fases do MVP base foram fechadas:
+As quatro fases do MVP base ja foram fechadas:
 
 - Fase 1: fundacao do compilador
 - Fase 2: semantica operacional do nucleo
 - Fase 3: operacionalizacao real da linguagem
 - Fase 4: ferramentas de adocao
 
-No estado atual, a Sema:
+Depois disso, a Sema fechou o marco `0.6 backend-first`, entregando:
 
-- resolve `use` entre modulos vizinhos
-- formaliza expressoes com `e`, `ou`, `nao` e parenteses
-- valida invariantes e transicoes em `state`
-- vincula `task` a `state`
-- entende `flow` estruturado com dependencias, contexto, ramificacao e roteamento por erro
-- tipa `effects` em `persistencia`, `consulta`, `evento`, `notificacao` e `auditoria`
+- `sema.config.json` com defaults de projeto e multiplas origens
+- `sema inspecionar` para diagnostico nao destrutivo
+- scaffold backend util para NestJS
+- scaffold backend util para FastAPI
+- `impl` como ponte estavel entre contrato e implementacao viva
+- melhor resolucao de `use` para contexto de projeto
+- diagnosticos melhores de `use` e `flow`
+
+Hoje a Sema ja:
+
+- modela contrato, estado, fluxo, erro, efeito e garantia
 - fortalece `route` como contrato publico semantico
-- gera contratos executaveis iniciais para Python e TypeScript
-- expõe AST, IR, diagnosticos e verificacao em JSON estruturado
-- aplica formatacao canonica oficial com `sema formatar`
-- oferece extensao basica de VS Code para arquivos `.sema`
-
-O proximo ciclo do projeto deixa de ser "fechar o MVP base" e passa a ser amadurecimento pos-Fase 4: ecossistema, editor mais profundo, contratos mais ricos e expansao segura da linguagem.
-
-No estado atual, a Sema ja alcancou um marco pratico de `0.5` util de verdade:
-
-- vertical oficial de pagamento modularizado com `use`
-- contrato publico mais forte em `route`
-- `effects` operacionais com criticidade
-- validacao e geracao coerentes para o dominio de pagamento
-- verificacao ponta a ponta usando o caso real como regua
+- gera scaffold base para TypeScript, Python e Dart
+- gera scaffold de framework para NestJS e FastAPI
+- expoe AST, IR, diagnosticos e verificacao em JSON
+- aplica formatacao canonica oficial
+- oferece extensao VS Code com LSP inicial
 
 ## Roadmap resumido
 
-- amadurecer o ecossistema pos-Fase 4
-- evoluir suporte de editor alem da extensao basica atual
-- enriquecer ainda mais contratos de execucao, efeitos e erros
-- ampliar a resolucao de `use` para projetos maiores
-- aprofundar a experiencia de automacao e integracao com IA
+- aprofundar criacao e edicao de backend em projeto vivo
+- amadurecer `flow` para orquestracao backend mais rica
+- fortalecer `use` para projetos maiores e multiplos contextos
+- enriquecer contratos de execucao, efeitos, erros e garantias
+- evoluir o suporte de editor alem do LSP inicial atual
 
 ## Aviso importante
 
-Este projeto esta em MVP. Ele ja serve como base real para construir a linguagem, mas ainda nao pretende ser uma implementacao final ou completa.
+A Sema ja deixou de ser so “documentacao premium”, mas ainda seria papo furado vender como “backend inteiro pronto sem tocar em nada”. Ela manda muito bem como linguagem de intencao, contrato e scaffold. A implementacao real continua vivendo nas stacks e frameworks ao redor com ajuda de `impl`, geradores e adocao incremental.

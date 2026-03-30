@@ -11,6 +11,7 @@ export type TipoBloco =
   | "output"
   | "rules"
   | "effects"
+  | "impl"
   | "guarantees"
   | "state"
   | "flow"
@@ -67,6 +68,7 @@ export interface BlocoCasoTesteAst extends NoAstBase {
 
 export interface UseAst extends NoAstBase {
   tipo: "use";
+  origem: "sema" | "ts" | "py" | "dart";
   caminho: string;
 }
 
@@ -97,6 +99,7 @@ export interface TaskAst extends NoAstBase {
   output?: BlocoGenericoAst;
   rules?: BlocoGenericoAst;
   effects?: BlocoGenericoAst;
+  impl?: BlocoGenericoAst;
   guarantees?: BlocoGenericoAst;
   state?: BlocoGenericoAst;
   tests?: BlocoGenericoAst;
