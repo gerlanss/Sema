@@ -33,6 +33,7 @@ export interface ConfiguracaoProjetoCarregada {
 
 export interface ContextoProjetoCarregado {
   entradaResolvida: string;
+  baseProjeto: string;
   configCarregada?: ConfiguracaoProjetoCarregada;
   arquivosProjeto: string[];
   origensProjeto: string[];
@@ -139,21 +140,6 @@ async function listarArquivosDeOrigens(origens: string[]): Promise<string[]> {
   return [...encontrados].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
-function resolverOrigensProjeto(
-  entradaResolvida: string,
-  configCarregada?: ConfiguracaoProjetoCarregada,
-): string[] {
-  if (configCarregada) {
-    const declaradas = configCarregada.config.origens ?? (configCarregada.config.origem ? [configCarregada.config.origem] : []);
-    if (declaradas.length > 0) {
-      return declaradas.map((origem) => path.resolve(configCarregada.baseDiretorio, origem));
-    }
-    return [configCarregada.baseDiretorio];
-  }
-
-  return [path.dirname(entradaResolvida)];
-}
-
 function normalizarFonteLegado(valor: string): FonteLegado | undefined {
   if (valor === "nestjs" || valor === "fastapi" || valor === "typescript" || valor === "python" || valor === "dart") {
     return valor;
@@ -184,13 +170,142 @@ async function listarDiretoriosFilhos(diretorioBase: string): Promise<string[]> 
   }
 }
 
-async function inferirDiretoriosCodigo(
+const DIRETORIOS_CODIGO_FIXOS = [
+  "src",
+  "app",
+  "backend",
+  "lib",
+  "api",
+  "server",
+  "services",
+  "models",
+  "data",
+  "pipeline",
+  "scripts",
+];
+
+const DIRETORIOS_CODIGO_IGNORADOS = new Set([
+  ".git",
+  ".github",
+  ".pytest_cache",
+  ".tmp",
+  ".venv",
+  ".next",
+  ".nuxt",
+  ".dart_tool",
+  "__pycache__",
+  "build",
+  "coverage",
+  "deploy",
+  "dist",
+  "doc",
+  "docs",
+  "generated",
+  "node_modules",
+  "sema",
+  "test",
+  "tests",
+  "venv",
+]);
+
+const EXTENSOES_CODIGO = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".dart"];
+
+async function resolverBaseProjeto(
+  entradaResolvida: string,
+  configCarregada?: ConfiguracaoProjetoCarregada,
+): Promise<string> {
+  if (configCarregada) {
+    return configCarregada.baseDiretorio;
+  }
+
+  const infoEntrada = await stat(entradaResolvida);
+  const pontoPartida = path.resolve(infoEntrada.isDirectory() ? entradaResolvida : path.dirname(entradaResolvida));
+
+  let atual = pontoPartida;
+  for (;;) {
+    if (path.basename(atual).toLowerCase() === "sema") {
+      const contemMarcadorRaiz = await caminhoExiste(path.join(atual, "package.json"))
+        || await caminhoExiste(path.join(atual, "sema.config.json"));
+      if (!contemMarcadorRaiz) {
+        const pai = path.dirname(atual);
+        if (pai !== atual) {
+          return pai;
+        }
+      }
+    }
+
+    const pai = path.dirname(atual);
+    if (pai === atual) {
+      break;
+    }
+    atual = pai;
+  }
+
+  return pontoPartida;
+}
+
+async function descobrirOrigemPadrao(baseProjeto: string, entradaResolvida: string): Promise<string> {
+  const origemContratos = path.join(baseProjeto, "sema");
+  if (await caminhoExiste(origemContratos)) {
+    return path.resolve(origemContratos);
+  }
+
+  const infoEntrada = await stat(entradaResolvida);
+  if (infoEntrada.isFile()) {
+    return path.resolve(path.dirname(entradaResolvida));
+  }
+
+  return path.resolve(baseProjeto);
+}
+
+async function resolverOrigensProjeto(
+  baseProjeto: string,
   entradaResolvida: string,
   configCarregada?: ConfiguracaoProjetoCarregada,
 ): Promise<string[]> {
-  const infoEntrada = await stat(entradaResolvida);
-  const baseProjeto = configCarregada?.baseDiretorio
-    ?? (infoEntrada.isDirectory() ? entradaResolvida : path.dirname(entradaResolvida));
+  if (configCarregada) {
+    const declaradas = configCarregada.config.origens ?? (configCarregada.config.origem ? [configCarregada.config.origem] : []);
+    if (declaradas.length > 0) {
+      return declaradas.map((origem) => path.resolve(configCarregada.baseDiretorio, origem));
+    }
+    return [configCarregada.baseDiretorio];
+  }
+
+  return [await descobrirOrigemPadrao(baseProjeto, entradaResolvida)];
+}
+
+async function diretorioTemArquivosCodigo(diretorioBase: string, profundidadeMaxima = 2): Promise<boolean> {
+  let entradas;
+  try {
+    entradas = await readdir(diretorioBase, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+
+  for (const entrada of entradas) {
+    const caminhoEntrada = path.join(diretorioBase, entrada.name);
+    if (entrada.isDirectory()) {
+      if (profundidadeMaxima <= 0 || DIRETORIOS_CODIGO_IGNORADOS.has(entrada.name.toLowerCase())) {
+        continue;
+      }
+      if (await diretorioTemArquivosCodigo(caminhoEntrada, profundidadeMaxima - 1)) {
+        return true;
+      }
+      continue;
+    }
+
+    if (EXTENSOES_CODIGO.some((extensao) => entrada.name.toLowerCase().endsWith(extensao))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function inferirDiretoriosCodigo(
+  baseProjeto: string,
+  configCarregada?: ConfiguracaoProjetoCarregada,
+): Promise<string[]> {
 
   if (configCarregada?.config.diretoriosCodigo?.length) {
     return [...new Set(configCarregada.config.diretoriosCodigo
@@ -199,26 +314,42 @@ async function inferirDiretoriosCodigo(
       .sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
 
-  const candidatosFixos = ["src", "app", "backend", "lib"]
+  const candidatosFixos = DIRETORIOS_CODIGO_FIXOS
     .map((segmento) => path.join(baseProjeto, segmento));
-  const existentes = [];
+  const existentes: string[] = [];
   for (const candidato of candidatosFixos) {
-    if (await caminhoExiste(candidato)) {
+    if (await caminhoExiste(candidato) && await diretorioTemArquivosCodigo(candidato)) {
       existentes.push(path.resolve(candidato));
     }
   }
 
-  if (existentes.length > 0) {
-    return [...new Set(existentes)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const filhos = await listarDiretoriosFilhos(baseProjeto);
+  const uteis: string[] = [];
+  for (const diretorio of filhos) {
+    const nome = path.basename(diretorio).toLowerCase();
+    if (DIRETORIOS_CODIGO_IGNORADOS.has(nome)) {
+      continue;
+    }
+    if (await diretorioTemArquivosCodigo(diretorio)) {
+      uteis.push(path.resolve(diretorio));
+    }
   }
 
-  const filhos = await listarDiretoriosFilhos(baseProjeto);
-  const uteis = filhos.filter((diretorio) => ![".git", "node_modules", "dist", "build", ".tmp", "generated"].includes(path.basename(diretorio).toLowerCase()));
-  return uteis.sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const combinados = [...new Set([...existentes, ...uteis])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  if (combinados.length > 0) {
+    return combinados;
+  }
+
+  if (await diretorioTemArquivosCodigo(baseProjeto, 0)) {
+    return [path.resolve(baseProjeto)];
+  }
+
+  return [];
 }
 
 async function inferirFontesLegado(
   diretoriosCodigo: string[],
+  baseProjeto: string,
   configCarregada?: ConfiguracaoProjetoCarregada,
 ): Promise<FonteLegado[]> {
   if (configCarregada?.config.fontesLegado?.length) {
@@ -229,8 +360,7 @@ async function inferirFontesLegado(
   }
 
   const encontrados = new Set<FonteLegado>();
-  const baseProjeto = configCarregada?.baseDiretorio;
-  const packageJson = baseProjeto ? await lerConteudoSeExistir(path.join(baseProjeto, "package.json")) : undefined;
+  const packageJson = await lerConteudoSeExistir(path.join(baseProjeto, "package.json"));
   if (packageJson) {
     if (/@nestjs\/common|@nestjs\/core/.test(packageJson)) {
       encontrados.add("nestjs");
@@ -274,11 +404,12 @@ export async function carregarProjeto(
   const entradaBase = entrada ? path.resolve(cwd, entrada) : cwd;
   const configCarregada = await carregarConfiguracaoProjeto(entradaBase);
   const entradaResolvida = entrada ? path.resolve(cwd, entrada) : resolverEntradaPadrao(cwd, configCarregada);
+  const baseProjeto = await resolverBaseProjeto(entradaResolvida, configCarregada);
   const infoEntrada = await stat(entradaResolvida);
-  const origensProjeto = resolverOrigensProjeto(entradaResolvida, configCarregada);
+  const origensProjeto = await resolverOrigensProjeto(baseProjeto, entradaResolvida, configCarregada);
   const arquivosProjeto = await listarArquivosDeOrigens(origensProjeto);
-  const diretoriosCodigo = await inferirDiretoriosCodigo(entradaResolvida, configCarregada);
-  const fontesLegado = await inferirFontesLegado(diretoriosCodigo, configCarregada);
+  const diretoriosCodigo = await inferirDiretoriosCodigo(baseProjeto, configCarregada);
+  const fontesLegado = await inferirFontesLegado(diretoriosCodigo, baseProjeto, configCarregada);
   const modoAdocao = normalizarModoAdocao(configCarregada?.config.modoAdocao);
 
   const arquivosSelecionados = infoEntrada.isFile()
@@ -298,6 +429,7 @@ export async function carregarProjeto(
 
   return {
     entradaResolvida,
+    baseProjeto,
     configCarregada,
     arquivosProjeto,
     origensProjeto,

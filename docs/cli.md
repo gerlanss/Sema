@@ -138,6 +138,7 @@ Mostra como a CLI esta enxergando o projeto atual antes de gerar scaffold.
 Campos tipicos:
 
 - arquivo de configuracao encontrado
+- base do projeto resolvida
 - framework ativo
 - estrutura de saida
 - alvos
@@ -150,6 +151,12 @@ Campos tipicos:
 
 Esse comando existe para evitar aquela merda de “a CLI nao achou meu modulo” sem ninguem saber qual contexto ela estava usando.
 
+Heuristica importante quando nao existe `sema.config.json`:
+
+- entrada na raiz usa a propria raiz como base do projeto
+- entrada em `.../sema` ou `.../sema/arquivo.sema` sobe para o projeto pai antes de inferir codigo vivo
+- `baseProjeto`, `origens` e `diretoriosCodigo` devem ficar estaveis entre esses tres jeitos de chamar a CLI
+
 ### `sema drift <arquivo-ou-pasta> [--json]`
 
 Compara o contrato `.sema` com o codigo vivo ligado por `impl`.
@@ -160,6 +167,14 @@ O comando aponta:
 - `impl` quebrado
 - `task` sem implementacao ligada
 - rota publica divergente em NestJS/FastAPI, quando houver contexto suficiente
+
+No caso de Python, o `drift` indexa:
+
+- funcoes de modulo
+- metodos de classe
+- simbolos com `_` quando foram declarados explicitamente no `impl`
+
+Traduzindo: se o contrato apontar para `services.telegram_bot._callback_handler`, a CLI tenta resolver esse simbolo de verdade, em vez de fingir que privado nao existe.
 
 Com `--json`, a saida inclui:
 
@@ -247,6 +262,7 @@ Gera um pacote de contexto para IA com:
 - `diagnosticos.json`
 - `ast.json`
 - `ir.json`
+- `drift.json`
 - `README.md` com o fluxo operacional recomendado
 
 Sem `--json`, imprime um resumo humano e informa a pasta gerada.

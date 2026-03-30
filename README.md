@@ -32,8 +32,9 @@ Hoje a Sema ja faz bem estas porras aqui:
 - gera scaffold base para TypeScript, Python e Dart
 - gera scaffold orientado a framework para NestJS e FastAPI
 - organiza projeto via `sema.config.json`
+- resolve contexto de projeto mesmo sem `sema.config.json`, inclusive quando a entrada vem da raiz, da pasta `sema/` ou de um arquivo `.sema`
 - resolve `use` em multiplas origens de projeto
-- vincula `task` a implementacao real via `impl`
+- vincula `task` a implementacao real via `impl`, inclusive em Python com simbolos internos quando eles forem declarados explicitamente
 - ajuda IA e humanos a editar backend sem virar pantano semantico
 
 ### Iniciar um backend NestJS
@@ -108,11 +109,21 @@ O `drift` destaca:
 - `task` sem implementacao ligada
 - rota publica divergente em NestJS/FastAPI, quando houver pista suficiente
 
+Na pratica:
+
+- `sema inspecionar`, `sema drift` e `sema contexto-ia` agora conseguem manter o mesmo contexto de projeto quando voce parte da raiz, da pasta `sema/` ou de um arquivo isolado
+- `impl` Python pode apontar para funcao, metodo de classe ou simbolo interno com `_`; o `drift` valida alcance real, nao opiniao moralista sobre API publica
+
 Regra pratica:
 
 - `importar` gera um **rascunho Sema valido para revisao**
 - ele nao promete reconstruir toda a intencao do projeto sozinho
 - ele serve para cortar o trabalho bruto de migracao e dar um ponto de partida coerente
+
+Referencia oficial para governanca operacional:
+
+- [exemplos/operacao_estrategia.sema](./exemplos/operacao_estrategia.sema) modela `strategy gate`, `slice lifecycle`, discovery semanal, quarentena seletiva e rollout de nova versao
+- exemplos e testes oficiais devem usar identificadores neutros, sem carregar dado concreto com cara de producao
 
 ## Documentacao principal
 

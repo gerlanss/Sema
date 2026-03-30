@@ -263,6 +263,72 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
   return { simbolos: [...simbolos.values()], rotas };
 }
 
+interface BlocoPython {
+  tipo: "class" | "def";
+  nome: string;
+  indentacao: number;
+}
+
+function contarIndentacaoPython(linha: string): number {
+  let total = 0;
+  for (const caractere of linha) {
+    if (caractere === " ") {
+      total += 1;
+      continue;
+    }
+    if (caractere === "\t") {
+      total += 4;
+      continue;
+    }
+    break;
+  }
+  return total;
+}
+
+function registrarSimboloPython(
+  simbolos: Map<string, SimboloResolvido>,
+  basesSimbolicas: string[],
+  arquivo: string,
+  nome: string,
+  nomeClasse?: string,
+): void {
+  for (const baseSimbolica of basesSimbolicas) {
+    const caminho = nomeClasse
+      ? `${baseSimbolica}.${nomeClasse}.${nome}`
+      : `${baseSimbolica}.${nome}`;
+    simbolos.set(caminho, {
+      origem: "py",
+      caminho,
+      arquivo,
+      simbolo: nomeClasse ? `${nomeClasse}.${nome}` : nome,
+    });
+  }
+}
+
+function registrarRotasPython(
+  rotas: RotaResolvida[],
+  decoratorsPendentes: string[],
+  prefixo: string | undefined,
+  arquivo: string,
+  nomeFuncao: string,
+): void {
+  for (const decorator of decoratorsPendentes) {
+    const match = decorator.match(/^@(router|app)\.(get|post|put|patch|delete)\((.*)\)\s*$/);
+    if (!match) {
+      continue;
+    }
+    const metodo = match[2]!.toUpperCase();
+    const sufixo = match[3]?.match(/["']([^"']+)["']/)?.[1];
+    rotas.push({
+      origem: "fastapi",
+      metodo,
+      caminho: juntarCaminhoHttp(prefixo, sufixo),
+      arquivo,
+      simbolo: nomeFuncao,
+    });
+  }
+}
+
 async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
@@ -274,47 +340,53 @@ async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloR
     for (const arquivo of arquivos) {
       const texto = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      const prefixo = texto.match(/APIRouter\s*\(\s*prefix\s*=\s*["']([^"']+)["']/)?.[1];
+      const blocos: BlocoPython[] = [];
+      let decoratorsPendentes: string[] = [];
 
-      for (const match of texto.matchAll(/^(?:async\s+def|def)\s+(\w+)\(([^)]*)\)(?:\s*->\s*([^:]+))?:/gm)) {
-        const nomeFuncao = match[1]!;
-        if (nomeFuncao.startsWith("_")) {
+      for (const linha of texto.split(/\r?\n/)) {
+        const trim = linha.trim();
+        if (trim === "" || trim.startsWith("#")) {
+          decoratorsPendentes = [];
           continue;
         }
-        for (const baseSimbolica of basesSimbolicas) {
-          const caminho = `${baseSimbolica}.${nomeFuncao}`;
-          simbolos.set(caminho, { origem: "py", caminho, arquivo, simbolo: nomeFuncao });
-        }
-      }
 
-      for (const classe of texto.matchAll(/^class\s+(\w+)(?:\(([^)]*)\))?:\n((?:^[ \t].*(?:\n|$))*)/gm)) {
-        const nomeClasse = classe[1]!;
-        const corpo = classe[3] ?? "";
-        for (const metodo of corpo.matchAll(/^\s{4}(?:async\s+def|def)\s+(\w+)\(([^)]*)\)(?:\s*->\s*([^:]+))?:/gm)) {
-          const nomeMetodo = metodo[1]!;
-          if (nomeMetodo.startsWith("_")) {
-            continue;
-          }
-          for (const baseSimbolica of basesSimbolicas) {
-            const caminho = `${baseSimbolica}.${nomeClasse}.${nomeMetodo}`;
-            simbolos.set(caminho, { origem: "py", caminho, arquivo, simbolo: `${nomeClasse}.${nomeMetodo}` });
-          }
+        const indentacao = contarIndentacaoPython(linha);
+        while (blocos.length > 0 && indentacao <= blocos[blocos.length - 1]!.indentacao) {
+          blocos.pop();
         }
-      }
 
-      const prefixo = texto.match(/APIRouter\s*\(\s*prefix\s*=\s*["']([^"']+)["']/)?.[1];
-      const routeRegex = /@(?:router|app)\.(get|post|put|patch|delete)\(([^)]*)\)\s*\n(?:async\s+)?def\s+(\w+)\(/g;
-      for (const match of texto.matchAll(routeRegex)) {
-        const metodo = match[1]!.toUpperCase();
-        const argumentoDecorator = match[2] ?? "";
-        const sufixo = argumentoDecorator.match(/["']([^"']+)["']/)?.[1];
-        const nomeFuncao = match[3]!;
-        rotas.push({
-          origem: "fastapi",
-          metodo,
-          caminho: juntarCaminhoHttp(prefixo, sufixo),
-          arquivo,
-          simbolo: nomeFuncao,
-        });
+        if (trim.startsWith("@")) {
+          decoratorsPendentes.push(trim);
+          continue;
+        }
+
+        const classe = trim.match(/^class\s+([A-Za-z_]\w*)(?:\([^)]*\))?:\s*(?:#.*)?$/);
+        if (classe) {
+          blocos.push({ tipo: "class", nome: classe[1]!, indentacao });
+          decoratorsPendentes = [];
+          continue;
+        }
+
+        const definicao = trim.match(/^(?:async\s+def|def)\s+([A-Za-z_]\w*)\s*\(/);
+        if (definicao) {
+          const nomeFuncao = definicao[1]!;
+          const existeDefPai = blocos.some((bloco) => bloco.tipo === "def");
+          const classeAtual = [...blocos].reverse().find((bloco) => bloco.tipo === "class");
+
+          if (!existeDefPai && classeAtual) {
+            registrarSimboloPython(simbolos, basesSimbolicas, arquivo, nomeFuncao, classeAtual.nome);
+          } else if (!existeDefPai) {
+            registrarSimboloPython(simbolos, basesSimbolicas, arquivo, nomeFuncao);
+            registrarRotasPython(rotas, decoratorsPendentes, prefixo, arquivo, nomeFuncao);
+          }
+
+          blocos.push({ tipo: "def", nome: nomeFuncao, indentacao });
+          decoratorsPendentes = [];
+          continue;
+        }
+
+        decoratorsPendentes = [];
       }
     }
   }

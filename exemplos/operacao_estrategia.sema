@@ -1,31 +1,54 @@
 module exemplos.operacao_estrategia {
+  docs {
+    resumo: "Referencia oficial de governanca operacional para strategy, slice, gate, discovery semanal e rollout de nova versao de modelo."
+  }
+
   type JanelaDiscovery {
     fields {
       semana_referencia: Data
       strategy_id: Id
-      versao_modelo: Texto
+      versao_modelo_candidata: Texto
+      status_discovery: StatusDiscovery
     }
     invariants {
       semana_referencia existe
       strategy_id existe
-      versao_modelo existe
+      versao_modelo_candidata existe
+      status_discovery em [ABERTA, EM_AVALIACAO, APROVADA, REJEITADA]
+    }
+  }
+
+  type ContextoQuarentena {
+    fields {
+      motivo: Texto
+      origem: Texto
+      desde: Data
+    }
+    invariants {
+      motivo existe
+      origem existe
+      desde existe
     }
   }
 
   entity Strategy {
     fields {
       id: Id
-      versao_modelo: Texto
+      versao_modelo_ativa: Texto
+      versao_modelo_candidata: Texto
       status: StatusStrategy
       gate_global: StatusGate
       discovery_atual: JanelaDiscovery
+      ultima_quarentena: ContextoQuarentena
     }
     invariants {
       id existe
-      versao_modelo existe
-      status em [ATIVA, QUARENTENA, DESATIVADA]
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      status em [RASCUNHO, ATIVA, QUARENTENA, DESATIVADA]
       gate_global em [ABERTO, FECHADO]
       discovery_atual existe
+      ultima_quarentena existe
     }
   }
 
@@ -35,14 +58,20 @@ module exemplos.operacao_estrategia {
       strategy_id: Id
       status: StatusSlice
       gate: StatusGate
-      versao_modelo: Texto
+      versao_modelo_ativa: Texto
+      versao_modelo_candidata: Texto
+      motivo_quarentena: Texto
+      precision_observada: Decimal
     }
     invariants {
       id existe
       strategy_id existe
       status em [ATIVO, QUARENTENA, DESLIGADO]
       gate em [ABERTO, FECHADO]
-      versao_modelo existe
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      motivo_quarentena existe
+      precision_observada existe
     }
   }
 
@@ -64,20 +93,36 @@ module exemplos.operacao_estrategia {
     FECHADO
   }
 
-  state operacao_estrategia {
+  enum StatusDiscovery {
+    ABERTA,
+    EM_AVALIACAO,
+    APROVADA,
+    REJEITADA
+  }
+
+  state governanca_estrategia {
     fields {
       status: StatusStrategy
       slice_status: StatusSlice
-      gate: StatusGate
-      versao_modelo: Texto
+      gate_global: StatusGate
+      gate_slice: StatusGate
+      discovery_status: StatusDiscovery
+      versao_modelo_ativa: Texto
+      versao_modelo_candidata: Texto
+      motivo_operacional: Texto
     }
     invariants {
-      status em [ATIVA, QUARENTENA, DESATIVADA]
+      status em [RASCUNHO, ATIVA, QUARENTENA, DESATIVADA]
       slice_status em [ATIVO, QUARENTENA, DESLIGADO]
-      gate em [ABERTO, FECHADO]
-      versao_modelo existe
+      gate_global em [ABERTO, FECHADO]
+      gate_slice em [ABERTO, FECHADO]
+      discovery_status em [ABERTA, EM_AVALIACAO, APROVADA, REJEITADA]
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      motivo_operacional existe
     }
     transitions {
+      RASCUNHO -> ATIVA
       ATIVA -> QUARENTENA
       QUARENTENA -> ATIVA
       ATIVA -> DESATIVADA
@@ -85,34 +130,88 @@ module exemplos.operacao_estrategia {
   }
 
   task registrar_discovery_semanal {
+    docs {
+      resumo: "Abre a janela semanal de discovery para uma strategy e marca a versao candidata que esta entrando em avaliacao."
+    }
     input {
       strategy_id: Id required
       semana_referencia: Data required
-      versao_modelo: Texto required
+      versao_modelo_candidata: Texto required
     }
     output {
       janela: JanelaDiscovery
-      registrado: Booleano
+      discovery_registrada: Booleano
     }
     rules {
       strategy_id existe
       semana_referencia existe
-      versao_modelo existe
+      versao_modelo_candidata existe
     }
     effects {
-      persistencia discovery_semanal criticidade = media
+      persistencia discovery_semanal criticidade = alta
       auditoria strategy criticidade = alta
+      evento discovery_aberta criticidade = media
     }
     guarantees {
       janela existe
-      registrado == verdadeiro
+      discovery_registrada == verdadeiro
     }
     tests {
-      caso "registra janela da semana" {
+      caso "abre discovery da semana" {
         given {
-          strategy_id: "strat_1"
+          strategy_id: "strategy_alpha"
           semana_referencia: "2026-03-30"
-          versao_modelo: "modelo_2026_13"
+          versao_modelo_candidata: "modelo_2026_13"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task avaliar_slice_apos_discovery {
+    docs {
+      resumo: "Decide se um slice segue aberto, entra em quarentena ou precisa ficar bloqueado ate nova avaliacao."
+    }
+    input {
+      strategy_id: Id required
+      slice_id: Id required
+      precision_observada: Decimal required
+      precision_minima: Decimal required
+      risco_operacional: Texto required
+    }
+    output {
+      gate_slice: StatusGate
+      slice_status: StatusSlice
+      motivo_operacional: Texto
+    }
+    rules {
+      strategy_id existe
+      slice_id existe
+      precision_observada existe
+      precision_minima existe
+      risco_operacional existe
+    }
+    effects {
+      persistencia slice criticidade = alta
+      auditoria discovery_slice criticidade = alta
+      notificacao operacao criticidade = media
+    }
+    guarantees {
+      gate_slice existe
+      slice_status existe
+      motivo_operacional existe
+    }
+    tests {
+      caso "slice ruim fecha gate na avaliacao" {
+        given {
+          strategy_id: "strategy_alpha"
+          slice_id: "slice_under35_serie_a"
+          precision_observada: 0.49
+          precision_minima: 0.58
+          risco_operacional: "drawdown_excessivo"
         }
 
         expect {
@@ -123,40 +222,96 @@ module exemplos.operacao_estrategia {
   }
 
   task colocar_slice_em_quarentena {
+    docs {
+      resumo: "Transforma um problema de slice em acao operacional explicita, sem desligar a strategy inteira por reflexo idiota."
+    }
     input {
       strategy_id: Id required
       slice_id: Id required
       motivo: Texto required
+      origem: Texto required
+      data_referencia: Data required
     }
     output {
       slice_status: StatusSlice
-      gate: StatusGate
+      gate_slice: StatusGate
+      contexto: ContextoQuarentena
     }
     rules {
       strategy_id existe
       slice_id existe
       motivo existe
+      origem existe
+      data_referencia existe
     }
     effects {
       persistencia slice criticidade = alta
+      persistencia quarentena criticidade = alta
       notificacao operacao criticidade = alta
       auditoria quarentena criticidade = alta
     }
-    state operacao_estrategia {
+    state governanca_estrategia {
       transitions {
         ATIVA -> QUARENTENA
       }
     }
     guarantees {
       slice_status == QUARENTENA
-      gate == FECHADO
+      gate_slice == FECHADO
+      contexto existe
     }
     tests {
-      caso "quarentena slice ruim" {
+      caso "quarentena seletiva fecha so o slice afetado" {
         given {
-          strategy_id: "strat_1"
-          slice_id: "slice_7"
-          motivo: "drawdown_excessivo"
+          strategy_id: "strategy_alpha"
+          slice_id: "slice_under35_serie_a"
+          motivo: "llm_detectou_noticia_ruim"
+          origem: "monitoramento_live"
+          data_referencia: "2026-03-30"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task fechar_gate_global_strategy {
+    docs {
+      resumo: "Fecha o gate global quando a strategy inteira precisa parar de liberar sem apagar historico nem perder a trilha da versao ativa."
+    }
+    input {
+      strategy_id: Id required
+      motivo_operacional: Texto required
+      versao_modelo_ativa: Texto required
+    }
+    output {
+      strategy_status: StatusStrategy
+      gate_global: StatusGate
+      versao_modelo_ativa: Texto
+    }
+    rules {
+      strategy_id existe
+      motivo_operacional existe
+      versao_modelo_ativa existe
+    }
+    effects {
+      persistencia strategy criticidade = alta
+      notificacao operacao criticidade = alta
+      auditoria gate_global criticidade = alta
+    }
+    guarantees {
+      strategy_status == QUARENTENA
+      gate_global == FECHADO
+      versao_modelo_ativa existe
+    }
+    tests {
+      caso "fecha gate global sem perder versao ativa" {
+        given {
+          strategy_id: "strategy_alpha"
+          motivo_operacional: "sequencia_ruim_em_varias_ligas"
+          versao_modelo_ativa: "modelo_2026_12"
         }
 
         expect {
@@ -167,18 +322,28 @@ module exemplos.operacao_estrategia {
   }
 
   task ativar_strategy_com_nova_versao {
+    docs {
+      resumo: "Promove a versao candidata aprovada e reabre a strategy so quando houver aprovacao manual e gate global devidamente controlado."
+    }
     input {
       strategy_id: Id required
-      versao_modelo: Texto required
+      versao_modelo_ativa: Texto required
+      versao_modelo_candidata: Texto required
+      strategy_status_atual: StatusStrategy required
+      gate_global_atual: StatusGate required
       aprovacao_manual: Booleano required
     }
     output {
       strategy_status: StatusStrategy
-      versao_ativa: Texto
+      gate_global: StatusGate
+      versao_modelo_ativa: Texto
     }
     rules {
       strategy_id existe
-      versao_modelo existe
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      strategy_status_atual em [RASCUNHO, QUARENTENA]
+      gate_global_atual == FECHADO
       aprovacao_manual == verdadeiro
     }
     effects {
@@ -186,20 +351,25 @@ module exemplos.operacao_estrategia {
       evento strategy_ativada criticidade = alta
       auditoria rollout criticidade = alta
     }
-    state operacao_estrategia {
+    state governanca_estrategia {
       transitions {
         QUARENTENA -> ATIVA
+        RASCUNHO -> ATIVA
       }
     }
     guarantees {
       strategy_status == ATIVA
-      versao_ativa existe
+      gate_global == ABERTO
+      versao_modelo_ativa existe
     }
     tests {
-      caso "reativa strategy apos retreino" {
+      caso "reativa strategy apos aprovacao do novo modelo" {
         given {
-          strategy_id: "strat_1"
-          versao_modelo: "modelo_2026_14"
+          strategy_id: "strategy_alpha"
+          versao_modelo_ativa: "modelo_2026_12"
+          versao_modelo_candidata: "modelo_2026_13"
+          strategy_status_atual: "QUARENTENA"
+          gate_global_atual: "FECHADO"
           aprovacao_manual: verdadeiro
         }
 
@@ -212,13 +382,21 @@ module exemplos.operacao_estrategia {
 
   flow governanca_operacional {
     strategy_id: Id
-    semana_referencia: Data
-    versao_modelo: Texto
     slice_id: Id
-    motivo: Texto
+    semana_referencia: Data
+    versao_modelo_ativa: Texto
+    versao_modelo_candidata: Texto
+    precision_observada: Decimal
+    precision_minima: Decimal
+    risco_operacional: Texto
+    motivo_operacional: Texto
+    strategy_status_atual: StatusStrategy
+    gate_global_atual: StatusGate
     aprovacao_manual: Booleano
-    etapa discovery usa registrar_discovery_semanal com strategy_id = strategy_id, semana_referencia = semana_referencia, versao_modelo = versao_modelo
-    etapa quarentena usa colocar_slice_em_quarentena com strategy_id = strategy_id, slice_id = slice_id, motivo = motivo quando motivo existe
-    etapa reativacao usa ativar_strategy_com_nova_versao com strategy_id = strategy_id, versao_modelo = versao_modelo, aprovacao_manual = aprovacao_manual quando aprovacao_manual == verdadeiro depende_de quarentena
+    etapa discovery usa registrar_discovery_semanal com strategy_id = strategy_id, semana_referencia = semana_referencia, versao_modelo_candidata = versao_modelo_candidata
+    etapa avaliar_slice usa avaliar_slice_apos_discovery com strategy_id = strategy_id, slice_id = slice_id, precision_observada = precision_observada, precision_minima = precision_minima, risco_operacional = risco_operacional depende_de discovery
+    etapa quarentena_slice usa colocar_slice_em_quarentena com strategy_id = strategy_id, slice_id = slice_id, motivo = motivo_operacional, origem = risco_operacional, data_referencia = semana_referencia quando motivo_operacional existe depende_de avaliar_slice
+    etapa fechar_gate_global usa fechar_gate_global_strategy com strategy_id = strategy_id, motivo_operacional = motivo_operacional, versao_modelo_ativa = versao_modelo_ativa quando motivo_operacional existe depende_de quarentena_slice
+    etapa reativacao usa ativar_strategy_com_nova_versao com strategy_id = strategy_id, versao_modelo_ativa = versao_modelo_ativa, versao_modelo_candidata = versao_modelo_candidata, strategy_status_atual = strategy_status_atual, gate_global_atual = gate_global_atual, aprovacao_manual = aprovacao_manual quando aprovacao_manual == verdadeiro depende_de fechar_gate_global
   }
 }

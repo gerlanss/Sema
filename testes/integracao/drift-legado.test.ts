@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
+import { criarProjetoPythonEstiloFuteBot } from "./futebot-fixture.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
 
@@ -169,3 +171,77 @@ export class PedidosController {
     await rm(base, { recursive: true, force: true });
   }
 });
+
+test("cli drift resolve impl python em projeto estilo FuteBot sem sema.config", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-futebot-like-"));
+
+  try {
+    await criarProjetoPythonEstiloFuteBot(base);
+
+    const execucao = executar(["drift", path.join(base, "sema"), "--json"], path.resolve("."));
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.comando, "drift");
+    assert.equal(json.impls_quebrados.length, 0);
+
+    const caminhosValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    for (const caminhoEsperado of [
+      "data.database.Database.salvar_scan_candidates",
+      "data.database.Database.salvar_prediction",
+      "data.database.Database.resolver_prediction",
+      "data.bulk_download._check_limite",
+      "pipeline.scheduler.Scheduler._garantir_radar_do_dia",
+      "pipeline.scheduler.Scheduler._job_liberacao_t30",
+      "pipeline.scheduler.Scheduler._job_check_ao_vivo",
+      "pipeline.scheduler.Scheduler._job_relatorio",
+      "pipeline.scheduler.Scheduler._priorizar_ligas_quarentena",
+      "pipeline.scheduler.Scheduler._job_retreino_quarentena",
+      "pipeline.scanner.Scanner._verificar_auto_pause",
+      "models.learner.Learner.verificar_degradacao",
+      "models.learner.Learner._registrar_feedback_contextual_fixture",
+      "services.telegram_bot.cmd_start",
+      "services.telegram_bot._callback_handler",
+      "services.telegram_bot._executar_via_callback",
+      "services.telegram_bot._send_to_chats",
+    ]) {
+      assert.equal(caminhosValidos.has(caminhoEsperado), true, `impl nao resolvido: ${caminhoEsperado}`);
+    }
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+if (existsSync("C:\\GitHub\\FuteBot")) {
+  test("smoke real: drift melhora resolucao Python no FuteBot real", () => {
+    const execucao = executar(["drift", "C:\\GitHub\\FuteBot\\sema", "--json"], path.resolve("."));
+    assert.equal(execucao.status, 1, "o smoke real ainda deve expor ao menos um contrato torto no FuteBot");
+
+    const json = JSON.parse(execucao.stdout);
+    const implsValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+
+    for (const caminhoEsperado of [
+      "data.database.Database.salvar_scan_candidates",
+      "data.database.Database.salvar_prediction",
+      "data.database.Database.resolver_prediction",
+      "data.bulk_download._check_limite",
+      "pipeline.scheduler.Scheduler._garantir_radar_do_dia",
+      "pipeline.scheduler.Scheduler._job_liberacao_t30",
+      "pipeline.scheduler.Scheduler._job_check_ao_vivo",
+      "pipeline.scheduler.Scheduler._job_relatorio",
+      "pipeline.scheduler.Scheduler._priorizar_ligas_quarentena",
+      "pipeline.scheduler.Scheduler._job_retreino_quarentena",
+      "pipeline.scanner.Scanner._verificar_auto_pause",
+      "models.learner.Learner.verificar_degradacao",
+      "models.learner.Learner._registrar_feedback_contextual_fixture",
+      "services.telegram_bot._callback_handler",
+      "services.telegram_bot._executar_via_callback",
+    ]) {
+      assert.equal(implsValidos.has(caminhoEsperado), true, `FuteBot ainda nao resolve ${caminhoEsperado}`);
+    }
+
+    const implsQuebrados = new Set(json.impls_quebrados.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(implsQuebrados.has("services.telegram_bot._send_to_chats"), true);
+    assert.equal(implsQuebrados.size, 1);
+  });
+}

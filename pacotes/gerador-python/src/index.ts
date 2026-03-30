@@ -421,7 +421,7 @@ function gerarPythonBase(modulo: IrModulo): ArquivoGerado[] {
   const tasks = modulo.tasks.map(gerarTask).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
-  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${tipos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
+  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\nfrom __future__ import annotations\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${tipos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
   const testes = gerarTestes(modulo);
 
   return [

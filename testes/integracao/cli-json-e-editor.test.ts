@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
+import { DIRETORIOS_CODIGO_FUTEBOT_FIXTURE, criarProjetoPythonEstiloFuteBot } from "./futebot-fixture.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
 
@@ -226,6 +227,83 @@ test("cli gera pacote de contexto de ia para modulo com use", async () => {
     assert.match(readme, /sema prompt-ia/);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto Python sem config com mesma base a partir de raiz, sema e arquivo", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-python-"));
+
+  try {
+    await criarProjetoPythonEstiloFuteBot(baseTemporaria);
+
+    const entradas = [
+      baseTemporaria,
+      path.join(baseTemporaria, "sema"),
+      path.join(baseTemporaria, "sema", "ciclo_previsao.sema"),
+    ];
+
+    const resultados = entradas.map((entrada) => {
+      const execucao = spawnSync(
+        "node",
+        [CLI, "inspecionar", entrada, "--json"],
+        { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+      );
+
+      assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+      return JSON.parse(execucao.stdout);
+    });
+
+    for (const resultado of resultados) {
+      assert.equal(resultado.configuracao.baseProjeto, baseTemporaria);
+      assert.deepEqual(resultado.configuracao.origens, [path.join(baseTemporaria, "sema")]);
+    }
+
+    assert.deepEqual(resultados[0].configuracao.diretoriosCodigo, resultados[1].configuracao.diretoriosCodigo);
+    assert.deepEqual(resultados[0].configuracao.diretoriosCodigo, resultados[2].configuracao.diretoriosCodigo);
+
+    for (const diretorio of DIRETORIOS_CODIGO_FUTEBOT_FIXTURE) {
+      assert.equal(resultados[0].configuracao.diretoriosCodigo.includes(path.join(baseTemporaria, diretorio)), true);
+    }
+
+    for (const ignorado of ["docs", "sema", "tests"]) {
+      assert.equal(resultados[0].configuracao.diretoriosCodigo.includes(path.join(baseTemporaria, ignorado)), false);
+    }
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli gera contexto de ia com drift python resolvido para arquivo dentro de sema", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-python-"));
+  const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-python-out-"));
+
+  try {
+    await criarProjetoPythonEstiloFuteBot(baseTemporaria);
+    const arquivo = path.join(baseTemporaria, "sema", "ciclo_previsao.sema");
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "contexto-ia", arquivo, "--saida", pastaSaida, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.sucesso, true);
+    assert.equal(json.modulo, "futebot.previsao");
+
+    const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
+    const readme = await readFile(path.join(pastaSaida, "README.md"), "utf8");
+
+    assert.equal(drift.comando, "drift");
+    assert.equal(drift.modulo, "futebot.previsao");
+    assert.equal(drift.resumo.implsValidos, 5);
+    assert.equal(drift.resumo.implsQuebrados, 0);
+    assert.equal(drift.drift.tasks.every((task: { implsQuebrados: number }) => task.implsQuebrados === 0), true);
+    assert.match(readme, /drift\.json/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+    await rm(pastaSaida, { recursive: true, force: true });
   }
 });
 

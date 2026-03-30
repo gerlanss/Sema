@@ -1013,6 +1013,7 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
     entrada: contextoProjeto.entradaResolvida,
     configuracao: {
       caminho: contextoProjeto.configCarregada?.caminho ?? null,
+      baseProjeto: contextoProjeto.baseProjeto,
       framework,
       estruturaSaida,
       alvos,
@@ -1042,6 +1043,7 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
   console.log("Inspecao de projeto Sema");
   console.log(`- Entrada: ${payload.entrada}`);
   console.log(`- Configuracao: ${payload.configuracao.caminho ?? "nenhuma"}`);
+  console.log(`- Base do projeto: ${payload.configuracao.baseProjeto}`);
   console.log(`- Framework: ${payload.configuracao.framework}`);
   console.log(`- Estrutura de saida: ${payload.configuracao.estruturaSaida}`);
   console.log(`- Alvos: ${payload.configuracao.alvos.join(", ")}`);

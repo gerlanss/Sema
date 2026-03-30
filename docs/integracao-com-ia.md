@@ -49,6 +49,7 @@ No marco `0.7 legado incremental`, essa integracao deixa de ser so leitura de co
 - importacao assistida de legado para rascunho `.sema`
 - blocos explicitos para regra, efeito, garantia, estado, fluxo, erro e teste
 - `impl` para ligar contrato a implementacao real
+- `drift.json` no pacote de `contexto-ia`
 
 ## Comandos que expoem JSON
 
@@ -103,11 +104,14 @@ Na pratica, `ir --json` e o melhor ponto para:
 Use quando a IA precisar saber:
 
 - qual `sema.config.json` foi encontrado
+- qual `baseProjeto` a CLI resolveu
 - quais origens estao ativas
 - quais modulos foram resolvidos
 - qual framework/estrutura de saida esta em jogo
 
 Esse comando evita muito diagnostico burro em projeto com multiplas pastas.
+
+Na pratica, ele tambem evita outra burrice comum: chamar a CLI da raiz, da pasta `sema/` ou de um arquivo isolado e receber tres leituras diferentes do projeto.
 
 ### `verificar --json`
 
@@ -230,6 +234,7 @@ Regra pratica:
 - garantias podem ser auditadas
 - contratos publicos de `route` ficam rastreaveis
 - `impl` mostra onde a implementacao real vive
+- `drift` agora consegue validar Python real com funcao, metodo de classe e simbolo interno com `_` quando o contrato aponta para isso
 - `sema.config.json` e `inspecionar` reduzem erro de contexto
 - o formatador reduz ruido e diffs idiotas
 - a saida JSON elimina boa parte da adivinhacao de parsing textual
