@@ -1,34 +1,9 @@
 module exemplos.pagamento {
-  enum StatusPagamento {
-    PENDENTE,
-    AUTORIZADO,
-    RECUSADO,
-    PROCESSADO
+  docs {
+    resumo: "Vertical oficial de pagamento da Sema 0.5, usado como referencia de utilidade real controlada."
   }
 
-  entity Pagamento {
-    fields {
-      id: Id
-      valor: Decimal
-      status: StatusPagamento
-    }
-  }
-
-  state ciclo_pagamento {
-    fields {
-      status: StatusPagamento
-      conciliado: Booleano
-    }
-    invariants {
-      status existe
-      conciliado == falso
-    }
-    transitions {
-      PENDENTE -> AUTORIZADO
-      AUTORIZADO -> PROCESSADO
-      PENDENTE -> RECUSADO
-    }
-  }
+  use exemplos.pagamento.dominio
 
   task processar_pagamento {
     input {
@@ -46,9 +21,11 @@ module exemplos.pagamento {
       token deve_ser valido
     }
     effects {
-      consulta gateway_pagamento
-      registra auditoria
-      notifica cliente
+      consulta gateway_pagamento criticidade = alta
+      persistencia Pagamento criticidade = alta
+      evento pagamento_autorizado criticidade = media
+      notificacao cliente comprovante_pagamento criticidade = media
+      auditoria pagamento criticidade = alta
     }
     state ciclo_pagamento {
       transitions {
@@ -73,10 +50,173 @@ module exemplos.pagamento {
           valor: 199.9
           token: "tok_ok"
         }
+
         expect {
           sucesso: verdadeiro
         }
       }
+      caso "pagamento recusado por autorizacao" {
+        given {
+          pagamento_id: "pag_erro"
+          valor: 10
+          token: "tok_recusado"
+        }
+
+        expect {
+          sucesso: falso
+        }
+
+        error {
+          tipo: "autorizacao_negada"
+        }
+      }
+      caso "pagamento falha por timeout" {
+        given {
+          pagamento_id: "pag_timeout"
+          valor: 10
+          token: "tok_timeout"
+        }
+
+        expect {
+          sucesso: falso
+        }
+
+        error {
+          tipo: "timeout_gateway"
+        }
+      }
+    }
+  }
+
+  task confirmar_pagamento {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      status: StatusPagamento
+    }
+    rules {
+      pagamento_id existe
+    }
+    effects {
+      consulta gateway_pagamento criticidade = alta
+      persistencia Pagamento criticidade = alta
+      evento pagamento_confirmado criticidade = media
+      auditoria conciliacao_pagamento criticidade = alta
+    }
+    state ciclo_pagamento {
+      transitions {
+        AUTORIZADO -> PROCESSADO
+      }
+    }
+    guarantees {
+      status == PROCESSADO
+    }
+    tests {
+      caso "confirma pagamento autorizado" {
+        given {
+          pagamento_id: "pag_1"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task notificar_falha_pagamento {
+    input {
+      pagamento_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo_notificacao: Id
+    }
+    effects {
+      notificacao cliente falha_pagamento criticidade = alta
+      auditoria falha_pagamento criticidade = media
+    }
+    guarantees {
+      protocolo_notificacao existe
+    }
+    tests {
+      caso "notifica falha por recusa" {
+        given {
+          pagamento_id: "pag_erro"
+          motivo: "autorizacao_negada"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task registrar_timeout_pagamento {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      auditoria_id: Id
+    }
+    effects {
+      auditoria timeout_gateway criticidade = alta
+      persistencia incidente_pagamento criticidade = media
+    }
+    guarantees {
+      auditoria_id existe
+    }
+    tests {
+      caso "registra timeout" {
+        given {
+          pagamento_id: "pag_timeout"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow orquestracao_pagamento {
+    pagamento_id: Id
+    valor: Decimal
+    token: Texto
+    etapa autorizar usa processar_pagamento com pagamento_id = pagamento_id, valor = valor, token = token em_sucesso confirmar em_erro registrar_falha por_erro autorizacao_negada = notificar_falha, timeout_gateway = registrar_timeout
+    etapa confirmar usa confirmar_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    etapa notificar_falha usa notificar_falha_pagamento com pagamento_id = pagamento_id, motivo = autorizacao_negada depende_de autorizar
+    etapa registrar_timeout usa registrar_timeout_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    etapa registrar_falha usa registrar_timeout_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    effects {
+      auditoria fluxo_pagamento criticidade = alta
+      evento pagamento_em_processamento criticidade = media
+    }
+  }
+
+  route processar_pagamento_publico {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar_pagamento
+    input {
+      pagamento_id: Id required
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      pagamento: Pagamento required
+      status: StatusPagamento required
+    }
+    effects {
+      auditoria pagamento_publico criticidade = alta
+      evento pagamento_requisitado criticidade = media
+    }
+    error {
+      autorizacao_negada: "Erro publico quando o gateway recusa a operacao."
+      saldo_insuficiente: "Erro publico quando nao ha saldo suficiente."
+      timeout_gateway: "Erro publico quando o gateway nao responde."
     }
   }
 }

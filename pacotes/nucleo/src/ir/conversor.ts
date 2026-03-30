@@ -1,5 +1,6 @@
 import type { BlocoCasoTesteAst, BlocoGenericoAst, ModuloAst } from "../ast/tipos.js";
 import type { Diagnostico } from "../diagnosticos/index.js";
+import type { ContextoSemantico } from "../semantico/analisador.js";
 import { parsearEfeitoSemantico, parsearEtapaFlow, parsearExpressaoSemantica, parsearTransicaoEstado } from "../semantico/estruturas.js";
 import type {
   IrBlocoDeclarativo,
@@ -46,7 +47,26 @@ function encontrarSubBloco(bloco: BlocoGenericoAst, palavraChave: string): Bloco
   return bloco.blocos.find((subbloco): subbloco is BlocoGenericoAst => subbloco.tipo === "bloco_generico" && subbloco.palavraChave === palavraChave);
 }
 
-export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]): IrModulo {
+function converterErrosPublicos(bloco?: BlocoGenericoAst) {
+  return (bloco?.campos ?? []).map((campo) => ({
+    nome: campo.nome,
+    codigo: campo.nome,
+    mensagem: [campo.valor, ...campo.modificadores].join(" ").trim() || undefined,
+  }));
+}
+
+function recomporCaminho(campo?: { valor: string; modificadores: string[] }): string | undefined {
+  if (!campo) {
+    return undefined;
+  }
+
+  return [campo.valor, ...campo.modificadores]
+    .join(" ")
+    .replace(/\s*\/\s*/g, "/")
+    .trim();
+}
+
+export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], contexto?: ContextoSemantico): IrModulo {
   const types: IrType[] = modulo.types.map((type) => ({
     nome: type.nome,
     definicao: converterBloco(type.corpo),
@@ -79,6 +99,9 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
     tests: (task.tests?.blocos.filter((bloco): bloco is BlocoCasoTesteAst => bloco.tipo === "caso_teste") ?? []).map(converterCaso),
   }));
 
+  const tarefasPorNome = new Map(tasks.map((task) => [task.nome, task] as const));
+  const tarefasSemanticas = contexto?.tarefasDetalhadas ?? new Map();
+
   const flows: IrFlow[] = modulo.flows.map((flow) => ({
     nome: flow.nome,
     campos: flow.corpo.campos.map((campo) => ({
@@ -93,6 +116,10 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
     etapasEstruturadas: flow.corpo.linhas
       .map((linha) => parsearEtapaFlow(linha.conteudo))
       .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
+    effects: (encontrarSubBloco(flow.corpo, "effects")?.linhas ?? []).map((linha) => linha.conteudo),
+    efeitosEstruturados: (encontrarSubBloco(flow.corpo, "effects")?.linhas ?? [])
+      .map((linha) => parsearEfeitoSemantico(linha.conteudo))
+      .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
   }));
 
   const routes: IrRoute[] = modulo.routes.map((route) => ({
@@ -104,9 +131,68 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[]):
     })),
     linhas: route.corpo.linhas.map((linha) => linha.conteudo),
     metodo: route.corpo.campos.find((campo) => campo.nome === "metodo")?.valor,
-    caminho: route.corpo.campos.find((campo) => campo.nome === "caminho")?.valor,
+    caminho: recomporCaminho(route.corpo.campos.find((campo) => campo.nome === "caminho")),
     task: route.corpo.campos.find((campo) => campo.nome === "task" || campo.nome === "tarefa")?.valor,
-  }));
+    inputPublico: [],
+    outputPublico: [],
+    errosPublicos: [],
+    efeitosPublicos: [],
+    garantiasPublicasMinimas: [],
+    publico: {
+      metodo: undefined,
+      caminho: undefined,
+      task: undefined,
+      input: [],
+      output: [],
+      errors: [],
+      effects: [],
+      garantiasMinimas: [],
+    },
+  })).map((route) => {
+    const routeAst = modulo.routes.find((item) => item.nome === route.nome)!;
+    const tarefaAssociada = route.task ? tarefasPorNome.get(route.task) : undefined;
+    const tarefaSemantica = route.task ? tarefasSemanticas.get(route.task) : undefined;
+    const inputPublicoDeclarado = converterCampos(encontrarSubBloco(routeAst.corpo, "input"));
+    const outputPublicoDeclarado = converterCampos(encontrarSubBloco(routeAst.corpo, "output"));
+    const errosPublicosDeclarados = converterErrosPublicos(encontrarSubBloco(routeAst.corpo, "error"));
+    const efeitosPublicosDeclarados = (encontrarSubBloco(routeAst.corpo, "effects")?.linhas ?? [])
+      .map((linha) => parsearEfeitoSemantico(linha.conteudo))
+      .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha));
+    const inputPublicoResolvido = inputPublicoDeclarado.length > 0
+      ? inputPublicoDeclarado
+      : (tarefaAssociada?.input ?? tarefaSemantica?.input ?? []);
+    const outputPublicoResolvido = outputPublicoDeclarado.length > 0
+      ? outputPublicoDeclarado
+      : (tarefaAssociada?.output ?? tarefaSemantica?.output ?? []);
+    const errosPublicosResolvidos = errosPublicosDeclarados.length > 0
+      ? errosPublicosDeclarados
+      : (tarefaAssociada
+        ? Object.entries(tarefaAssociada.errors).map(([nome, mensagem]) => ({ nome, codigo: nome, mensagem, origemTask: route.task }))
+        : (tarefaSemantica?.errors ?? []).map((erro: { codigo: string; mensagem: string }) => ({ nome: erro.codigo, codigo: erro.codigo, mensagem: erro.mensagem, origemTask: route.task })));
+    const garantiasPublicasMinimas = (tarefaAssociada?.guarantees ?? tarefaSemantica?.guarantees ?? []).filter((garantia: string) => {
+      const referencia = garantia.trim().split(/\s+/)[0] ?? "";
+      return outputPublicoResolvido.some((campo: { nome: string }) => campo.nome === referencia || garantia.includes(`${campo.nome}.`));
+    });
+
+    return {
+      ...route,
+      inputPublico: inputPublicoResolvido,
+      outputPublico: outputPublicoResolvido,
+      errosPublicos: errosPublicosResolvidos,
+      efeitosPublicos: efeitosPublicosDeclarados,
+      garantiasPublicasMinimas,
+      publico: {
+        metodo: route.metodo,
+        caminho: route.caminho,
+        task: route.task,
+        input: inputPublicoResolvido,
+        output: outputPublicoResolvido,
+        errors: errosPublicosResolvidos,
+        effects: efeitosPublicosDeclarados,
+        garantiasMinimas: garantiasPublicasMinimas,
+      },
+    };
+  });
 
   const states: IrState[] = modulo.states.map((state) => ({
     nome: state.nome,

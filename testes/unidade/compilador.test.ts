@@ -91,6 +91,12 @@ module exemplo.rotas {
     metodo: POST
     caminho: /itens
     task: criar_item
+    input {
+      nome: Texto
+    }
+    output {
+      item_id: Id
+    }
   }
 }
 `;
@@ -98,6 +104,8 @@ module exemplo.rotas {
   assert.equal(temErros(resultado.diagnosticos), false);
   assert.equal(resultado.ir?.flows[0]?.tasksReferenciadas[0], "criar_item");
   assert.equal(resultado.ir?.routes[0]?.metodo, "POST");
+  assert.equal(resultado.ir?.routes[0]?.inputPublico[0]?.nome, "nome");
+  assert.equal(resultado.ir?.routes[0]?.outputPublico[0]?.nome, "item_id");
   assert.equal(resultado.ir?.states[0]?.nome, "status_execucao");
 });
 
@@ -294,7 +302,7 @@ module exemplo.pagamento.avancado {
     }
     effects {
       consulta gateway
-      registra auditoria
+      auditoria pagamento
     }
     state ciclo_pagamento {
       transitions {
@@ -324,6 +332,8 @@ module exemplo.pagamento.avancado {
   assert.equal(temErros(resultado.diagnosticos), false);
   assert.equal(resultado.ir?.tasks[0]?.regrasEstruturadas.length, 3);
   assert.equal(resultado.ir?.tasks[0]?.efeitosEstruturados.length, 2);
+  assert.equal(resultado.ir?.tasks[0]?.efeitosEstruturados[0]?.categoria, "consulta");
+  assert.equal(resultado.ir?.tasks[0]?.efeitosEstruturados[1]?.categoria, "auditoria");
   assert.equal(resultado.ir?.tasks[0]?.garantiasEstruturadas.length, 1);
   assert.equal(resultado.ir?.tasks[0]?.stateContract?.nomeEstado, "ciclo_pagamento");
   assert.equal(resultado.ir?.tasks[0]?.stateContract?.transicoes.length, 2);
@@ -500,7 +510,7 @@ module exemplo.invalido.avancado {
       valor ??? 0
     }
     effects {
-      notifica
+      coisa gateway
     }
     guarantees {
       resultado existe
@@ -522,10 +532,190 @@ module exemplo.invalido.avancado {
   const resultado = compilarCodigo(codigo, "memoria.sema");
   assert.equal(temErros(resultado.diagnosticos), true);
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM021"));
-  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM023"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM048"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM024" || diagnostico.codigo === "SEM025"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM027"));
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM028" || diagnostico.codigo === "SEM029"));
+});
+
+test("compilador valida route com erros publicos coerentes com a task", () => {
+  const codigo = `
+module exemplo.route.publica {
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+      token: Texto required
+    }
+    output {
+      status: Texto
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      autorizacao_negada: "sem autorizacao"
+      timeout_gateway: "tempo esgotado"
+    }
+    tests {
+      caso "ok" {
+        given {
+          pagamento_id: "1"
+          token: "ok"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route pagamento_publico {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar_pagamento
+    input {
+      pagamento_id: Id
+      token: Texto
+    }
+    output {
+      status: Texto
+    }
+    error {
+      autorizacao_negada: "erro exposto"
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.routes[0]?.errosPublicos[0]?.nome, "autorizacao_negada");
+});
+
+test("compilador resolve contrato publico da route a partir da task quando blocos nao sao declarados", () => {
+  const codigo = `
+module exemplo.route.publica.padrao {
+  task criar_item {
+    input {
+      nome: Texto required
+      preco: Decimal required
+    }
+    output {
+      item_id: Id
+      status: Texto
+    }
+    guarantees {
+      item_id existe
+    }
+    error {
+      entrada_invalida: "dados invalidos"
+    }
+    tests {
+      caso "ok" {
+        given {
+          nome: "Caneca"
+          preco: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route itens_publica {
+    metodo: POST
+    caminho: /itens
+    task: criar_item
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.routes[0]?.inputPublico.length, 2);
+  assert.equal(resultado.ir?.routes[0]?.outputPublico.length, 2);
+  assert.equal(resultado.ir?.routes[0]?.errosPublicos[0]?.nome, "entrada_invalida");
+});
+
+test("compilador rejeita route com erro publico fora do contrato da task", () => {
+  const codigo = `
+module exemplo.route.publica.invalida {
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      status: Texto
+    }
+    guarantees {
+      status existe
+    }
+    error {
+      autorizacao_negada: "sem autorizacao"
+    }
+    tests {
+      caso "ok" {
+        given {
+          pagamento_id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route pagamento_publico {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar_pagamento
+    error {
+      timeout_gateway: "tempo esgotado"
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM051"));
+});
+
+test("compilador rejeita efeito malformado com categoria sem alvo", () => {
+  const codigo = `
+module exemplo.efeito.invalido {
+  task auditar {
+    input {
+      id: Id required
+    }
+    output {
+      protocolo: Id
+    }
+    effects {
+      auditoria
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM023"));
 });
 
 test("compilador rejeita etapa de flow malformada e dependencia desconhecida", () => {
@@ -834,4 +1024,241 @@ module exemplo.state.task.invalido {
   const resultado = compilarCodigo(codigo, "memoria.sema");
   assert.equal(temErros(resultado.diagnosticos), true);
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM041"));
+});
+
+test("compilador valida effects com criticidade em task, flow e route", () => {
+  const codigo = `
+module exemplo.efeitos.operacionais {
+  task consultar_gateway {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      status: Texto
+    }
+    effects {
+      consulta gateway_pagamento criticidade=alta
+      auditoria pagamento detalhada criticidade=media
+    }
+    guarantees {
+      status existe
+    }
+    tests {
+      caso "consulta" {
+        given {
+          pagamento_id: "pag_1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow operacao {
+    pagamento_id: Id
+    effects {
+      auditoria fluxo_pagamento criticidade=alta
+    }
+    etapa consultar usa consultar_gateway com pagamento_id=pagamento_id
+  }
+
+  route consultar_publico {
+    metodo: GET
+    caminho: /pagamentos/consultar
+    task: consultar_gateway
+    effects {
+      auditoria borda_pagamento criticidade=baixa
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.tasks[0]?.efeitosEstruturados[0]?.criticidade, "alta");
+  assert.equal(resultado.ir?.flows[0]?.efeitosEstruturados[0]?.categoria, "auditoria");
+  assert.equal(resultado.ir?.routes[0]?.efeitosPublicos[0]?.criticidade, "baixa");
+});
+
+test("compilador rejeita criticidade invalida de efeito", () => {
+  const codigo = `
+module exemplo.efeitos.criticidade.invalida {
+  task processar {
+    input {
+      id: Id required
+    }
+    output {
+      protocolo: Id
+    }
+    effects {
+      consulta gateway criticidade=urgente
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM052"));
+});
+
+test("compilador rejeita route com tipo publico incoerente e assinatura duplicada", () => {
+  const codigo = `
+module exemplo.route.publica.coerencia {
+  task processar {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      timeout_gateway: "tempo esgotado"
+    }
+    tests {
+      caso "ok" {
+        given {
+          pagamento_id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route pagamento_a {
+    metodo: post
+    caminho: /pagamentos/processar
+    task: processar
+    input {
+      pagamento_id: Texto
+    }
+  }
+
+  route pagamento_b {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM053"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM055"));
+});
+
+test("compilador resolve pagamento modularizado em multiplos arquivos", () => {
+  const dominio = `
+module exemplos.pagamento.dominio {
+  entity Pagamento {
+    fields {
+      id: Id
+      valor: Decimal
+      status: StatusPagamento
+    }
+  }
+
+  enum StatusPagamento {
+    PENDENTE,
+    AUTORIZADO,
+    RECUSADO,
+    PROCESSADO
+  }
+
+  state ciclo_pagamento {
+    fields {
+      status: StatusPagamento
+      conciliado: Booleano
+    }
+    transitions {
+      PENDENTE -> AUTORIZADO
+      AUTORIZADO -> PROCESSADO
+      PENDENTE -> RECUSADO
+    }
+  }
+}
+`;
+
+  const pagamento = `
+module exemplos.pagamento {
+  use exemplos.pagamento.dominio
+
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      pagamento: Pagamento
+      status: StatusPagamento
+    }
+    effects {
+      consulta gateway_pagamento criticidade=alta
+      persistencia Pagamento criticidade=alta
+      auditoria pagamento criticidade=media
+    }
+    state ciclo_pagamento {
+      transitions {
+        PENDENTE -> AUTORIZADO
+      }
+    }
+    guarantees {
+      pagamento existe
+      status existe
+    }
+    error {
+      timeout_gateway: "tempo esgotado"
+    }
+    tests {
+      caso "ok" {
+        given {
+          pagamento_id: "1"
+          valor: 10
+          token: "ok"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route processar_pagamento_publico {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar_pagamento
+  }
+}
+`;
+
+  const resultado = compilarProjeto([
+    { caminho: "pagamento_dominio.sema", codigo: dominio },
+    { caminho: "pagamento.sema", codigo: pagamento },
+  ]);
+
+  assert.equal(temErros(resultado.diagnosticos), false);
+  const moduloPrincipal = resultado.modulos.find((modulo) => modulo.modulo?.nome === "exemplos.pagamento");
+  assert.equal(moduloPrincipal?.ir?.routes[0]?.inputPublico.length, 3);
+  assert.equal(moduloPrincipal?.ir?.routes[0]?.publico.errors[0]?.codigo, "timeout_gateway");
 });

@@ -1,0 +1,54 @@
+{
+  "name": "sema-vscode",
+  "displayName": "Sema",
+  "description": "Suporte basico de editor para a linguagem Sema.",
+  "version": "0.1.0",
+  "publisher": "sema",
+  "private": true,
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters"
+  ],
+  "activationEvents": [
+    "onLanguage:sema",
+    "onCommand:sema.formatarDocumento"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "sema",
+        "aliases": [
+          "Sema",
+          "sema"
+        ],
+        "extensions": [
+          ".sema"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sema",
+        "scopeName": "source.sema",
+        "path": "./syntaxes/sema.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "sema",
+        "path": "./snippets/sema.code-snippets"
+      }
+    ],
+    "commands": [
+      {
+        "command": "sema.formatarDocumento",
+        "title": "Sema: Formatar Documento"
+      }
+    ]
+  }
+}

@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
-import { compilarCodigo, temErros } from "../../pacotes/nucleo/dist/index.js";
+import { compilarCodigo, compilarProjeto, temErros } from "../../pacotes/nucleo/dist/index.js";
 import { gerarTypeScript } from "../../pacotes/gerador-typescript/dist/index.js";
 import { gerarPython } from "../../pacotes/gerador-python/dist/index.js";
 
@@ -28,7 +28,13 @@ test("geradores produzem artefatos para o exemplo de calculadora", async () => {
 test("geradores refletem estruturas semanticas mais ricas no exemplo de pagamento", async () => {
   const caminho = path.resolve("exemplos/pagamento.sema");
   const codigo = await readFile(caminho, "utf8");
-  const resultado = compilarCodigo(codigo, caminho);
+  const caminhoDominio = path.resolve("exemplos/pagamento_dominio.sema");
+  const codigoDominio = await readFile(caminhoDominio, "utf8");
+  const projeto = compilarProjeto([
+    { caminho: caminhoDominio, codigo: codigoDominio },
+    { caminho, codigo },
+  ]);
+  const resultado = projeto.modulos.find((modulo) => modulo.caminho === caminho)!;
 
   assert.equal(temErros(resultado.diagnosticos), false);
   assert.ok(resultado.ir);
@@ -39,8 +45,21 @@ test("geradores refletem estruturas semanticas mais ricas no exemplo de pagament
   assert.ok(arquivosTs[0]?.conteudo.includes("Regra violada"));
   assert.ok(arquivosTs[0]?.conteudo.includes("Garantia violada"));
   assert.ok(arquivosTs[0]?.conteudo.includes("Vinculo de estado: ciclo_pagamento"));
-  assert.ok(arquivosTs[0]?.conteudo.includes("transicoes=3"));
-  assert.ok(arquivosPy[0]?.conteudo.includes("Efeito estruturado"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("categoria=consulta alvo=gateway_pagamento"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("Route processar_pagamento_publico: metodo=POST caminho=/pagamentos/processar task=processar_pagamento"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("erros_publicos=autorizacao_negada, saldo_insuficiente, timeout_gateway"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("effects_publicos=auditoria:pagamento_publico"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("export const contrato_processar_pagamento"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("export async function adaptar_processar_pagamento_publico"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("export function verificar_resposta_publica_processar_pagamento_publico"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("verificar_garantias_processar_pagamento"));
+  assert.ok(arquivosTs[0]?.conteudo.includes("Transicoes declaradas pela task: PENDENTE->AUTORIZADO, AUTORIZADO->PROCESSADO"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("Efeito estruturado: categoria=consulta alvo=gateway_pagamento criticidade=alta"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("Route processar_pagamento_publico: metodo=POST caminho=/pagamentos/processar task=processar_pagamento"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("contrato_processar_pagamento = {"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("def adaptar_processar_pagamento_publico"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("def verificar_resposta_publica_processar_pagamento_publico"));
+  assert.ok(arquivosPy[0]?.conteudo.includes("def verificar_garantias_processar_pagamento"));
   assert.ok(arquivosPy[0]?.conteudo.includes("Vinculo de estado: ciclo_pagamento"));
   assert.ok(arquivosPy[0]?.conteudo.includes("Garantia violada"));
 });

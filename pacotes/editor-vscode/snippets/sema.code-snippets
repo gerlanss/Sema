@@ -1,0 +1,99 @@
+{
+  "module": {
+    "prefix": "sema-module",
+    "body": [
+      "module ${1:exemplo.modulo} {",
+      "  ${0}",
+      "}"
+    ],
+    "description": "Estrutura basica de modulo Sema"
+  },
+  "task": {
+    "prefix": "sema-task",
+    "body": [
+      "task ${1:nome_task} {",
+      "  input {",
+      "    ${2:campo}: ${3:Texto} required",
+      "  }",
+      "  output {",
+      "    ${4:resultado}: ${5:Texto}",
+      "  }",
+      "  guarantees {",
+      "    ${4:resultado} existe",
+      "  }",
+      "  tests {",
+      "    caso \"${6:caso basico}\" {",
+      "      given {",
+      "        ${2:campo}: ${7:\"valor\"}",
+      "      }",
+      "      expect {",
+      "        sucesso: verdadeiro",
+      "      }",
+      "    }",
+      "  }",
+      "}"
+    ],
+    "description": "Estrutura basica de task Sema"
+  },
+  "flow": {
+    "prefix": "sema-flow",
+    "body": [
+      "flow ${1:nome_flow} {",
+      "  ${2:entrada}: ${3:Texto}",
+      "  etapa ${4:executar} usa ${5:task_exemplo} com ${2:entrada}=${2:entrada}",
+      "}"
+    ],
+    "description": "Estrutura basica de flow Sema"
+  },
+  "route": {
+    "prefix": "sema-route",
+    "body": [
+      "route ${1:nome_route} {",
+      "  metodo: ${2:POST}",
+      "  caminho: ${3:/recurso}",
+      "  task: ${4:task_exemplo}",
+      "}"
+    ],
+    "description": "Estrutura basica de route Sema"
+  },
+  "state": {
+    "prefix": "sema-state",
+    "body": [
+      "state ${1:nome_estado} {",
+      "  fields {",
+      "    status: ${2:StatusDominio}",
+      "  }",
+      "  transitions {",
+      "    ${3:ABERTO} -> ${4:FECHADO}",
+      "  }",
+      "}"
+    ],
+    "description": "Estrutura basica de state Sema"
+  },
+  "pagamento-route": {
+    "prefix": "sema-pagamento-route",
+    "body": [
+      "route ${1:processar_pagamento_publico} {",
+      "  metodo: POST",
+      "  caminho: /pagamentos/processar",
+      "  task: processar_pagamento",
+      "  input {",
+      "    pagamento_id: Id required",
+      "    valor: Decimal required",
+      "    token: Texto required",
+      "  }",
+      "  output {",
+      "    pagamento: Pagamento required",
+      "    status: StatusPagamento required",
+      "  }",
+      "  effects {",
+      "    auditoria pagamento_publico criticidade=alta",
+      "  }",
+      "  error {",
+      "    timeout_gateway: \"Gateway indisponivel.\"",
+      "  }",
+      "}"
+    ],
+    "description": "Route publica de pagamento com contrato forte"
+  }
+}

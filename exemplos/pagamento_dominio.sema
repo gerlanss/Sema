@@ -1,0 +1,35 @@
+module exemplos.pagamento.dominio {
+  docs {
+    resumo: "Contratos de dominio compartilhados pelo vertical oficial de pagamento da Sema 0.5."
+  }
+
+  entity Pagamento {
+    fields {
+      id: Id
+      valor: Decimal
+      status: StatusPagamento
+    }
+  }
+
+  enum StatusPagamento {
+    PENDENTE,
+    AUTORIZADO,
+    RECUSADO,
+    PROCESSADO
+  }
+
+  state ciclo_pagamento {
+    fields {
+      status: StatusPagamento
+      conciliado: Booleano
+    }
+    invariants {
+      status existe
+    }
+    transitions {
+      PENDENTE -> AUTORIZADO
+      AUTORIZADO -> PROCESSADO
+      PENDENTE -> RECUSADO
+    }
+  }
+}

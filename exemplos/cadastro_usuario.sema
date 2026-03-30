@@ -26,8 +26,9 @@ module exemplos.cadastro.usuario {
       email deve_ser unico em Usuario.email
     }
     effects {
-      grava Usuario
-      emite evento "usuario_criado"
+      persistencia Usuario
+      evento usuario_criado
+      auditoria cadastro_usuario
     }
     guarantees {
       usuario existe
@@ -43,6 +44,7 @@ module exemplos.cadastro.usuario {
           nome: "Ana"
           email: "ana@empresa.com"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -50,4 +52,3 @@ module exemplos.cadastro.usuario {
     }
   }
 }
-

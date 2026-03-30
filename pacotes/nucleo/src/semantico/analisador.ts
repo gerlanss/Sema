@@ -13,6 +13,8 @@ import type {
   TypeAst,
 } from "../ast/tipos.js";
 import {
+  ehCategoriaEfeitoSemantico,
+  ehCriticidadeEfeitoSemantico,
   extrairReferenciasDaExpressao,
   parsearEfeitoSemantico,
   parsearEtapaFlow,
@@ -25,12 +27,30 @@ export interface SimboloSemantico {
   categoria: "tipo" | "entity" | "enum" | "task" | "flow" | "route" | "state";
 }
 
+export interface CampoSemantico {
+  nome: string;
+  tipo: string;
+  modificadores: string[];
+}
+
+export interface ErroSemanticoTask {
+  codigo: string;
+  mensagem: string;
+}
+
+export interface ResumoTaskSemantico {
+  input: CampoSemantico[];
+  output: CampoSemantico[];
+  errors: ErroSemanticoTask[];
+  guarantees: string[];
+}
+
 export interface ContextoSemantico {
   modulo: string;
   simbolos: Map<string, SimboloSemantico>;
   tiposConhecidos: Set<string>;
   tasksConhecidas: Set<string>;
-  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>;
+  tarefasDetalhadas: Map<string, ResumoTaskSemantico>;
   statesConhecidos: Map<string, { transicoes: Set<string> }>;
   modulosImportados: string[];
   enumsConhecidos: Map<string, Set<string>>;
@@ -111,6 +131,71 @@ function localizarBloco(corpo: BlocoGenericoAst, nome: string): BlocoGenericoAst
   return corpo.blocos.find((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === nome);
 }
 
+function localizarCampo(bloco: BlocoGenericoAst, ...nomes: string[]): CampoAst | undefined {
+  return bloco.campos.find((campo) => nomes.includes(campo.nome));
+}
+
+function converterCampoSemantico(campo: CampoAst): CampoSemantico {
+  return {
+    nome: campo.nome,
+    tipo: campo.valor,
+    modificadores: [...campo.modificadores],
+  };
+}
+
+function indicesCampos(campos: CampoSemantico[]): Map<string, CampoSemantico> {
+  return new Map(campos.map((campo) => [campo.nome, campo]));
+}
+
+function indiceErros(erros: ErroSemanticoTask[]): Map<string, ErroSemanticoTask> {
+  return new Map(erros.map((erro) => [erro.codigo, erro]));
+}
+
+function coletarErrosTask(task: TaskAst): ErroSemanticoTask[] {
+  const erros = new Map<string, ErroSemanticoTask>();
+  for (const campo of task.error?.campos ?? []) {
+    erros.set(campo.nome, {
+      codigo: campo.nome,
+      mensagem: [campo.valor, ...campo.modificadores].join(" ").trim(),
+    });
+  }
+
+  for (const bloco of task.tests?.blocos ?? []) {
+    if (bloco.tipo !== "caso_teste") {
+      continue;
+    }
+    const codigoErro = bloco.error?.campos.find((campo) => campo.nome === "tipo")?.valor;
+    if (codigoErro && !erros.has(codigoErro)) {
+      erros.set(codigoErro, {
+        codigo: codigoErro,
+        mensagem: `Erro sintetico derivado do caso de teste "${bloco.nome}".`,
+      });
+    }
+  }
+
+  return [...erros.values()];
+}
+
+function coletarResumoTask(task: TaskAst): ResumoTaskSemantico {
+  return {
+    input: (task.input?.campos ?? []).map(converterCampoSemantico),
+    output: (task.output?.campos ?? []).map(converterCampoSemantico),
+    errors: coletarErrosTask(task),
+    guarantees: (task.guarantees?.linhas ?? []).map((linha) => linha.conteudo),
+  };
+}
+
+function recomporCaminhoRoute(campo?: CampoAst): string | undefined {
+  if (!campo) {
+    return undefined;
+  }
+
+  return [campo.valor, ...campo.modificadores]
+    .join(" ")
+    .replace(/\s*\/\s*/g, "/")
+    .trim();
+}
+
 function serializarTransicao(origem: string, destino: string): string {
   return `${origem}->${destino}`;
 }
@@ -171,7 +256,32 @@ function validarEfeitosDeclarados(linhas: BlocoGenericoAst["linhas"], diagnostic
           `Declaracao invalida de efeito em ${contexto}: "${linha.conteudo}".`,
           "erro",
           linha.intervalo,
-          "Use o formato \"acao alvo\" ou \"acao alvo complemento\" para declarar efeitos no MVP.",
+          "Use o formato \"categoria alvo\" ou \"categoria alvo detalhe\", com categorias como persistencia, consulta, evento, notificacao ou auditoria.",
+        ),
+      );
+      continue;
+    }
+
+    if (!ehCategoriaEfeitoSemantico(efeito.categoria)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM048",
+          `Categoria de efeito "${efeito.categoria}" nao e suportada em ${contexto}.`,
+          "erro",
+          linha.intervalo,
+          "Use apenas persistencia, consulta, evento, notificacao ou auditoria.",
+        ),
+      );
+    }
+
+    if (efeito.criticidadeTexto && !ehCriticidadeEfeitoSemantico(efeito.criticidadeTexto)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM052",
+          `Criticidade de efeito "${efeito.criticidadeTexto}" nao e suportada em ${contexto}.`,
+          "erro",
+          linha.intervalo,
+          "Use apenas criticidade=baixa, criticidade=media, criticidade=alta ou criticidade=critica.",
         ),
       );
     }
@@ -284,7 +394,7 @@ function validarState(
 function validarFlow(
   flow: FlowAst,
   tasksConhecidas: Set<string>,
-  tarefasDetalhadas: Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>,
+  tarefasDetalhadas: Map<string, ResumoTaskSemantico>,
   diagnosticos: Diagnostico[],
 ): void {
   const possuiEtapas = flow.corpo.linhas.length > 0 || flow.corpo.campos.length > 0 || flow.corpo.blocos.length > 0;
@@ -298,6 +408,11 @@ function validarFlow(
         "Adicione linhas declarativas, campos ou subblocos dentro de flow.",
       ),
     );
+  }
+
+  const effects = localizarBloco(flow.corpo, "effects");
+  if (effects) {
+    validarEfeitosDeclarados(effects.linhas, diagnosticos, `effects do flow ${flow.nome}`);
   }
 
   const tarefasReferenciadas = flow.corpo.campos
@@ -370,8 +485,10 @@ function validarFlow(
     if (item.etapa.task) {
       const detalhesTask = tarefasDetalhadas.get(item.etapa.task);
       if (detalhesTask) {
+        const indiceInput = indicesCampos(detalhesTask.input);
         for (const mapeamento of item.etapa.mapeamentos) {
-          if (!detalhesTask.input.has(mapeamento.campo)) {
+          const campoInput = indiceInput.get(mapeamento.campo);
+          if (!campoInput) {
             diagnosticos.push(
               criarDiagnostico(
                 "SEM042",
@@ -387,7 +504,14 @@ function validarFlow(
           const ehLiteral = ["verdadeiro", "falso", "nulo"].includes(mapeamento.valor)
             || /^-?\d+(?:\.\d+)?$/.test(mapeamento.valor)
             || /^".*"$/.test(mapeamento.valor);
-          if (!ehLiteral && !contextoFlow.has(raizValor) && !nomesEtapas.has(raizValor)) {
+          const aceitaLiteralTextual = Boolean(
+            campoInput
+            && ["Texto", "Id", "Email", "Url"].includes(campoInput.tipo)
+            && !mapeamento.valor.includes(".")
+            && !contextoFlow.has(raizValor)
+            && !nomesEtapas.has(raizValor),
+          );
+          if (!ehLiteral && !aceitaLiteralTextual && !contextoFlow.has(raizValor) && !nomesEtapas.has(raizValor)) {
             diagnosticos.push(
               criarDiagnostico(
                 "SEM043",
@@ -403,7 +527,8 @@ function validarFlow(
             const [etapaOrigem, campoSaida] = mapeamento.valor.split(".", 2);
             const etapaReferenciada = etapaOrigem ? etapasValidas.get(etapaOrigem) : undefined;
             const taskReferenciada = etapaReferenciada?.task ? tarefasDetalhadas.get(etapaReferenciada.task) : undefined;
-            if (etapaOrigem && campoSaida && etapaReferenciada && taskReferenciada && !taskReferenciada.output.has(campoSaida)) {
+            const indiceOutput = taskReferenciada ? indicesCampos(taskReferenciada.output) : undefined;
+            if (etapaOrigem && campoSaida && etapaReferenciada && indiceOutput && !indiceOutput.has(campoSaida)) {
               diagnosticos.push(
                 criarDiagnostico(
                   "SEM044",
@@ -471,8 +596,9 @@ function validarFlow(
 
     if (item.etapa.task) {
       const detalhesTask = tarefasDetalhadas.get(item.etapa.task);
+      const indiceErrors = indiceErros(detalhesTask?.errors ?? []);
       for (const rotaErro of item.etapa.porErro) {
-        if (!detalhesTask?.errors.has(rotaErro.tipo)) {
+        if (!indiceErrors.has(rotaErro.tipo)) {
           diagnosticos.push(
             criarDiagnostico(
               "SEM046",
@@ -581,10 +707,113 @@ function validarVinculoEstadoDaTask(
   }
 }
 
-function validarRoute(route: RouteAst, tasksConhecidas: Set<string>, diagnosticos: Diagnostico[]): void {
-  const metodo = route.corpo.campos.find((campo) => campo.nome === "metodo");
-  const caminho = route.corpo.campos.find((campo) => campo.nome === "caminho");
-  const task = route.corpo.campos.find((campo) => campo.nome === "task" || campo.nome === "tarefa");
+function validarContratoRoute(
+  route: RouteAst,
+  taskNome: string,
+  tarefasDetalhadas: Map<string, ResumoTaskSemantico>,
+  diagnosticos: Diagnostico[],
+): void {
+  const inputPublico = localizarBloco(route.corpo, "input");
+  const outputPublico = localizarBloco(route.corpo, "output");
+  const errorPublico = localizarBloco(route.corpo, "error");
+  const detalhesTask = tarefasDetalhadas.get(taskNome);
+
+  if (!detalhesTask) {
+    return;
+  }
+
+  const indiceInputTask = indicesCampos(detalhesTask.input);
+  const indiceOutputTask = indicesCampos(detalhesTask.output);
+  const indiceErrorsTask = indiceErros(detalhesTask.errors);
+
+  if (inputPublico) {
+    for (const campo of inputPublico.campos) {
+      const campoTask = indiceInputTask.get(campo.nome);
+      if (!campoTask) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM049",
+            `Route "${route.nome}" expoe o campo de input "${campo.nome}", mas ele nao existe na task "${taskNome}".`,
+            "erro",
+            campo.intervalo,
+            "Use apenas campos declarados no input da task associada a route.",
+          ),
+        );
+        continue;
+      }
+
+      if (campoTask.tipo !== campo.valor) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM053",
+            `Route "${route.nome}" declara o campo publico "${campo.nome}" com tipo "${campo.valor}", mas a task "${taskNome}" usa "${campoTask.tipo}".`,
+            "erro",
+            campo.intervalo,
+            "Mantenha o tipo publico coerente com o contrato interno da task.",
+          ),
+        );
+      }
+    }
+  }
+
+  if (outputPublico) {
+    for (const campo of outputPublico.campos) {
+      const campoTask = indiceOutputTask.get(campo.nome);
+      if (!campoTask) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM050",
+            `Route "${route.nome}" expoe o campo de output "${campo.nome}", mas ele nao existe na task "${taskNome}".`,
+            "erro",
+            campo.intervalo,
+            "Use apenas campos declarados no output da task associada a route.",
+          ),
+        );
+        continue;
+      }
+
+      if (campoTask.tipo !== campo.valor) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM054",
+            `Route "${route.nome}" declara o campo publico de saida "${campo.nome}" com tipo "${campo.valor}", mas a task "${taskNome}" usa "${campoTask.tipo}".`,
+            "erro",
+            campo.intervalo,
+            "Mantenha o output publico coerente com o contrato interno da task.",
+          ),
+        );
+      }
+    }
+  }
+
+  if (errorPublico) {
+    for (const campo of errorPublico.campos) {
+      if (!indiceErrorsTask.has(campo.nome)) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM051",
+            `Route "${route.nome}" expoe o erro "${campo.nome}", mas ele nao pertence ao contrato da task "${taskNome}".`,
+            "erro",
+            campo.intervalo,
+            "Exponha apenas erros declarados pela task associada a route.",
+          ),
+        );
+      }
+    }
+  }
+}
+
+function validarRoute(
+  route: RouteAst,
+  tasksConhecidas: Set<string>,
+  tarefasDetalhadas: Map<string, ResumoTaskSemantico>,
+  diagnosticos: Diagnostico[],
+): void {
+  const metodo = localizarCampo(route.corpo, "metodo");
+  const caminho = localizarCampo(route.corpo, "caminho");
+  const caminhoResolvido = recomporCaminhoRoute(caminho);
+  const task = localizarCampo(route.corpo, "task", "tarefa");
+  const effects = localizarBloco(route.corpo, "effects");
 
   if (!metodo) {
     diagnosticos.push(
@@ -625,16 +854,20 @@ function validarRoute(route: RouteAst, tasksConhecidas: Set<string>, diagnostico
     }
   }
 
-  if (caminho && !caminho.valor.startsWith("/")) {
+  if (caminho && (!caminhoResolvido || !caminhoResolvido.startsWith("/"))) {
     diagnosticos.push(
       criarDiagnostico(
         "SEM017",
-        `Route "${route.nome}" precisa usar um caminho iniciando com '/'.`,
-        "erro",
-        caminho.intervalo,
-        "Exemplo valido: caminho: \"/produtos\".",
+          `Route "${route.nome}" precisa usar um caminho iniciando com '/'.`,
+          "erro",
+          caminho.intervalo,
+          "Exemplo valido: caminho: \"/produtos\".",
       ),
     );
+  }
+
+  if (effects) {
+    validarEfeitosDeclarados(effects.linhas, diagnosticos, `effects da route ${route.nome}`);
   }
 
   if (task && !tasksConhecidas.has(task.valor)) {
@@ -647,6 +880,11 @@ function validarRoute(route: RouteAst, tasksConhecidas: Set<string>, diagnostico
         "Ajuste o campo task da route para apontar para uma task declarada no modulo.",
       ),
     );
+    return;
+  }
+
+  if (task) {
+    validarContratoRoute(route, task.valor, tarefasDetalhadas, diagnosticos);
   }
 }
 
@@ -654,7 +892,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
-  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>();
+  const tarefasDetalhadas = new Map<string, ResumoTaskSemantico>();
   const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const enumsConhecidos = new Map<string, Set<string>>();
 
@@ -682,17 +920,7 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   }
   for (const task of modulo.tasks) {
     registrar(task.nome, "task");
-    tarefasDetalhadas.set(task.nome, {
-      input: new Set((task.input?.campos ?? []).map((campo) => campo.nome)),
-      output: new Set((task.output?.campos ?? []).map((campo) => campo.nome)),
-      errors: new Set([
-        ...(task.error?.campos ?? []).map((campo) => campo.nome),
-        ...(task.tests?.blocos
-          .filter((bloco): bloco is BlocoCasoTesteAst => bloco.tipo === "caso_teste")
-          .flatMap((bloco) => bloco.error?.campos.find((campo) => campo.nome === "tipo")?.valor ? [bloco.error.campos.find((campo) => campo.nome === "tipo")!.valor] : [])
-          ?? []),
-      ]),
-    });
+    tarefasDetalhadas.set(task.nome, coletarResumoTask(task));
   }
   for (const flow of modulo.flows) {
     registrar(flow.nome, "flow");
@@ -867,7 +1095,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   const simbolos = new Map<string, SimboloSemantico>();
   const tiposConhecidos = new Set(TIPOS_PRIMITIVOS);
   const tasksConhecidas = new Set<string>();
-  const tarefasDetalhadas = new Map<string, { input: Set<string>; output: Set<string>; errors: Set<string> }>();
+  const tarefasDetalhadas = new Map<string, ResumoTaskSemantico>();
   const statesConhecidos = new Map<string, { transicoes: Set<string> }>();
   const modulosImportados: string[] = [];
   const enumsConhecidos = new Map<string, Set<string>>();
@@ -896,9 +1124,10 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     }
     for (const [nomeTask, detalhesTask] of contextoImportado.tarefasDetalhadas) {
       tarefasDetalhadas.set(nomeTask, {
-        input: new Set(detalhesTask.input),
-        output: new Set(detalhesTask.output),
-        errors: new Set(detalhesTask.errors),
+        input: detalhesTask.input.map((campo) => ({ ...campo, modificadores: [...campo.modificadores] })),
+        output: detalhesTask.output.map((campo) => ({ ...campo, modificadores: [...campo.modificadores] })),
+        errors: detalhesTask.errors.map((erro) => ({ ...erro })),
+        guarantees: [...detalhesTask.guarantees],
       });
     }
     for (const [nomeState, metadadosState] of contextoImportado.statesConhecidos) {
@@ -938,17 +1167,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
   for (const task of modulo.tasks) {
     registrar(task.nome, "task", task.intervalo);
-    tarefasDetalhadas.set(task.nome, {
-      input: new Set((task.input?.campos ?? []).map((campo) => campo.nome)),
-      output: new Set((task.output?.campos ?? []).map((campo) => campo.nome)),
-      errors: new Set([
-        ...(task.error?.campos ?? []).map((campo) => campo.nome),
-        ...(task.tests?.blocos
-          .filter((bloco): bloco is BlocoCasoTesteAst => bloco.tipo === "caso_teste")
-          .flatMap((bloco) => bloco.error?.campos.find((campo) => campo.nome === "tipo")?.valor ? [bloco.error.campos.find((campo) => campo.nome === "tipo")!.valor] : [])
-          ?? []),
-      ]),
-    });
+    tarefasDetalhadas.set(task.nome, coletarResumoTask(task));
   }
   for (const flow of modulo.flows) {
     registrar(flow.nome, "flow", flow.intervalo);
@@ -1003,7 +1222,31 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
 
   for (const route of modulo.routes) {
-    validarRoute(route, tasksConhecidas, diagnosticos);
+    validarRoute(route, tasksConhecidas, tarefasDetalhadas, diagnosticos);
+  }
+
+  const assinaturasRoute = new Map<string, RouteAst>();
+  for (const route of modulo.routes) {
+    const metodo = (localizarCampo(route.corpo, "metodo")?.valor ?? "").toUpperCase();
+    const caminho = recomporCaminhoRoute(localizarCampo(route.corpo, "caminho")) ?? "";
+    if (!metodo || !caminho) {
+      continue;
+    }
+    const chave = `${metodo} ${caminho}`;
+    const existente = assinaturasRoute.get(chave);
+    if (existente) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM055",
+          `Route "${route.nome}" reutiliza a assinatura publica "${chave}", ja declarada por "${existente.nome}".`,
+          "erro",
+          route.intervalo,
+          "Cada combinacao de metodo e caminho deve ser unica no mesmo modulo.",
+        ),
+      );
+      continue;
+    }
+    assinaturasRoute.set(chave, route);
   }
 
   for (const state of modulo.states) {

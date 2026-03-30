@@ -1,4 +1,6 @@
 export type TipoExpressaoSemantica = "existe" | "comparacao" | "predicado" | "pertencimento" | "composta" | "negacao";
+export type CategoriaEfeitoSemantico = "persistencia" | "consulta" | "evento" | "notificacao" | "auditoria";
+export type CriticidadeEfeitoSemantico = "baixa" | "media" | "alta" | "critica";
 
 export interface ExpressaoBaseSemantica {
   tipo: TipoExpressaoSemantica;
@@ -51,9 +53,11 @@ export type ExpressaoSemantica =
 
 export interface EfeitoSemantico {
   textoOriginal: string;
-  acao: string;
+  categoria: CategoriaEfeitoSemantico;
   alvo: string;
-  complemento?: string;
+  detalhe?: string;
+  criticidade?: CriticidadeEfeitoSemantico;
+  criticidadeTexto?: string;
 }
 
 export interface TransicaoEstadoSemantica {
@@ -73,6 +77,51 @@ export interface EtapaFlowSemantica {
   emErro?: string;
   porErro: Array<{ tipo: string; destino: string }>;
 }
+
+export interface ContratoErroRouteSemantico {
+  nome: string;
+  codigo: string;
+  mensagem?: string;
+}
+
+export interface ContratoRouteSemantico {
+  metodo?: string;
+  caminho?: string;
+  task?: string;
+  inputPublico: Array<{ nome: string; tipo: string; modificadores: string[] }>;
+  outputPublico: Array<{ nome: string; tipo: string; modificadores: string[] }>;
+  errosPublicos: ContratoErroRouteSemantico[];
+  effectsPublicos: EfeitoSemantico[];
+}
+
+const CATEGORIAS_EFEITO = new Set<CategoriaEfeitoSemantico>([
+  "persistencia",
+  "consulta",
+  "evento",
+  "notificacao",
+  "auditoria",
+]);
+
+const CRITICIDADES_EFEITO = new Set<CriticidadeEfeitoSemantico>([
+  "baixa",
+  "media",
+  "alta",
+  "critica",
+]);
+
+const MAPEAMENTO_EFEITOS_LEGADOS: Record<string, CategoriaEfeitoSemantico> = {
+  grava: "persistencia",
+  atualiza: "persistencia",
+  persiste: "persistencia",
+  consulta: "consulta",
+  le: "consulta",
+  acessa: "consulta",
+  emite: "evento",
+  notifica: "notificacao",
+  envia: "notificacao",
+  registra: "auditoria",
+  audita: "auditoria",
+};
 
 const OPERADORES_COMPARACAO = new Set(["==", "!=", ">", ">=", "<", "<="]);
 
@@ -234,11 +283,62 @@ export function parsearEfeitoSemantico(texto: string): EfeitoSemantico | undefin
     return undefined;
   }
 
+  const partesSemCriticidade = [...partes];
+  let criticidadeTexto: string | undefined;
+  const indiceCriticidade = partesSemCriticidade.findIndex((parte) => parte.startsWith("criticidade="));
+  if (indiceCriticidade !== -1) {
+    criticidadeTexto = partesSemCriticidade[indiceCriticidade]!.slice("criticidade=".length).trim();
+    partesSemCriticidade.splice(indiceCriticidade, 1);
+  } else {
+    const indiceCriticidadeSeparada = partesSemCriticidade.findIndex((parte) => parte === "criticidade");
+    if (
+      indiceCriticidadeSeparada !== -1
+      && partesSemCriticidade[indiceCriticidadeSeparada + 1] === "="
+      && partesSemCriticidade[indiceCriticidadeSeparada + 2]
+    ) {
+      criticidadeTexto = partesSemCriticidade[indiceCriticidadeSeparada + 2]!.trim();
+      partesSemCriticidade.splice(indiceCriticidadeSeparada, 3);
+    }
+  }
+
+  if (partesSemCriticidade.length < 2) {
+    return undefined;
+  }
+
+  const categoriaNormalizada = partesSemCriticidade[0] as CategoriaEfeitoSemantico;
+  const criticidade = criticidadeTexto && CRITICIDADES_EFEITO.has(criticidadeTexto as CriticidadeEfeitoSemantico)
+    ? criticidadeTexto as CriticidadeEfeitoSemantico
+    : undefined;
+  if (CATEGORIAS_EFEITO.has(categoriaNormalizada)) {
+    return {
+      textoOriginal: normalizado,
+      categoria: categoriaNormalizada,
+      alvo: partesSemCriticidade[1]!,
+      detalhe: partesSemCriticidade.slice(2).join(" ").trim() || undefined,
+      criticidade,
+      criticidadeTexto,
+    };
+  }
+
+  const categoriaLegada = MAPEAMENTO_EFEITOS_LEGADOS[partesSemCriticidade[0]!.toLowerCase()];
+  if (categoriaLegada) {
+    return {
+      textoOriginal: normalizado,
+      categoria: categoriaLegada,
+      alvo: partesSemCriticidade[1]!,
+      detalhe: partesSemCriticidade.slice(2).join(" ").trim() || undefined,
+      criticidade,
+      criticidadeTexto,
+    };
+  }
+
   return {
     textoOriginal: normalizado,
-    acao: partes[0]!,
-    alvo: partes[1]!,
-    complemento: partes.slice(2).join(" ").trim() || undefined,
+    categoria: partesSemCriticidade[0]! as CategoriaEfeitoSemantico,
+    alvo: partesSemCriticidade[1]!,
+    detalhe: partesSemCriticidade.slice(2).join(" ").trim() || undefined,
+    criticidade,
+    criticidadeTexto,
   };
 }
 
@@ -369,4 +469,12 @@ export function pareceReferenciaSemantica(valor: string): boolean {
   }
 
   return /^[A-Za-z_][A-Za-z0-9_.]*$/.test(normalizado);
+}
+
+export function ehCategoriaEfeitoSemantico(valor: string): valor is CategoriaEfeitoSemantico {
+  return CATEGORIAS_EFEITO.has(valor as CategoriaEfeitoSemantico);
+}
+
+export function ehCriticidadeEfeitoSemantico(valor: string): valor is CriticidadeEfeitoSemantico {
+  return CRITICIDADES_EFEITO.has(valor as CriticidadeEfeitoSemantico);
 }

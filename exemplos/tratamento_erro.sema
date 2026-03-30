@@ -1,13 +1,4 @@
 module exemplos.tratamento.erro {
-  flow resposta_segura {
-    chave: Texto
-    etapa tentar usa executar_operacao_sensivel com chave=chave em_sucesso concluir em_erro registrar_falha por_erro acesso_negado=tratar_acesso_negado, recurso_indisponivel=agendar_retentativa
-    etapa tratar_acesso_negado usa responder_acesso_negado com chave=chave depende_de tentar
-    etapa agendar_retentativa usa responder_retentativa com chave=chave depende_de tentar
-    etapa registrar_falha usa registrar_auditoria_falha com chave=chave depende_de tentar
-    etapa concluir usa registrar_sucesso com protocolo=tentar.protocolo depende_de tentar
-  }
-
   task executar_operacao_sensivel {
     input {
       chave: Texto required
@@ -19,8 +10,8 @@ module exemplos.tratamento.erro {
       chave existe e chave deve_ser preenchida
     }
     effects {
-      acessa cofre
-      registra falha
+      consulta cofre
+      auditoria falha_operacao_sensivel
     }
     guarantees {
       protocolo existe
@@ -35,9 +26,11 @@ module exemplos.tratamento.erro {
         given {
           chave: "sem_permissao"
         }
+
         expect {
           sucesso: falso
         }
+
         error {
           tipo: "acesso_negado"
         }
@@ -52,6 +45,10 @@ module exemplos.tratamento.erro {
     output {
       protocolo_resposta: Id
     }
+    effects {
+      notificacao cliente acesso_negado
+      auditoria acesso_negado
+    }
     guarantees {
       protocolo_resposta existe
     }
@@ -60,6 +57,7 @@ module exemplos.tratamento.erro {
         given {
           chave: "sem_permissao"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -74,6 +72,10 @@ module exemplos.tratamento.erro {
     output {
       protocolo_resposta: Id
     }
+    effects {
+      notificacao cliente retentativa_programada
+      auditoria retentativa
+    }
     guarantees {
       protocolo_resposta existe
     }
@@ -82,6 +84,7 @@ module exemplos.tratamento.erro {
         given {
           chave: "instavel"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -96,6 +99,10 @@ module exemplos.tratamento.erro {
     output {
       auditoria_id: Id
     }
+    effects {
+      auditoria falha_operacional
+      persistencia auditoria_falha
+    }
     guarantees {
       auditoria_id existe
     }
@@ -104,6 +111,7 @@ module exemplos.tratamento.erro {
         given {
           chave: "sem_permissao"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -118,6 +126,10 @@ module exemplos.tratamento.erro {
     output {
       registro_id: Id
     }
+    effects {
+      auditoria operacao_concluida
+      evento operacao_sensivel_concluida
+    }
     guarantees {
       registro_id existe
     }
@@ -126,10 +138,20 @@ module exemplos.tratamento.erro {
         given {
           protocolo: "prot_1"
         }
+
         expect {
           sucesso: verdadeiro
         }
       }
     }
+  }
+
+  flow resposta_segura {
+    chave: Texto
+    etapa tentar usa executar_operacao_sensivel com chave = chave em_sucesso concluir em_erro registrar_falha por_erro acesso_negado = tratar_acesso_negado, recurso_indisponivel = agendar_retentativa
+    etapa tratar_acesso_negado usa responder_acesso_negado com chave = chave depende_de tentar
+    etapa agendar_retentativa usa responder_retentativa com chave = chave depende_de tentar
+    etapa registrar_falha usa registrar_auditoria_falha com chave = chave depende_de tentar
+    etapa concluir usa registrar_sucesso com protocolo = tentar.protocolo depende_de tentar
   }
 }

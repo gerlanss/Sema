@@ -1,19 +1,11 @@
 module exemplos.automacao {
   state onboarding_status {
+    origem: automacao
     fields {
       lead_id: Id
       etapa_atual: Texto
       concluido: Booleano
     }
-    origem: automacao
-  }
-
-  flow onboarding_cliente {
-    lead_id: Id
-    email: Email
-    etapa receber usa executar_onboarding com lead_id=lead_id, email=email quando (sucesso existe ou persistencia concluida) em_sucesso auditar em_erro registrar_falha
-    etapa auditar usa registrar_auditoria com protocolo=receber.protocolo depende_de receber
-    etapa registrar_falha usa registrar_falha_onboarding com lead_id=lead_id depende_de receber
   }
 
   task executar_onboarding {
@@ -29,10 +21,10 @@ module exemplos.automacao {
       email deve_ser email_valido
     }
     effects {
-      le crm
-      grava conta
-      envia email
-      registra auditoria
+      consulta crm
+      persistencia conta
+      notificacao email detalhe_boas_vindas
+      auditoria onboarding
     }
     guarantees {
       protocolo existe
@@ -44,6 +36,7 @@ module exemplos.automacao {
           lead_id: "lead_1"
           email: "cliente@empresa.com"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -58,6 +51,9 @@ module exemplos.automacao {
     output {
       auditoria_id: Id
     }
+    effects {
+      auditoria onboarding
+    }
     guarantees {
       auditoria_id existe
     }
@@ -66,6 +62,7 @@ module exemplos.automacao {
         given {
           protocolo: "prot_1"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -80,6 +77,10 @@ module exemplos.automacao {
     output {
       protocolo_falha: Id
     }
+    effects {
+      auditoria falha_onboarding
+      persistencia onboarding_falha
+    }
     guarantees {
       protocolo_falha existe
     }
@@ -88,10 +89,19 @@ module exemplos.automacao {
         given {
           lead_id: "lead_1"
         }
+
         expect {
           sucesso: verdadeiro
         }
       }
     }
+  }
+
+  flow onboarding_cliente {
+    lead_id: Id
+    email: Email
+    etapa receber usa executar_onboarding com lead_id = lead_id, email = email quando (sucesso existe ou persistencia concluida) em_sucesso auditar em_erro registrar_falha
+    etapa auditar usa registrar_auditoria com protocolo = receber.protocolo depende_de receber
+    etapa registrar_falha usa registrar_falha_onboarding com lead_id = lead_id depende_de receber
   }
 }

@@ -1,11 +1,51 @@
 import type { ExpressaoSemantica, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import { normalizarNomeModulo, normalizarNomeParaSimbolo, mapearTipoParaTypeScript, type ArquivoGerado } from "@sema/padroes";
 
+const TIPOS_PRIMITIVOS_SEMA = new Set(["Texto", "Numero", "Inteiro", "Decimal", "Booleano", "Data", "DataHora", "Id", "Email", "Url", "Json", "Vazio"]);
+
 function gerarInterface(nome: string, campos: IrCampo[]): string {
   const propriedades = campos.length === 0
     ? "  // Sem campos declarados.\n"
     : campos.map((campo) => `  ${campo.nome}${campo.modificadores.includes("required") ? "" : "?"}: ${mapearTipoParaTypeScript(campo.tipo)};`).join("\n");
   return `export interface ${nome} {\n${propriedades}\n}\n`;
+}
+
+function gerarLiteralCamposTypeScript(campos: IrCampo[]): string {
+  if (campos.length === 0) {
+    return "[]";
+  }
+  return `[\n${campos.map((campo) => `  { nome: "${campo.nome}", tipo: "${campo.tipo}", obrigatorio: ${campo.modificadores.includes("required") ? "true" : "false"} },`).join("\n")}\n]`;
+}
+
+function coletarTiposExternos(modulo: IrModulo): string[] {
+  const locais = new Set([
+    ...modulo.types.map((item) => item.nome),
+    ...modulo.entities.map((item) => item.nome),
+    ...modulo.enums.map((item) => item.nome),
+  ]);
+  const referenciados = new Set<string>();
+  const campos = [
+    ...modulo.entities.flatMap((entity) => entity.campos),
+    ...modulo.tasks.flatMap((task) => [...task.input, ...task.output]),
+    ...modulo.routes.flatMap((route) => [...route.inputPublico, ...route.outputPublico]),
+    ...modulo.states.flatMap((state) => state.campos),
+  ];
+
+  for (const campo of campos) {
+    if (!TIPOS_PRIMITIVOS_SEMA.has(campo.tipo) && !locais.has(campo.tipo)) {
+      referenciados.add(campo.tipo);
+    }
+  }
+
+  return [...referenciados].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function gerarLiteralErrosTypeScript(erros: Record<string, string>): string {
+  const entradas = Object.entries(erros);
+  if (entradas.length === 0) {
+    return "{}";
+  }
+  return `{\n${entradas.map(([nome, mensagem]) => `  ${JSON.stringify(nome)}: ${JSON.stringify(mensagem)},`).join("\n")}\n}`;
 }
 
 function formatarValorTypeScript(valor: string, camposConhecidos: Set<string>, variavel: string): string {
@@ -149,9 +189,10 @@ function gerarValidacoes(task: IrTask): string {
 }
 
 function gerarGarantias(task: IrTask): string {
-  if (task.guarantees.length === 0) {
-    return "  // Nenhuma garantia declarada.\n  return saida;";
-  }
+  return `  verificar_garantias_${normalizarNomeParaSimbolo(task.nome)}(saida);\n  return saida;`;
+}
+
+function gerarFuncaoGarantias(task: IrTask): string {
   const camposSaida = new Set(task.output.map((campo) => campo.nome));
   const linhas: string[] = [];
   for (const garantia of task.garantiasEstruturadas) {
@@ -167,8 +208,103 @@ function gerarGarantias(task: IrTask): string {
   for (const garantia of task.guarantees.filter((texto) => !task.garantiasEstruturadas.some((estruturada) => estruturada.textoOriginal === texto))) {
     linhas.push(`  // Garantia declarada em Sema: ${garantia}`);
   }
-  linhas.push("  return saida;");
-  return linhas.join("\n");
+  if (linhas.length === 0) {
+    linhas.push("  // Nenhuma garantia declarada.");
+  }
+  return `export function verificar_garantias_${normalizarNomeParaSimbolo(task.nome)}(saida: ${task.nome}Saida): void {\n${linhas.join("\n")}\n}\n`;
+}
+
+function gerarMetadadosTask(task: IrTask): string {
+  const efeitos = task.efeitosEstruturados.length === 0
+    ? "[]"
+    : `[\n${task.efeitosEstruturados.map((efeito) => `  { categoria: "${efeito.categoria}", alvo: "${efeito.alvo}"${efeito.detalhe ? `, detalhe: ${JSON.stringify(efeito.detalhe)}` : ""}${efeito.criticidade ? `, criticidade: "${efeito.criticidade}"` : ""} },`).join("\n")}\n]`;
+
+  return `export const contrato_${normalizarNomeParaSimbolo(task.nome)} = {
+  nome: "${task.nome}",
+  input: ${gerarLiteralCamposTypeScript(task.input)},
+  output: ${gerarLiteralCamposTypeScript(task.output)},
+  effects: ${efeitos},
+  errors: ${gerarLiteralErrosTypeScript(task.errors)},
+  guarantees: ${JSON.stringify(task.guarantees, null, 2)},
+} as const;
+`;
+}
+
+function gerarMapeamentoSaidaPublicaTypeScript(nomeVariavel: string, campos: IrCampo[]): string {
+  if (campos.length === 0) {
+    return "{}";
+  }
+  return `{\n${campos.map((campo) => `      ${campo.nome}: ${nomeVariavel}.${campo.nome},`).join("\n")}\n    }`;
+}
+
+function gerarRotas(modulo: IrModulo): string {
+  const rotasComTask = modulo.routes.filter((route) => route.task);
+  if (rotasComTask.length === 0) {
+    return "";
+  }
+
+  return rotasComTask.map((route) => {
+    const taskAssociada = modulo.tasks.find((task) => task.nome === route.task);
+    if (!taskAssociada) {
+      return "";
+    }
+
+    const nomeSimboloRoute = normalizarNomeParaSimbolo(route.nome);
+    const nomeSimboloTask = normalizarNomeParaSimbolo(taskAssociada.nome);
+    const uniaoErros = route.errosPublicos.length === 0
+      ? "never"
+      : route.errosPublicos.map((erro) => JSON.stringify(erro.nome)).join(" | ");
+    const efeitosPublicos = route.efeitosPublicos.length === 0
+      ? "[]"
+      : `[\n${route.efeitosPublicos.map((efeito) => `  { categoria: "${efeito.categoria}", alvo: "${efeito.alvo}"${efeito.detalhe ? `, detalhe: ${JSON.stringify(efeito.detalhe)}` : ""}${efeito.criticidade ? `, criticidade: "${efeito.criticidade}"` : ""} },`).join("\n")}\n]`;
+    const verificacoesErro = route.errosPublicos.map((erro) => `    if (erro instanceof ${taskAssociada.nome}_${erro.nome}Erro) {
+      return { sucesso: false, erro: { codigo: "${erro.nome}" as ${route.nome}ErroPublico, mensagem: ${JSON.stringify(erro.mensagem ?? taskAssociada.errors[erro.nome] ?? `Erro publico ${erro.nome}`)} } };
+    }`).join("\n");
+
+    return `
+${gerarInterface(`${route.nome}EntradaPublica`, route.inputPublico)}
+${gerarInterface(`${route.nome}SaidaPublica`, route.outputPublico)}
+export type ${route.nome}ErroPublico = ${uniaoErros};
+export type ${route.nome}RespostaPublica =
+  | { sucesso: true; dados: ${route.nome}SaidaPublica }
+  | { sucesso: false; erro: { codigo: ${route.nome}ErroPublico; mensagem: string } };
+
+export const contrato_publico_${nomeSimboloRoute} = {
+  nome: "${route.nome}",
+  metodo: ${JSON.stringify(route.metodo ?? null)},
+  caminho: ${JSON.stringify(route.caminho ?? null)},
+  task: ${JSON.stringify(route.task ?? null)},
+  input: ${gerarLiteralCamposTypeScript(route.inputPublico)},
+  output: ${gerarLiteralCamposTypeScript(route.outputPublico)},
+  effects: ${efeitosPublicos},
+  guarantees: ${JSON.stringify(route.garantiasPublicasMinimas, null, 2)},
+  errors: ${route.errosPublicos.length === 0 ? "[]" : `[\n${route.errosPublicos.map((erro) => `  { nome: "${erro.nome}", mensagem: ${JSON.stringify(erro.mensagem ?? taskAssociada.errors[erro.nome] ?? "")} },`).join("\n")}\n]`},
+} as const;
+
+export function verificar_resposta_publica_${nomeSimboloRoute}(dados: ${route.nome}SaidaPublica): void {
+${route.outputPublico.length === 0
+  ? "  // Route sem campos publicos obrigatorios."
+  : route.outputPublico.map((campo) => campo.modificadores.includes("required")
+      ? `  if (dados.${campo.nome} === undefined || dados.${campo.nome} === null) throw new Error("Resposta publica invalida: campo obrigatorio ausente ${campo.nome}");`
+      : `  // Campo publico opcional: ${campo.nome}`).join("\n")}
+}
+
+export async function adaptar_${nomeSimboloRoute}(requisicao: ${route.nome}EntradaPublica): Promise<${route.nome}RespostaPublica> {
+  try {
+    const saida = await executar_${nomeSimboloTask}(requisicao as ${taskAssociada.nome}Entrada);
+    const dados = ${gerarMapeamentoSaidaPublicaTypeScript("saida", route.outputPublico)} as ${route.nome}SaidaPublica;
+    verificar_resposta_publica_${nomeSimboloRoute}(dados);
+    return {
+      sucesso: true,
+      dados,
+    };
+  } catch (erro) {
+${verificacoesErro || "    throw erro;"}
+    throw erro;
+  }
+}
+`;
+  }).join("\n");
 }
 
 function gerarTask(task: IrTask): string {
@@ -197,17 +333,20 @@ ${gerarInterface(`${task.nome}Entrada`, task.input)}
 ${gerarInterface(`${task.nome}Saida`, task.output)}
 export type ${task.nome}Erro = ${erros.length === 0 ? "never" : erros.map(([erro]) => `"${erro}"`).join(" | ")};
 ${erros.map(([nomeErro, mensagem]) => `export class ${task.nome}_${nomeErro}Erro extends Error {\n  readonly codigo = "${nomeErro}";\n  constructor() {\n    super(${JSON.stringify(mensagem)});\n    this.name = "${task.nome}_${nomeErro}Erro";\n  }\n}\n`).join("\n")}
+${gerarMetadadosTask(task)}
 
 export function validar_${nomeSimbolo}(entrada: ${task.nome}Entrada): void {
 ${gerarValidacoes(task)}
 }
+
+${gerarFuncaoGarantias(task)}
 
 export async function executar_${nomeSimbolo}(entrada: ${task.nome}Entrada): Promise<${task.nome}Saida> {
   validar_${nomeSimbolo}(entrada);
 ${cenariosErro.map((caso) => `  if (JSON.stringify(entrada) === JSON.stringify(${JSON.stringify(caso.entrada)})) throw new ${task.nome}_${caso.tipoErro}Erro();`).join("\n")}
 ${task.stateContract ? `  // Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n  // Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
   // Efeitos declarados:
-${task.efeitosEstruturados.map((efeito) => `  // - acao=${efeito.acao} alvo=${efeito.alvo}${efeito.complemento ? ` complemento=${efeito.complemento}` : ""}`).join("\n") || task.effects.map((efeito) => `  // - ${efeito}`).join("\n") || "  // - Nenhum efeito declarado."}
+${task.efeitosEstruturados.map((efeito) => `  // - categoria=${efeito.categoria} alvo=${efeito.alvo}${efeito.detalhe ? ` detalhe=${efeito.detalhe}` : ""}${efeito.criticidade ? ` criticidade=${efeito.criticidade}` : ""}`).join("\n") || task.effects.map((efeito) => `  // - ${efeito}`).join("\n") || "  // - Nenhum efeito declarado."}
 ${gerarPreparacaoSaida(task)}
 ${gerarGarantias(task)}
 }
@@ -264,6 +403,9 @@ test("${task.nome} :: ${caso.nome}", async () => {
 
 export function gerarTypeScript(modulo: IrModulo): ArquivoGerado[] {
   const nomeBase = normalizarNomeModulo(modulo.nome).replace(/\./g, "_");
+  const tiposExternos = coletarTiposExternos(modulo)
+    .map((tipo) => `export type ${tipo} = any; // Tipo externo referenciado por use ou por contrato compartilhado.\n`)
+    .join("\n");
   const entidades = modulo.entities
     .map((entity) => gerarInterface(entity.nome, entity.campos))
     .join("\n");
@@ -274,14 +416,15 @@ export function gerarTypeScript(modulo: IrModulo): ArquivoGerado[] {
     .map((state) => `// State${state.nome ? ` ${state.nome}` : ""}: campos=${state.campos.length} invariantes=${state.invariantes.length} transicoes=${state.transicoes.length}`)
     .join("\n");
   const flows = modulo.flows
-    .map((flow) => `// Flow ${flow.nome}: etapas=${flow.linhas.length} estruturadas=${flow.etapasEstruturadas.length} tasks=${flow.tasksReferenciadas.join(", ") || flow.etapasEstruturadas.map((etapa) => etapa.task).filter(Boolean).join(", ") || "nenhuma"} ramificacoes=${flow.etapasEstruturadas.filter((etapa) => etapa.emSucesso || etapa.emErro).length} mapeamentos=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.mapeamentos.length, 0)} rotas_erro=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.porErro.length, 0)}`)
+    .map((flow) => `// Flow ${flow.nome}: etapas=${flow.linhas.length} estruturadas=${flow.etapasEstruturadas.length} tasks=${flow.tasksReferenciadas.join(", ") || flow.etapasEstruturadas.map((etapa) => etapa.task).filter(Boolean).join(", ") || "nenhuma"} ramificacoes=${flow.etapasEstruturadas.filter((etapa) => etapa.emSucesso || etapa.emErro).length} mapeamentos=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.mapeamentos.length, 0)} rotas_erro=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.porErro.length, 0)} efeitos=${flow.efeitosEstruturados.map((efeito) => `${efeito.categoria}:${efeito.alvo}`).join(", ") || "nenhum"}`)
     .join("\n");
   const routes = modulo.routes
-    .map((route) => `// Route ${route.nome}: metodo=${route.metodo ?? "nao_definido"} caminho=${route.caminho ?? "nao_definido"} task=${route.task ?? "nao_definida"}`)
+    .map((route) => `// Route ${route.nome}: metodo=${route.metodo ?? "nao_definido"} caminho=${route.caminho ?? "nao_definido"} task=${route.task ?? "nao_definida"} input_publico=${route.inputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} output_publico=${route.outputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} erros_publicos=${route.errosPublicos.map((erro) => erro.nome).join(", ") || "padrao_task"} effects_publicos=${route.efeitosPublicos.map((efeito) => `${efeito.categoria}:${efeito.alvo}`).join(", ") || "nenhum"} garantias_publicas=${route.garantiasPublicasMinimas.length}`)
     .join("\n");
   const tasks = modulo.tasks.map(gerarTask).join("\n");
+  const contratosPublicos = gerarRotas(modulo);
 
-  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n`;
+  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n\n${tiposExternos}\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
   const testes = gerarTestes(modulo);
 
   return [

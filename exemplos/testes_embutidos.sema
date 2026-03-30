@@ -11,7 +11,7 @@ module exemplos.testes.embutidos {
       documento deve_ser preenchido
     }
     effects {
-      registra validacao
+      auditoria validacao_documento
     }
     guarantees {
       valido existe
@@ -20,8 +20,9 @@ module exemplos.testes.embutidos {
     tests {
       caso "documento valido" {
         given {
-          documento: "12345678900"
+          documento: 12345678900
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -30,9 +31,11 @@ module exemplos.testes.embutidos {
         given {
           documento: ""
         }
+
         expect {
           sucesso: falso
         }
+
         error {
           tipo: "entrada_invalida"
         }

@@ -8,13 +8,6 @@ module exemplos.crud.simples {
     }
   }
 
-  route produtos {
-    metodo: POST
-    caminho: /produtos
-    task: criar_produto
-    finalidade: cadastro_produto
-  }
-
   task criar_produto {
     input {
       nome: Texto required
@@ -28,7 +21,8 @@ module exemplos.crud.simples {
       preco deve_ser positivo
     }
     effects {
-      grava Produto
+      persistencia Produto
+      auditoria produto_criado
     }
     guarantees {
       produto existe
@@ -39,6 +33,7 @@ module exemplos.crud.simples {
           nome: "Caneca"
           preco: 39.9
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -59,7 +54,8 @@ module exemplos.crud.simples {
       id deve_ser valido
     }
     effects {
-      atualiza Produto
+      persistencia Produto
+      auditoria produto_atualizado
     }
     guarantees {
       produto existe
@@ -69,10 +65,25 @@ module exemplos.crud.simples {
         given {
           id: "prod_1"
         }
+
         expect {
           sucesso: verdadeiro
         }
       }
+    }
+  }
+
+  route produtos {
+    metodo: POST
+    caminho: /produtos
+    task: criar_produto
+    finalidade: cadastro_produto
+    input {
+      nome: Texto
+      preco: Decimal
+    }
+    output {
+      produto: Produto
     }
   }
 }

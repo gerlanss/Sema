@@ -13,10 +13,12 @@
     "lint": "tsc -b --pretty false",
     "cli": "node pacotes/cli/dist/index.js",
     "dev:cli": "node scripts/dev-cli.mjs",
+    "format:check": "node pacotes/cli/dist/index.js formatar exemplos --check",
+    "ia:preparar-contexto": "node scripts/preparar-contexto-ia.mjs",
     "status:sync": "node scripts/sync-status.mjs",
     "status:check": "node scripts/check-status.mjs",
     "docs:prepare": "npm run status:sync && npm run status:check",
-    "project:check": "npm run status:check && npm test && node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check"
+    "project:check": "npm run status:check && npm test && npm run format:check && node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",

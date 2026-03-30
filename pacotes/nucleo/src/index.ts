@@ -15,6 +15,7 @@ export * from "./semantico/analisador.js";
 export * from "./semantico/estruturas.js";
 export * from "./ir/modelos.js";
 export * from "./ir/conversor.js";
+export * from "./formatador/index.js";
 export * from "./util/arquivos.js";
 
 export interface ResultadoCompilacao {
@@ -49,7 +50,7 @@ export function compilarCodigo(codigo: string, arquivo?: string): ResultadoCompi
   const resultadoSemantico = analisarSemantica(resultadoParser.modulo);
   diagnosticos.push(...resultadoSemantico.diagnosticos);
 
-  const ir = converterParaIr(resultadoParser.modulo, diagnosticos);
+  const ir = converterParaIr(resultadoParser.modulo, diagnosticos, resultadoSemantico.contexto);
 
   return {
     modulo: resultadoParser.modulo,
@@ -104,7 +105,7 @@ export function compilarProjeto(fontes: FonteProjeto[]): ResultadoCompilacaoProj
 
     const resultadoSemantico = analisarSemantica(resultado.modulo, { contextosModulos: contextosLocais });
     const diagnosticos = [...resultado.diagnosticos, ...resultadoSemantico.diagnosticos];
-    const ir = converterParaIr(resultado.modulo, diagnosticos);
+    const ir = converterParaIr(resultado.modulo, diagnosticos, resultadoSemantico.contexto);
 
     return {
       caminho: resultado.caminho,

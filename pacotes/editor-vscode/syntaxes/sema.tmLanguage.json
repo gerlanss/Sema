@@ -1,0 +1,59 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Sema",
+  "scopeName": "source.sema",
+  "patterns": [
+    { "include": "#comentarios" },
+    { "include": "#strings" },
+    { "include": "#keywords" },
+    { "include": "#tipos" },
+    { "include": "#numeros" }
+  ],
+  "repository": {
+    "comentarios": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.sema",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.sema",
+          "begin": "\"",
+          "end": "\""
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.sema",
+          "match": "\\b(module|use|type|entity|enum|task|input|output|rules|effects|guarantees|state|flow|route|tests|error|docs|comments|fields|invariants|transitions|given|when|expect|caso|required|depende_de|em_sucesso|em_erro|por_erro|com|usa)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.sema",
+          "match": "\\b(e|ou|nao|existe|deve_ser|em)\\b"
+        }
+      ]
+    },
+    "tipos": {
+      "patterns": [
+        {
+          "name": "support.type.sema",
+          "match": "\\b(Texto|Numero|Inteiro|Decimal|Booleano|Data|DataHora|Id|Email|Url|Json|Vazio)\\b"
+        }
+      ]
+    },
+    "numeros": {
+      "patterns": [
+        {
+          "name": "constant.numeric.sema",
+          "match": "\\b\\d+(?:\\.\\d+)?\\b"
+        }
+      ]
+    }
+  }
+}

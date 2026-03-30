@@ -1,5 +1,11 @@
 import type { Diagnostico } from "../diagnosticos/index.js";
-import type { EfeitoSemantico, EtapaFlowSemantica, ExpressaoSemantica, TransicaoEstadoSemantica } from "../semantico/estruturas.js";
+import type {
+  ContratoErroRouteSemantico,
+  EfeitoSemantico,
+  EtapaFlowSemantica,
+  ExpressaoSemantica,
+  TransicaoEstadoSemantica,
+} from "../semantico/estruturas.js";
 
 export interface IrCampo {
   nome: string;
@@ -50,6 +56,24 @@ export interface IrTask {
   tests: IrCasoTeste[];
 }
 
+export interface IrErroPublico {
+  nome: string;
+  codigo: string;
+  mensagem?: string;
+  origemTask?: string;
+}
+
+export interface IrRoutePublica {
+  metodo?: string;
+  caminho?: string;
+  task?: string;
+  input: IrCampo[];
+  output: IrCampo[];
+  errors: IrErroPublico[];
+  effects: EfeitoSemantico[];
+  garantiasMinimas: string[];
+}
+
 export interface IrTaskStateContract {
   nomeEstado?: string;
   campos: IrCampo[];
@@ -63,6 +87,8 @@ export interface IrFlow {
   linhas: string[];
   tasksReferenciadas: string[];
   etapasEstruturadas: EtapaFlowSemantica[];
+  effects: string[];
+  efeitosEstruturados: EfeitoSemantico[];
 }
 
 export interface IrRoute {
@@ -72,6 +98,12 @@ export interface IrRoute {
   metodo?: string;
   caminho?: string;
   task?: string;
+  inputPublico: IrCampo[];
+  outputPublico: IrCampo[];
+  errosPublicos: ContratoErroRouteSemantico[];
+  efeitosPublicos: EfeitoSemantico[];
+  garantiasPublicasMinimas: string[];
+  publico: IrRoutePublica;
 }
 
 export interface IrState {

@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import {
   compilarCodigo,
   compilarProjeto,
+  formatarCodigo,
   formatarDiagnosticos,
   lerArquivoTexto,
   listarArquivosSema,
@@ -24,7 +25,8 @@ type Comando =
   | "gerar"
   | "testar"
   | "diagnosticos"
-  | "verificar";
+  | "verificar"
+  | "formatar";
 
 interface ResultadoExecucaoTestes {
   codigoSaida: number;
@@ -45,6 +47,20 @@ interface ResumoModuloVerificacao {
   alvos: ResumoAlvoVerificacao[];
 }
 
+interface SaidaTesteCapturada {
+  codigoSaida: number;
+  quantidadeTestes: number;
+  saidaPadrao: string;
+  saidaErro: string;
+}
+
+interface ResultadoFormatacaoArquivo {
+  caminho: string;
+  alterado: boolean;
+  sucesso: boolean;
+  diagnosticos: ReturnType<typeof compilarCodigo>["diagnosticos"];
+}
+
 function obterArgumentos(): { comando?: Comando; resto: string[] } {
   const [, , comando, ...resto] = process.argv;
   return { comando: comando as Comando | undefined, resto };
@@ -62,7 +78,8 @@ Comandos:
   sema gerar <python|typescript> <arquivo-ou-pasta> --saida <diretorio>
   sema testar <arquivo.sema> --alvo <python|typescript> --saida <diretorio-temporario>
   sema diagnosticos <arquivo.sema> [--json]
-  sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>]
+  sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]
+  sema formatar <arquivo-ou-pasta> [--check] [--json]
 `;
 }
 
@@ -110,6 +127,10 @@ function obterOpcao(args: string[], nome: string, padrao?: string): string | und
   return args[indice + 1] ?? padrao;
 }
 
+function possuiFlag(args: string[], nome: string): boolean {
+  return args.includes(nome);
+}
+
 function garantirIr(resultado: ReturnType<typeof compilarCodigo>, caminho: string): IrModulo {
   if (!resultado.ir) {
     throw new Error(`Nao foi possivel gerar IR para ${caminho}.\n${formatarDiagnosticos(resultado.diagnosticos)}`);
@@ -137,25 +158,58 @@ function contarCasosDeTesteGerados(alvo: string, arquivos: Array<{ caminhoRelati
   return (arquivoTeste.conteudo.match(/\bdef test_/g) ?? []).length;
 }
 
-function executarTestesGerados(alvo: string, baseSaida: string, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): ResultadoExecucaoTestes {
+function executarTestesGerados(
+  alvo: string,
+  baseSaida: string,
+  arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
+  silencioso = false,
+): SaidaTesteCapturada {
   const quantidadeTestes = contarCasosDeTesteGerados(alvo, arquivos);
+  if (quantidadeTestes === 0) {
+    if (!silencioso) {
+      console.log(`Nenhum teste ${alvo === "typescript" ? "TypeScript" : "Python"} foi gerado.`);
+    }
+    return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
+  }
+
   if (alvo === "typescript") {
     const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.endsWith(".test.ts"))?.caminhoRelativo;
     if (!arquivoTeste) {
-      console.log("Nenhum teste TypeScript foi gerado.");
-      return { codigoSaida: 0, quantidadeTestes };
+      if (!silencioso) {
+        console.log("Nenhum teste TypeScript foi gerado.");
+      }
+      return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
     }
-    const execucao = spawnSync("node", ["--import", "tsx", path.join(baseSaida, arquivoTeste)], { stdio: "inherit" });
-    return { codigoSaida: execucao.status ?? 1, quantidadeTestes };
+    const execucao = spawnSync("node", ["--import", "tsx", path.join(baseSaida, arquivoTeste)], {
+      stdio: silencioso ? "pipe" : "inherit",
+      encoding: silencioso ? "utf8" : undefined,
+    });
+    return {
+      codigoSaida: execucao.status ?? 1,
+      quantidadeTestes,
+      saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
+      saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : "",
+    };
   }
 
   const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.startsWith("test_"))?.caminhoRelativo;
   if (!arquivoTeste) {
-    console.log("Nenhum teste Python foi gerado.");
-    return { codigoSaida: 0, quantidadeTestes };
+    if (!silencioso) {
+      console.log("Nenhum teste Python foi gerado.");
+    }
+    return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
   }
-  const execucao = spawnSync("pytest", [arquivoTeste], { stdio: "inherit", cwd: baseSaida });
-  return { codigoSaida: execucao.status ?? 1, quantidadeTestes };
+  const execucao = spawnSync("pytest", [arquivoTeste], {
+    stdio: silencioso ? "pipe" : "inherit",
+    cwd: baseSaida,
+    encoding: silencioso ? "utf8" : undefined,
+  });
+  return {
+    codigoSaida: execucao.status ?? 1,
+    quantidadeTestes,
+    saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
+    saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : "",
+  };
 }
 
 function nomeSubpastaModulo(caminhoArquivo: string): string {
@@ -179,6 +233,22 @@ async function comandoValidar(entrada: string): Promise<number> {
   return temErros(diagnosticos) ? 1 : 0;
 }
 
+async function comandoValidarJson(entrada: string): Promise<number> {
+  const modulos = await carregarModulos(entrada);
+  const resultados = modulos.map((item) => ({
+    caminho: item.caminho,
+    modulo: item.resultado.modulo?.nome ?? null,
+    sucesso: !temErros(item.resultado.diagnosticos),
+    diagnosticos: item.resultado.diagnosticos,
+  }));
+  console.log(JSON.stringify({
+    comando: "validar",
+    sucesso: resultados.every((resultado) => resultado.sucesso),
+    resultados,
+  }, null, 2));
+  return resultados.every((resultado) => resultado.sucesso) ? 0 : 1;
+}
+
 async function comandoAst(arquivo: string): Promise<number> {
   const codigo = await lerArquivoTexto(arquivo);
   const resultado = compilarCodigo(codigo, arquivo);
@@ -186,10 +256,38 @@ async function comandoAst(arquivo: string): Promise<number> {
   return temErros(resultado.diagnosticos) ? 1 : 0;
 }
 
+async function comandoAstJson(arquivo: string): Promise<number> {
+  const codigo = await lerArquivoTexto(arquivo);
+  const resultado = compilarCodigo(codigo, arquivo);
+  console.log(JSON.stringify({
+    comando: "ast",
+    caminho: path.resolve(arquivo),
+    modulo: resultado.modulo?.nome ?? null,
+    sucesso: !temErros(resultado.diagnosticos),
+    diagnosticos: resultado.diagnosticos,
+    ast: resultado.modulo ?? null,
+  }, null, 2));
+  return temErros(resultado.diagnosticos) ? 1 : 0;
+}
+
 async function comandoIr(arquivo: string): Promise<number> {
   const codigo = await lerArquivoTexto(arquivo);
   const resultado = compilarCodigo(codigo, arquivo);
   console.log(JSON.stringify(resultado.ir ?? null, null, 2));
+  return temErros(resultado.diagnosticos) ? 1 : 0;
+}
+
+async function comandoIrJson(arquivo: string): Promise<number> {
+  const codigo = await lerArquivoTexto(arquivo);
+  const resultado = compilarCodigo(codigo, arquivo);
+  console.log(JSON.stringify({
+    comando: "ir",
+    caminho: path.resolve(arquivo),
+    modulo: resultado.modulo?.nome ?? null,
+    sucesso: !temErros(resultado.diagnosticos),
+    diagnosticos: resultado.diagnosticos,
+    ir: resultado.ir ?? null,
+  }, null, 2));
   return temErros(resultado.diagnosticos) ? 1 : 0;
 }
 
@@ -219,6 +317,68 @@ async function comandoDiagnosticos(arquivo: string, emJson: boolean): Promise<nu
     console.log(formatarDiagnosticos(resultado.diagnosticos));
   }
   return temErros(resultado.diagnosticos) ? 1 : 0;
+}
+
+async function comandoFormatar(entrada: string, verificarApenas: boolean, emJson: boolean): Promise<number> {
+  const entradaResolvida = path.resolve(entrada);
+  const estatisticas = await stat(entradaResolvida);
+  const arquivos = estatisticas.isFile() ? [entradaResolvida] : await listarArquivosSema(entradaResolvida);
+  const resultados: ResultadoFormatacaoArquivo[] = [];
+
+  for (const arquivo of arquivos) {
+    const codigo = await lerArquivoTexto(arquivo);
+    const resultado = formatarCodigo(codigo, arquivo);
+    const sucesso = !temErros(resultado.diagnosticos) && Boolean(resultado.codigoFormatado);
+    resultados.push({
+      caminho: arquivo,
+      alterado: resultado.alterado,
+      sucesso,
+      diagnosticos: resultado.diagnosticos,
+    });
+
+    if (sucesso && !verificarApenas && resultado.alterado && resultado.codigoFormatado) {
+      await writeFile(arquivo, resultado.codigoFormatado, "utf8");
+    }
+  }
+
+  const possuiErros = resultados.some((resultado) => !resultado.sucesso);
+  const possuiDiferencas = resultados.some((resultado) => resultado.alterado);
+  const codigoSaida = possuiErros ? 1 : verificarApenas && possuiDiferencas ? 1 : 0;
+
+  if (emJson) {
+    console.log(JSON.stringify({
+      comando: "formatar",
+      sucesso: codigoSaida === 0,
+      modo: verificarApenas ? "check" : "write",
+      arquivos: resultados,
+      totais: {
+        arquivos: resultados.length,
+        alterados: resultados.filter((resultado) => resultado.alterado).length,
+        erros: resultados.filter((resultado) => !resultado.sucesso).length,
+      },
+    }, null, 2));
+    return codigoSaida;
+  }
+
+  if (possuiErros) {
+    console.error(formatarDiagnosticos(resultados.flatMap((resultado) => resultado.diagnosticos)));
+    return 1;
+  }
+
+  if (verificarApenas) {
+    if (possuiDiferencas) {
+      console.error("Arquivos fora do formato canonico:");
+      for (const resultado of resultados.filter((item) => item.alterado)) {
+        console.error(`- ${resultado.caminho}`);
+      }
+      return 1;
+    }
+    console.log("Todos os arquivos ja estao no formato canonico.");
+    return 0;
+  }
+
+  console.log(`Formatacao concluida. Arquivos verificados=${resultados.length} alterados=${resultados.filter((resultado) => resultado.alterado).length}`);
+  return 0;
 }
 
 async function comandoTestar(arquivo: string, alvo: string, saida: string): Promise<number> {
@@ -299,6 +459,71 @@ async function comandoVerificar(entrada: string, baseSaida: string): Promise<num
   return 0;
 }
 
+async function comandoVerificarJson(entrada: string, baseSaida: string): Promise<number> {
+  const modulos = await carregarModulos(entrada);
+  const diagnosticos = modulos.flatMap((item) => item.resultado.diagnosticos);
+  if (temErros(diagnosticos)) {
+    console.log(JSON.stringify({
+      comando: "verificar",
+      sucesso: false,
+      diagnosticos,
+      modulos: [],
+      totais: { modulos: 0, alvos: 0, arquivos: 0, testes: 0 },
+    }, null, 2));
+    return 1;
+  }
+
+  const alvos = ["typescript", "python"] as const;
+  const resumos: Array<ResumoModuloVerificacao & { saidaTestes?: Array<{ alvo: string; stdout: string; stderr: string }> }> = [];
+  let codigoSaida = 0;
+
+  for (const modulo of modulos) {
+    const ir = garantirIr(modulo.resultado, modulo.caminho);
+    const resumoModulo: ResumoModuloVerificacao & { saidaTestes: Array<{ alvo: string; stdout: string; stderr: string }> } = {
+      modulo: ir.nome,
+      arquivoFonte: modulo.caminho,
+      alvos: [],
+      saidaTestes: [],
+    };
+
+    for (const alvo of alvos) {
+      const pastaAlvo = path.join(baseSaida, alvo, nomeSubpastaModulo(modulo.caminho));
+      const arquivos = gerarArquivosPorAlvo(ir, alvo);
+      await escreverArquivos(pastaAlvo, arquivos);
+      const execucao = executarTestesGerados(alvo, pastaAlvo, arquivos, true);
+      resumoModulo.alvos.push({
+        alvo,
+        arquivosGerados: arquivos.length,
+        quantidadeTestes: execucao.quantidadeTestes,
+        pastaSaida: pastaAlvo,
+        sucesso: execucao.codigoSaida === 0,
+      });
+      resumoModulo.saidaTestes.push({ alvo, stdout: execucao.saidaPadrao, stderr: execucao.saidaErro });
+      if (execucao.codigoSaida !== 0) {
+        codigoSaida = execucao.codigoSaida;
+      }
+    }
+
+    resumos.push(resumoModulo);
+  }
+
+  const totais = {
+    modulos: resumos.length,
+    alvos: resumos.reduce((total, resumo) => total + resumo.alvos.length, 0),
+    arquivos: resumos.reduce((total, resumo) => total + resumo.alvos.reduce((subTotal, alvo) => subTotal + alvo.arquivosGerados, 0), 0),
+    testes: resumos.reduce((total, resumo) => total + resumo.alvos.reduce((subTotal, alvo) => subTotal + alvo.quantidadeTestes, 0), 0),
+  };
+
+  console.log(JSON.stringify({
+    comando: "verificar",
+    sucesso: codigoSaida === 0,
+    modulos: resumos,
+    totais,
+  }, null, 2));
+
+  return codigoSaida;
+}
+
 async function principal(): Promise<void> {
   const { comando, resto } = obterArgumentos();
   if (!comando) {
@@ -313,13 +538,19 @@ async function principal(): Promise<void> {
       codigoSaida = await comandoIniciar(cwd);
       break;
     case "validar":
-      codigoSaida = await comandoValidar(resto[0] ?? "exemplos");
+      codigoSaida = possuiFlag(resto, "--json")
+        ? await comandoValidarJson(resto[0] ?? "exemplos")
+        : await comandoValidar(resto[0] ?? "exemplos");
       break;
     case "ast":
-      codigoSaida = await comandoAst(resto[0] ?? "");
+      codigoSaida = possuiFlag(resto, "--json")
+        ? await comandoAstJson(resto[0] ?? "")
+        : await comandoAst(resto[0] ?? "");
       break;
     case "ir":
-      codigoSaida = await comandoIr(resto[0] ?? "");
+      codigoSaida = possuiFlag(resto, "--json")
+        ? await comandoIrJson(resto[0] ?? "")
+        : await comandoIr(resto[0] ?? "");
       break;
     case "compilar":
       codigoSaida = await comandoCompilar(
@@ -346,9 +577,21 @@ async function principal(): Promise<void> {
       );
       break;
     case "verificar":
-      codigoSaida = await comandoVerificar(
+      codigoSaida = possuiFlag(resto, "--json")
+        ? await comandoVerificarJson(
+          resto[0] ?? "exemplos",
+          obterOpcao(resto, "--saida", "./.tmp/sema-verificar") ?? "./.tmp/sema-verificar",
+        )
+        : await comandoVerificar(
+          resto[0] ?? "exemplos",
+          obterOpcao(resto, "--saida", "./.tmp/sema-verificar") ?? "./.tmp/sema-verificar",
+        );
+      break;
+    case "formatar":
+      codigoSaida = await comandoFormatar(
         resto[0] ?? "exemplos",
-        obterOpcao(resto, "--saida", "./.tmp/sema-verificar") ?? "./.tmp/sema-verificar",
+        possuiFlag(resto, "--check"),
+        possuiFlag(resto, "--json"),
       );
       break;
     default:
