@@ -1,10 +1,32 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
 import { compilarProjeto, formatarCodigo, temErros, type Diagnostico } from "@sema/nucleo";
 import { normalizarSegmentoModulo } from "@sema/padroes";
+import { extrairSimbolosCpp } from "./cpp-symbols.js";
+import { extrairRotasDotnet, extrairSimbolosDotnet } from "./dotnet-http.js";
+import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
+import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
+import { extrairParametrosCaminhoFlask, extrairRotasFlaskDecoradas } from "./python-http.js";
+import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
+import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 
-export type FonteImportacao = "nestjs" | "fastapi" | "typescript" | "python" | "dart";
+export type FonteImportacao =
+  | "nestjs"
+  | "fastapi"
+  | "flask"
+  | "nextjs"
+  | "firebase"
+  | "typescript"
+  | "python"
+  | "dart"
+  | "dotnet"
+  | "java"
+  | "go"
+  | "rust"
+  | "cpp";
+
+type OrigemInteropImportada = "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
 
 interface CampoImportado {
   nome: string;
@@ -40,7 +62,7 @@ interface TarefaImportada {
   output: CampoImportado[];
   errors: ErroImportado[];
   effects: EfeitoImportado[];
-  impl?: Partial<Record<"ts" | "py" | "dart", string>>;
+  impl?: Partial<Record<OrigemInteropImportada, string>>;
   origemArquivo: string;
   origemSimbolo: string;
 }
@@ -114,9 +136,13 @@ const DIRETORIOS_IGNORADOS = new Set([
   ".git",
   ".hg",
   ".svn",
+  ".gradle",
+  ".cargo",
   "node_modules",
   "dist",
   "build",
+  "bin",
+  "obj",
   ".next",
   ".nuxt",
   ".dart_tool",
@@ -126,6 +152,8 @@ const DIRETORIOS_IGNORADOS = new Set([
   "coverage",
   ".tmp",
   "generated",
+  "vendor",
+  "ephemeral",
 ]);
 
 const SUFIXOS_WRAPPER = ["Entrada", "Saida", "Dto", "Request", "Response", "Payload", "Body", "Input", "Output"];
@@ -196,11 +224,16 @@ async function listarArquivosRecursivos(
   return encontrados.sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
-function inferirContextoPorArquivo(relacao: string): string[] {
+function inferirContextoPorArquivo(
+  relacao: string,
+  opcoes?: { preservarUltimo?: boolean; snakeCaseUltimo?: boolean },
+): string[] {
   const semExtensao = relacao.replace(/\.[^.]+$/, "");
-  const segmentos = semExtensao.split(path.sep).map((segmento) => paraIdentificadorModulo(segmento)).filter(Boolean);
+  const segmentosOriginais = semExtensao.split(path.sep).filter(Boolean);
+  const segmentos = segmentosOriginais.map((segmento) => paraIdentificadorModulo(segmento)).filter(Boolean);
   if (segmentos[0] === "src" || segmentos[0] === "app") {
     segmentos.shift();
+    segmentosOriginais.shift();
   }
 
   const ultimo = segmentos.at(-1) ?? "";
@@ -213,8 +246,12 @@ function inferirContextoPorArquivo(relacao: string): string[] {
     return ["importado"];
   }
 
-  if (semSufixo && semSufixo !== ultimo) {
+  if (!opcoes?.preservarUltimo && semSufixo && semSufixo !== ultimo) {
     segmentos[segmentos.length - 1] = semSufixo;
+  }
+
+  if (opcoes?.snakeCaseUltimo && segmentos.length > 0) {
+    segmentos[segmentos.length - 1] = paraSnakeCase(segmentosOriginais[segmentosOriginais.length - 1] ?? ultimo);
   }
 
   if (segmentos.length > 1 && segmentos[segmentos.length - 1] === segmentos[segmentos.length - 2]) {
@@ -305,6 +342,66 @@ function mapearTipoPrimitivo(tipo: string): string {
     return minusculo === "void" || minusculo === "none" ? "Vazio" : "Json";
   }
   return tipo.trim();
+}
+
+function limparTipoBackend(tipo: string | undefined): string | undefined {
+  if (!tipo) {
+    return undefined;
+  }
+  return tipo
+    .trim()
+    .replace(/^Task<(.+)>$/i, "$1")
+    .replace(/^ActionResult<(.+)>$/i, "$1")
+    .replace(/^IActionResult$/i, "Json")
+    .replace(/^Results<(.+)>$/i, "$1")
+    .replace(/^ResponseEntity<(.+)>$/i, "$1")
+    .replace(/^Optional<(.+)>$/i, "$1")
+    .replace(/^Result<(.+)>$/i, "$1")
+    .replace(/^impl\s+IntoResponse$/i, "Json")
+    .replace(/^Json<(.+)>$/i, "$1")
+    .replace(/^Option<(.+)>$/i, "$1")
+    .replace(/^Vec<(.+)>$/i, "Json")
+    .replace(/^List<(.+)>$/i, "Json")
+    .replace(/^Map<(.+)>$/i, "Json")
+    .replace(/^Dictionary<(.+)>$/i, "Json");
+}
+
+function mapearTipoBackendParaSema(tipo: string | undefined): string {
+  const limpo = limparTipoBackend(tipo);
+  if (!limpo) {
+    return "Json";
+  }
+  const basico = mapearTipoPrimitivo(limpo);
+  if (basico !== limpo) {
+    return basico;
+  }
+  if (/\[\]$/.test(limpo) || /^(IEnumerable|IReadOnlyList|List|Vec|HashMap|Map|Dictionary)</.test(limpo)) {
+    return "Json";
+  }
+  if (/^(void|unit|\(\)|nil)$/i.test(limpo)) {
+    return "Vazio";
+  }
+  if (/\b(uuid|guid)\b/i.test(limpo)) {
+    return "Id";
+  }
+  return "Json";
+}
+
+function criarCampoResultadoBackend(tipo: string | undefined): CampoImportado[] {
+  const tipoSema = mapearTipoBackendParaSema(tipo);
+  return tipoSema === "Vazio"
+    ? []
+    : [{ nome: "resultado", tipo: tipoSema, obrigatorio: false }];
+}
+
+function camposDeParametrosRotaBackend(
+  parametros: Array<{ nome: string; tipoSema: "Texto" | "Inteiro" | "Decimal" | "Id" }>,
+): CampoImportado[] {
+  return parametros.map((parametro) => ({
+    nome: paraSnakeCase(parametro.nome),
+    tipo: parametro.tipoSema,
+    obrigatorio: true,
+  }));
 }
 
 function pareceWrapperTipo(nome: string): boolean {
@@ -563,6 +660,40 @@ function caminhoImplTs(diretorioBase: string, arquivo: string, simbolo: string):
   return [...segmentos, simbolo].join(".");
 }
 
+function localizarExportacaoTypeScript(
+  sourceFile: ts.SourceFile,
+  nomeExportado: string,
+): { corpo?: ts.Block; retorno?: string; parametros: readonly ts.ParameterDeclaration[] } | undefined {
+  for (const node of sourceFile.statements) {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === nomeExportado && node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+      return {
+        corpo: node.body,
+        retorno: node.type?.getText(sourceFile),
+        parametros: node.parameters,
+      };
+    }
+
+    if (!ts.isVariableStatement(node) || !node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+      continue;
+    }
+
+    for (const declaracao of node.declarationList.declarations) {
+      if (!ts.isIdentifier(declaracao.name) || declaracao.name.text !== nomeExportado || !declaracao.initializer) {
+        continue;
+      }
+      if (ts.isArrowFunction(declaracao.initializer) || ts.isFunctionExpression(declaracao.initializer)) {
+        return {
+          corpo: ts.isBlock(declaracao.initializer.body) ? declaracao.initializer.body : undefined,
+          retorno: declaracao.initializer.type?.getText(sourceFile),
+          parametros: declaracao.initializer.parameters,
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function extrairChamadaServiceTs(node: ts.Node): string | undefined {
   let encontrado: string | undefined;
   const visitar = (atual: ts.Node): void => {
@@ -712,7 +843,7 @@ function renderizarEffects(effects: EfeitoImportado[], indentacao = "  "): strin
   ];
 }
 
-function renderizarImpl(impl: Partial<Record<"ts" | "py" | "dart", string>> | undefined, indentacao = "  "): string[] {
+function renderizarImpl(impl: Partial<Record<OrigemInteropImportada, string>> | undefined, indentacao = "  "): string[] {
   if (!impl || Object.keys(impl).length === 0) {
     return [];
   }
@@ -721,6 +852,11 @@ function renderizarImpl(impl: Partial<Record<"ts" | "py" | "dart", string>> | un
     ...(impl.ts ? [`${indentacao}  ts: ${impl.ts}`] : []),
     ...(impl.py ? [`${indentacao}  py: ${impl.py}`] : []),
     ...(impl.dart ? [`${indentacao}  dart: ${impl.dart}`] : []),
+    ...(impl.cs ? [`${indentacao}  cs: ${impl.cs}`] : []),
+    ...(impl.java ? [`${indentacao}  java: ${impl.java}`] : []),
+    ...(impl.go ? [`${indentacao}  go: ${impl.go}`] : []),
+    ...(impl.rust ? [`${indentacao}  rust: ${impl.rust}`] : []),
+    ...(impl.cpp ? [`${indentacao}  cpp: ${impl.cpp}`] : []),
     `${indentacao}}`,
     "",
   ];
@@ -753,6 +889,9 @@ function renderizarTask(task: TarefaImportada): string[] {
 }
 
 function renderizarRoute(route: RotaImportada): string[] {
+  const caminhoRenderizado = /[{}]/.test(route.caminho)
+    ? `"${escaparTexto(route.caminho)}"`
+    : route.caminho;
   return [
     `  route ${route.nome} {`,
     "    docs {",
@@ -760,7 +899,7 @@ function renderizarRoute(route: RotaImportada): string[] {
     "    }",
     "",
     `    metodo: ${route.metodo}`,
-    `    caminho: ${route.caminho}`,
+    `    caminho: ${caminhoRenderizado}`,
     `    task: ${route.task}`,
     ...renderizarCampos("input", route.input, "    "),
     ...renderizarCampos("output", route.output, "    "),
@@ -1100,6 +1239,236 @@ async function importarTypeScriptBase(
   return [...modulos.values()];
 }
 
+function nomeTaskParaRotaTypeScript(caminho: string, metodo: string): string {
+  const segmentos = caminho
+    .replace(/^\/+|\/+$/g, "")
+    .split("/")
+    .filter(Boolean)
+    .map((segmento) => segmento.replace(/[{}]/g, ""));
+  return paraSnakeCase([...segmentos, metodo.toLowerCase()].join("_")) || `rota_${metodo.toLowerCase()}`;
+}
+
+function camposDeParametrosRotaTypeScript(
+  parametros: ReturnType<typeof extrairRotasTypeScriptHttp>[number]["parametros"],
+): CampoImportado[] {
+  return parametros.map((parametro) => ({
+    nome: paraSnakeCase(parametro.nome),
+    tipo: parametro.tipoSema,
+    obrigatorio: true,
+  }));
+}
+
+function extrairColecoesFirebaseImportacao(texto: string): string[] {
+  const encontrados = new Set<string>();
+
+  for (const match of texto.matchAll(/\b(?:export\s+)?const\s+\w*COLLECTIONS?\w*\s*=\s*\{([\s\S]*?)\n\}/g)) {
+    const corpo = match[1] ?? "";
+    for (const valor of corpo.matchAll(/:\s*["'`]([^"'`]+)["'`]/g)) {
+      encontrados.add(valor[1]!);
+    }
+  }
+
+  return [...encontrados];
+}
+
+async function importarNextJsBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = await listarArquivosRecursivos(diretorio, [".ts", ".tsx", ".js", ".jsx"]);
+  const uteis = arquivos.filter((arquivo) =>
+    !arquivo.endsWith(".spec.ts")
+    && !arquivo.endsWith(".test.ts")
+    && !arquivo.endsWith(".d.ts")
+    && /(\\|\/)(?:src\\|src\/)?app(\\|\/)api(\\|\/).+(\\|\/)route\.(ts|tsx|js|jsx)$/i.test(arquivo));
+
+  const contextos = await Promise.all(uteis.map(async (arquivo) => {
+    const texto = await readFile(arquivo, "utf8");
+    const scriptKind = arquivo.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+    return {
+      sourceFile: ts.createSourceFile(arquivo, texto, ts.ScriptTarget.Latest, true, scriptKind),
+      texto,
+      relacao: path.relative(diretorio, arquivo),
+    };
+  }));
+  const tiposGlobais = consolidarTiposTs(contextos);
+  const modulos = new Map<string, ModuloImportado>();
+
+  for (const contexto of contextos) {
+    const entitiesRef = new Set<string>();
+    const enumsRef = new Set<string>();
+    const contextoSegmentos = inferirContextoPorArquivo(
+      contexto.relacao.replace(/[\\/]route\.(?:ts|tsx|js|jsx)$/i, ""),
+    ).filter((segmento, indice) => !(indice === 0 && segmento === "app"));
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+    const routes: RotaImportada[] = [];
+
+    for (const rota of extrairRotasTypeScriptHttp(contexto.sourceFile, contexto.relacao).filter((item) => item.origem === "nextjs")) {
+      const taskNome = nomeTaskParaRotaTypeScript(rota.caminho, rota.metodo);
+      const exportacao = localizarExportacaoTypeScript(contexto.sourceFile, rota.simbolo);
+      const input = deduplicarCampos(camposDeParametrosRotaTypeScript(rota.parametros));
+      const output = exportacao?.retorno && mapearTipoPrimitivo(exportacao.retorno) === "Vazio"
+        ? []
+        : deduplicarCampos(expandirCamposTs("resultado", exportacao?.retorno, tiposGlobais, entitiesRef, enumsRef, false));
+      const taskOutput = output.length > 0 ? output : [{ nome: "resultado", tipo: "Json", obrigatorio: false }];
+      const resumoBase = `Rota Next.js App Router importada automaticamente de ${contexto.relacao}#${rota.simbolo}.`;
+
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task derivada automaticamente de ${contexto.relacao}#${rota.simbolo}.`,
+        input,
+        output: taskOutput,
+        errors: exportacao?.corpo ? extrairErrosTs(exportacao.corpo, contexto.sourceFile) : [],
+        effects: exportacao?.corpo ? descreverEfeitosPorHeuristica(exportacao.corpo.getText(contexto.sourceFile)) : descreverEfeitosPorHeuristica(contexto.texto),
+        impl: { ts: caminhoImplTs(diretorio, path.join(diretorio, contexto.relacao), rota.simbolo) },
+        origemArquivo: contexto.relacao,
+        origemSimbolo: rota.simbolo,
+      });
+
+      routes.push({
+        nome: `${taskNome}_publico`,
+        resumo: resumoBase,
+        metodo: rota.metodo,
+        caminho: rota.caminho,
+        task: taskNome,
+        input,
+        output: taskOutput,
+        errors: exportacao?.corpo ? extrairErrosTs(exportacao.corpo, contexto.sourceFile) : [],
+      });
+    }
+
+    if (!tasks.length && !routes.length) {
+      continue;
+    }
+
+    sincronizarRotasComTasks(routes, tasks);
+    const { entities, enums } = criarEntidadesReferenciadas(tiposGlobais, entitiesRef, enumsRef);
+    modulos.set(nomeModulo, {
+      nome: nomeModulo,
+      resumo: `Rascunho Sema importado automaticamente de ${contexto.relacao}.`,
+      tasks: deduplicarTarefas(tasks),
+      routes: deduplicarRotas(routes),
+      entities,
+      enums,
+    });
+  }
+
+  return [...modulos.values()];
+}
+
+async function importarFirebaseBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = await listarArquivosRecursivos(diretorio, [".ts", ".tsx", ".js", ".jsx"]);
+  const uteis = arquivos.filter((arquivo) =>
+    !arquivo.endsWith(".spec.ts")
+    && !arquivo.endsWith(".test.ts")
+    && !arquivo.endsWith(".d.ts")
+    && /(sema_contract_bridge|health-check|collections?|firestore)/i.test(arquivo));
+
+  const contextos = await Promise.all(uteis.map(async (arquivo) => {
+    const texto = await readFile(arquivo, "utf8");
+    const scriptKind = arquivo.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+    return {
+      sourceFile: ts.createSourceFile(arquivo, texto, ts.ScriptTarget.Latest, true, scriptKind),
+      texto,
+      relacao: path.relative(diretorio, arquivo),
+    };
+  }));
+  const tiposGlobais = consolidarTiposTs(contextos);
+  const modulos = new Map<string, ModuloImportado>();
+
+  for (const contexto of contextos) {
+    const entitiesRef = new Set<string>();
+    const enumsRef = new Set<string>();
+    const contextoSegmentos = inferirContextoPorArquivo(contexto.relacao);
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+    const routes: RotaImportada[] = [];
+
+    for (const node of contexto.sourceFile.statements) {
+      if (ts.isFunctionDeclaration(node) && node.name && node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+        const nome = node.name.text;
+        const input = node.parameters.flatMap((parametro) =>
+          expandirCamposTs(parametro.name.getText(contexto.sourceFile), parametro.type?.getText(contexto.sourceFile), tiposGlobais, entitiesRef, enumsRef, !parametro.questionToken));
+        const output = node.type?.getText(contexto.sourceFile) && mapearTipoPrimitivo(node.type.getText(contexto.sourceFile)) === "Vazio"
+          ? []
+          : deduplicarCampos(expandirCamposTs("resultado", node.type?.getText(contexto.sourceFile), tiposGlobais, entitiesRef, enumsRef, false));
+        tasks.push({
+          nome: paraSnakeCase(nome.replace(/^sema/, "")) || paraSnakeCase(nome),
+          resumo: `Task Firebase/worker importada automaticamente de ${contexto.relacao}#${nome}.`,
+          input: deduplicarCampos(input),
+          output: output.length > 0 ? output : [{ nome: "resultado", tipo: "Json", obrigatorio: false }],
+          errors: node.body ? extrairErrosTs(node.body, contexto.sourceFile) : [],
+          effects: node.body ? descreverEfeitosPorHeuristica(node.body.getText(contexto.sourceFile)) : descreverEfeitosPorHeuristica(contexto.texto),
+          impl: { ts: caminhoImplTs(diretorio, path.join(diretorio, contexto.relacao), nome) },
+          origemArquivo: contexto.relacao,
+          origemSimbolo: nome,
+        });
+      }
+    }
+
+    for (const rota of extrairRotasTypeScriptHttp(contexto.sourceFile, contexto.relacao).filter((item) => item.origem === "firebase")) {
+      const taskNome = nomeTaskParaRotaTypeScript(rota.caminho, rota.metodo);
+      const exportacao = localizarExportacaoTypeScript(contexto.sourceFile, rota.simbolo);
+      const input = deduplicarCampos(camposDeParametrosRotaTypeScript(rota.parametros));
+      const output = exportacao?.retorno && mapearTipoPrimitivo(exportacao.retorno) === "Vazio"
+        ? []
+        : deduplicarCampos(expandirCamposTs("resultado", exportacao?.retorno, tiposGlobais, entitiesRef, enumsRef, false));
+      const taskOutput = output.length > 0 ? output : [{ nome: "resultado", tipo: "Json", obrigatorio: false }];
+
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task HTTP do worker importada automaticamente de ${contexto.relacao}#${rota.simbolo}.`,
+        input,
+        output: taskOutput,
+        errors: exportacao?.corpo ? extrairErrosTs(exportacao.corpo, contexto.sourceFile) : [],
+        effects: exportacao?.corpo ? descreverEfeitosPorHeuristica(exportacao.corpo.getText(contexto.sourceFile)) : descreverEfeitosPorHeuristica(contexto.texto),
+        impl: { ts: caminhoImplTs(diretorio, path.join(diretorio, contexto.relacao), rota.simbolo) },
+        origemArquivo: contexto.relacao,
+        origemSimbolo: rota.simbolo,
+      });
+
+      routes.push({
+        nome: `${taskNome}_publico`,
+        resumo: `Rota do worker importada automaticamente de ${contexto.relacao}#${rota.simbolo}.`,
+        metodo: rota.metodo,
+        caminho: rota.caminho,
+        task: taskNome,
+        input,
+        output: taskOutput,
+        errors: exportacao?.corpo ? extrairErrosTs(exportacao.corpo, contexto.sourceFile) : [],
+      });
+    }
+
+    for (const colecao of extrairColecoesFirebaseImportacao(contexto.texto)) {
+      tasks.push({
+        nome: paraSnakeCase(`inventariar_${colecao}`),
+        resumo: `Task sintetica para registrar o recurso persistido ${colecao} descoberto em ${contexto.relacao}.`,
+        input: [],
+        output: [{ nome: "colecao", tipo: "Texto", obrigatorio: false }],
+        errors: [],
+        effects: [{ categoria: "persistencia", alvo: colecao, criticidade: "media" }],
+        origemArquivo: contexto.relacao,
+        origemSimbolo: colecao,
+      });
+    }
+
+    if (!tasks.length && !routes.length) {
+      continue;
+    }
+
+    sincronizarRotasComTasks(routes, tasks);
+    const { entities, enums } = criarEntidadesReferenciadas(tiposGlobais, entitiesRef, enumsRef);
+    modulos.set(nomeModulo, {
+      nome: nomeModulo,
+      resumo: `Rascunho Sema importado automaticamente de ${contexto.relacao}.`,
+      tasks: deduplicarTarefas(tasks),
+      routes: deduplicarRotas(routes),
+      entities,
+      enums,
+    });
+  }
+
+  return [...modulos.values()];
+}
+
 function extrairTiposPython(texto: string): Map<string, TipoPythonDescoberto> {
   const encontrados = new Map<string, TipoPythonDescoberto>();
 
@@ -1229,20 +1598,124 @@ function extrairErrosPython(texto: string): ErroImportado[] {
   return [...erros.entries()].map(([nome, mensagem]) => ({ nome, mensagem }));
 }
 
-function caminhoImplPython(diretorioBase: string, arquivo: string, simbolo: string): string {
+function caminhoImplGenerico(
+  diretorioBase: string,
+  arquivo: string,
+  simbolo: string,
+  opcoes?: { snakeCaseUltimoArquivo?: boolean },
+): string {
   const relativo = path.relative(diretorioBase, arquivo).replace(/\.[^.]+$/, "");
-  return [...relativo.split(path.sep).map((segmento) => paraIdentificadorModulo(segmento)).filter(Boolean), simbolo].join(".");
+  const segmentos = relativo.split(path.sep).map((segmento, indice, lista) =>
+    opcoes?.snakeCaseUltimoArquivo && indice === lista.length - 1
+      ? paraSnakeCase(segmento)
+      : paraIdentificadorModulo(segmento))
+    .filter(Boolean);
+  return [...segmentos, simbolo].join(".");
+}
+
+function caminhoImplPython(diretorioBase: string, arquivo: string, simbolo: string): string {
+  return caminhoImplGenerico(diretorioBase, arquivo, simbolo);
 }
 
 function caminhoImplDart(diretorioBase: string, arquivo: string, simbolo: string): string {
-  const relativo = path.relative(diretorioBase, arquivo).replace(/\.[^.]+$/, "");
-  return [...relativo.split(path.sep).map((segmento) => paraIdentificadorModulo(segmento)).filter(Boolean), simbolo].join(".");
+  return caminhoImplGenerico(diretorioBase, arquivo, simbolo);
+}
+
+type ModoHttpPython = "nenhum" | "fastapi" | "flask";
+
+function dividirParametrosPython(parametros: string): string[] {
+  const partes: string[] = [];
+  let atual = "";
+  let profundidade = 0;
+
+  for (const caractere of parametros) {
+    if (caractere === "," && profundidade === 0) {
+      if (atual.trim()) {
+        partes.push(atual.trim());
+      }
+      atual = "";
+      continue;
+    }
+
+    if (["[", "(", "{", "<"].includes(caractere)) {
+      profundidade += 1;
+    } else if (["]", ")", "}", ">"].includes(caractere) && profundidade > 0) {
+      profundidade -= 1;
+    }
+
+    atual += caractere;
+  }
+
+  if (atual.trim()) {
+    partes.push(atual.trim());
+  }
+
+  return partes;
+}
+
+function extrairAssinaturaParametrosPython(parametros: string): Map<string, { tipoTexto?: string; obrigatorio: boolean }> {
+  const assinatura = new Map<string, { tipoTexto?: string; obrigatorio: boolean }>();
+
+  for (const item of dividirParametrosPython(parametros)) {
+    if (!item || item.startsWith("self") || item.startsWith("cls") || item.startsWith("*")) {
+      continue;
+    }
+
+    const obrigatorio = !item.includes("=");
+    const semValorPadrao = item.split("=")[0]?.trim() ?? item.trim();
+    const [nomeBruto, tipo] = semValorPadrao.split(":").map((parte) => parte.trim());
+    const nome = nomeBruto?.replace(/^\*{1,2}/, "").trim();
+    if (!nome) {
+      continue;
+    }
+
+    assinatura.set(nome, {
+      tipoTexto: tipo || undefined,
+      obrigatorio,
+    });
+  }
+
+  return assinatura;
+}
+
+function mapearConversorFlaskParaSema(conversor?: string): string {
+  switch ((conversor ?? "").toLowerCase()) {
+    case "int":
+      return "Inteiro";
+    case "float":
+      return "Decimal";
+    case "uuid":
+      return "Id";
+    case "path":
+    default:
+      return "Texto";
+  }
+}
+
+function criarInputRotaFlask(
+  caminho: string,
+  parametros: string,
+  tiposGlobais: Map<string, TipoPythonDescoberto>,
+  entitiesRef: Set<string>,
+  enumsRef: Set<string>,
+): CampoImportado[] {
+  const assinatura = extrairAssinaturaParametrosPython(parametros);
+  return extrairParametrosCaminhoFlask(caminho).map((parametro) => {
+    const correspondente = assinatura.get(parametro.nome);
+    return {
+      nome: paraSnakeCase(parametro.nome),
+      tipo: correspondente?.tipoTexto
+        ? mapearTipoPythonParaSema(correspondente.tipoTexto, tiposGlobais, entitiesRef, enumsRef)
+        : mapearConversorFlaskParaSema(parametro.conversor),
+      obrigatorio: correspondente?.obrigatorio ?? true,
+    };
+  });
 }
 
 async function importarPythonBase(
   diretorio: string,
   namespaceBase: string,
-  modoFastapi = false,
+  modoHttp: ModoHttpPython = "nenhum",
 ): Promise<ModuloImportado[]> {
   const arquivos = (await listarArquivosRecursivos(diretorio, [".py"]))
     .filter((arquivo) => !arquivo.endsWith("__init__.py") && !/tests?[\\/]/i.test(arquivo));
@@ -1271,7 +1744,7 @@ async function importarPythonBase(
     const tasks: TarefaImportada[] = [];
     const routes: RotaImportada[] = [];
 
-    if (modoFastapi) {
+    if (modoHttp === "fastapi") {
       const prefixo = texto.match(/APIRouter\s*\(\s*prefix\s*=\s*["']([^"']+)["']/)?.[1];
       const routeRegex = /@(?:router|app)\.(get|post|put|patch|delete)\(([^)]*)\)\s*\n(?:async\s+)?def\s+(\w+)\(([^)]*)\)(?:\s*->\s*([^:]+))?:/g;
       for (const match of texto.matchAll(routeRegex)) {
@@ -1303,6 +1776,24 @@ async function importarPythonBase(
           task: taskNome,
           input: deduplicarCampos(routeInput),
           output: routeOutput,
+          errors: [],
+        });
+      }
+    } else if (modoHttp === "flask") {
+      for (const rota of extrairRotasFlaskDecoradas(texto)) {
+        const taskNome = paraSnakeCase(rota.nomeFuncao);
+        const nomeBase = `${taskNome}_publico`;
+        const nome = routes.some((route) => route.nome === nomeBase)
+          ? `${taskNome}_${rota.metodo.toLowerCase()}_publico`
+          : nomeBase;
+        routes.push({
+          nome,
+          resumo: `Rota Flask importada automaticamente de ${relacao}#${rota.nomeFuncao}.`,
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          task: taskNome,
+          input: deduplicarCampos(criarInputRotaFlask(rota.caminho, rota.parametros, tiposGlobais, entitiesRef, enumsRef)),
+          output: [],
           errors: [],
         });
       }
@@ -1417,7 +1908,7 @@ async function importarDartBase(diretorio: string, namespaceBase: string): Promi
     const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
     const tasks: TarefaImportada[] = [];
 
-    for (const match of texto.matchAll(/(?:Future<([^>]+)>|(\w+))\s+(\w+)\(([^)]*)\)\s*\{/g)) {
+    for (const match of texto.matchAll(/(?:Future<([^\n]+)>|([\w?<>.,\s]+))\s+(\w+)\(([^)]*)\)\s*(?:async\s*)?\{/g)) {
       const retorno = (match[1] ?? match[2] ?? "").trim();
       const nome = match[3]!;
       if (["build", "toString", "hashCode"].includes(nome)) {
@@ -1472,6 +1963,435 @@ async function importarDartBase(diretorio: string, namespaceBase: string): Promi
   return modulos;
 }
 
+function criarModuloImportadoSimples(
+  nome: string,
+  resumo: string,
+  tasks: TarefaImportada[],
+  routes: RotaImportada[] = [],
+): ModuloImportado {
+  sincronizarRotasComTasks(routes, tasks);
+  return {
+    nome,
+    resumo,
+    tasks: deduplicarTarefas(tasks),
+    routes: deduplicarRotas(routes),
+    entities: [],
+    enums: [],
+  };
+}
+
+function acumularModuloImportado(
+  modulos: Map<string, ModuloImportado>,
+  modulo: ModuloImportado,
+): void {
+  const existente = modulos.get(modulo.nome);
+  if (!existente) {
+    modulos.set(modulo.nome, modulo);
+    return;
+  }
+
+  existente.tasks = deduplicarTarefas([...existente.tasks, ...modulo.tasks]);
+  existente.routes = deduplicarRotas([...existente.routes, ...modulo.routes]);
+  existente.entities = deduplicarEntidades([...existente.entities, ...modulo.entities]);
+  existente.enums = deduplicarEnums([...existente.enums, ...modulo.enums]);
+}
+
+function selecionarSimbolosPreferidos<T extends { simbolo: string }>(simbolos: T[]): T[] {
+  const mapa = new Map<string, T>();
+  for (const simbolo of simbolos) {
+    const chave = simbolo.simbolo.split(".").at(-1) ?? simbolo.simbolo;
+    const existente = mapa.get(chave);
+    if (!existente) {
+      mapa.set(chave, simbolo);
+      continue;
+    }
+    const pontuacaoAtual = simbolo.simbolo.split(".").length;
+    const pontuacaoExistente = existente.simbolo.split(".").length;
+    if (pontuacaoAtual > pontuacaoExistente) {
+      mapa.set(chave, simbolo);
+    }
+  }
+  return [...mapa.values()];
+}
+
+async function existeArquivo(caminho: string): Promise<boolean> {
+  try {
+    await access(caminho);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolverArquivoRustParaSimbolo(
+  diretorio: string,
+  relacaoFonte: string,
+  simbolo: string,
+): Promise<string> {
+  const partes = simbolo.split(".").filter(Boolean);
+  if (partes.length <= 1) {
+    return path.join(diretorio, relacaoFonte);
+  }
+
+  const moduloPartes = partes.slice(0, -1);
+  const baseAtual = path.dirname(relacaoFonte);
+  const candidatos = [
+    path.join(baseAtual, ...moduloPartes) + ".rs",
+    path.join(baseAtual, ...moduloPartes, "mod.rs"),
+    path.join("src", ...moduloPartes) + ".rs",
+    path.join("src", ...moduloPartes, "mod.rs"),
+  ];
+
+  for (const candidato of candidatos) {
+    const absoluto = path.join(diretorio, candidato);
+    if (await existeArquivo(absoluto)) {
+      return absoluto;
+    }
+  }
+
+  return path.join(diretorio, relacaoFonte);
+}
+
+async function importarDotnetBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = (await listarArquivosRecursivos(diretorio, [".cs"]))
+    .filter((arquivo) => !/(^|[\\/])(bin|obj|Test[s]?)([\\/]|$)/i.test(arquivo));
+  const modulos = new Map<string, ModuloImportado>();
+
+  for (const arquivo of arquivos) {
+    const texto = await readFile(arquivo, "utf8");
+    const relacao = path.relative(diretorio, arquivo);
+    const contextoSegmentos = inferirContextoPorArquivo(relacao, { preservarUltimo: true, snakeCaseUltimo: true });
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+    const routes: RotaImportada[] = [];
+
+    for (const simbolo of extrairSimbolosDotnet(texto)) {
+      const taskNome = paraSnakeCase(simbolo.simbolo.split(".").at(-1) ?? simbolo.simbolo);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task importada automaticamente de ${relacao}#${simbolo.simbolo}.`,
+        input: simbolo.parametros.map((parametro) => ({
+          nome: paraSnakeCase(parametro.nome),
+          tipo: mapearTipoBackendParaSema(parametro.tipoTexto),
+          obrigatorio: parametro.obrigatorio,
+        })),
+        output: criarCampoResultadoBackend(simbolo.retorno),
+        errors: [],
+        effects: descreverEfeitosPorHeuristica(texto),
+        impl: { cs: caminhoImplGenerico(diretorio, arquivo, simbolo.simbolo, { snakeCaseUltimoArquivo: true }) },
+        origemArquivo: relacao,
+        origemSimbolo: simbolo.simbolo,
+      });
+    }
+
+    for (const rota of extrairRotasDotnet(texto)) {
+      const taskNome = paraSnakeCase(rota.simbolo.split(".").at(-1) ?? rota.simbolo);
+      const output = criarCampoResultadoBackend(rota.retorno);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task HTTP ASP.NET Core importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output,
+        errors: [],
+        effects: [{ categoria: "consulta", alvo: "http", criticidade: "media" }],
+        impl: { cs: caminhoImplGenerico(diretorio, arquivo, rota.simbolo, { snakeCaseUltimoArquivo: true }) },
+        origemArquivo: relacao,
+        origemSimbolo: rota.simbolo,
+      });
+      routes.push({
+        nome: `${taskNome}_publico`,
+        resumo: `Rota ASP.NET Core importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        metodo: rota.metodo,
+        caminho: rota.caminho,
+        task: taskNome,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output,
+        errors: [],
+      });
+    }
+
+    if (tasks.length === 0 && routes.length === 0) {
+      continue;
+    }
+
+    acumularModuloImportado(modulos, criarModuloImportadoSimples(
+      nomeModulo,
+      `Rascunho Sema importado automaticamente de ${relacao}.`,
+      tasks,
+      routes,
+    ));
+  }
+
+  return [...modulos.values()];
+}
+
+async function importarJavaBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = (await listarArquivosRecursivos(diretorio, [".java"]))
+    .filter((arquivo) => !/(^|[\\/])(target|build|out|Test[s]?)([\\/]|$)/i.test(arquivo));
+  const modulos = new Map<string, ModuloImportado>();
+
+  for (const arquivo of arquivos) {
+    const texto = await readFile(arquivo, "utf8");
+    const relacao = path.relative(diretorio, arquivo);
+    const contextoSegmentos = inferirContextoPorArquivo(relacao, { preservarUltimo: true, snakeCaseUltimo: true });
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+    const routes: RotaImportada[] = [];
+
+    for (const simbolo of extrairSimbolosJava(texto)) {
+      const taskNome = paraSnakeCase(simbolo.simbolo.split(".").at(-1) ?? simbolo.simbolo);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task importada automaticamente de ${relacao}#${simbolo.simbolo}.`,
+        input: simbolo.parametros.map((parametro) => ({
+          nome: paraSnakeCase(parametro.nome),
+          tipo: mapearTipoBackendParaSema(parametro.tipoTexto),
+          obrigatorio: parametro.obrigatorio,
+        })),
+        output: criarCampoResultadoBackend(simbolo.retorno),
+        errors: [],
+        effects: descreverEfeitosPorHeuristica(texto),
+        impl: { java: caminhoImplGenerico(diretorio, arquivo, simbolo.simbolo, { snakeCaseUltimoArquivo: true }) },
+        origemArquivo: relacao,
+        origemSimbolo: simbolo.simbolo,
+      });
+    }
+
+    for (const rota of extrairRotasJava(texto)) {
+      const taskNome = paraSnakeCase(rota.simbolo.split(".").at(-1) ?? rota.simbolo);
+      const output = criarCampoResultadoBackend(rota.retorno);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task HTTP Spring Boot importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output,
+        errors: [],
+        effects: [{ categoria: "consulta", alvo: "http", criticidade: "media" }],
+        impl: { java: caminhoImplGenerico(diretorio, arquivo, rota.simbolo, { snakeCaseUltimoArquivo: true }) },
+        origemArquivo: relacao,
+        origemSimbolo: rota.simbolo,
+      });
+      routes.push({
+        nome: `${taskNome}_publico`,
+        resumo: `Rota Spring Boot importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        metodo: rota.metodo,
+        caminho: rota.caminho,
+        task: taskNome,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output,
+        errors: [],
+      });
+    }
+
+    if (tasks.length === 0 && routes.length === 0) {
+      continue;
+    }
+
+    acumularModuloImportado(modulos, criarModuloImportadoSimples(
+      nomeModulo,
+      `Rascunho Sema importado automaticamente de ${relacao}.`,
+      tasks,
+      routes,
+    ));
+  }
+
+  return [...modulos.values()];
+}
+
+async function importarGoBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = await listarArquivosRecursivos(diretorio, [".go"]);
+  const modulos = new Map<string, ModuloImportado>();
+
+  for (const arquivo of arquivos) {
+    const texto = await readFile(arquivo, "utf8");
+    const relacao = path.relative(diretorio, arquivo);
+    const contextoSegmentos = inferirContextoPorArquivo(relacao);
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+    const routes: RotaImportada[] = [];
+
+    for (const simbolo of extrairSimbolosGo(texto)) {
+      const taskNome = paraSnakeCase(simbolo.simbolo.split(".").at(-1) ?? simbolo.simbolo);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task importada automaticamente de ${relacao}#${simbolo.simbolo}.`,
+        input: simbolo.parametros.map((parametro) => ({
+          nome: paraSnakeCase(parametro.nome),
+          tipo: mapearTipoBackendParaSema(parametro.tipoTexto),
+          obrigatorio: parametro.obrigatorio,
+        })),
+        output: criarCampoResultadoBackend(simbolo.retorno),
+        errors: [],
+        effects: descreverEfeitosPorHeuristica(texto),
+        impl: { go: caminhoImplGenerico(diretorio, arquivo, simbolo.simbolo) },
+        origemArquivo: relacao,
+        origemSimbolo: simbolo.simbolo,
+      });
+    }
+
+    for (const rota of extrairRotasGo(texto)) {
+      const taskNome = paraSnakeCase(rota.simbolo.split(".").at(-1) ?? rota.simbolo);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task HTTP Go importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output: [{ nome: "resultado", tipo: "Json", obrigatorio: false }],
+        errors: [],
+        effects: [{ categoria: "consulta", alvo: "http", criticidade: "media" }],
+        impl: { go: caminhoImplGenerico(diretorio, arquivo, rota.simbolo) },
+        origemArquivo: relacao,
+        origemSimbolo: rota.simbolo,
+      });
+      routes.push({
+        nome: `${taskNome}_publico`,
+        resumo: `Rota Go importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        metodo: rota.metodo,
+        caminho: rota.caminho,
+        task: taskNome,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output: [{ nome: "resultado", tipo: "Json", obrigatorio: false }],
+        errors: [],
+      });
+    }
+
+    if (tasks.length === 0 && routes.length === 0) {
+      continue;
+    }
+
+    modulos.set(nomeModulo, criarModuloImportadoSimples(
+      nomeModulo,
+      `Rascunho Sema importado automaticamente de ${relacao}.`,
+      tasks,
+      routes,
+    ));
+  }
+
+  return [...modulos.values()];
+}
+
+async function importarRustBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = await listarArquivosRecursivos(diretorio, [".rs"]);
+  const modulos = new Map<string, ModuloImportado>();
+
+  for (const arquivo of arquivos) {
+    const texto = await readFile(arquivo, "utf8");
+    const relacao = path.relative(diretorio, arquivo);
+    const contextoSegmentos = inferirContextoPorArquivo(relacao);
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+    const routes: RotaImportada[] = [];
+
+    for (const simbolo of extrairSimbolosRust(texto)) {
+      const taskNome = paraSnakeCase(simbolo.simbolo.split(".").at(-1) ?? simbolo.simbolo);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task importada automaticamente de ${relacao}#${simbolo.simbolo}.`,
+        input: simbolo.parametros.map((parametro) => ({
+          nome: paraSnakeCase(parametro.nome),
+          tipo: mapearTipoBackendParaSema(parametro.tipoTexto),
+          obrigatorio: parametro.obrigatorio,
+        })),
+        output: criarCampoResultadoBackend(simbolo.retorno),
+        errors: [],
+        effects: descreverEfeitosPorHeuristica(texto),
+        impl: { rust: caminhoImplGenerico(diretorio, arquivo, simbolo.simbolo) },
+        origemArquivo: relacao,
+        origemSimbolo: simbolo.simbolo,
+      });
+    }
+
+    acumularModuloImportado(modulos, criarModuloImportadoSimples(
+      nomeModulo,
+      `Rascunho Sema importado automaticamente de ${relacao}.`,
+      tasks,
+      routes,
+    ));
+
+    for (const rota of extrairRotasRust(texto)) {
+      const simboloLimpo = rota.simbolo.replace(/::/g, ".");
+      const nomeSimbolo = simboloLimpo.split(".").at(-1) ?? simboloLimpo;
+      const arquivoAlvo = await resolverArquivoRustParaSimbolo(diretorio, relacao, simboloLimpo);
+      const relacaoAlvo = path.relative(diretorio, arquivoAlvo);
+      const moduloAlvo = [namespaceBase, ...inferirContextoPorArquivo(relacaoAlvo)].join(".");
+      const taskNome = paraSnakeCase(rota.simbolo.split(".").at(-1) ?? rota.simbolo);
+      const task: TarefaImportada = {
+        nome: taskNome,
+        resumo: `Task HTTP Axum importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output: [{ nome: "resultado", tipo: "Json", obrigatorio: false }],
+        errors: [],
+        effects: [{ categoria: "consulta", alvo: "http", criticidade: "media" }],
+        impl: { rust: caminhoImplGenerico(diretorio, arquivoAlvo, nomeSimbolo) },
+        origemArquivo: relacaoAlvo,
+        origemSimbolo: nomeSimbolo,
+      };
+      const route: RotaImportada = {
+        nome: `${taskNome}_publico`,
+        resumo: `Rota Axum importada automaticamente de ${relacao}#${rota.simbolo}.`,
+        metodo: rota.metodo,
+        caminho: rota.caminho,
+        task: taskNome,
+        input: camposDeParametrosRotaBackend(rota.parametros),
+        output: [{ nome: "resultado", tipo: "Json", obrigatorio: false }],
+        errors: [],
+      };
+      acumularModuloImportado(modulos, criarModuloImportadoSimples(
+        moduloAlvo,
+        `Rascunho Sema importado automaticamente de ${relacaoAlvo}.`,
+        [task],
+        [route],
+      ));
+    }
+  }
+
+  return [...modulos.values()];
+}
+
+async function importarCppBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = (await listarArquivosRecursivos(diretorio, [".cpp", ".cc", ".cxx", ".hpp", ".h"]))
+    .filter((arquivo) => !/(^|[\\/])(windows|linux|macos|runner|flutter|ephemeral|build|vendor)([\\/]|$)/i.test(arquivo));
+  const modulos = new Map<string, ModuloImportado>();
+
+  for (const arquivo of arquivos) {
+    const texto = await readFile(arquivo, "utf8");
+    const relacao = path.relative(diretorio, arquivo);
+    const contextoSegmentos = inferirContextoPorArquivo(relacao);
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+
+    for (const simbolo of selecionarSimbolosPreferidos(extrairSimbolosCpp(texto))) {
+      const taskNome = paraSnakeCase(simbolo.simbolo.split(".").at(-1) ?? simbolo.simbolo);
+      tasks.push({
+        nome: taskNome,
+        resumo: `Task importada automaticamente de ${relacao}#${simbolo.simbolo}.`,
+        input: simbolo.parametros.map((parametro) => ({
+          nome: paraSnakeCase(parametro.nome),
+          tipo: mapearTipoBackendParaSema(parametro.tipoTexto),
+          obrigatorio: parametro.obrigatorio,
+        })),
+        output: [{ nome: "resultado", tipo: "Json", obrigatorio: false }],
+        errors: [],
+        effects: descreverEfeitosPorHeuristica(texto),
+        impl: { cpp: caminhoImplGenerico(diretorio, arquivo, simbolo.simbolo) },
+        origemArquivo: relacao,
+        origemSimbolo: simbolo.simbolo,
+      });
+    }
+
+    if (tasks.length === 0) {
+      continue;
+    }
+
+    acumularModuloImportado(modulos, criarModuloImportadoSimples(
+      nomeModulo,
+      `Rascunho Sema importado automaticamente de ${relacao}.`,
+      tasks,
+    ));
+  }
+
+  return [...modulos.values()];
+}
+
 export async function importarProjetoLegado(
   fonte: FonteImportacao,
   diretorio: string,
@@ -1483,14 +2403,30 @@ export async function importarProjetoLegado(
   let modulos: ModuloImportado[] = [];
   if (fonte === "nestjs") {
     modulos = await importarTypeScriptBase(base, namespace, true);
+  } else if (fonte === "nextjs") {
+    modulos = await importarNextJsBase(base, namespace);
+  } else if (fonte === "firebase") {
+    modulos = await importarFirebaseBase(base, namespace);
   } else if (fonte === "typescript") {
     modulos = await importarTypeScriptBase(base, namespace, false);
   } else if (fonte === "fastapi") {
-    modulos = await importarPythonBase(base, namespace, true);
+    modulos = await importarPythonBase(base, namespace, "fastapi");
+  } else if (fonte === "flask") {
+    modulos = await importarPythonBase(base, namespace, "flask");
   } else if (fonte === "python") {
-    modulos = await importarPythonBase(base, namespace, false);
+    modulos = await importarPythonBase(base, namespace, "nenhum");
   } else if (fonte === "dart") {
     modulos = await importarDartBase(base, namespace);
+  } else if (fonte === "dotnet") {
+    modulos = await importarDotnetBase(base, namespace);
+  } else if (fonte === "java") {
+    modulos = await importarJavaBase(base, namespace);
+  } else if (fonte === "go") {
+    modulos = await importarGoBase(base, namespace);
+  } else if (fonte === "rust") {
+    modulos = await importarRustBase(base, namespace);
+  } else if (fonte === "cpp") {
+    modulos = await importarCppBase(base, namespace);
   }
 
   const arquivos: ArquivoImportado[] = [];

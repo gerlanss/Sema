@@ -4,16 +4,23 @@ import ts from "typescript";
 import type { IrRoute, IrTask } from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
 import type { FonteLegado } from "./tipos.js";
+import { extrairSimbolosCpp } from "./cpp-symbols.js";
+import { extrairRotasDotnet, extrairSimbolosDotnet } from "./dotnet-http.js";
+import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
+import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
+import { contarIndentacaoPython, extrairRotasFlaskDecoradas, normalizarCaminhoFlask } from "./python-http.js";
+import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
+import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 
 interface SimboloResolvido {
-  origem: "ts" | "py" | "dart";
+  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   arquivo: string;
   simbolo: string;
 }
 
 interface RotaResolvida {
-  origem: "nestjs" | "fastapi";
+  origem: "nestjs" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust";
   metodo: string;
   caminho: string;
   arquivo: string;
@@ -21,7 +28,7 @@ interface RotaResolvida {
 }
 
 export interface DiagnosticoDrift {
-  tipo: "impl_quebrado" | "task_sem_impl" | "rota_divergente";
+  tipo: "impl_quebrado" | "task_sem_impl" | "rota_divergente" | "recurso_divergente";
   modulo: string;
   task?: string;
   route?: string;
@@ -31,7 +38,7 @@ export interface DiagnosticoDrift {
 interface RegistroImplDrift {
   modulo: string;
   task: string;
-  origem: "ts" | "py" | "dart";
+  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   arquivo?: string;
   simbolo?: string;
@@ -48,8 +55,27 @@ interface RegistroRotaDivergente {
   motivo: string;
 }
 
+interface RecursoResolvido {
+  origem: "firebase";
+  nome: string;
+  arquivo: string;
+  simbolo?: string;
+  tipo: "colecao";
+}
+
+interface RegistroRecursoDrift {
+  modulo: string;
+  task: string;
+  categoria: "persistencia";
+  alvo: string;
+  arquivo: string;
+  origem: "firebase";
+  tipo: "colecao";
+  status: "resolvido" | "divergente";
+}
+
 interface SimboloCandidatoDrift {
-  origem: "ts" | "py" | "dart";
+  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   arquivo: string;
   simbolo: string;
@@ -82,6 +108,8 @@ export interface ResultadoDrift {
   impls_validos: RegistroImplDrift[];
   impls_quebrados: RegistroImplDrift[];
   rotas_divergentes: RegistroRotaDivergente[];
+  recursos_validos: RegistroRecursoDrift[];
+  recursos_divergentes: RegistroRecursoDrift[];
   diagnosticos: DiagnosticoDrift[];
 }
 
@@ -192,24 +220,105 @@ function caminhosSimbolicos(baseDiretorio: string, arquivo: string): string[] {
   return [...new Set([semPrefixo, comPrefixo].filter(Boolean))];
 }
 
-async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+function registrarSimboloTypeScript(
+  simbolos: Map<string, SimboloResolvido>,
+  basesSimbolicas: string[],
+  arquivo: string,
+  nome: string,
+  nomeClasse?: string,
+): void {
+  for (const baseSimbolica of basesSimbolicas) {
+    const caminho = nomeClasse
+      ? `${baseSimbolica}.${nomeClasse}.${nome}`
+      : `${baseSimbolica}.${nome}`;
+    simbolos.set(caminho, {
+      origem: "ts",
+      caminho,
+      arquivo,
+      simbolo: nomeClasse ? `${nomeClasse}.${nome}` : nome,
+    });
+  }
+}
+
+function extrairColecoesFirebase(arquivo: string, codigo: string): RecursoResolvido[] {
+  const recursos = new Map<string, RecursoResolvido>();
+  const registrar = (nome: string) => {
+    if (!nome) {
+      return;
+    }
+    recursos.set(`${nome}:${arquivo}`, {
+      origem: "firebase",
+      nome,
+      arquivo,
+      tipo: "colecao",
+    });
+  };
+
+  for (const match of codigo.matchAll(/\b(?:export\s+)?const\s+\w*COLLECTIONS?\w*\s*=\s*\{([\s\S]*?)\n\}/g)) {
+    const corpo = match[1] ?? "";
+    for (const valor of corpo.matchAll(/:\s*["'`]([^"'`]+)["'`]/g)) {
+      registrar(valor[1]!);
+    }
+  }
+
+  for (const match of codigo.matchAll(/\b(?:db\.)?collection\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g)) {
+    registrar(match[1]!);
+  }
+
+  for (const match of codigo.matchAll(/\bdoc\s*\(\s*[^,]+,\s*["'`]([^"'`]+)["'`]/g)) {
+    registrar(match[1]!);
+  }
+
+  return [...recursos.values()];
+}
+
+async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".ts"]))
-      .filter((arquivo) => !arquivo.endsWith(".d.ts") && !arquivo.endsWith(".spec.ts") && !arquivo.endsWith(".test.ts"));
+    const arquivos = (await listarArquivosRecursivos(diretorio, [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]))
+      .filter((arquivo) =>
+        !arquivo.endsWith(".d.ts")
+        && !arquivo.endsWith(".spec.ts")
+        && !arquivo.endsWith(".test.ts"),
+      );
 
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
-      const sourceFile = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+      const scriptKind = arquivo.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+      const sourceFile = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKind);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      const relacao = path.relative(diretorio, arquivo);
+
+      for (const recurso of extrairColecoesFirebase(arquivo, codigo)) {
+        recursos.set(`${recurso.nome}:${recurso.arquivo}:${recurso.tipo}`, recurso);
+      }
+
+      for (const rota of extrairRotasTypeScriptHttp(sourceFile, relacao)) {
+        rotas.push({
+          origem: rota.origem,
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          arquivo,
+          simbolo: rota.simbolo,
+        });
+      }
 
       for (const node of sourceFile.statements) {
         if (ts.isFunctionDeclaration(node) && node.name && node.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) {
-          for (const baseSimbolica of basesSimbolicas) {
-            const caminho = `${baseSimbolica}.${node.name.text}`;
-            simbolos.set(caminho, { origem: "ts", caminho, arquivo, simbolo: node.name.text });
+          registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, node.name.text);
+        }
+
+        if (ts.isVariableStatement(node) && node.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) {
+          for (const declaracao of node.declarationList.declarations) {
+            if (!ts.isIdentifier(declaracao.name) || !declaracao.initializer) {
+              continue;
+            }
+            if (ts.isArrowFunction(declaracao.initializer) || ts.isFunctionExpression(declaracao.initializer)) {
+              registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, declaracao.name.text);
+            }
           }
         }
 
@@ -233,10 +342,8 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
             continue;
           }
 
+          registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, nomeMetodo, node.name.text);
           for (const baseSimbolica of basesSimbolicas) {
-            const caminhoClasse = `${baseSimbolica}.${node.name.text}.${nomeMetodo}`;
-            simbolos.set(caminhoClasse, { origem: "ts", caminho: caminhoClasse, arquivo, simbolo: `${node.name.text}.${nomeMetodo}` });
-
             const caminhoMetodoDireto = `${baseSimbolica}.${nomeMetodo}`;
             if (!simbolos.has(caminhoMetodoDireto)) {
               simbolos.set(caminhoMetodoDireto, { origem: "ts", caminho: caminhoMetodoDireto, arquivo, simbolo: nomeMetodo });
@@ -260,29 +367,13 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
     }
   }
 
-  return { simbolos: [...simbolos.values()], rotas };
+  return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
 interface BlocoPython {
   tipo: "class" | "def";
   nome: string;
   indentacao: number;
-}
-
-function contarIndentacaoPython(linha: string): number {
-  let total = 0;
-  for (const caractere of linha) {
-    if (caractere === " ") {
-      total += 1;
-      continue;
-    }
-    if (caractere === "\t") {
-      total += 4;
-      continue;
-    }
-    break;
-  }
-  return total;
 }
 
 function registrarSimboloPython(
@@ -341,6 +432,15 @@ async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloR
       const texto = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       const prefixo = texto.match(/APIRouter\s*\(\s*prefix\s*=\s*["']([^"']+)["']/)?.[1];
+      for (const rota of extrairRotasFlaskDecoradas(texto)) {
+        rotas.push({
+          origem: "flask",
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          arquivo,
+          simbolo: rota.nomeFuncao,
+        });
+      }
       const blocos: BlocoPython[] = [];
       let decoratorsPendentes: string[] = [];
 
@@ -405,7 +505,7 @@ async function indexarDart(diretorios: string[]): Promise<SimboloResolvido[]> {
       const texto = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
 
-      for (const match of texto.matchAll(/(?:Future<[^>]+>|[\w?<>]+)\s+(\w+)\(([^)]*)\)\s*\{/g)) {
+      for (const match of texto.matchAll(/(?:Future<[^\n]+>|[\w?<>.,\s]+)\s+(\w+)\(([^)]*)\)\s*(?:async\s*)?\{/g)) {
         const nome = match[1]!;
         if (["build", "toString"].includes(nome)) {
           continue;
@@ -421,14 +521,188 @@ async function indexarDart(diretorios: string[]): Promise<SimboloResolvido[]> {
   return [...simbolos.values()];
 }
 
+function registrarSimboloGenerico(
+  simbolos: Map<string, SimboloResolvido>,
+  origem: SimboloResolvido["origem"],
+  basesSimbolicas: string[],
+  arquivo: string,
+  simbolo: string,
+): void {
+  for (const baseSimbolica of basesSimbolicas) {
+    const caminho = `${baseSimbolica}.${simbolo}`;
+    simbolos.set(caminho, {
+      origem,
+      caminho,
+      arquivo,
+      simbolo,
+    });
+
+    const ultimo = simbolo.split(".").at(-1);
+    if (ultimo) {
+      const caminhoDireto = `${baseSimbolica}.${ultimo}`;
+      if (!simbolos.has(caminhoDireto)) {
+        simbolos.set(caminhoDireto, {
+          origem,
+          caminho: caminhoDireto,
+          arquivo,
+          simbolo: ultimo,
+        });
+      }
+    }
+  }
+}
+
+async function indexarDotnet(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+  const simbolos = new Map<string, SimboloResolvido>();
+  const rotas: RotaResolvida[] = [];
+
+  for (const diretorio of diretorios) {
+    const arquivos = (await listarArquivosRecursivos(diretorio, [".cs"]))
+      .filter((arquivo) => !/(^|[\\/])(bin|obj|Test[s]?)([\\/]|$)/i.test(arquivo));
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const simbolo of extrairSimbolosDotnet(codigo)) {
+        registrarSimboloGenerico(simbolos, "cs", basesSimbolicas, arquivo, simbolo.simbolo);
+      }
+      for (const rota of extrairRotasDotnet(codigo)) {
+        rotas.push({
+          origem: "dotnet",
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          arquivo,
+          simbolo: rota.simbolo,
+        });
+      }
+    }
+  }
+
+  return { simbolos: [...simbolos.values()], rotas };
+}
+
+async function indexarJava(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+  const simbolos = new Map<string, SimboloResolvido>();
+  const rotas: RotaResolvida[] = [];
+
+  for (const diretorio of diretorios) {
+    const arquivos = (await listarArquivosRecursivos(diretorio, [".java"]))
+      .filter((arquivo) => !/(^|[\\/])(target|build|out|Test[s]?)([\\/]|$)/i.test(arquivo));
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const simbolo of extrairSimbolosJava(codigo)) {
+        registrarSimboloGenerico(simbolos, "java", basesSimbolicas, arquivo, simbolo.simbolo);
+      }
+      for (const rota of extrairRotasJava(codigo)) {
+        rotas.push({
+          origem: "java",
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          arquivo,
+          simbolo: rota.simbolo,
+        });
+      }
+    }
+  }
+
+  return { simbolos: [...simbolos.values()], rotas };
+}
+
+async function indexarGo(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+  const simbolos = new Map<string, SimboloResolvido>();
+  const rotas: RotaResolvida[] = [];
+
+  for (const diretorio of diretorios) {
+    const arquivos = await listarArquivosRecursivos(diretorio, [".go"]);
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const simbolo of extrairSimbolosGo(codigo)) {
+        registrarSimboloGenerico(simbolos, "go", basesSimbolicas, arquivo, simbolo.simbolo);
+      }
+      for (const rota of extrairRotasGo(codigo)) {
+        rotas.push({
+          origem: "go",
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          arquivo,
+          simbolo: rota.simbolo,
+        });
+      }
+    }
+  }
+
+  return { simbolos: [...simbolos.values()], rotas };
+}
+
+async function indexarRust(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+  const simbolos = new Map<string, SimboloResolvido>();
+  const rotas: RotaResolvida[] = [];
+
+  for (const diretorio of diretorios) {
+    const arquivos = await listarArquivosRecursivos(diretorio, [".rs"]);
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const simbolo of extrairSimbolosRust(codigo)) {
+        registrarSimboloGenerico(simbolos, "rust", basesSimbolicas, arquivo, simbolo.simbolo);
+      }
+      for (const rota of extrairRotasRust(codigo)) {
+        rotas.push({
+          origem: "rust",
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          arquivo,
+          simbolo: rota.simbolo,
+        });
+      }
+    }
+  }
+
+  return { simbolos: [...simbolos.values()], rotas };
+}
+
+async function indexarCpp(diretorios: string[]): Promise<SimboloResolvido[]> {
+  const simbolos = new Map<string, SimboloResolvido>();
+
+  for (const diretorio of diretorios) {
+    const arquivos = (await listarArquivosRecursivos(diretorio, [".cpp", ".cc", ".cxx", ".hpp", ".h"]))
+      .filter((arquivo) => !/(^|[\\/])(windows|linux|macos|runner|flutter|ephemeral|build|vendor)([\\/]|$)/i.test(arquivo));
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const simbolo of extrairSimbolosCpp(codigo)) {
+        registrarSimboloGenerico(simbolos, "cpp", basesSimbolicas, arquivo, simbolo.simbolo);
+      }
+    }
+  }
+
+  return [...simbolos.values()];
+}
+
 function normalizarCaminhoRota(caminho?: string): string {
   if (!caminho) {
     return "/";
   }
-  const limpo = caminho.trim();
+  const limpo = normalizarCaminhoFlask(caminho.trim());
   const comBarra = limpo.startsWith("/") ? limpo : `/${limpo}`;
   const normalizado = comBarra.replace(/\/+/g, "/");
   return normalizado.endsWith("/") && normalizado !== "/" ? normalizado.slice(0, -1) : normalizado;
+}
+
+function extrairFontesHttpTypeScript(fontesLegado: FonteLegado[]): Array<"nestjs" | "nextjs" | "firebase"> {
+  return fontesLegado.filter((fonte): fonte is "nestjs" | "nextjs" | "firebase" =>
+    fonte === "nestjs" || fonte === "nextjs" || fonte === "firebase");
+}
+
+function extrairFontesHttpBackend(fontesLegado: FonteLegado[]): Array<"dotnet" | "java" | "go" | "rust"> {
+  return fontesLegado.filter((fonte): fonte is "dotnet" | "java" | "go" | "rust" =>
+    fonte === "dotnet" || fonte === "java" || fonte === "go" || fonte === "rust");
 }
 
 function ultimoSegmentoSimbolico(caminho: string): string {
@@ -436,7 +710,7 @@ function ultimoSegmentoSimbolico(caminho: string): string {
   return paraIdentificadorModulo(partes[partes.length - 1] ?? caminho);
 }
 
-function pontuarCandidatoDeclarado(candidato: SimboloResolvido, origem: "ts" | "py" | "dart", caminhoDeclarado: string): SimboloCandidatoDrift | undefined {
+function pontuarCandidatoDeclarado(candidato: SimboloResolvido, origem: SimboloResolvido["origem"], caminhoDeclarado: string): SimboloCandidatoDrift | undefined {
   if (candidato.origem !== origem) {
     return undefined;
   }
@@ -552,7 +826,7 @@ function ordenarCandidatos(candidatos: SimboloCandidatoDrift[]): SimboloCandidat
 
 function sugerirCandidatosParaImpl(
   simbolos: SimboloResolvido[],
-  origem: "ts" | "py" | "dart",
+  origem: SimboloResolvido["origem"],
   caminhoDeclarado: string,
 ): SimboloCandidatoDrift[] {
   return ordenarCandidatos(deduplicarCandidatos(
@@ -570,36 +844,121 @@ function sugerirCandidatosParaTaskSemImpl(simbolos: SimboloResolvido[], nomeTask
   )).slice(0, 5);
 }
 
-function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "fastapi"> {
-  if (fontesLegado.includes("nestjs")) {
-    return ["nestjs"];
-  }
-  if (fontesLegado.includes("fastapi")) {
-    return ["fastapi"];
-  }
-  if (task.implementacoesExternas.some((impl) => impl.origem === "ts")) {
-    return ["nestjs"];
+function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust"> {
+  const fontesTs = extrairFontesHttpTypeScript(fontesLegado);
+  const fontesBackend = extrairFontesHttpBackend(fontesLegado);
+  const implTs = task.implementacoesExternas.find((impl) => impl.origem === "ts");
+  if (implTs) {
+    const esperadas = new Set<"nestjs" | "nextjs" | "firebase">();
+    if (/\.route\.(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/i.test(implTs.caminho) || /\.route\./i.test(implTs.caminho)) {
+      esperadas.add("nextjs");
+    }
+    if (/\bcontroller\b/i.test(implTs.caminho) && fontesTs.includes("nestjs")) {
+      esperadas.add("nestjs");
+    }
+    if (fontesTs.includes("firebase") && /(apps\.worker|worker|sema_contract_bridge|health)/i.test(implTs.caminho)) {
+      esperadas.add("firebase");
+    }
+    if (esperadas.size > 0) {
+      return [...esperadas];
+    }
+    if (fontesTs.length > 0) {
+      return fontesTs;
+    }
+    return ["nestjs", "nextjs", "firebase"];
   }
   if (task.implementacoesExternas.some((impl) => impl.origem === "py")) {
-    return ["fastapi"];
+    const fontesPython = fontesLegado.filter((fonte): fonte is "fastapi" | "flask" => fonte === "fastapi" || fonte === "flask");
+    if (fontesPython.length > 0) {
+      return fontesPython;
+    }
+    return ["fastapi", "flask"];
+  }
+  const implCs = task.implementacoesExternas.find((impl) => impl.origem === "cs");
+  if (implCs) {
+    return fontesBackend.includes("dotnet") ? ["dotnet"] : ["dotnet"];
+  }
+  const implJava = task.implementacoesExternas.find((impl) => impl.origem === "java");
+  if (implJava) {
+    return fontesBackend.includes("java") ? ["java"] : ["java"];
+  }
+  const implGo = task.implementacoesExternas.find((impl) => impl.origem === "go");
+  if (implGo) {
+    return fontesBackend.includes("go") ? ["go"] : ["go"];
+  }
+  const implRust = task.implementacoesExternas.find((impl) => impl.origem === "rust");
+  if (implRust) {
+    return fontesBackend.includes("rust") ? ["rust"] : ["rust"];
+  }
+  if (fontesTs.length > 0) {
+    return fontesTs;
+  }
+  const fontesPython = fontesLegado.filter((fonte): fonte is "fastapi" | "flask" => fonte === "fastapi" || fonte === "flask");
+  if (fontesPython.length > 0) {
+    return fontesPython;
+  }
+  if (fontesBackend.length > 0) {
+    return fontesBackend;
   }
   return [];
+}
+
+function taskEhBridgeFirebase(task: IrTask): boolean {
+  return task.implementacoesExternas.some((impl) =>
+    impl.origem === "ts" && /sema_contract_bridge|collections?|apps\.worker/i.test(impl.caminho));
+}
+
+function extrairRecursosEsperados(task: IrTask): Array<{ categoria: "persistencia"; alvo: string }> {
+  if (!taskEhBridgeFirebase(task)) {
+    return [];
+  }
+
+  return task.efeitosEstruturados
+    .filter((efeito) => efeito.categoria === "persistencia" && Boolean(efeito.alvo))
+    .map((efeito) => ({
+      categoria: "persistencia" as const,
+      alvo: efeito.alvo,
+    }));
 }
 
 export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): Promise<ResultadoDrift> {
   const indexTs = await indexarTypeScript(contexto.diretoriosCodigo);
   const indexPy = await indexarPython(contexto.diretoriosCodigo);
   const indexDart = await indexarDart(contexto.diretoriosCodigo);
-  const todosSimbolos = [...indexTs.simbolos, ...indexPy.simbolos, ...indexDart];
+  const indexDotnet = await indexarDotnet(contexto.diretoriosCodigo);
+  const indexJava = await indexarJava(contexto.diretoriosCodigo);
+  const indexGo = await indexarGo(contexto.diretoriosCodigo);
+  const indexRust = await indexarRust(contexto.diretoriosCodigo);
+  const indexCpp = await indexarCpp(contexto.diretoriosCodigo);
+  const todosSimbolos = [
+    ...indexTs.simbolos,
+    ...indexPy.simbolos,
+    ...indexDart,
+    ...indexDotnet.simbolos,
+    ...indexJava.simbolos,
+    ...indexGo.simbolos,
+    ...indexRust.simbolos,
+    ...indexCpp,
+  ];
   const mapaImpl = new Map<string, SimboloResolvido>([
     ...indexTs.simbolos.map((item) => [item.caminho, item] as const),
     ...indexPy.simbolos.map((item) => [item.caminho, item] as const),
     ...indexDart.map((item) => [item.caminho, item] as const),
+    ...indexDotnet.simbolos.map((item) => [item.caminho, item] as const),
+    ...indexJava.simbolos.map((item) => [item.caminho, item] as const),
+    ...indexGo.simbolos.map((item) => [item.caminho, item] as const),
+    ...indexRust.simbolos.map((item) => [item.caminho, item] as const),
+    ...indexCpp.map((item) => [item.caminho, item] as const),
   ]);
+  const mapaRecursos = new Map<string, RecursoResolvido>(
+    indexTs.recursos.map((item) => [item.nome, item] as const),
+  );
 
   const implsValidos: RegistroImplDrift[] = [];
   const implsQuebrados: RegistroImplDrift[] = [];
   const rotasDivergentes: RegistroRotaDivergente[] = [];
+  const recursosValidos: RegistroRecursoDrift[] = [];
+  const recursosDivergentes: RegistroRecursoDrift[] = [];
   const diagnosticos: DiagnosticoDrift[] = [];
   const tasksResumo: ResultadoDrift["tasks"] = [];
 
@@ -673,6 +1032,33 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         simbolosReferenciados: [...simbolosReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")),
         candidatosImpl: ordenarCandidatos([...candidatosTask.values()]).slice(0, 5),
       });
+
+      for (const recursoEsperado of extrairRecursosEsperados(task)) {
+        const resolvido = mapaRecursos.get(recursoEsperado.alvo);
+        const registro: RegistroRecursoDrift = {
+          modulo: ir.nome,
+          task: task.nome,
+          categoria: recursoEsperado.categoria,
+          alvo: recursoEsperado.alvo,
+          arquivo: resolvido?.arquivo ?? "",
+          origem: "firebase",
+          tipo: "colecao",
+          status: resolvido ? "resolvido" : "divergente",
+        };
+
+        if (resolvido) {
+          registro.arquivo = resolvido.arquivo;
+          recursosValidos.push(registro);
+        } else {
+          recursosDivergentes.push(registro);
+          diagnosticos.push({
+            tipo: "recurso_divergente",
+            modulo: ir.nome,
+            task: task.nome,
+            mensagem: `Recurso vivo "${recursoEsperado.alvo}" nao foi encontrado nos bridges/configuracoes Firebase do codigo legado.`,
+          });
+        }
+      }
     }
 
     for (const route of ir.routes) {
@@ -696,7 +1082,14 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         continue;
       }
 
-      const encontradas = [...indexTs.rotas, ...indexPy.rotas].filter((rotaResolvida) => esperadas.includes(rotaResolvida.origem));
+      const encontradas = [
+        ...indexTs.rotas,
+        ...indexPy.rotas,
+        ...indexDotnet.rotas,
+        ...indexJava.rotas,
+        ...indexGo.rotas,
+        ...indexRust.rotas,
+      ].filter((rotaResolvida) => esperadas.includes(rotaResolvida.origem));
       const combina = encontradas.some((rotaResolvida) =>
         rotaResolvida.metodo === route.metodo
         && normalizarCaminhoRota(rotaResolvida.caminho) === normalizarCaminhoRota(route.caminho));
@@ -722,7 +1115,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
 
   return {
     comando: "drift",
-    sucesso: implsQuebrados.length === 0 && rotasDivergentes.length === 0,
+    sucesso: implsQuebrados.length === 0 && rotasDivergentes.length === 0 && recursosDivergentes.length === 0,
     modulos: contexto.modulosSelecionados.map((item) => ({
       caminho: item.caminho,
       modulo: item.resultado.ir?.nome ?? item.resultado.modulo?.nome ?? null,
@@ -733,6 +1126,8 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     impls_validos: implsValidos,
     impls_quebrados: implsQuebrados,
     rotas_divergentes: rotasDivergentes,
+    recursos_validos: recursosValidos,
+    recursos_divergentes: recursosDivergentes,
     diagnosticos,
   };
 }

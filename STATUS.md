@@ -5,11 +5,12 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-30
-- Ultimo commit de referencia: `98ae431`
+- Ultimo commit de referencia: `d1b1302`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: marco `0.7 legado incremental` em consolidacao, com foco oficial em adocao incremental de projeto vivo
+- Estagio atual: marco publico `0.8.x backend generico` em consolidacao, com foco oficial em familias backend first-class e adocao incremental de projeto vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
-- Posicionamento atual: linguagem estruturada para IA, mantida como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
+- Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
+- Linha publica de release: `0.8.0`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
   - lexer, parser, AST, diagnosticos, analise semantica e IR
@@ -23,6 +24,14 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - modo backend-first com scaffold para NestJS e FastAPI
   - `sema.config.json` com defaults de projeto e multiplas origens
   - importacao assistida de legado com `sema drift` para governar contrato vs codigo vivo
+  - empacotamento publico da CLI em tarball instalavel sem dependencia `file:` quebrada
+  - showcase oficial sanitizado para provar valor em backend Flask vivo
+  - `Flask`, `Next.js App Router` e `Node/Firebase worker` como fontes legado de primeira classe em `importar` e `drift`
+  - starters oficiais para `nextjs-api` e `node-firebase-worker`
+  - scorecard oficial de compatibilidade por familia de stack
+  - `ASP.NET Core`, `Spring Boot`, `Go net/http + Gin`, `Rust Axum` e `C++ bridge/service` como familias backend first-class em `importar` e `drift`
+  - `sema doctor` para saneamento rapido de ambiente
+  - instaladores oficiais `install-sema.sh` e `install-sema.ps1`
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
@@ -52,17 +61,20 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Fase 4 encerrada como marco tecnico do MVP base
 - `[x]` Marco `0.5` util de verdade fechado com o vertical oficial de pagamento
 - `[x]` Marco `0.6 backend-first` fechado com scaffold backend, configuracao de projeto e integracao inicial com frameworks
-- `[x]` Marco `0.7 legado incremental` iniciado com importacao assistida fortalecida, `sema drift` e adocao incremental mais clara
+- `[x]` Marco `0.7 legado incremental` fechado com importacao assistida fortalecida, `sema drift` e adocao incremental mais clara
+- `[x]` Marco `0.8 backend generico` iniciado com familias backend first-class alem do eixo TypeScript/Python
 - Foco imediato:
   - aprofundar criacao e edicao de backends reais
   - amadurecer orquestracao backend
   - suporte de editor mais profundo
   - automacao e IA em cima dos contratos ja estabilizados
+  - consolidar narrativa publica protocol-first e demonstracao de valor reproduzivel
+  - empurrar as familias dominantes de stack para a regua `9/10` com benchmark real
 
 ## Proxima Fase
 
 - `[x]` Feedback externo de uso por IA em projeto real consolidado como insumo de produto
-- `[ ]` Pos-0.7 legado incremental
+- `[ ]` Pos-0.8 backend generico
 - Prioridade sugerida:
   - aprofundar criacao de backend em projeto vivo
   - amadurecer `use` para projetos maiores
@@ -72,6 +84,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - subir o nivel de invariantes para modulos operacionais que hoje estao bons de fluxo, mas ainda frouxos de garantia
   - mapear melhor `modulo Sema -> arquivos reais` para reduzir adivinhacao de IA em Python, TypeScript e frameworks
   - estudar contratos mais estaveis para estrategia, gate, slice e versao ativa em dominios operacionais
+  - fechar a segunda onda de compatibilidade para `Angular`, `.NET desktop`, `Flutter consumidor` e outras bordas consumer/desktop na linha `0.9.x`
 
 ## Criterios de Fechamento do Marco 0.5
 
@@ -120,11 +133,26 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Entregar scaffold backend para FastAPI
 - `[x]` Adicionar `sema inspecionar` para diagnostico nao destrutivo de projeto
 - `[x]` Melhorar diagnosticos de `use` e `flow` para contexto real de backend
+- `[x]` Fazer `sema drift` e `sema inspecionar` tratarem `contratos/` como origem valida sem depender do nome `sema/`
 - `[x]` Atualizar a documentacao operacional para o marco `0.6 backend-first`
 - `[x]` Adicionar `sema drift` para governar contrato e codigo vivo em projeto legado
 - `[x]` Enriquecer `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
 - `[x]` Expandir `sema.config.json` com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
 - `[x]` Registrar feedback externo do FuteBot como validacao de valor e ajuste de prioridade para a ultima milha entre contrato e implementacao viva
+- `[x]` Alinhar release publica `0.8.0` entre CLI, pacotes e extensao
+- `[x]` Entregar pacote publico da CLI instalavel fora do monorrepo
+- `[x]` Publicar showcase oficial reproduzivel para demonstrar valor em backend Flask vivo
+- `[x]` Tratar `Next.js App Router` como fonte legado de primeira classe
+- `[x]` Tratar `Node/Firebase worker` como fonte legado de primeira classe
+- `[x]` Formalizar scorecard oficial de compatibilidade por familia de stack
+- `[x]` Entregar starters oficiais para `nextjs-api` e `node-firebase-worker`
+- `[x]` Tratar `ASP.NET Core` como fonte legado de primeira classe
+- `[x]` Tratar `Spring Boot` como fonte legado de primeira classe
+- `[x]` Tratar `Go net/http + Gin` como fonte legado de primeira classe
+- `[x]` Tratar `Rust Axum` como fonte legado de primeira classe
+- `[x]` Tratar `C++ bridge/service` como fonte `generic bridge/symbol first-class`
+- `[x]` Entregar `sema doctor`
+- `[x]` Entregar instaladores oficiais para Linux/macOS e Windows
 
 ## Fundacao do Projeto
 
@@ -210,9 +238,11 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Script canonico `project:check` para verificacao completa do projeto
 - `[x]` Verificacao dedicada do vertical de pagamento com modularizacao por `use`
 - `[x]` `sema iniciar --template <base|nestjs|fastapi>`
+- `[x]` `sema iniciar --template <nextjs-api|node-firebase-worker>`
 - `[x]` `sema compilar`, `sema gerar` e `sema testar` com `--framework <base|nestjs|fastapi>`
 - `[x]` `sema compilar`, `sema gerar` e `sema testar` com `--estrutura <flat|modulos|backend>`
 - `[x]` `sema.config.json` com defaults de projeto para alvo, estrutura, framework e multiplas origens
+- `[x]` `sema importar <nestjs|fastapi|flask|nextjs|firebase|typescript|python|dart>`
 
 ## Exemplos Obrigatorios
 
@@ -252,9 +282,10 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Guia de onboarding para ensinar a Sema a IA, com prompt-base oficial e fluxo pratico de agente
 - `[x]` Starter curto para agente e script para preparar contexto de IA com `validar`, `diagnosticos`, `ast` e `ir`
 - `[x]` Guia de instalacao e primeiro uso com requisitos, comandos e problemas comuns
-- `[x]` Fluxo de distribuicao inicial da CLI com instalacao local por `npm link` e empacotamento `.tgz`
+- `[x]` Fluxo de distribuicao publica da CLI com pacote `.tgz` instalavel e smoke automatizado de instalacao
 - `[x]` Comandos nativos da CLI para onboarding de IA: `starter-ia`, `prompt-ia` e `contexto-ia`
 - `[x]` Guia do ciclo `0.6 backend-first`
+- `[x]` Scorecard oficial de compatibilidade por familia e benchmark real
 - `[x]` Guias de adocao incremental para NestJS e FastAPI existentes
 - `[x]` Guia pratico de uso da Sema com NestJS + Prisma em backend critico
 - `[x]` Documentacao de CLI e instalacao atualizada para scaffold backend, `inspecionar` e `sema.config.json`
@@ -278,8 +309,12 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Pacote de aceite da Fase 4 com `npm run build`, `npm test`, `npm run status:check`, `sema formatar exemplos --check` e `sema verificar exemplos --json`
 - `[x]` Testes cobrindo scaffold backend para NestJS
 - `[x]` Testes cobrindo scaffold backend para FastAPI
+- `[x]` Testes cobrindo `Next.js App Router` em `importar`, `drift` e `inspecionar`
+- `[x]` Testes cobrindo `Node/Firebase worker` em `importar`, `drift` e `inspecionar`
+- `[x]` Testes cobrindo bridge Dart consumidor para `impl.dart` e `contexto-ia`
 - `[x]` Testes cobrindo `sema.config.json` com multiplas origens e compile por projeto
 - `[x]` Testes cobrindo `sema inspecionar --json`
+- `[x]` Smokes reais opcionais para `FuteBot` e `Gestech` como benchmark de regressao
 - `[-]` A cobertura atual fecha bem o MVP base, mas ainda pode crescer para cenarios maiores no pos-Fase 4
 
 ## Proximos Passos do MVP
@@ -294,6 +329,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[ ]` Amadurecer `flow` para orquestracao backend mais rica sem inflar a linguagem
 - `[ ]` Fortalecer ainda mais `use` para projeto grande e multiplos diretorios
 - `[ ]` Enriquecer contratos de execucao, efeitos, erros e garantias no pos-`0.6`
+- `[ ]` Fechar a segunda onda de compatibilidade de primeira classe para `Angular` e `.NET`
 
 ## Observacoes
 

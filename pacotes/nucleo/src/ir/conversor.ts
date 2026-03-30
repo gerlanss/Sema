@@ -68,7 +68,7 @@ function recomporCaminho(campo?: { valor: string; modificadores: string[] }): st
 
 function ehUseInterop(
   use: ModuloAst["uses"][number],
-): use is ModuloAst["uses"][number] & { origem: "ts" | "py" | "dart" } {
+): use is ModuloAst["uses"][number] & { origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp" } {
   return use.origem !== "sema";
 }
 
@@ -108,6 +108,21 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
         }
         if (origem === "dart") {
           return { origem: "dart" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
+        }
+        if (origem === "cs" || origem === "csharp" || origem === "dotnet") {
+          return { origem: "cs" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
+        }
+        if (origem === "java") {
+          return { origem: "java" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
+        }
+        if (origem === "go" || origem === "golang") {
+          return { origem: "go" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
+        }
+        if (origem === "rust" || origem === "rs") {
+          return { origem: "rust" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
+        }
+        if (origem === "cpp" || origem === "cxx" || origem === "cc" || origem === "c++") {
+          return { origem: "cpp" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
         }
         return undefined;
       })

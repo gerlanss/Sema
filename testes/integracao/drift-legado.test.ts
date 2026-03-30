@@ -5,9 +5,21 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
-import { criarProjetoPythonEstiloFuteBot } from "./futebot-fixture.ts";
+import {
+  criarProjetoCppBridge,
+  criarProjetoBridgeDart,
+  criarProjetoDotnetAspNet,
+  criarProjetoFirebaseWorker,
+  criarProjetoFlaskEstiloGestech,
+  criarProjetoGoHttp,
+  criarProjetoNextJsAppRouter,
+  criarProjetoPythonEstiloFuteBot,
+  criarProjetoRustAxum,
+  criarProjetoSpringBoot,
+} from "./futebot-fixture.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
+const GESTECH_BASE = "C:\\GitHub\\Gestech";
 
 function executar(args: string[], cwd?: string) {
   return spawnSync("node", [CLI, ...args], {
@@ -15,6 +27,16 @@ function executar(args: string[], cwd?: string) {
     encoding: "utf8",
     cwd,
   });
+}
+
+function localizarPrimeiroContrato(base: string, candidatos: string[]): string | undefined {
+  for (const candidato of candidatos) {
+    const caminho = path.join(base, candidato);
+    if (existsSync(caminho)) {
+      return caminho;
+    }
+  }
+  return undefined;
 }
 
 test("cli drift detecta impl valido, impl quebrado, task sem impl e rota divergente", async () => {
@@ -212,10 +234,211 @@ test("cli drift resolve impl python em projeto estilo FuteBot sem sema.config", 
   }
 });
 
+test("cli drift resolve impls e rotas Flask em fixture estilo Gestech", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-flask-"));
+
+  try {
+    await criarProjetoFlaskEstiloGestech(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.comando, "drift");
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+
+    const caminhosValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    for (const caminhoEsperado of [
+      "gestech.app.status",
+      "gestech.app.sync_store",
+      "gestech.routes.api_ranking.app_version",
+      "gestech.routes.api_ranking.ranking_showroom",
+      "gestech.routes.api_ferramentas.api_config",
+      "gestech.routes.api_ferramentas.api_admin_item",
+    ]) {
+      assert.equal(caminhosValidos.has(caminhoEsperado), true, `impl flask nao resolvido: ${caminhoEsperado}`);
+    }
+
+    const rotas = new Set(json.tasks.flatMap((task: { task: string; arquivosReferenciados: string[] }) =>
+      task.arquivosReferenciados.map((arquivo) => `${task.task}:${arquivo}`),
+    ));
+    assert.equal(rotas.size >= 6, true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls e rotas Next.js App Router sem falsos positivos de Nest", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-nextjs-"));
+
+  try {
+    await criarProjetoNextJsAppRouter(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    assert.equal(json.recursos_divergentes.length, 0);
+
+    const caminhosValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    for (const caminhoEsperado of [
+      "src.app.api.reposicao.route.GET",
+      "src.app.api.pedido.route.GET",
+      "src.app.api.pedido.route.POST",
+      "src.app.api.reposicao.item_id.route.GET",
+    ]) {
+      assert.equal(caminhosValidos.has(caminhoEsperado), true, `impl nextjs nao resolvido: ${caminhoEsperado}`);
+    }
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls, rota worker e recursos Firebase em fixture sintetico", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-firebase-"));
+
+  try {
+    await criarProjetoFirebaseWorker(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    assert.equal(json.recursos_divergentes.length, 0);
+    assert.equal(json.recursos_validos.some((recurso: { alvo: string }) => recurso.alvo === "telegram_sessions"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve bridge Dart consumidor sem gambiarra ad hoc", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-dart-"));
+
+  try {
+    await criarProjetoBridgeDart(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    const caminhosValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhosValidos.has("lib.api.sema_contract_bridge.semaFetchShowroomRanking"), true);
+    assert.equal(caminhosValidos.has("lib.api.sema_contract_bridge.semaCheckForUpdate"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls e rotas ASP.NET Core em fixture sintetico", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-dotnet-"));
+
+  try {
+    await criarProjetoDotnetAspNet(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhos.has("src.controllers.health_controller.HealthController.Get"), true);
+    assert.equal(caminhos.has("src.minimal.program.Ping"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls e rotas Spring Boot em fixture sintetico", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-java-"));
+
+  try {
+    await criarProjetoSpringBoot(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhos.has("src.main.java.com.acme.health.health_controller.HealthController.show"), true);
+    assert.equal(caminhos.has("src.main.java.com.acme.health.health_controller.HealthController.refresh"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls e rotas Go em fixture sintetico", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-go-"));
+
+  try {
+    await criarProjetoGoHttp(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhos.has("internal.routes.getHealth"), true);
+    assert.equal(caminhos.has("internal.routes.refreshHealth"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls e rotas Rust Axum em fixture sintetico", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-rust-"));
+
+  try {
+    await criarProjetoRustAxum(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhos.has("src.handlers.health"), true);
+    assert.equal(caminhos.has("src.handlers.refresh"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls C++ bridge sem prometer rota HTTP", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-cpp-"));
+
+  try {
+    await criarProjetoCppBridge(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhos.has("src.runtime.RuntimeBridge.processSnapshot"), true);
+    assert.equal(caminhos.has("src.runtime.emitSignal"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
 if (existsSync("C:\\GitHub\\FuteBot")) {
-  test("smoke real: drift melhora resolucao Python no FuteBot real", () => {
+  test("smoke real: drift resolve impls Python no FuteBot real sem contratos quebrados", () => {
     const execucao = executar(["drift", "C:\\GitHub\\FuteBot\\sema", "--json"], path.resolve("."));
-    assert.equal(execucao.status, 1, "o smoke real ainda deve expor ao menos um contrato torto no FuteBot");
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
     const json = JSON.parse(execucao.stdout);
     const implsValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
@@ -236,12 +459,78 @@ if (existsSync("C:\\GitHub\\FuteBot")) {
       "models.learner.Learner._registrar_feedback_contextual_fixture",
       "services.telegram_bot._callback_handler",
       "services.telegram_bot._executar_via_callback",
+      "services.telegram_bot._send_to_chats",
     ]) {
       assert.equal(implsValidos.has(caminhoEsperado), true, `FuteBot ainda nao resolve ${caminhoEsperado}`);
     }
 
     const implsQuebrados = new Set(json.impls_quebrados.map((impl: { caminho: string }) => impl.caminho));
-    assert.equal(implsQuebrados.has("services.telegram_bot._send_to_chats"), true);
-    assert.equal(implsQuebrados.size, 1);
+    assert.equal(implsQuebrados.size, 0);
   });
+}
+
+if (existsSync(GESTECH_BASE)) {
+  const contratoFlaskGestech = localizarPrimeiroContrato(GESTECH_BASE, [
+    "contratos/gestech/ranking_showroom.sema",
+    "contratos/gestech/flask_showroom.sema",
+    "contratos/flask_showroom.sema",
+  ]);
+
+  const contratosNextNodeGestech = [
+    "contratos/ferramentas/reposicao.sema",
+    "contratos/ferramentas/operacional.sema",
+    "contratos/ferramentas/gema_chat.sema",
+    "contratos/lothar/local_firestore_api.sema",
+    "contratos/lothar/worker_runtime.sema",
+    "contratos/lothar/auth_session.sema",
+  ]
+    .map((contrato) => path.join(GESTECH_BASE, contrato))
+    .filter((contrato) => existsSync(contrato));
+
+  const contratoFirebaseGestech = localizarPrimeiroContrato(GESTECH_BASE, [
+    "contratos/lothar/monitoring_pipeline.sema",
+  ]);
+
+  if (contratoFlaskGestech) {
+    test("smoke real: drift resolve rotas e impls Flask no Gestech real", () => {
+      const execucao = executar(["drift", contratoFlaskGestech, "--json"], GESTECH_BASE);
+      assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+      const json = JSON.parse(execucao.stdout);
+      assert.equal(json.impls_quebrados.length, 0);
+      assert.equal(json.rotas_divergentes.length, 0);
+      assert.equal(json.impls_validos.length >= 4, true);
+    });
+  } else {
+    test("smoke real: drift resolve rotas e impls Flask no Gestech real", { skip: "Contrato Flask nao encontrado no Gestech local." }, () => {});
+  }
+
+  if (contratosNextNodeGestech.length > 0) {
+    test("smoke real: drift fecha route drift do lado Next/Node no Gestech real", () => {
+      for (const contrato of contratosNextNodeGestech) {
+        const execucao = executar(["drift", contrato, "--json"], GESTECH_BASE);
+        assert.equal(execucao.status, 0, `${contrato}\n${execucao.stderr || execucao.stdout}`);
+
+        const json = JSON.parse(execucao.stdout);
+        assert.equal(json.impls_quebrados.length, 0, contrato);
+        assert.equal(json.rotas_divergentes.length, 0, contrato);
+      }
+    });
+  } else {
+    test("smoke real: drift fecha route drift do lado Next/Node no Gestech real", { skip: "Nenhum contrato Next/Node encontrado no Gestech local." }, () => {});
+  }
+
+  if (contratoFirebaseGestech) {
+    test("smoke real: drift valida recursos Firebase do worker no Gestech real", () => {
+      const execucao = executar(["drift", contratoFirebaseGestech, "--json"], GESTECH_BASE);
+      assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+      const json = JSON.parse(execucao.stdout);
+      assert.equal(json.impls_quebrados.length, 0);
+      assert.equal(json.recursos_divergentes.length, 0);
+      assert.equal(json.recursos_validos.length >= 1, true);
+    });
+  } else {
+    test("smoke real: drift valida recursos Firebase do worker no Gestech real", { skip: "Contrato Firebase worker nao encontrado no Gestech local." }, () => {});
+  }
 }

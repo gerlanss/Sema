@@ -385,12 +385,17 @@ module app.ingressos.api {
   assert.deepEqual(moduloApi?.ir?.uses, ["app.ingressos.dominio"]);
 });
 
-test("compilador aceita interop externo com ts, py e dart sem exigir modulo sema local", () => {
+test("compilador aceita interop externo com origens suportadas sem exigir modulo sema local", () => {
   const codigo = `
 module app.interop {
   use ts app.gateway.pagamentos
   use py servicos.conciliacao
   use dart app.mobile.pagamentos
+  use cs src.Controllers.HealthController
+  use java com.acme.health.HealthController
+  use go internal.health
+  use rust src.handlers.health
+  use cpp src.runtime.RuntimeBridge
 
   task consultar_status {
     input {
@@ -423,11 +428,21 @@ module app.interop {
     "ts:app.gateway.pagamentos",
     "py:servicos.conciliacao",
     "dart:app.mobile.pagamentos",
+    "cs:src.Controllers.HealthController",
+    "java:com.acme.health.HealthController",
+    "go:internal.health",
+    "rust:src.handlers.health",
+    "cpp:src.runtime.RuntimeBridge",
   ]);
   assert.deepEqual(resultado.ir?.interoperabilidades.map((item) => `${item.origem}:${item.caminho}`), [
     "ts:app.gateway.pagamentos",
     "py:servicos.conciliacao",
     "dart:app.mobile.pagamentos",
+    "cs:src.Controllers.HealthController",
+    "java:com.acme.health.HealthController",
+    "go:internal.health",
+    "rust:src.handlers.health",
+    "cpp:src.runtime.RuntimeBridge",
   ]);
 });
 
@@ -522,7 +537,7 @@ module app.impl.invalido {
       ts: app.gateway.pagamentos.processar
       py: app..gateway.invalido
       typescript: app.gateway.duplicado
-      java: app.gateway.legacy
+      kotlin: app.gateway.legacy
     }
     guarantees {
       protocolo existe

@@ -2,17 +2,23 @@
 
 ![Logo da Sema](./logo.png)
 
-Sema e uma linguagem estruturada para IA, voltada a modelagem explicita de contratos e intencao. Ela existe para reduzir ambiguidade semantica e permitir que IA e humanos operem sobre significado explicito.
+Sema e um **Protocolo de Governanca de Intencao para IA e backend vivo**.
 
-Na pratica, a Sema nasce como linguagem de intencao. Ela nao quer substituir TypeScript, Python, Dart ou framework nenhum. Ela governa a camada de significado acima deles: contrato, fluxo, estado, erro, efeito, garantia e teste.
+Ele nao tenta substituir TypeScript, Python, Dart, Flask, FastAPI ou NestJS. A proposta e mais util do que isso: governar a camada de significado acima da stack, com contrato explicito, fluxo, erro, efeito, garantia, `impl`, `drift` e contexto operacional para IA.
 
-No marco atual, `0.7 legado incremental`, o foco deixou de ser so “fechar MVP” e virou algo bem mais util: **criar, importar e editar projetos backend reais** com scaffold forte, configuracao de projeto, integracao com frameworks e governanca incremental em codigo vivo.
+Tecnicamente, a Sema continua sendo uma **linguagem de intencao**. Publicamente, o posicionamento agora fica mais honesto: ela e o protocolo que impede IA e humano de codarem no escuro feito dois animais bem intencionados.
 
-## O que significa ser uma linguagem estruturada para IA
+## O problema que resolve
 
-Significa que a Sema nao foi desenhada para obrigar a IA a adivinhar o sistema.
+Em projeto vivo, a verdade costuma ficar espalhada:
 
-Ela explicita:
+- contrato numa ponta
+- DTO em outra
+- comentario vencido no canto
+- framework escondendo regra no meio do handler
+- IA adivinhando simbolo e fluxo como se fosse paranormal
+
+A Sema junta isso num ponto governavel:
 
 - intencao da operacao
 - contrato de entrada e saida
@@ -21,8 +27,70 @@ Ela explicita:
 - erros esperados
 - garantias finais
 - fluxo e estado do dominio
+- vinculo com implementacao real via `impl`
+- divergencia real entre contrato e codigo vivo via `drift`
 
-Ou seja: a Sema nao existe para substituir stacks maduras. Ela existe para governar significado acima delas.
+## Quickstart em 2 minutos
+
+Hoje voce **nao precisa clonar o repo** para instalar a CLI. A distribuicao publica passa a acontecer por GitHub Release com um tarball estavel.
+
+Linux, Windows PowerShell e macOS:
+
+```bash
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+mkdir sema-demo
+cd sema-demo
+sema iniciar
+sema validar contratos/pedidos.sema --json
+sema doctor
+```
+
+Se quiser instalar local ao projeto:
+
+```bash
+npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npx sema --help
+```
+
+Se depois voce quiser ver a Sema em backend vivo, ai sim entre no repo e rode o case oficial:
+
+```bash
+cd showcases/ranking-showroom
+sema inspecionar . --json
+sema drift contratos/ranking_showroom.sema --json
+```
+
+## Case oficial
+
+O case oficial da Sema agora e [showcases/ranking-showroom](./showcases/ranking-showroom/).
+
+Ele mostra, num backend Flask pequeno e real:
+
+- contrato semantico curado
+- `impl` apontando para simbolos vivos
+- `drift` sem falso positivo idiota
+- `contexto-ia` com `drift.json`
+- adocao incremental sem reescrever a stack
+
+Se voce quer entender por que isso e mais util do que `OpenAPI + DTO + comentario espalhado`, esse showcase foi feito exatamente para isso.
+
+## Compatibilidade atual honesta
+
+- `NestJS`: importacao de rotas + `drift` de rota publica
+- `FastAPI`: importacao de rotas + `drift` de rota publica
+- `Flask`: importacao de rotas + `drift` de rota publica com `Blueprint`, `url_prefix` e `@app.route`/`@bp.route`
+- `Next.js App Router`: importacao de rotas + `drift` de rota publica por `route.ts`, incluindo segmentos dinamicos
+- `ASP.NET Core`: importacao de controllers e Minimal API + `drift` de rota publica via `cs:`
+- `Spring Boot`: importacao de controllers + `drift` de rota publica via `java:`
+- `Go net/http + Gin`: importacao de handlers + `drift` de rota publica via `go:`
+- `Rust Axum`: importacao de handlers + `drift` de rota publica via `rust:`
+- `Node/Firebase worker`: importacao focada em bridge + `drift` de rota worker e recurso persistido
+- `C++ bridge/service`: importacao generica + `drift` de simbolo via `cpp:`
+- `TypeScript`, `Python`, `Dart`: resolucao de simbolo e importacao generica
+
+Observacao importante: `flask`, `nextjs`, `firebase`, `dotnet`, `java`, `go`, `rust` e `cpp` entram como **fontes legado** para `importar` e `drift`; eles nao viram frameworks novos de geracao. A geracao continua `base`, `nestjs` e `fastapi`, enquanto as outras familias entram via starter e adocao incremental.
+
+Para a regua oficial por familia de stack, benchmarks reais e criterio de nota `9/10`, veja [docs/scorecard-compatibilidade.md](./docs/scorecard-compatibilidade.md).
 
 ## Backend-first em 30 segundos
 
@@ -34,193 +102,24 @@ Hoje a Sema ja faz bem estas porras aqui:
 - organiza projeto via `sema.config.json`
 - resolve contexto de projeto mesmo sem `sema.config.json`, inclusive quando a entrada vem da raiz, da pasta `sema/` ou de um arquivo `.sema`
 - resolve `use` em multiplas origens de projeto
+- cobre `Next.js App Router` e `Node/Firebase worker` como familias de legado de primeira classe para criacao incremental e edicao
+- cobre `ASP.NET Core`, `Spring Boot`, `Go net/http + Gin`, `Rust Axum` e `C++ bridge/service` como familias backend first-class para importacao e edicao
 - vincula `task` a implementacao real via `impl`, inclusive em Python com simbolos internos quando eles forem declarados explicitamente
 - ajuda IA e humanos a editar backend sem virar pantano semantico
 
-### Iniciar um backend NestJS
-
-```bash
-sema iniciar --template nestjs
-sema inspecionar --json
-sema compilar --framework nestjs
-```
-
-Saida tipica:
-
-- `src/<contexto>/<modulo>.contract.ts`
-- `src/<contexto>/dto/<modulo>.dto.ts`
-- `src/<contexto>/<modulo>.service.ts`
-- `src/<contexto>/<modulo>.controller.ts`
-- `test/<contexto>/<modulo>.contract.test.ts`
-- `test/<contexto>/<modulo>.controller.spec.ts`
-
-### Iniciar um backend FastAPI
-
-```bash
-sema iniciar --template fastapi
-sema inspecionar --json
-sema compilar --framework fastapi
-```
-
-Saida tipica:
-
-- `app/<contexto>/<modulo>_contract.py`
-- `app/<contexto>/<modulo>_schemas.py`
-- `app/<contexto>/<modulo>_service.py`
-- `app/<contexto>/<modulo>_router.py`
-- `tests/<contexto>/test_<modulo>_contract.py`
-- `tests/<contexto>/test_<modulo>_router.py`
-
-### Importar um backend legado para rascunho Sema
-
-Se o projeto nao nasceu com Sema, a CLI agora consegue puxar um rascunho inicial a partir de codigo vivo.
-
-Exemplos:
-
-```bash
-sema importar nestjs ./backend --saida ./sema/importado
-sema importar fastapi ./app --saida ./sema/importado
-sema importar python ./servicos --saida ./sema/importado
-sema importar typescript ./src --saida ./sema/importado
-sema importar dart ./lib --saida ./sema/importado
-```
-
 Fluxo recomendado:
 
-1. importar o legado para `.sema`
-2. revisar e lapidar o contrato
-3. rodar `sema formatar` e `sema validar --json`
-4. conectar implementacoes reais via `impl`
-5. rodar `sema drift --json`
-6. compilar scaffold quando fizer sentido
+1. importar ou curar o contrato
+2. lapidar a intencao
+3. ligar `impl`
+4. rodar `sema inspecionar`
+5. rodar `sema drift`
+6. usar `sema contexto-ia` antes de editar
 
-### Governar drift entre contrato e codigo vivo
+Se quiser instalar sem decorar a novela toda:
 
-Depois de importar e ligar `impl`, a CLI tambem consegue mostrar onde o contrato e o projeto real estao se afastando.
-
-```bash
-sema drift --json
-```
-
-O `drift` destaca:
-
-- `impl` resolvido
-- `impl` quebrado
-- `task` sem implementacao ligada
-- rota publica divergente em NestJS/FastAPI, quando houver pista suficiente
-
-Na pratica:
-
-- `sema inspecionar`, `sema drift` e `sema contexto-ia` agora conseguem manter o mesmo contexto de projeto quando voce parte da raiz, da pasta `sema/` ou de um arquivo isolado
-- `impl` Python pode apontar para funcao, metodo de classe ou simbolo interno com `_`; o `drift` valida alcance real, nao opiniao moralista sobre API publica
-
-Regra pratica:
-
-- `importar` gera um **rascunho Sema valido para revisao**
-- ele nao promete reconstruir toda a intencao do projeto sozinho
-- ele serve para cortar o trabalho bruto de migracao e dar um ponto de partida coerente
-
-Referencia oficial para governanca operacional:
-
-- [exemplos/operacao_estrategia.sema](./exemplos/operacao_estrategia.sema) modela `strategy gate`, `slice lifecycle`, discovery semanal, quarentena seletiva e rollout de nova versao
-- exemplos e testes oficiais devem usar identificadores neutros, sem carregar dado concreto com cara de producao
-
-## Documentacao principal
-
-- [STATUS.md](./STATUS.md)
-- [docs/backend-first.md](./docs/backend-first.md)
-- [docs/arquitetura.md](./docs/arquitetura.md)
-- [docs/roadmap.md](./docs/roadmap.md)
-- [docs/instalacao-e-primeiro-uso.md](./docs/instalacao-e-primeiro-uso.md)
-- [docs/cli.md](./docs/cli.md)
-- [docs/integracao-com-ia.md](./docs/integracao-com-ia.md)
-- [docs/da-sema-para-codigo.md](./docs/da-sema-para-codigo.md)
-- [docs/importacao-legado.md](./docs/importacao-legado.md)
-- [docs/feedback-futebot.md](./docs/feedback-futebot.md)
-- [docs/adocao-nestjs-existente.md](./docs/adocao-nestjs-existente.md)
-- [docs/adocao-fastapi-existente.md](./docs/adocao-fastapi-existente.md)
-- [docs/nestjs-prisma-sema.md](./docs/nestjs-prisma-sema.md)
-- [docs/pagamento-ponta-a-ponta.md](./docs/pagamento-ponta-a-ponta.md)
-- [docs/AGENT_STARTER.md](./docs/AGENT_STARTER.md)
-- [docs/prompt-base-ia-sema.md](./docs/prompt-base-ia-sema.md)
-
-## Instalar a CLI da Sema no Windows
-
-Esse fluxo instala a **CLI da Sema a partir deste repositorio**. Ele **nao baixa o projeto sozinho**, **nao instala a extensao do VS Code** e **nao publica nada na sua maquina alem do comando linkado da CLI**.
-
-Pre-requisitos:
-
-- Node.js instalado
-- npm funcionando
-- este repositorio ja clonado ou baixado
-
-Na raiz do projeto:
-
-```powershell
-npm install
-npm run build
-npm run cli:instalar-local
-```
-
-O `cli:instalar-local`:
-
-1. garante que o prefixo global do npm entre no `PATH` do usuario no Windows
-2. executa o `npm link` da CLI da Sema
-
-Depois disso, feche e abra o terminal para o PowerShell recarregar o `PATH`.
-
-Teste assim:
-
-```powershell
-sema
-sema validar exemplos/calculadora.sema
-```
-
-Se o comando `sema` ainda nao aparecer, use a CLI direto por arquivo enquanto o ambiente se acerta:
-
-```powershell
-node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
-```
-
-Para remover o comando linkado:
-
-```powershell
-npm run cli:desinstalar-local
-```
-
-## Extensao VS Code
-
-A extensao da Sema para VS Code ja tem:
-
-- associacao automatica de `.sema`
-- highlight de sintaxe
-- snippets
-- comando `Sema: Formatar Documento`
-- servidor de linguagem com diagnosticos semanticos
-- hover basico
-- formatacao via servidor e via CLI
-
-Para empacotar:
-
-```bash
-npm run extensao:empacotar
-```
-
-Pacote gerado:
-
-- `.tmp/editor-vscode/sema-language-tools-0.1.1.vsix`
-
-Para instalar localmente:
-
-```bash
-npm run extensao:instalar-local
-```
-
-Ou manualmente:
-
-```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.1.1.vsix --force
-```
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
 
 ## Exemplo rapido
 
@@ -254,7 +153,7 @@ module exemplos.calculadora {
 
 ## Configuracao de projeto
 
-A Sema agora tem um `sema.config.json` pensado para projeto real:
+A Sema usa `sema.config.json` para tratar projeto real com menos adivinhacao.
 
 ```json
 {
@@ -273,240 +172,92 @@ A Sema agora tem um `sema.config.json` pensado para projeto real:
 }
 ```
 
-Isso controla:
+Na pratica:
 
-- onde a CLI procura os `.sema`
-- qual alvo usar por padrao
-- qual estrutura de saida usar
-- qual framework guiar o scaffold
-- para onde cada stack gera arquivo
+- `origens` controla onde a CLI procura `.sema`
+- `diretoriosCodigo` ajuda a localizar implementacao viva
+- `fontesLegado` orienta `importar` e `drift`
+- `framework`, `estruturaSaida` e `alvos` deixam scaffold previsivel
+- `sema doctor` ajuda a detectar se o ambiente esta pronto ou so te trollando
 
-Para ver exatamente o que a CLI esta resolvendo no projeto atual:
+## Documentacao principal
 
-```bash
-sema inspecionar --json
-```
+- [STATUS.md](./STATUS.md)
+- [docs/backend-first.md](./docs/backend-first.md)
+- [docs/scorecard-compatibilidade.md](./docs/scorecard-compatibilidade.md)
+- [docs/inventario-benchmark-local.md](./docs/inventario-benchmark-local.md)
+- [docs/arquitetura.md](./docs/arquitetura.md)
+- [docs/roadmap.md](./docs/roadmap.md)
+- [docs/instalacao-e-primeiro-uso.md](./docs/instalacao-e-primeiro-uso.md)
+- [docs/cli.md](./docs/cli.md)
+- [docs/integracao-com-ia.md](./docs/integracao-com-ia.md)
+- [docs/distribuicao-da-cli.md](./docs/distribuicao-da-cli.md)
+- [docs/da-sema-para-codigo.md](./docs/da-sema-para-codigo.md)
+- [docs/importacao-legado.md](./docs/importacao-legado.md)
+- [docs/feedback-futebot.md](./docs/feedback-futebot.md)
+- [docs/adocao-nestjs-existente.md](./docs/adocao-nestjs-existente.md)
+- [docs/adocao-fastapi-existente.md](./docs/adocao-fastapi-existente.md)
+- [docs/nestjs-prisma-sema.md](./docs/nestjs-prisma-sema.md)
+- [docs/pagamento-ponta-a-ponta.md](./docs/pagamento-ponta-a-ponta.md)
+- [docs/AGENT_STARTER.md](./docs/AGENT_STARTER.md)
+- [docs/prompt-base-ia-sema.md](./docs/prompt-base-ia-sema.md)
 
-## Modularizacao e interop
+## Extensao VS Code
 
-A Sema suporta dois niveis de conexao:
+A extensao da Sema para VS Code ja tem:
 
-- `use modulo.outro` para importar outro modulo `.sema`
-- `use ts ...`, `use py ...`, `use dart ...` para declarar interoperabilidade externa
+- associacao automatica de `.sema`
+- highlight de sintaxe
+- snippets
+- comando `Sema: Formatar Documento`
+- servidor de linguagem com diagnosticos semanticos
+- hover basico
+- formatacao via servidor e via CLI
 
-Exemplo:
+Para instalar pela release publica sem clonar:
 
-```sema
-module app.pagamentos {
-  use base.contratos
-  use ts app.gateway.pagamentos
-  use py servicos.conciliacao
-  use dart app.mobile.pagamentos
-}
-```
-
-No estado atual:
-
-- `use` entre arquivos `.sema` participa da resolucao semantica real
-- `use ts|py|dart` registra contrato externo de interop
-- a Sema continua governando o significado; ela nao vira serva da stack ao redor
-
-## Vincular uma task a implementacoes externas
-
-Quando fizer sentido dizer onde a implementacao concreta mora, use `impl`:
-
-```sema
-task processar_pagamento {
-  input {
-    pagamento_id: Id required
-  }
-  output {
-    protocolo: Id
-  }
-  impl {
-    ts: app.gateway.pagamentos.processar
-    py: servicos.pagamentos.processar
-    dart: app.mobile.pagamentos.processar
-  }
-  guarantees {
-    protocolo existe
-  }
-}
-```
-
-Leitura pratica:
-
-- `use ts|py|dart ...` declara interoperabilidade do modulo
-- `impl` liga a `task` a implementacoes concretas
-- a Sema continua mandando no contrato; a stack concreta executa
-
-## Gerar scaffold base
-
-### Python
+Linux/macOS:
 
 ```bash
-node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo python --saida ./saida/python
+curl -L -o sema-language-tools.vsix https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix
+code --install-extension ./sema-language-tools.vsix --force
 ```
 
-### TypeScript
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest -Uri https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix -OutFile sema-language-tools.vsix
+code --install-extension .\sema-language-tools.vsix --force
+```
+
+Se voce estiver desenvolvendo o proprio repo, ainda pode empacotar localmente:
 
 ```bash
-node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo typescript --saida ./saida/typescript
+npm run extensao:empacotar
 ```
 
-### Dart
+Pacote gerado:
+
+- `.tmp/editor-vscode/sema-language-tools-0.8.0.vsix`
+
+Para instalar localmente:
 
 ```bash
-node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo dart --saida ./saida/dart
+npm run extensao:instalar-local
 ```
 
-## Gerar scaffold backend
-
-Se voce quiser saida organizada por namespace:
+Ou manualmente:
 
 ```bash
-node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo typescript --saida ./generated --estrutura modulos
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.0.vsix --force
 ```
 
-Isso gera algo como:
+## Observacao honesta
 
-- `generated/exemplos/calculadora.ts`
-- `generated/exemplos/calculadora.test.ts`
+A Sema ja deixou de ser so "documentacao premium", mas ainda seria papo furado vender como "backend inteiro pronto sem tocar em nada". O valor real dela hoje esta em:
 
-Se a ideia for scaffold orientado a framework:
-
-### NestJS
-
-```bash
-node pacotes/cli/dist/index.js compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
-```
-
-### FastAPI
-
-```bash
-node pacotes/cli/dist/index.js compilar contratos/pagamentos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
-```
-
-Regra pratica:
-
-- `framework base`: scaffold sem framework
-- `framework nestjs`: scaffold TypeScript para controller/service/dto
-- `framework fastapi`: scaffold Python para router/service/schema
-
-## Rodar testes e verificacoes
-
-```bash
-npm test
-```
-
-Fluxo completo do projeto:
-
-```bash
-npm run project:check
-```
-
-Verificacao em lote dos exemplos:
-
-```bash
-node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao
-```
-
-Formatacao canonica:
-
-```bash
-node pacotes/cli/dist/index.js formatar exemplos
-node pacotes/cli/dist/index.js formatar exemplos --check
-```
-
-JSON para automacao, IDE e IA:
-
-```bash
-node pacotes/cli/dist/index.js validar exemplos --json
-node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-json
-```
-
-Se a tarefa pedir codigo derivado, esse comando tem que entrar no fluxo:
-
-```bash
-node pacotes/cli/dist/index.js compilar contratos/pagamentos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./saida/nestjs
-```
-
-## Onboarding para IA
-
-A Sema ja tem um fluxo nativo bem menos burro para agentes:
-
-```bash
-sema ajuda-ia
-sema starter-ia
-sema prompt-ia
-sema prompt-ia-ui
-sema prompt-ia-react
-sema prompt-ia-sema-primeiro
-sema exemplos-prompt-ia
-sema contexto-ia exemplos/pagamento.sema
-```
-
-Se a IA for gerar backend a partir do contrato, nao vacile:
-
-```bash
-sema ast contratos/pedidos.sema --json
-sema ir contratos/pedidos.sema --json
-sema validar contratos/pedidos.sema --json
-sema compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
-```
-
-## Estrutura do repositorio
-
-```text
-docs/                        Documentacao conceitual e tecnica
-exemplos/                    Modulos .sema completos
-pacotes/nucleo/              Lexer, parser, AST, semantica e IR
-pacotes/gerador-python/      Geracao de codigo Python
-pacotes/gerador-typescript/  Geracao de codigo TypeScript
-pacotes/gerador-dart/        Geracao de codigo Dart
-pacotes/cli/                 Interface de linha de comando
-pacotes/editor-vscode/       Extensao de VS Code para `.sema`
-pacotes/padroes/             Funcoes auxiliares compartilhadas
-testes/                      Testes de unidade e integracao
-```
-
-## Estagio atual
-
-As quatro fases do MVP base ja foram fechadas:
-
-- Fase 1: fundacao do compilador
-- Fase 2: semantica operacional do nucleo
-- Fase 3: operacionalizacao real da linguagem
-- Fase 4: ferramentas de adocao
-
-Depois disso, a Sema fechou o marco `0.6 backend-first`, entregando:
-
-- `sema.config.json` com defaults de projeto e multiplas origens
-- `sema inspecionar` para diagnostico nao destrutivo
-- scaffold backend util para NestJS
-- scaffold backend util para FastAPI
-- `impl` como ponte estavel entre contrato e implementacao viva
-- melhor resolucao de `use` para contexto de projeto
-- diagnosticos melhores de `use` e `flow`
-
-Hoje a Sema ja:
-
-- modela contrato, estado, fluxo, erro, efeito e garantia
-- fortalece `route` como contrato publico semantico
-- gera scaffold base para TypeScript, Python e Dart
-- gera scaffold de framework para NestJS e FastAPI
-- expoe AST, IR, diagnosticos e verificacao em JSON
-- aplica formatacao canonica oficial
-- oferece extensao VS Code com LSP inicial
-
-## Roadmap resumido
-
-- aprofundar criacao e edicao de backend em projeto vivo
-- amadurecer `flow` para orquestracao backend mais rica
-- fortalecer `use` para projetos maiores e multiplos contextos
-- enriquecer contratos de execucao, efeitos, erros e garantias
-- evoluir o suporte de editor alem do LSP inicial atual
-
-## Aviso importante
-
-A Sema ja deixou de ser so “documentacao premium”, mas ainda seria papo furado vender como “backend inteiro pronto sem tocar em nada”. Ela manda muito bem como linguagem de intencao, contrato e scaffold. A implementacao real continua vivendo nas stacks e frameworks ao redor com ajuda de `impl`, geradores e adocao incremental.
+- protocolo semantico
+- scaffold util
+- adocao incremental
+- governanca de contrato vs codigo vivo
+- ergonomia para IA operar sistema real sem sair chutando parede

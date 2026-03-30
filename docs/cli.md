@@ -2,7 +2,7 @@
 
 ## Visao geral
 
-A CLI da Sema e a interface oficial para:
+A CLI da Sema e a interface oficial do protocolo Sema para:
 
 - validacao semantica
 - exportacao de AST e IR
@@ -12,7 +12,7 @@ A CLI da Sema e a interface oficial para:
 - inspecao de projeto
 - onboarding de IA
 
-No marco `0.7 legado incremental`, ela tambem virou a fonte de verdade para:
+No marco publico `0.8.x backend generico`, ela tambem virou a fonte de verdade para:
 
 - configuracao de projeto via `sema.config.json`
 - scaffold orientado a framework para NestJS e FastAPI
@@ -21,9 +21,46 @@ No marco `0.7 legado incremental`, ela tambem virou a fonte de verdade para:
 - governanca de drift entre contrato e codigo vivo
 - inspecao nao destrutiva de projeto antes de gerar qualquer coisa
 
+Matriz curta de compatibilidade legado:
+
+- `nestjs`: importar + `drift` de rota publica
+- `fastapi`: importar + `drift` de rota publica
+- `flask`: importar + `drift` de rota publica
+- `nextjs`: importar + `drift` de rota publica via `App Router`
+- `dotnet`: importar + `drift` de rota publica via ASP.NET Core
+- `java`: importar + `drift` de rota publica via Spring Boot
+- `go`: importar + `drift` de rota publica via `net/http` e Gin
+- `rust`: importar + `drift` de rota publica via Axum
+- `firebase`: importar + `drift` de rota worker e recurso vivo
+- `typescript`, `python`, `dart`, `cpp`: importacao generica e resolucao de simbolo
+
+## Distribuicao publica
+
+O caminho publico principal da CLI agora e:
+
+1. instalar da GitHub Release
+2. usar `sema`
+
+Comando publico:
+
+```bash
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+```
+
+`npm link` continua existindo, mas virou fluxo de desenvolvimento do proprio repo.
+
+Primeiro uso sem clonar o repo:
+
+```bash
+mkdir sema-demo
+cd sema-demo
+sema iniciar
+sema validar contratos/pedidos.sema --json
+```
+
 ## Comandos disponiveis
 
-### `sema iniciar [--template <base|nestjs|fastapi>]`
+### `sema iniciar [--template <base|nestjs|fastapi|nextjs-api|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge>]`
 
 Cria uma estrutura inicial de projeto.
 
@@ -32,6 +69,13 @@ Templates:
 - `base`: projeto minimo neutro
 - `nestjs`: projeto voltado a scaffold backend TypeScript/NestJS
 - `fastapi`: projeto voltado a scaffold backend Python/FastAPI
+- `nextjs-api`: starter de adocao para `Next.js App Router`
+- `node-firebase-worker`: starter de worker/bridge Firebase
+- `aspnet-api`: starter de ASP.NET Core
+- `springboot-api`: starter de Spring Boot
+- `go-http-api`: starter de `net/http` + Gin
+- `rust-axum-api`: starter de Axum
+- `cpp-service-bridge`: starter de bridge/service em C++
 
 Artefatos iniciais tipicos:
 
@@ -156,6 +200,7 @@ Heuristica importante quando nao existe `sema.config.json`:
 - entrada na raiz usa a propria raiz como base do projeto
 - entrada em `.../sema` ou `.../sema/arquivo.sema` sobe para o projeto pai antes de inferir codigo vivo
 - `baseProjeto`, `origens` e `diretoriosCodigo` devem ficar estaveis entre esses tres jeitos de chamar a CLI
+- para Python, a deteccao automatica agora diferencia `fastapi`, `flask` e `python` generico; se o projeto tiver FastAPI e Flask juntos, as duas fontes aparecem
 
 ### `sema drift <arquivo-ou-pasta> [--json]`
 
@@ -166,15 +211,54 @@ O comando aponta:
 - `impl` valido
 - `impl` quebrado
 - `task` sem implementacao ligada
-- rota publica divergente em NestJS/FastAPI, quando houver contexto suficiente
+- rota publica divergente em NestJS/FastAPI/Flask/Next.js/Firebase worker, quando houver contexto suficiente
+- recurso vivo divergente em bridges Firebase/worker, quando o contrato explicitar persistencia verificavel
 
 No caso de Python, o `drift` indexa:
 
 - funcoes de modulo
 - metodos de classe
 - simbolos com `_` quando foram declarados explicitamente no `impl`
+- rotas Flask via `@app.route`, `@blueprint.route` e `Blueprint(..., url_prefix=...)`
 
 Traduzindo: se o contrato apontar para `services.telegram_bot._callback_handler`, a CLI tenta resolver esse simbolo de verdade, em vez de fingir que privado nao existe.
+
+No caso de Flask, a comparacao de rota tambem normaliza parametros como:
+
+- `<id>` -> `{id}`
+- `<int:id>` -> `{id}`
+- `<float:valor>` -> `{valor}`
+- `<uuid:item_id>` -> `{item_id}`
+- `<path:arquivo>` -> `{arquivo}`
+
+No caso de TypeScript HTTP, o `drift` agora cobre:
+
+- `Next.js App Router` via `app/api/**/route.ts` e `src/app/api/**/route.ts`
+- segmentos dinamicos `[id]`, `[...slug]` e `[[...slug]]`
+- worker Node/Firebase com `req.url === "/..."` + `req.method === "GET"` no servidor HTTP minimo
+
+No caso dos backends adicionais, o `drift` agora cobre:
+
+- `ASP.NET Core`: `[Route]`, `[HttpGet|Post|Put|Patch|Delete]` e `MapGet|MapPost|MapPut|MapPatch|MapDelete`
+- `Spring Boot`: `@RestController`, `@RequestMapping` e `@GetMapping|PostMapping|PutMapping|PatchMapping|DeleteMapping`
+- `Go`: `http.HandleFunc`, `ServeMux.HandleFunc`, `gin.Engine` e `gin.RouterGroup`
+- `Rust Axum`: `Router::route`, `get|post|put|patch|delete` e `nest`
+- `C++`: `drift` de simbolo/bridge, sem prometer HTTP nesta fatia
+
+### `sema doctor`
+
+Faz uma checagem rapida de ambiente para reduzir atrito idiota antes de voce culpar a ferramenta.
+
+Hoje ele verifica:
+
+- `node`
+- `npm`
+- `python` ou `py`
+- `dotnet`
+- `go`
+- `cargo`
+- `java`
+- `code`
 
 Com `--json`, a saida inclui:
 
@@ -193,9 +277,11 @@ Com `--json`, a saida inclui:
 - `diagnosticos`
 - `sucesso`
 
-### `sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]`
+### `sema importar <nestjs|fastapi|flask|nextjs|firebase|typescript|python|dart|dotnet|java|go|rust|cpp> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]`
 
 Importa um projeto legado e gera um **rascunho Sema revisavel**.
+
+Leitura importante: `flask`, `nextjs`, `firebase`, `dotnet`, `java`, `go`, `rust` e `cpp` aqui sao **fontes legado de importacao/drift**, nao novos `frameworks` de geracao. A geracao continua `base`, `nestjs` e `fastapi`.
 
 O comando:
 
@@ -214,7 +300,14 @@ Casos praticos:
 
 - `nestjs`: controller, service e DTO para rascunho backend TypeScript
 - `fastapi`: router, service e schema para rascunho backend Python
-- `typescript`, `python`, `dart`: importacao generica focada em funcoes, classes e contratos basicos
+- `flask`: `Blueprint`, `url_prefix`, `@app.route` e `@blueprint.route` para rascunho backend Python
+- `nextjs`: `App Router` com `route.ts`, metodos HTTP e segmentos dinamicos
+- `firebase`: bridge de worker, endpoint de health e recursos persistidos descobertos no runtime
+- `dotnet`: controllers ASP.NET Core, Minimal API e simbolos `cs:`
+- `java`: controllers Spring Boot e simbolos `java:`
+- `go`: handlers `net/http` / Gin e simbolos `go:`
+- `rust`: handlers Axum e simbolos `rust:`
+- `typescript`, `python`, `dart`, `cpp`: importacao generica focada em funcoes, classes e contratos basicos
 
 ### `sema starter-ia`
 
@@ -416,6 +509,13 @@ Campos tipicos:
 ```bash
 sema iniciar --template nestjs
 sema iniciar --template fastapi
+sema iniciar --template nextjs-api
+sema iniciar --template node-firebase-worker
+sema iniciar --template aspnet-api
+sema iniciar --template springboot-api
+sema iniciar --template go-http-api
+sema iniciar --template rust-axum-api
+sema iniciar --template cpp-service-bridge
 ```
 
 ### Inspecionar a configuracao resolvida
@@ -452,6 +552,18 @@ sema importar nestjs ./backend --saida ./sema/importado --json
 
 ```bash
 sema importar fastapi ./app --saida ./sema/importado --json
+```
+
+### Importar um backend Next.js App Router legado
+
+```bash
+sema importar nextjs ./frontend --saida ./sema/importado --json
+```
+
+### Importar um worker Node/Firebase legado
+
+```bash
+sema importar firebase ./worker --saida ./sema/importado --json
 ```
 
 ### Importar projeto TypeScript, Python ou Dart generico

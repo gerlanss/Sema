@@ -1,0 +1,62 @@
+name: Release Publica
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag da release, por exemplo v0.8.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+
+    env:
+      SEMA_RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Validar versao publica
+        run: npm run release:verificar-versao
+
+      - name: Executar verificacao completa do projeto
+        run: npm run project:check
+
+      - name: Empacotar extensao VS Code
+        run: npm run extensao:empacotar
+
+      - name: Preparar artefatos da release
+        run: node scripts/preparar-release-publica.mjs
+
+      - name: Publicar release no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.SEMA_RELEASE_TAG }}
+          generate_release_notes: true
+          body_path: .tmp/release-assets/release-notes.md
+          files: |
+            .tmp/release-assets/sema-cli-*.tgz
+            .tmp/release-assets/sema-language-tools-*.vsix
+            .tmp/release-assets/install-sema.sh
+            .tmp/release-assets/install-sema.ps1
+            .tmp/release-assets/SHA256SUMS.txt

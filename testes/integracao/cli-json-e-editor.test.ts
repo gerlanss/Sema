@@ -4,7 +4,19 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
-import { DIRETORIOS_CODIGO_FUTEBOT_FIXTURE, criarProjetoPythonEstiloFuteBot } from "./futebot-fixture.ts";
+import {
+  DIRETORIOS_CODIGO_FUTEBOT_FIXTURE,
+  criarProjetoBridgeDart,
+  criarProjetoCppBridge,
+  criarProjetoDotnetAspNet,
+  criarProjetoFirebaseWorker,
+  criarProjetoFlaskEstiloGestech,
+  criarProjetoGoHttp,
+  criarProjetoNextJsAppRouter,
+  criarProjetoPythonEstiloFuteBot,
+  criarProjetoRustAxum,
+  criarProjetoSpringBoot,
+} from "./futebot-fixture.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
 
@@ -119,7 +131,7 @@ test("cli expoe starter e prompt de ia", () => {
   assert.match(starter.stdout, /Origem da instalacao:/);
   assert.match(starter.stdout, /Documentos locais encontrados:/);
   assert.match(starter.stdout, /AGENT_STARTER\.md/);
-  assert.match(starter.stdout, /Sema, uma linguagem estruturada para IA/);
+  assert.match(starter.stdout, /Sema, um Protocolo de Governanca de Intencao para IA e backend vivo/);
   assert.match(starter.stdout, /nao invente sintaxe/);
   assert.match(starter.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
 
@@ -132,7 +144,7 @@ test("cli expoe starter e prompt de ia", () => {
   assert.match(prompt.stdout, /Prompt-base de IA da Sema/);
   assert.match(prompt.stdout, /Origem da instalacao:/);
   assert.match(prompt.stdout, /prompt-base-ia-sema\.md/);
-  assert.match(prompt.stdout, /Trate a Sema como linguagem de especificacao executavel/);
+  assert.match(prompt.stdout, /Trate a Sema como camada semantica e linguagem de especificacao executavel/);
   assert.match(prompt.stdout, /use o formatador oficial da Sema como fonte unica de estilo/);
 });
 
@@ -273,6 +285,108 @@ test("cli inspeciona projeto Python sem config com mesma base a partir de raiz, 
   }
 });
 
+test("cli inspeciona projeto Flask e detecta fonte legado correta", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-flask-"));
+
+  try {
+    await criarProjetoFlaskEstiloGestech(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", baseTemporaria, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.baseProjeto, baseTemporaria);
+    assert.deepEqual(json.configuracao.origens, [path.join(baseTemporaria, "contratos")]);
+    assert.deepEqual(json.configuracao.diretoriosCodigo, [path.join(baseTemporaria, "Gestech")]);
+    assert.equal(json.configuracao.fontesLegado.includes("flask"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto Next.js App Router e detecta fonte legado correta", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-nextjs-"));
+
+  try {
+    await criarProjetoNextJsAppRouter(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", baseTemporaria, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.baseProjeto, baseTemporaria);
+    assert.equal(json.configuracao.fontesLegado.includes("nextjs"), true);
+    assert.equal(json.projeto.modulos[0].implementacao.rotasDivergentes.length, 0);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli resolve base de projeto sem config a partir de contratos e arquivo isolado", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-contratos-"));
+
+  try {
+    await criarProjetoNextJsAppRouter(baseTemporaria);
+    await rm(path.join(baseTemporaria, "sema.config.json"), { force: true });
+
+    const entradas = [
+      baseTemporaria,
+      path.join(baseTemporaria, "contratos"),
+      path.join(baseTemporaria, "contratos", "next_http.sema"),
+    ];
+
+    const resultados = entradas.map((entrada) => {
+      const execucao = spawnSync(
+        "node",
+        [CLI, "inspecionar", entrada, "--json"],
+        { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+      );
+
+      assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+      return JSON.parse(execucao.stdout);
+    });
+
+    for (const resultado of resultados) {
+      assert.equal(resultado.configuracao.baseProjeto, baseTemporaria);
+      assert.deepEqual(resultado.configuracao.origens, [path.join(baseTemporaria, "contratos")]);
+      assert.equal(resultado.configuracao.fontesLegado.includes("nextjs"), true);
+      assert.equal(resultado.configuracao.diretoriosCodigo.includes(path.join(baseTemporaria, "src")), true);
+    }
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto Firebase worker e detecta recurso vivo correto", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-firebase-"));
+
+  try {
+    await criarProjetoFirebaseWorker(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", baseTemporaria, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.baseProjeto, baseTemporaria);
+    assert.equal(json.configuracao.fontesLegado.includes("firebase"), true);
+    assert.equal(json.projeto.modulos.some((modulo: { implementacao: { recursosValidos: number } }) => modulo.implementacao.recursosValidos >= 1), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
 test("cli gera contexto de ia com drift python resolvido para arquivo dentro de sema", async () => {
   const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-python-"));
   const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-python-out-"));
@@ -301,6 +415,30 @@ test("cli gera contexto de ia com drift python resolvido para arquivo dentro de 
     assert.equal(drift.resumo.implsQuebrados, 0);
     assert.equal(drift.drift.tasks.every((task: { implsQuebrados: number }) => task.implsQuebrados === 0), true);
     assert.match(readme, /drift\.json/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+    await rm(pastaSaida, { recursive: true, force: true });
+  }
+});
+
+test("cli gera contexto de ia acionavel para bridge Dart consumidor", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-dart-"));
+  const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-dart-out-"));
+
+  try {
+    await criarProjetoBridgeDart(baseTemporaria);
+    const arquivo = path.join(baseTemporaria, "contratos", "consumer_bridge.sema");
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "contexto-ia", arquivo, "--saida", pastaSaida, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
+    assert.equal(drift.resumo.implsQuebrados, 0);
+    assert.equal(drift.resumo.implsValidos, 2);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
     await rm(pastaSaida, { recursive: true, force: true });
@@ -429,6 +567,114 @@ test("cli compila usando sema.config para scaffold FastAPI sem precisar de flags
     const schemas = await readFile(path.join(baseTemporaria, "generated", "fastapi", "app", "app", "pedidos_schemas.py"), "utf8");
     assert.match(router, /APIRouter/);
     assert.match(schemas, /BaseModel/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inicia template Next.js API com trilha oficial de criacao", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-starter-nextjs-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "nextjs-api"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const contrato = await readFile(path.join(baseTemporaria, "contratos", "health.sema"), "utf8");
+    const route = await readFile(path.join(baseTemporaria, "src", "app", "api", "health", "route.ts"), "utf8");
+    assert.match(contrato, /ts: src\.app\.api\.health\.route\.GET/);
+    assert.match(route, /export async function GET/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inicia template Node Firebase worker com bridge e recurso vivo", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-starter-firebase-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "node-firebase-worker"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const contrato = await readFile(path.join(baseTemporaria, "contratos", "worker_runtime.sema"), "utf8");
+    const bridge = await readFile(path.join(baseTemporaria, "src", "sema_contract_bridge.ts"), "utf8");
+    const collections = await readFile(path.join(baseTemporaria, "src", "config", "collections.ts"), "utf8");
+    assert.match(contrato, /ts: src\.sema_contract_bridge\.semaWorkerHealthPayload/);
+    assert.match(bridge, /semaCollectionNames/);
+    assert.match(collections, /worker_status/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inicia templates backend genericos oficiais", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-starters-backend-"));
+
+  try {
+    for (const template of ["aspnet-api", "springboot-api", "go-http-api", "rust-axum-api", "cpp-service-bridge"]) {
+      const destino = path.join(baseTemporaria, template);
+      await mkdir(destino, { recursive: true });
+      const init = spawnSync(
+        "node",
+        [CLI, "iniciar", "--template", template],
+        { stdio: "pipe", encoding: "utf8", cwd: destino },
+      );
+      assert.equal(init.status, 0, `${template}\n${init.stderr || init.stdout}`);
+      assert.equal((await readFile(path.join(destino, "sema.config.json"), "utf8")).length > 0, true);
+      assert.equal((await readFile(path.join(destino, "README.md"), "utf8")).length > 0, true);
+    }
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli doctor checa toolchain sem explodir", () => {
+  const execucao = spawnSync(
+    "node",
+    [CLI, "doctor"],
+    { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+  );
+
+  assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+  assert.match(execucao.stdout, /Sema doctor/);
+  assert.match(execucao.stdout, /node: ok/);
+  assert.match(execucao.stdout, /npm: ok/);
+});
+
+test("cli inspeciona familias backend novas e detecta fontes corretas", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-backends-"));
+
+  try {
+    const cenarios = [
+      { nome: "dotnet", criar: criarProjetoDotnetAspNet },
+      { nome: "java", criar: criarProjetoSpringBoot },
+      { nome: "go", criar: criarProjetoGoHttp },
+      { nome: "rust", criar: criarProjetoRustAxum },
+      { nome: "cpp", criar: criarProjetoCppBridge },
+    ] as const;
+
+    for (const cenario of cenarios) {
+      const base = path.join(baseTemporaria, cenario.nome);
+      await mkdir(base, { recursive: true });
+      await cenario.criar(base);
+
+      const execucao = spawnSync(
+        "node",
+        [CLI, "inspecionar", base, "--json"],
+        { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+      );
+
+      assert.equal(execucao.status, 0, `${cenario.nome}\n${execucao.stderr || execucao.stdout}`);
+      const json = JSON.parse(execucao.stdout);
+      assert.equal(json.configuracao.fontesLegado.includes(cenario.nome), true);
+    }
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
   }

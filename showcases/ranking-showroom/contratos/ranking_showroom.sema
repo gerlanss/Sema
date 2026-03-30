@@ -1,0 +1,174 @@
+module showcases.ranking_showroom {
+  docs {
+    resumo: "Case oficial sanitizado para provar valor da Sema em backend Flask vivo, com impl, drift e contexto de IA."
+  }
+
+  entity RankingShowroom {
+    fields {
+      vitrine_id: Id
+      top_item_slug: Texto
+      total_itens: Inteiro
+      atualizado_em: Data
+    }
+    invariants {
+      vitrine_id existe
+      top_item_slug existe
+      total_itens existe
+      atualizado_em existe
+    }
+  }
+
+  entity RankingItem {
+    fields {
+      item_id: Id
+      slug: Texto
+      posicao: Inteiro
+      score: Decimal
+      status: Texto
+    }
+    invariants {
+      item_id existe
+      slug existe
+      posicao existe
+      score existe
+      status existe
+    }
+  }
+
+  type ResultadoSync {
+    fields {
+      execucao_id: Id
+      itens_processados: Inteiro
+      status_sync: Texto
+    }
+    invariants {
+      execucao_id existe
+      itens_processados existe
+      status_sync existe
+    }
+  }
+
+  task listar_vitrine_ranking {
+    input {
+      canal: Texto required
+    }
+    output {
+      vitrine: RankingShowroom
+    }
+    impl {
+      py: showcase_app.routes.api_ranking.ranking_showroom
+    }
+    effects {
+      consulta ranking_showroom criticidade = alta
+      auditoria ranking_showroom criticidade = media
+    }
+    guarantees {
+      vitrine existe
+    }
+    tests {
+      caso "lista vitrine ativa" {
+        given {
+          canal: "home"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task consultar_item_ranking {
+    input {
+      item_id: Inteiro required
+    }
+    output {
+      item: RankingItem
+    }
+    impl {
+      py: showcase_app.routes.api_ranking.ranking_item
+    }
+    effects {
+      consulta ranking_item criticidade = alta
+      auditoria ranking_item criticidade = media
+    }
+    guarantees {
+      item existe
+    }
+    tests {
+      caso "consulta item da vitrine" {
+        given {
+          item_id: 42
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task sincronizar_vitrine_ranking {
+    input {
+      origem: Texto required
+    }
+    output {
+      execucao: ResultadoSync
+    }
+    impl {
+      py: showcase_app.routes.api_ranking.sync_ranking
+    }
+    effects {
+      persistencia ranking_showroom criticidade = alta
+      auditoria sync_ranking criticidade = alta
+      evento ranking_sincronizado criticidade = media
+    }
+    guarantees {
+      execucao existe
+    }
+    tests {
+      caso "sincroniza showroom" {
+        given {
+          origem: "catalogo"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route ranking_showroom_publico {
+    metodo: GET
+    caminho: /api/ranking-showroom
+    task: listar_vitrine_ranking
+    input {
+      canal: Texto required
+    }
+    output {
+      vitrine: RankingShowroom required
+    }
+  }
+
+  route ranking_item_publico {
+    metodo: GET
+    caminho: "/api/ranking-showroom/{item_id}"
+    task: consultar_item_ranking
+    input {
+      item_id: Inteiro required
+    }
+    output {
+      item: RankingItem required
+    }
+  }
+
+  route ranking_sync_publico {
+    metodo: POST
+    caminho: /api/ranking-showroom/sync
+    task: sincronizar_vitrine_ranking
+    input {
+      origem: Texto required
+    }
+    output {
+      execucao: ResultadoSync required
+    }
+  }
+}

@@ -1,141 +1,83 @@
 # Sema Backend-First
 
-A Sema entrou num ciclo em que o backend deixa de ser caso secundario e vira o terreno principal.
+A Sema continua sendo uma linguagem de intencao, mas o produto agora se apresenta primeiro como **Protocolo de Governanca de Intencao para IA e backend vivo**.
 
 Leitura direta:
 
-- a Sema continua sendo linguagem de intencao
-- ela continua governando contrato e significado
-- mas agora o foco pratico e **criar e editar backends reais**
+- a Sema manda no contrato e no significado
+- a stack real continua em NestJS, FastAPI, Flask, TypeScript, Python ou Dart
+- o foco pratico e criar, importar e editar backends reais sem perder a trilha semantica
 
-No marco `0.7 legado incremental`, a Sema ja cobre:
+## O que isso significa hoje
+
+No marco publico `0.8.x backend generico`, a Sema cobre:
 
 - scaffold base para TypeScript, Python e Dart
-- scaffold orientado a framework para:
-  - NestJS
-  - FastAPI
-- importacao assistida de legado para NestJS, FastAPI, TypeScript, Python e Dart
+- scaffold orientado a framework para NestJS e FastAPI
+- starters oficiais para `nextjs-api` e `node-firebase-worker`
+- importacao assistida de legado para NestJS, FastAPI, Flask, Next.js App Router, Node/Firebase worker, TypeScript, Python e Dart
 - configuracao de projeto com `sema.config.json`
 - resolucao de `use` em multiplas origens do projeto
 - inspecao nao destrutiva com `sema inspecionar`
-- governanca de drift com `sema drift`
-- vinculacao de `task` com implementacao externa via `impl`
+- governanca de `drift` com `sema drift`
+- ligacao de `task` com implementacao externa via `impl`
 
-## O que isso muda na pratica
+## O que muda no fluxo
 
-Antes, o fluxo mais comum era:
+Antes, o uso comum era:
 
 1. escrever `.sema`
 2. validar
-3. compilar um arquivo para uma pasta generica
+3. compilar para uma pasta generica
 
-Agora o fluxo backend-first pode ser:
+Agora, em projeto vivo, o fluxo util fica:
 
-1. iniciar um projeto com template
-2. modelar o dominio em `contratos/*.sema`
-3. inspecionar como a Sema esta resolvendo o projeto
-4. compilar scaffold de backend
-5. ligar implementacoes reais via `impl`
+1. importar ou curar o contrato
+2. revisar a intencao
+3. ligar `impl`
+4. rodar `sema inspecionar`
+5. rodar `sema drift`
+6. preparar contexto para IA com `sema contexto-ia`
+7. compilar scaffold quando fizer sentido
 
-Para projeto que nao nasceu com Sema, o fluxo vira:
+## Compatibilidade legado
 
-1. importar o legado com `sema importar`
-2. revisar o rascunho `.sema`
-3. validar, formatar e lapidar a intencao
-4. usar `impl` para amarrar o contrato ao codigo vivo
-5. medir `sema drift --json`
-6. compilar scaffold quando fizer sentido
+- `NestJS`, `FastAPI`, `Flask`: importar + `drift` de rota publica
+- `Next.js App Router`: importar + `drift` de rota publica por `route.ts`
+- `Node/Firebase worker`: importar + `drift` de health endpoint e recurso persistido
+- `TypeScript`, `Python`, `Dart`: importacao generica + resolucao de simbolo
 
-## Templates iniciais
+No caso de Flask, isso cobre:
 
-### NestJS
+- `Application Factory`
+- `Blueprint`
+- `url_prefix`
+- `@app.route`
+- `@bp.route`
 
-```bash
-sema iniciar --template nestjs
-```
+No caso de `Next.js App Router`, isso cobre:
 
-Isso cria um projeto com:
+- `app/api/**/route.ts`
+- `src/app/api/**/route.ts`
+- segmentos dinamicos `[id]`, `[...slug]` e `[[...slug]]`
 
-- `sema.config.json`
-- `contratos/pedidos.sema`
-- convencao de geracao backend para TypeScript
+No caso de `Node/Firebase worker`, isso cobre:
 
-### FastAPI
+- bridge explicita para `impl`
+- endpoint HTTP minimo do worker
+- recurso persistido descoberto em colecoes/constantes do runtime
 
-```bash
-sema iniciar --template fastapi
-```
+## Showcase oficial
 
-Isso cria um projeto com:
+Se voce quiser ver isso sem depender de benchmark externo, o case oficial esta em [showcases/ranking-showroom](../showcases/ranking-showroom/).
 
-- `sema.config.json`
-- `contratos/pedidos.sema`
-- convencao de geracao backend para Python
+Ele demonstra:
 
-## Inspecionar antes de gerar
-
-Para evitar aquela zona de projeto em que ninguem sabe de onde a CLI esta lendo ou para onde vai escrever:
-
-```bash
-sema inspecionar --json
-```
-
-Esse comando mostra:
-
-- configuracao encontrada
-- framework ativo
-- estrutura de saida
-- alvos do projeto
-- origens resolvidas
-- diretorios de codigo candidatos
-- fontes de legado detectadas
-- modo de adocao
-- modulos encontrados
-
-## Governar drift depois da importacao
-
-Depois de ligar `impl`, rode:
-
-```bash
-sema drift --json
-```
-
-Esse comando existe para mostrar:
-
-- implementacoes externas resolvidas
-- implementacoes externas quebradas
-- tasks ainda sem ligacao com codigo vivo
-- rotas publicas divergentes, quando NestJS/FastAPI forem reconheciveis
-
-## Gerar scaffold NestJS
-
-```bash
-sema compilar --framework nestjs
-```
-
-Saida tipica:
-
-- `src/<contexto>/<modulo>.contract.ts`
-- `src/<contexto>/dto/<modulo>.dto.ts`
-- `src/<contexto>/<modulo>.service.ts`
-- `src/<contexto>/<modulo>.controller.ts`
-- `test/<contexto>/<modulo>.contract.test.ts`
-- `test/<contexto>/<modulo>.controller.spec.ts`
-
-## Gerar scaffold FastAPI
-
-```bash
-sema compilar --framework fastapi
-```
-
-Saida tipica:
-
-- `app/<contexto>/<modulo>_contract.py`
-- `app/<contexto>/<modulo>_schemas.py`
-- `app/<contexto>/<modulo>_service.py`
-- `app/<contexto>/<modulo>_router.py`
-- `tests/<contexto>/test_<modulo>_contract.py`
-- `tests/<contexto>/test_<modulo>_router.py`
+- backend Flask pequeno e real
+- contrato `.sema` curado
+- `impl` resolvendo simbolo vivo
+- `drift` sem divergencia
+- `contexto-ia` com `drift.json`
 
 ## O papel de `impl`
 
@@ -164,33 +106,13 @@ task processar_pagamento {
 Leitura pratica:
 
 - a Sema manda no contrato
-- NestJS ou FastAPI mantem execucao real
-- `impl` deixa rastreavel onde a implementacao vive
+- o framework mantem a execucao real
+- `impl` deixa rastreavel onde a verdade vive
 
-## Importacao assistida de legado
+## O que isso nao e
 
-Exemplos:
+- nao e runtime proprio
+- nao e framework acoplado a sintaxe
+- nao e promessa de "gerar backend inteiro sem tocar em nada"
 
-```bash
-sema importar nestjs ./backend --saida ./sema/importado
-sema importar fastapi ./app --saida ./sema/importado
-sema importar python ./servicos --saida ./sema/importado
-```
-
-O resultado e um **rascunho Sema valido para revisao**, nao uma promessa de engenharia reversa perfeita. A intencao aqui e poupar o trabalho bruto de migracao, dar visibilidade semantica e acelerar a adocao incremental.
-
-## O que ainda nao e o foco
-
-- UI
-- runtime proprio
-- framework acoplado a sintaxe da linguagem
-- "gerar backend inteiro e subir sem tocar em nada"
-
-A Sema aqui faz o trabalho pesado de:
-
-- travar dominio
-- explicitar contrato
-- gerar scaffold coerente
-- reduzir improviso conceitual
-
-E deixa o framework fazer o resto com dignidade.
+E protocolo semantico aplicado a sistema vivo. Esse e justamente o ponto.

@@ -141,7 +141,21 @@ async function listarArquivosDeOrigens(origens: string[]): Promise<string[]> {
 }
 
 function normalizarFonteLegado(valor: string): FonteLegado | undefined {
-  if (valor === "nestjs" || valor === "fastapi" || valor === "typescript" || valor === "python" || valor === "dart") {
+  if (
+    valor === "nestjs"
+    || valor === "fastapi"
+    || valor === "flask"
+    || valor === "nextjs"
+    || valor === "firebase"
+    || valor === "typescript"
+    || valor === "python"
+    || valor === "dart"
+    || valor === "dotnet"
+    || valor === "java"
+    || valor === "go"
+    || valor === "rust"
+    || valor === "cpp"
+  ) {
     return valor;
   }
   return undefined;
@@ -170,9 +184,90 @@ async function listarDiretoriosFilhos(diretorioBase: string): Promise<string[]> 
   }
 }
 
+async function listarArquivosRecursivosLimitado(
+  diretorioBase: string,
+  extensoes: string[],
+  profundidadeMaxima = 4,
+  limite = 40,
+): Promise<string[]> {
+  const encontrados: string[] = [];
+
+  const visitar = async (diretorioAtual: string, profundidadeAtual: number): Promise<void> => {
+    if (encontrados.length >= limite) {
+      return;
+    }
+
+    let entradas;
+    try {
+      entradas = await readdir(diretorioAtual, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entrada of entradas) {
+      if (encontrados.length >= limite) {
+        return;
+      }
+
+      const caminhoAtual = path.join(diretorioAtual, entrada.name);
+      if (entrada.isDirectory()) {
+        if (profundidadeAtual <= 0 || DIRETORIOS_CODIGO_IGNORADOS.has(entrada.name.toLowerCase())) {
+          continue;
+        }
+        await visitar(caminhoAtual, profundidadeAtual - 1);
+        continue;
+      }
+
+      if (extensoes.some((extensao) => entrada.name.toLowerCase().endsWith(extensao))) {
+        encontrados.push(caminhoAtual);
+      }
+    }
+  };
+
+  await visitar(diretorioBase, profundidadeMaxima);
+  return encontrados;
+}
+
+async function procurarArquivosPorNome(
+  diretorioBase: string,
+  nomes: string[],
+  profundidadeMaxima = 4,
+): Promise<string[]> {
+  const nomesNormalizados = new Set(nomes.map((nome) => nome.toLowerCase()));
+  const encontrados: string[] = [];
+
+  const visitar = async (diretorioAtual: string, profundidadeAtual: number): Promise<void> => {
+    let entradas;
+    try {
+      entradas = await readdir(diretorioAtual, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entrada of entradas) {
+      const caminhoAtual = path.join(diretorioAtual, entrada.name);
+      if (entrada.isDirectory()) {
+        if (profundidadeAtual <= 0 || DIRETORIOS_CODIGO_IGNORADOS.has(entrada.name.toLowerCase())) {
+          continue;
+        }
+        await visitar(caminhoAtual, profundidadeAtual - 1);
+        continue;
+      }
+
+      if (nomesNormalizados.has(entrada.name.toLowerCase())) {
+        encontrados.push(caminhoAtual);
+      }
+    }
+  };
+
+  await visitar(diretorioBase, profundidadeMaxima);
+  return encontrados;
+}
+
 const DIRETORIOS_CODIGO_FIXOS = [
   "src",
   "app",
+  "apps",
   "backend",
   "lib",
   "api",
@@ -181,6 +276,8 @@ const DIRETORIOS_CODIGO_FIXOS = [
   "models",
   "data",
   "pipeline",
+  "workers",
+  "functions",
   "scripts",
 ];
 
@@ -189,6 +286,7 @@ const DIRETORIOS_CODIGO_IGNORADOS = new Set([
   ".github",
   ".pytest_cache",
   ".tmp",
+  ".turbo",
   ".venv",
   ".next",
   ".nuxt",
@@ -202,13 +300,34 @@ const DIRETORIOS_CODIGO_IGNORADOS = new Set([
   "docs",
   "generated",
   "node_modules",
+  "ephemeral",
   "sema",
   "test",
   "tests",
+  "vendor",
   "venv",
 ]);
 
-const EXTENSOES_CODIGO = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".dart"];
+const EXTENSOES_CODIGO = [
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".py",
+  ".dart",
+  ".cs",
+  ".java",
+  ".go",
+  ".rs",
+  ".cpp",
+  ".cc",
+  ".cxx",
+  ".hpp",
+  ".h",
+];
+const NOMES_ORIGEM_CONTRATO = new Set(["sema", "contratos", "contracts"]);
 
 async function resolverBaseProjeto(
   entradaResolvida: string,
@@ -223,7 +342,7 @@ async function resolverBaseProjeto(
 
   let atual = pontoPartida;
   for (;;) {
-    if (path.basename(atual).toLowerCase() === "sema") {
+    if (NOMES_ORIGEM_CONTRATO.has(path.basename(atual).toLowerCase())) {
       const contemMarcadorRaiz = await caminhoExiste(path.join(atual, "package.json"))
         || await caminhoExiste(path.join(atual, "sema.config.json"));
       if (!contemMarcadorRaiz) {
@@ -245,9 +364,11 @@ async function resolverBaseProjeto(
 }
 
 async function descobrirOrigemPadrao(baseProjeto: string, entradaResolvida: string): Promise<string> {
-  const origemContratos = path.join(baseProjeto, "sema");
-  if (await caminhoExiste(origemContratos)) {
-    return path.resolve(origemContratos);
+  for (const nomeOrigem of NOMES_ORIGEM_CONTRATO) {
+    const origemContratos = path.join(baseProjeto, nomeOrigem);
+    if (await caminhoExiste(origemContratos)) {
+      return path.resolve(origemContratos);
+    }
   }
 
   const infoEntrada = await stat(entradaResolvida);
@@ -274,7 +395,7 @@ async function resolverOrigensProjeto(
   return [await descobrirOrigemPadrao(baseProjeto, entradaResolvida)];
 }
 
-async function diretorioTemArquivosCodigo(diretorioBase: string, profundidadeMaxima = 2): Promise<boolean> {
+async function diretorioTemArquivosCodigo(diretorioBase: string, profundidadeMaxima = 4): Promise<boolean> {
   let entradas;
   try {
     entradas = await readdir(diretorioBase, { withFileTypes: true });
@@ -360,37 +481,144 @@ async function inferirFontesLegado(
   }
 
   const encontrados = new Set<FonteLegado>();
-  const packageJson = await lerConteudoSeExistir(path.join(baseProjeto, "package.json"));
-  if (packageJson) {
-    if (/@nestjs\/common|@nestjs\/core/.test(packageJson)) {
+  const packageJsonRaiz = await lerConteudoSeExistir(path.join(baseProjeto, "package.json"));
+  const marcadoresFirebaseProjeto = await procurarArquivosPorNome(baseProjeto, ["firebase.json", "firestore.rules"], 3);
+
+  if (packageJsonRaiz) {
+    if (/@nestjs\/common|@nestjs\/core/.test(packageJsonRaiz)) {
       encontrados.add("nestjs");
     }
-    if (/typescript/.test(packageJson)) {
+    if (/typescript/.test(packageJsonRaiz)) {
+      encontrados.add("typescript");
+    }
+    if (/"next"\s*:/.test(packageJsonRaiz)) {
+      encontrados.add("nextjs");
+      encontrados.add("typescript");
+    }
+    if (/firebase-admin|firebase-functions|firebase\b/.test(packageJsonRaiz)) {
+      encontrados.add("firebase");
       encontrados.add("typescript");
     }
   }
 
+  if (marcadoresFirebaseProjeto.length > 0) {
+    encontrados.add("firebase");
+  }
+
   for (const diretorio of diretoriosCodigo) {
-    const arquivos = await readdir(diretorio, { withFileTypes: true }).catch(() => []);
-    const nomes = arquivos.map((arquivo) => arquivo.name.toLowerCase());
-    if (nomes.some((nome) => nome.endsWith(".ts"))) {
-      encontrados.add(packageJson && /@nestjs\/common|@nestjs\/core/.test(packageJson) ? "nestjs" : "typescript");
-    }
-    if (nomes.some((nome) => nome.endsWith(".py"))) {
-      const algumPy = await Promise.all(
-        arquivos
-          .filter((arquivo) => arquivo.isFile() && arquivo.name.toLowerCase().endsWith(".py"))
-          .slice(0, 5)
-          .map((arquivo) => lerConteudoSeExistir(path.join(diretorio, arquivo.name))),
-      );
-      if (algumPy.some((texto) => /from\s+fastapi\s+import|APIRouter|FastAPI/.test(texto ?? ""))) {
-        encontrados.add("fastapi");
-      } else {
-        encontrados.add("python");
+    const arquivosTs = await listarArquivosRecursivosLimitado(diretorio, [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"], 5, 40);
+    const arquivosPy = await listarArquivosRecursivosLimitado(diretorio, [".py"], 5, 20);
+    const arquivosDart = await listarArquivosRecursivosLimitado(diretorio, [".dart"], 5, 20);
+    const arquivosCs = await listarArquivosRecursivosLimitado(diretorio, [".cs"], 5, 20);
+    const arquivosJava = await listarArquivosRecursivosLimitado(diretorio, [".java"], 5, 20);
+    const arquivosGo = await listarArquivosRecursivosLimitado(diretorio, [".go"], 5, 20);
+    const arquivosRust = await listarArquivosRecursivosLimitado(diretorio, [".rs"], 5, 20);
+    const arquivosCppBrutos = await listarArquivosRecursivosLimitado(diretorio, [".cpp", ".cc", ".cxx", ".hpp", ".h"], 5, 30);
+    const arquivosCpp = arquivosCppBrutos.filter((arquivo) => !/(^|[\\/])(windows|linux|macos|runner|flutter|ephemeral|build|vendor)([\\/]|$)/i.test(arquivo));
+
+    if (arquivosTs.length > 0) {
+      encontrados.add("typescript");
+
+      const packageJsons = await procurarArquivosPorNome(diretorio, ["package.json"], 3);
+      const nextConfigs = await procurarArquivosPorNome(diretorio, ["next.config.js", "next.config.ts", "next.config.mjs"], 3);
+      const firebaseLocais = await procurarArquivosPorNome(diretorio, ["firebase.json", "firestore.rules"], 3);
+      const textosPackage = await Promise.all(packageJsons.slice(0, 8).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      const amostrasTs = await Promise.all(arquivosTs.slice(0, 10).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      const relacoesTs = arquivosTs.map((arquivo) => path.relative(diretorio, arquivo).replace(/\\/g, "/"));
+
+      const temNest = textosPackage.some((texto) => /@nestjs\/common|@nestjs\/core/.test(texto ?? ""))
+        || amostrasTs.some((texto) => /@nestjs\/common|@nestjs\/core|@Controller\(|@Get\(|@Post\(|@Put\(|@Patch\(|@Delete\(/.test(texto ?? ""));
+      const temNext = textosPackage.some((texto) => /"next"\s*:/.test(texto ?? ""))
+        || nextConfigs.length > 0
+        || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/api\/.+\/route\.(?:ts|tsx|js|jsx)$/.test(relacao));
+      const temFirebase = marcadoresFirebaseProjeto.length > 0
+        || firebaseLocais.length > 0
+        || textosPackage.some((texto) => /firebase-admin|firebase-functions/.test(texto ?? ""))
+        || amostrasTs.some((texto) => /firebase-admin|getFirestore|initializeApp|from\s+["']firebase-admin["']/.test(texto ?? ""));
+
+      if (temNest) {
+        encontrados.add("nestjs");
+      }
+      if (temNext) {
+        encontrados.add("nextjs");
+      }
+      if (temFirebase) {
+        encontrados.add("firebase");
       }
     }
-    if (nomes.some((nome) => nome.endsWith(".dart"))) {
+
+    if (arquivosPy.length > 0) {
+      encontrados.add("python");
+      const amostrasPython = await Promise.all(
+        arquivosPy
+          .slice(0, 8)
+          .map((arquivo) => lerConteudoSeExistir(arquivo)),
+      );
+
+      const temFastapi = amostrasPython.some((texto) => /from\s+fastapi\s+import|APIRouter|FastAPI/.test(texto ?? ""));
+      const temFlask = amostrasPython.some((texto) => /from\s+flask\s+import|import\s+flask\b|Blueprint\s*\(|Flask\s*\(|@\w+\.route\s*\(/.test(texto ?? ""));
+
+      if (temFastapi) {
+        encontrados.add("fastapi");
+      }
+      if (temFlask) {
+        encontrados.add("flask");
+      }
+    }
+    if (arquivosDart.length > 0) {
       encontrados.add("dart");
+    }
+
+    if (arquivosCs.length > 0) {
+      encontrados.add("dotnet");
+      const marcadores = await procurarArquivosPorNome(diretorio, ["appsettings.json", "Program.cs"], 4);
+      const amostrasCs = await Promise.all(arquivosCs.slice(0, 8).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      if (
+        marcadores.length > 0
+        || amostrasCs.some((texto) => /\bWebApplication\.CreateBuilder\b|\[ApiController\]|\[Http(Get|Post|Put|Patch|Delete)\]|\bMap(Get|Post|Put|Patch|Delete)\(/.test(texto ?? ""))
+      ) {
+        encontrados.add("dotnet");
+      }
+    }
+
+    if (arquivosJava.length > 0) {
+      encontrados.add("java");
+      const marcadoresJava = await procurarArquivosPorNome(diretorio, ["pom.xml", "build.gradle", "build.gradle.kts"], 4);
+      const amostrasJava = await Promise.all(arquivosJava.slice(0, 8).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      if (
+        marcadoresJava.length > 0
+        || amostrasJava.some((texto) => /@RestController|@GetMapping|@PostMapping|@RequestMapping/.test(texto ?? ""))
+      ) {
+        encontrados.add("java");
+      }
+    }
+
+    if (arquivosGo.length > 0) {
+      encontrados.add("go");
+      const goMod = await procurarArquivosPorNome(diretorio, ["go.mod"], 3);
+      const amostrasGo = await Promise.all(arquivosGo.slice(0, 8).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      if (
+        goMod.length > 0
+        || amostrasGo.some((texto) => /\bhttp\.HandleFunc\b|\bNewServeMux\b|\.GET\(|\.POST\(|gin\.Default\(/.test(texto ?? ""))
+      ) {
+        encontrados.add("go");
+      }
+    }
+
+    if (arquivosRust.length > 0) {
+      encontrados.add("rust");
+      const cargo = await procurarArquivosPorNome(diretorio, ["Cargo.toml"], 3);
+      const amostrasRust = await Promise.all(arquivosRust.slice(0, 8).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      if (
+        cargo.length > 0
+        || amostrasRust.some((texto) => /\bRouter::new\b|\.route\(|\bnest\(/.test(texto ?? ""))
+      ) {
+        encontrados.add("rust");
+      }
+    }
+
+    if (arquivosCpp.length > 0) {
+      encontrados.add("cpp");
     }
   }
 

@@ -42,6 +42,7 @@ type Comando =
   | "inspecionar"
   | "drift"
   | "importar"
+  | "doctor"
   | "formatar"
   | "ajuda-ia"
   | "starter-ia"
@@ -51,6 +52,16 @@ type Comando =
   | "prompt-ia-sema-primeiro"
   | "exemplos-prompt-ia"
   | "contexto-ia";
+
+type TemplateIniciar =
+  | FrameworkGeracao
+  | "nextjs-api"
+  | "node-firebase-worker"
+  | "aspnet-api"
+  | "springboot-api"
+  | "go-http-api"
+  | "rust-axum-api"
+  | "cpp-service-bridge";
 
 interface ResultadoExecucaoTestes {
   codigoSaida: number;
@@ -99,9 +110,10 @@ interface DescobertaDocsIa {
   documentos: Array<{ nome: string; caminho: string }>;
 }
 
-const STARTER_IA = `Voce esta trabalhando com Sema, uma linguagem estruturada para IA, voltada a modelagem explicita de contratos e intencao.
+const STARTER_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 
 Importante:
+- a Sema se apresenta publicamente como protocolo e funciona tecnicamente como linguagem de intencao
 - a Sema modela contratos, estados, fluxos, erros, efeitos e garantias
 - a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
 - a Sema pode servir de base para interfaces graficas elegantes e coerentes
@@ -146,9 +158,9 @@ Priorize sempre:
 Nao improvise quando faltar contexto.
 `;
 
-const PROMPT_BASE_IA = `Voce esta trabalhando com Sema, uma DSL semantica orientada a contrato, desenhada para facilitar entendimento e operacao por IA.
+const PROMPT_BASE_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao orientado a contrato, desenhado para facilitar entendimento e operacao por IA.
 
-Trate a Sema como linguagem de especificacao executavel. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
+Trate a Sema como camada semantica e linguagem de especificacao executavel. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
 
 Fontes de verdade, em ordem:
 1. README do projeto
@@ -383,7 +395,8 @@ Comandos:
   sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]
   sema inspecionar [arquivo-ou-pasta] [--json]
   sema drift <arquivo-ou-pasta> [--json]
-  sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
+  sema importar <nestjs|fastapi|flask|nextjs|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
+  sema doctor
   sema formatar <arquivo-ou-pasta> [--check] [--json]
   sema ajuda-ia
   sema starter-ia
@@ -434,6 +447,32 @@ function obterPosicionais(args: string[]): string[] {
   return posicionais;
 }
 
+function comandoDisponivel(comando: string, argumentos: string[] = ["--version"]): boolean {
+  const execucao = spawnSync(comando, argumentos, { stdio: "ignore", shell: process.platform === "win32" });
+  return (execucao.status ?? 1) === 0;
+}
+
+async function comandoDoctor(): Promise<number> {
+  const checks = [
+    { nome: "node", ok: comandoDisponivel("node") },
+    { nome: "npm", ok: comandoDisponivel("npm") },
+    { nome: "python", ok: comandoDisponivel("python") || comandoDisponivel("py") },
+    { nome: "dotnet", ok: comandoDisponivel("dotnet") },
+    { nome: "go", ok: comandoDisponivel("go") },
+    { nome: "cargo", ok: comandoDisponivel("cargo") },
+    { nome: "java", ok: comandoDisponivel("java") },
+    { nome: "code", ok: comandoDisponivel("code", ["--version"]) },
+  ];
+
+  console.log("Sema doctor");
+  for (const check of checks) {
+    console.log(`- ${check.nome}: ${check.ok ? "ok" : "ausente"}`);
+  }
+
+  const obrigatorios = checks.filter((check) => ["node", "npm"].includes(check.nome));
+  return obrigatorios.every((check) => check.ok) ? 0 : 1;
+}
+
 function validarCompatibilidadeFramework(alvo: AlvoGeracao, framework: FrameworkGeracao): string | undefined {
   if (framework === "base") {
     return undefined;
@@ -466,10 +505,62 @@ function normalizarFonteImportacao(valor: string | undefined): FonteImportacao |
   if (valor === "api") {
     return "fastapi";
   }
-  if (valor === "nestjs" || valor === "fastapi" || valor === "typescript" || valor === "python" || valor === "dart") {
+  if (valor === "next") {
+    return "nextjs";
+  }
+  if (valor === "fb") {
+    return "firebase";
+  }
+  if (valor === "csharp" || valor === "cs" || valor === "dotnet") {
+    return "dotnet";
+  }
+  if (valor === "java") {
+    return "java";
+  }
+  if (valor === "go" || valor === "golang") {
+    return "go";
+  }
+  if (valor === "rust" || valor === "rs") {
+    return "rust";
+  }
+  if (valor === "cpp" || valor === "cxx" || valor === "cc" || valor === "c++") {
+    return "cpp";
+  }
+  if (
+    valor === "nestjs"
+    || valor === "fastapi"
+    || valor === "flask"
+    || valor === "nextjs"
+    || valor === "firebase"
+    || valor === "dotnet"
+    || valor === "java"
+    || valor === "go"
+    || valor === "rust"
+    || valor === "cpp"
+    || valor === "typescript"
+    || valor === "python"
+    || valor === "dart"
+  ) {
     return valor;
   }
   return undefined;
+}
+
+function normalizarTemplateIniciar(valor?: string): TemplateIniciar {
+  if (
+    valor === "nestjs"
+    || valor === "fastapi"
+    || valor === "nextjs-api"
+    || valor === "node-firebase-worker"
+    || valor === "aspnet-api"
+    || valor === "springboot-api"
+    || valor === "go-http-api"
+    || valor === "rust-axum-api"
+    || valor === "cpp-service-bridge"
+  ) {
+    return valor;
+  }
+  return "base";
 }
 
 function garantirIr(resultado: ReturnType<typeof compilarCodigo>, caminho: string): IrModulo {
@@ -712,20 +803,31 @@ function resumirDriftPorModulo(
   const rotasDivergentes = modulo
     ? resultadoDrift.rotas_divergentes.filter((rota) => rota.modulo === modulo)
     : [];
+  const recursosValidos = modulo
+    ? resultadoDrift.recursos_validos.filter((recurso) => recurso.modulo === modulo)
+    : [];
+  const recursosDivergentes = modulo
+    ? resultadoDrift.recursos_divergentes.filter((recurso) => recurso.modulo === modulo)
+    : [];
 
   return {
     caminho,
     modulo,
     implsValidos: implsValidos.length,
     implsQuebrados: implsQuebrados.length,
+    recursosValidos: recursosValidos.length,
+    recursosDivergentesCount: recursosDivergentes.length,
     tasksSemImplementacao: tasks.filter((task) => task.semImplementacao).length,
     arquivosRelacionados: [...new Set([
       ...tasks.flatMap((task) => task.arquivosReferenciados),
       ...implsValidos.map((impl) => impl.arquivo).filter((item): item is string => Boolean(item)),
       ...implsQuebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.arquivo) ?? []),
+      ...recursosValidos.map((recurso) => recurso.arquivo).filter(Boolean),
+      ...recursosDivergentes.map((recurso) => recurso.arquivo).filter(Boolean),
     ])].sort((a, b) => a.localeCompare(b, "pt-BR")),
     tasks,
     rotasDivergentes,
+    recursosDivergentes,
   };
 }
 
@@ -845,7 +947,7 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
   };
 }
 
-async function comandoIniciar(cwd: string, template: FrameworkGeracao): Promise<number> {
+async function comandoIniciar(cwd: string, template: TemplateIniciar): Promise<number> {
   const arquivosBase = [
     {
       caminhoRelativo: "contratos/pedidos.sema",
@@ -947,6 +1049,548 @@ async function comandoIniciar(cwd: string, template: FrameworkGeracao): Promise<
       { caminhoRelativo: "app/.gitkeep", conteudo: "" },
       { caminhoRelativo: "tests/.gitkeep", conteudo: "" },
       ...arquivosBase,
+    ];
+  } else if (template === "nextjs-api") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["nextjs", "typescript"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/health.sema",
+        conteudo: `module app.health {
+  task get_api_health {
+    output {
+      status: Texto
+      runtime: Texto
+    }
+    impl {
+      ts: src.app.api.health.route.GET
+    }
+    guarantees {
+      status existe
+      runtime existe
+    }
+  }
+
+  route get_api_health_publico {
+    metodo: GET
+    caminho: /api/health
+    task: get_api_health
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/app/api/health/route.ts",
+        conteudo: `export async function GET() {
+  return Response.json({
+    status: "ok",
+    runtime: "nextjs",
+  });
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Next.js API + Sema
+
+- Contratos em \`contratos/\`
+- Handlers App Router em \`src/app/api/\`
+- Rota de exemplo validada por \`drift\`
+`,
+      },
+    ];
+  } else if (template === "node-firebase-worker") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["firebase", "typescript"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/worker_runtime.sema",
+        conteudo: `module worker.runtime {
+  task publicar_payload_health {
+    output {
+      status: Texto
+      timestamp: Texto
+    }
+    effects {
+      evento payload_health criticidade = alta
+    }
+    impl {
+      ts: src.sema_contract_bridge.semaWorkerHealthPayload
+    }
+    guarantees {
+      status existe
+      timestamp existe
+    }
+  }
+
+  task inventariar_colecoes {
+    output {
+      collections: Json
+    }
+    effects {
+      consulta runtime criticidade = baixa
+    }
+    impl {
+      ts: src.sema_contract_bridge.semaCollectionNames
+    }
+    guarantees {
+      collections existe
+    }
+  }
+
+  route get_health_worker {
+    metodo: GET
+    caminho: /health
+    task: publicar_payload_health
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/config/collections.ts",
+        conteudo: `export const COLLECTIONS = {
+  worker_status: "worker_status",
+  audit_log: "audit_log",
+} as const;
+`,
+      },
+      {
+        caminhoRelativo: "src/services/health-check.ts",
+        conteudo: `import http from "node:http";
+
+export type HealthStatus = {
+  status: "healthy" | "degraded" | "unhealthy" | "initializing";
+  timestamp: string;
+};
+
+export type HealthProvider = () => HealthStatus;
+
+export function startHealthCheckServer(port: number, provider: HealthProvider) {
+  const server = http.createServer((req, res) => {
+    if (req.url === "/health" && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(provider()));
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  server.listen(port);
+  return server;
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/sema_contract_bridge.ts",
+        conteudo: `import { COLLECTIONS } from "./config/collections";
+import { startHealthCheckServer, type HealthProvider, type HealthStatus } from "./services/health-check";
+
+export function semaStartWorkerHealthServer(port: number, provider: HealthProvider) {
+  return startHealthCheckServer(port, provider);
+}
+
+export function semaWorkerHealthPayload(payload: HealthStatus): HealthStatus {
+  return payload;
+}
+
+export function semaCollectionNames() {
+  return COLLECTIONS;
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Node Firebase Worker + Sema
+
+- Contratos em \`contratos/\`
+- Worker e bridges em \`src/\`
+- \`drift\` valida impl, endpoint de health e recursos Firestore declarados
+`,
+      },
+    ];
+  } else if (template === "aspnet-api") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["dotnet"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/health.sema",
+        conteudo: `module app.health {
+  task get_health {
+    output {
+      status: Texto
+      runtime: Texto
+    }
+    impl {
+      cs: src.Controllers.HealthController.Get
+    }
+    guarantees {
+      status existe
+      runtime existe
+    }
+  }
+
+  route get_health_publico {
+    metodo: GET
+    caminho: /api/health
+    task: get_health
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/Controllers/HealthController.cs",
+        conteudo: `using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/health")]
+public class HealthController : ControllerBase
+{
+    [HttpGet]
+    public object Get()
+    {
+        return new { status = "ok", runtime = "aspnet" };
+    }
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter ASP.NET Core API + Sema
+
+- Contratos em \`contratos/\`
+- Controllers/Minimal API em \`src/\`
+- \`drift\` valida impl e rota publica
+`,
+      },
+    ];
+  } else if (template === "springboot-api") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["java"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/health.sema",
+        conteudo: `module app.health {
+  task get_health {
+    output {
+      status: Texto
+      runtime: Texto
+    }
+    impl {
+      java: src.main.java.com.acme.health.HealthController.health
+    }
+    guarantees {
+      status existe
+      runtime existe
+    }
+  }
+
+  route get_health_publico {
+    metodo: GET
+    caminho: /api/health
+    task: get_health
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/main/java/com/acme/health/HealthController.java",
+        conteudo: `package com.acme.health;
+
+import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/health")
+public class HealthController {
+    @GetMapping
+    public Map<String, String> health() {
+        return Map.of("status", "ok", "runtime", "spring");
+    }
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Spring Boot API + Sema
+
+- Contratos em \`contratos/\`
+- Controllers REST em \`src/main/java/\`
+- \`drift\` valida impl e rota publica
+`,
+      },
+    ];
+  } else if (template === "go-http-api") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./internal"],
+  "fontesLegado": ["go"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/health.sema",
+        conteudo: `module app.health {
+  task get_health {
+    output {
+      resultado: Json
+    }
+    impl {
+      go: internal.health.getHealth
+    }
+    guarantees {
+      resultado existe
+    }
+  }
+
+  route get_health_publico {
+    metodo: GET
+    caminho: /health
+    task: get_health
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "internal/health.go",
+        conteudo: `package internal
+
+import "github.com/gin-gonic/gin"
+
+func registerRoutes(router *gin.Engine) {
+    router.GET("/health", getHealth)
+}
+
+func getHealth(ctx *gin.Context) {
+    ctx.JSON(200, gin.H{"status": "ok", "runtime": "go"})
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Go HTTP API + Sema
+
+- Contratos em \`contratos/\`
+- Handlers em \`internal/\`
+- \`drift\` valida impl e rota publica
+`,
+      },
+    ];
+  } else if (template === "rust-axum-api") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["rust"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/health.sema",
+        conteudo: `module app.health {
+  task get_health {
+    output {
+      resultado: Json
+    }
+    impl {
+      rust: src.handlers.health
+    }
+    guarantees {
+      resultado existe
+    }
+  }
+
+  route get_health_publico {
+    metodo: GET
+    caminho: /health
+    task: get_health
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/main.rs",
+        conteudo: `use axum::{routing::get, Router};
+
+mod handlers;
+
+fn app() -> Router {
+    Router::new().route("/health", get(handlers::health))
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/handlers.rs",
+        conteudo: `pub async fn health() -> &'static str {
+    "ok"
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Rust Axum API + Sema
+
+- Contratos em \`contratos/\`
+- Handlers em \`src/\`
+- \`drift\` valida impl e rota publica
+`,
+      },
+    ];
+  } else if (template === "cpp-service-bridge") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["cpp"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/runtime_bridge.sema",
+        conteudo: `module app.runtime_bridge {
+  task processar_snapshot {
+    input {
+      payload: Json required
+    }
+    output {
+      resultado: Json
+    }
+    impl {
+      cpp: src.runtime.RuntimeBridge.processSnapshot
+    }
+    guarantees {
+      resultado existe
+    }
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/runtime.cpp",
+        conteudo: `class RuntimeBridge {
+public:
+    int processSnapshot(int payload) {
+        return payload;
+    }
+};
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter C++ Service Bridge + Sema
+
+- Contratos em \`contratos/\`
+- Symbols e bridges em \`src/\`
+- \`drift\` valida impl de simbolos, sem prometer rota HTTP
+`,
+      },
     ];
   } else {
     arquivos = [
@@ -1064,7 +1708,7 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
   console.log("- Modulos selecionados:");
   for (const modulo of payload.projeto.modulos) {
     console.log(`  - ${modulo.modulo ?? "(sem modulo)"} :: ${modulo.caminho} :: diagnosticos=${modulo.diagnosticos}`);
-    console.log(`    impls validos=${modulo.implementacao.implsValidos} quebrados=${modulo.implementacao.implsQuebrados} sem_impl=${modulo.implementacao.tasksSemImplementacao}`);
+    console.log(`    impls validos=${modulo.implementacao.implsValidos} quebrados=${modulo.implementacao.implsQuebrados} recursos divergentes=${modulo.implementacao.recursosDivergentesCount} sem_impl=${modulo.implementacao.tasksSemImplementacao}`);
     for (const arquivoRelacionado of modulo.implementacao.arquivosRelacionados.slice(0, 5)) {
       console.log(`    arquivo relacionado: ${arquivoRelacionado}`);
     }
@@ -1087,6 +1731,8 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
   console.log(`- Impl validos: ${resultado.impls_validos.length}`);
   console.log(`- Impl quebrados: ${resultado.impls_quebrados.length}`);
   console.log(`- Rotas divergentes: ${resultado.rotas_divergentes.length}`);
+  console.log(`- Recursos vivos validos: ${resultado.recursos_validos.length}`);
+  console.log(`- Recursos vivos divergentes: ${resultado.recursos_divergentes.length}`);
 
   if (resultado.impls_quebrados.length > 0) {
     console.log("- Impl quebrados:");
@@ -1105,6 +1751,13 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
     console.log("- Rotas divergentes:");
     for (const rota of resultado.rotas_divergentes) {
       console.log(`  - ${rota.modulo}.${rota.route} :: ${rota.metodo ?? "?"} ${rota.caminho ?? "?"}`);
+    }
+  }
+
+  if (resultado.recursos_divergentes.length > 0) {
+    console.log("- Recursos divergentes:");
+    for (const recurso of resultado.recursos_divergentes) {
+      console.log(`  - ${recurso.modulo}.${recurso.task} :: ${recurso.categoria} ${recurso.alvo}`);
     }
   }
 
@@ -1627,7 +2280,8 @@ async function comandoVerificarJson(
 
 async function principal(): Promise<void> {
   const { comando, resto } = obterArgumentos();
-  if (!comando) {
+  const comandoCru = process.argv[2];
+  if (!comando || comandoCru === "--help" || comandoCru === "-h") {
     console.log(ajuda());
     process.exit(0);
   }
@@ -1637,7 +2291,7 @@ async function principal(): Promise<void> {
   let codigoSaida = 0;
   switch (comando) {
     case "iniciar":
-      codigoSaida = await comandoIniciar(cwd, resolverFrameworkPadrao(obterOpcao(resto, "--template"), undefined));
+      codigoSaida = await comandoIniciar(cwd, normalizarTemplateIniciar(obterOpcao(resto, "--template")));
       break;
     case "validar":
       codigoSaida = possuiFlag(resto, "--json")
@@ -1716,7 +2370,7 @@ async function principal(): Promise<void> {
       {
         const fonte = normalizarFonteImportacao(posicionais[0]);
         if (!fonte || !posicionais[1]) {
-          console.error("Uso: sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
+          console.error("Uso: sema importar <nestjs|fastapi|flask|nextjs|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
           codigoSaida = 1;
           break;
         }
@@ -1735,6 +2389,9 @@ async function principal(): Promise<void> {
         possuiFlag(resto, "--check"),
         possuiFlag(resto, "--json"),
       );
+      break;
+    case "doctor":
+      codigoSaida = await comandoDoctor();
       break;
     case "ajuda-ia":
       codigoSaida = await comandoAjudaIa();

@@ -1,8 +1,8 @@
 {
   "name": "sema",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "private": true,
-  "description": "Sema e uma linguagem estruturada para IA, focada em contrato, intencao e geracao de scaffolding backend.",
+  "description": "Sema e um Protocolo de Governanca de Intencao para IA e backend vivo, com contrato explicito, drift e scaffold semantico.",
   "icon": "logo.png",
   "type": "module",
   "workspaces": [
@@ -16,15 +16,19 @@
     "cli:instalar-local": "npm run build && node scripts/garantir-path-cli-windows.mjs && npm link --workspace @sema/cli",
     "cli:desinstalar-local": "npm unlink -g @sema/cli",
     "cli:empacotar": "npm run build && node -e \"require('node:fs').mkdirSync('.tmp/pacotes',{recursive:true})\" && npm pack --workspace @sema/cli --pack-destination ./.tmp/pacotes",
+    "cli:empacotar-publica": "npm run build && node scripts/empacotar-cli-publica.mjs",
+    "cli:testar-pacote-publico": "npm run cli:empacotar-publica && node scripts/testar-pacote-cli-publico.mjs",
     "extensao:empacotar": "npm run build && node scripts/empacotar-extensao-vscode.mjs",
     "extensao:instalar-local": "node scripts/instalar-extensao-vscode.mjs",
+    "release:verificar-versao": "node scripts/verificar-versao-release.mjs",
+    "release:preparar-publica": "npm run project:check && npm run extensao:empacotar && node scripts/preparar-release-publica.mjs",
     "dev:cli": "node scripts/dev-cli.mjs",
     "format:check": "node pacotes/cli/dist/index.js formatar exemplos --check",
     "ia:preparar-contexto": "node scripts/preparar-contexto-ia.mjs",
     "status:sync": "node scripts/sync-status.mjs",
     "status:check": "node scripts/check-status.mjs",
     "docs:prepare": "npm run status:sync && npm run status:check",
-    "project:check": "npm run status:check && npm test && npm run format:check && node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check"
+    "project:check": "npm run status:check && npm test && npm run format:check && npm run cli:testar-pacote-publico && node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",

@@ -88,11 +88,28 @@ function obterArquivosAlteradosNoRange() {
   return [];
 }
 
-const arquivosAlterados = obterArquivosAlteradosNoRange();
+function obterArquivosAlteradosNoWorktree() {
+  const status = executarGit(["status", "--porcelain"], true);
+  if (status.codigo !== 0 || !status.stdout) {
+    return [];
+  }
+
+  return status.stdout
+    .split(/\r?\n/u)
+    .filter(Boolean)
+    .map((linha) => linha.slice(3).trim())
+    .filter(Boolean);
+}
+
+const arquivosAlterados = [...new Set([
+  ...obterArquivosAlteradosNoRange(),
+  ...obterArquivosAlteradosNoWorktree(),
+])];
 const statusAlterado = arquivosAlterados.includes("STATUS.md");
 const mudancasRelevantes = arquivosAlterados.some((arquivo) =>
   arquivo.startsWith("pacotes/") ||
   arquivo.startsWith("exemplos/") ||
+  arquivo.startsWith("showcases/") ||
   arquivo.startsWith("scripts/") ||
   arquivo === "package.json" ||
   arquivo === "README.md",

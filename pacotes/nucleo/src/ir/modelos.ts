@@ -14,7 +14,7 @@ export interface IrCampo {
 }
 
 export interface IrImplementacaoTask {
-  origem: "ts" | "py" | "dart";
+  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   origemArquivo?: string;
   origemSimbolo?: string;
@@ -53,13 +53,13 @@ export interface IrEnum {
 }
 
 export interface IrUse {
-  origem: "sema" | "ts" | "py" | "dart";
+  origem: "sema" | "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   externo: boolean;
 }
 
 export interface IrInteropExterno {
-  origem: "ts" | "py" | "dart";
+  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
 }
 

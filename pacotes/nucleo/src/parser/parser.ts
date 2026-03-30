@@ -499,6 +499,23 @@ function normalizarOrigemUse(valor: string): UseAst["origem"] | undefined {
       return "py";
     case "dart":
       return "dart";
+    case "cs":
+    case "csharp":
+    case "dotnet":
+      return "cs";
+    case "java":
+      return "java";
+    case "go":
+    case "golang":
+      return "go";
+    case "rust":
+    case "rs":
+      return "rust";
+    case "cpp":
+    case "cxx":
+    case "cc":
+    case "c++":
+      return "cpp";
     default:
       return undefined;
   }

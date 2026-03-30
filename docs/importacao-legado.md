@@ -16,6 +16,9 @@ Leitura honesta:
 
 - `nestjs`
 - `fastapi`
+- `flask`
+- `nextjs`
+- `firebase`
 - `typescript`
 - `python`
 - `dart`
@@ -23,7 +26,7 @@ Leitura honesta:
 ## Comando
 
 ```bash
-sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
+sema importar <nestjs|fastapi|flask|nextjs|firebase|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
 ```
 
 ## O que a importacao tenta puxar
@@ -72,7 +75,8 @@ O `drift` acusa:
 - `impl` valido
 - `impl` quebrado
 - `task` sem implementacao
-- rota publica divergente em NestJS/FastAPI quando houver sinal suficiente
+- rota publica divergente em NestJS/FastAPI/Flask/Next.js quando houver sinal suficiente
+- recurso vivo divergente em worker Firebase quando o contrato declarar persistencia verificavel
 
 Leitura certa:
 
@@ -91,6 +95,24 @@ sema importar nestjs ./backend --saida ./sema/importado --json
 
 ```bash
 sema importar fastapi ./app --saida ./sema/importado --json
+```
+
+### Flask
+
+```bash
+sema importar flask ./Gestech --saida ./sema/importado --json
+```
+
+### Next.js App Router
+
+```bash
+sema importar nextjs ./app --saida ./sema/importado --json
+```
+
+### Firebase worker
+
+```bash
+sema importar firebase ./worker --saida ./sema/importado --json
 ```
 
 ### Python generico
@@ -116,6 +138,9 @@ sema importar dart ./lib --saida ./sema/importado
 - backend legado com regra critica
 - projeto onde o contrato esta espalhado e mal documentado
 - migracao incremental para NestJS ou FastAPI governados por contrato
+- migracao incremental para Flask governado por contrato sem perder `Blueprint` e `url_prefix`
+- migracao incremental para `Next.js App Router` sem perder inventario real de rota publica
+- migracao incremental para worker `Node/Firebase` sem ficar cego para bridge, health endpoint e recurso persistido
 - onboarding de IA em projeto velho sem jogar a coitada no pantano sem mapa
 
 ## Regra de ouro

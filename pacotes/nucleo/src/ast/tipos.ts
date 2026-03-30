@@ -68,7 +68,7 @@ export interface BlocoCasoTesteAst extends NoAstBase {
 
 export interface UseAst extends NoAstBase {
   tipo: "use";
-  origem: "sema" | "ts" | "py" | "dart";
+  origem: "sema" | "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
 }
 

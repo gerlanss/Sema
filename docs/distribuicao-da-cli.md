@@ -1,16 +1,81 @@
 # Distribuicao da CLI da Sema
 
-Este documento explica como usar a Sema fora do repositorio de desenvolvimento da linguagem.
+Este documento explica como distribuir a CLI da Sema fora do monorrepo sem vender fumaça.
 
-Hoje a Sema ainda e um projeto em evolucao, mas a CLI ja pode ser usada de tres formas praticas:
+## Modelo oficial agora
 
-1. diretamente do repositorio
-2. instalada localmente como comando `sema`
-3. empacotada para instalacao em outro projeto
+A trilha publica principal da Sema passa a ser:
 
-## 1. Uso direto do repositorio
+1. baixar da GitHub Release
+2. instalar o `.tgz`
+3. rodar `sema`
 
-Esse e o modo mais simples para desenvolver a linguagem e testar rapidamente:
+Instalacao sem clone em Linux, Windows PowerShell e macOS:
+
+```bash
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+sema --help
+sema doctor
+```
+
+Instaladores auxiliares:
+
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
+
+Instalacao local ao projeto:
+
+```bash
+npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npx sema --help
+```
+
+Cada release publica entrega:
+
+- `sema-cli-<versao>.tgz`
+- `sema-cli-latest.tgz`
+- `sema-language-tools-<versao>.vsix`
+- `sema-language-tools-latest.vsix`
+- `install-sema.sh`
+- `install-sema.ps1`
+
+## O que esse pacote resolve
+
+O tarball publico agora carrega os pacotes internos de runtime junto, sem depender de `file:` quebrado no `package.json`.
+
+Traduzindo sem perfume: ele foi feito para funcionar fora do monorrepo, e nao so para parecer empacotavel no papel.
+
+## Como validar o pacote
+
+Teste automatizado:
+
+```bash
+npm run cli:testar-pacote-publico
+```
+
+Esse smoke:
+
+- empacota a CLI
+- instala o tarball em diretorio temporario limpo
+- roda `sema --help`
+- roda `sema validar` contra um `.sema` real do repo
+- falha se o tarball ainda carregar dependencia `file:`
+
+## Como a release e publicada
+
+O workflow [release-publica.yml](../.github/workflows/release-publica.yml) faz o seguinte:
+
+1. valida alinhamento de versao publica
+2. roda `npm run project:check`
+3. empacota a CLI publica
+4. empacota a extensao VS Code
+5. publica os artefatos versionados e os aliases `latest`
+
+## Fluxos que continuam existindo
+
+### Uso direto do repositorio
+
+Bom para contribuir e desenvolver a ferramenta:
 
 ```bash
 npm install
@@ -18,101 +83,37 @@ npm run build
 node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
 ```
 
-Esse modo e bom para:
+### Instalacao local por `npm link`
 
-- evolucao da linguagem
-- testes locais
-- manutencao do compilador
-
-## 2. Instalar localmente como comando `sema`
-
-Se voce quer usar a CLI no terminal sem ficar chamando `node pacotes/cli/dist/index.js`, o caminho oficial e:
+Bom para quem esta mexendo no proprio repo da Sema:
 
 ```bash
 npm run cli:instalar-local
 ```
 
-Depois disso, a CLI passa a poder ser chamada assim:
+Isto continua util, mas agora e **fluxo de desenvolvimento**, nao distribuicao publica principal.
 
-```bash
-sema validar exemplos/calculadora.sema
-sema verificar exemplos --saida ./.tmp/verificacao
-sema formatar exemplos --check
-```
+### Empacotamento antigo de workspace
 
-Para remover o comando local instalado:
-
-```bash
-npm run cli:desinstalar-local
-```
-
-Esse modo e bom para:
-
-- uso frequente no proprio ambiente
-- testar a experiencia real de terminal
-- reduzir o atrito de uso da ferramenta
-
-## 3. Empacotar a CLI para outro projeto
-
-Se voce quer usar a Sema em outro repositorio sem copiar o projeto inteiro, empacote a CLI:
+O comando abaixo continua existindo:
 
 ```bash
 npm run cli:empacotar
 ```
 
-Esse comando gera um pacote `.tgz` em `.tmp/pacotes`.
+Ele passa a ser tratado como **empacotamento interno/dev**, bom para inspecao rapida de workspace, nao como narrativa oficial de distribuicao.
 
-Depois, no outro projeto, voce pode instalar o pacote gerado:
-
-```bash
-npm install caminho/para/o/pacote/sema-cli-0.1.0.tgz
-```
-
-E usar via:
-
-```bash
-npx sema validar contratos/pedido.sema
-```
-
-Esse modo e bom para:
-
-- testar a CLI fora do repositorio principal
-- integrar a Sema em outro projeto
-- validar o caminho de distribuicao antes de publicacao formal
-
-## Modelo mental correto
-
-A Sema nao e runtime de aplicacao. Ela funciona como:
-
-- linguagem de especificacao
-- validador semantico
-- compilador/transpilador
-- gerador de artefatos
-- ferramenta operacional para IA, automacao e editor
-
-Entao o uso normal e:
-
-1. escrever `.sema`
-2. validar
-3. formatar
-4. compilar
-5. verificar
-6. consumir o codigo gerado em Python ou TypeScript
-
-## Estado atual
-
-Hoje, o caminho mais maduro e:
-
-- usar a CLI no proprio repositorio
-- ou instalar localmente com `npm link`
-
-O empacotamento `.tgz` ja resolve bem o uso em outro projeto sem exigir que a pessoa copie o repositorio inteiro.
-
-## O que ainda nao e o foco agora
+## O que ainda nao entra nesta rodada
 
 - publicacao oficial em registry publico
 - instalador multiplataforma dedicado
+- updater automatico
 - runtime web acoplado
-- sistema de pacotes semanticos da linguagem
 
-O objetivo atual e deixar a CLI usavel de verdade sem forcar a pessoa a arrastar a oficina inteira junto.
+## Regra pratica
+
+Se a pessoa quer **usar** a Sema, entregue o `.tgz` publico.
+
+Se a pessoa quer **desenvolver** a Sema, use o monorrepo.
+
+Misturar os dois fluxos era justamente a origem da experiencia meio capenga que esse ciclo corrigiu.

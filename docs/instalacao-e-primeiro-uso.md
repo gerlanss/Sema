@@ -1,74 +1,82 @@
 # Instalacao e Primeiro Uso
 
-Este guia explica o minimo necessario para instalar, compilar e usar a Sema pela primeira vez sem cair naquela confusao de “instalei a linguagem” quando, na real, voce so linkou a CLI do repositorio.
+Este guia mostra o caminho mais curto para testar a Sema do jeito certo, sem cair naquela confusao classica de "instalei a linguagem" quando, na verdade, voce so linkou uma CLI local de desenvolvimento.
 
 ## Requisitos
 
-Para rodar a Sema hoje, voce precisa de:
-
 - Node.js instalado
 - npm funcionando
-- este repositorio clonado ou baixado
+- o repositorio so e necessario se voce quiser contribuir no Sema ou rodar o showcase oficial local
 
-Para rodar o fluxo completo com testes gerados em Python:
+Para o fluxo completo com testes Python gerados:
 
 - Python 3
-- `pytest` instalado no ambiente
+- `pytest` instalado
 
-## Instalacao basica do projeto
+## Caminho oficial: instalar da release publica
 
-Na raiz do repositorio:
+Voce nao precisa clonar o repo para usar a CLI.
+
+Linux, Windows PowerShell e macOS:
+
+```bash
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+sema --help
+sema doctor
+```
+
+Se quiser um caminho ainda mais mastigado:
+
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
+
+Se preferir instalar local ao projeto:
+
+```bash
+npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npx sema --help
+```
+
+Primeiro teste sem clonar o repo:
+
+```bash
+mkdir sema-demo
+cd sema-demo
+sema iniciar
+sema validar contratos/pedidos.sema --json
+```
+
+## Caminho de contribuinte: usar direto do repo
+
+Se o objetivo for desenvolver o proprio Sema:
 
 ```bash
 npm install
 npm run build
+node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
 ```
 
-Se quiser validar o projeto inteiro logo de cara:
+Se quiser validar tudo de cara:
 
 ```bash
 npm run project:check
 ```
 
-## Instalar a CLI da Sema no Windows
+## `npm link` virou trilha de desenvolvimento
 
-Esse fluxo instala a **CLI da Sema a partir deste repositorio**.
-
-Ele:
-
-- nao baixa o projeto por conta propria
-- nao instala a extensao do VS Code
-- nao publica nada na maquina alem do comando linkado da CLI
-
-Na raiz do projeto:
+O fluxo abaixo continua existindo, mas agora e assumidamente fluxo de contribuinte, nao trilha publica principal:
 
 ```powershell
-npm install
-npm run build
 npm run cli:instalar-local
 ```
 
-O `cli:instalar-local`:
+Ele serve para:
 
-1. garante que o prefixo global do npm entre no `PATH` do usuario no Windows
-2. executa o `npm link` da CLI da Sema
+- testar a experiencia de terminal no proprio ambiente
+- desenvolver a CLI
+- evitar ficar chamando `node pacotes/cli/dist/index.js`
 
-Depois disso:
-
-```powershell
-sema
-sema validar exemplos/calculadora.sema
-```
-
-Se o PowerShell ainda nao reconhecer `sema`, feche e abra o terminal de novo.
-
-Se mesmo assim o comando ainda nao estiver visivel, use temporariamente:
-
-```powershell
-node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
-```
-
-Para remover o comando instalado:
+Para remover:
 
 ```powershell
 npm run cli:desinstalar-local
@@ -76,72 +84,36 @@ npm run cli:desinstalar-local
 
 ## Primeiro fluxo util
 
-### Validar um modulo
-
 ```bash
-node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
+sema validar contratos/pedidos.sema --json
+sema ast contratos/pedidos.sema --json
+sema ir contratos/pedidos.sema --json
+sema formatar contratos/pedidos.sema
+sema verificar contratos --saida ./.tmp/verificacao
 ```
 
-### Ver AST
+## Primeiro fluxo de valor real
+
+Se quiser testar a Sema onde ela fica mais forte hoje, use o showcase oficial dentro do repo:
 
 ```bash
-node pacotes/cli/dist/index.js ast exemplos/calculadora.sema --json
+cd showcases/ranking-showroom
+sema inspecionar . --json
+sema drift contratos/ranking_showroom.sema --json
+sema contexto-ia contratos/ranking_showroom.sema --saida ./.tmp/contexto-ranking --json
 ```
 
-### Ver IR
+Esse fluxo mostra:
 
-```bash
-node pacotes/cli/dist/index.js ir exemplos/calculadora.sema --json
-```
-
-### Formatar
-
-```bash
-node pacotes/cli/dist/index.js formatar exemplos/calculadora.sema
-```
-
-### Verificar tudo
-
-```bash
-node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao
-```
-
-## Primeiro fluxo backend-first
-
-Se o objetivo for usar a Sema do jeito mais forte dela hoje, o caminho certo e backend.
-
-### Iniciar um projeto NestJS
-
-```bash
-sema iniciar --template nestjs
-sema inspecionar --json
-sema compilar --framework nestjs
-```
-
-### Iniciar um projeto FastAPI
-
-```bash
-sema iniciar --template fastapi
-sema inspecionar --json
-sema compilar --framework fastapi
-```
-
-O `sema inspecionar` serve para mostrar:
-
-- configuracao encontrada
-- framework ativo
-- estrutura de saida
-- alvos
-- origens resolvidas
-- modulos encontrados
-
-Ou seja: ele evita aquela cagada de a CLI estar lendo um projeto diferente do que voce pensou.
+- base de projeto resolvida
+- codigo vivo detectado
+- `impl` resolvido
+- rota Flask validada
+- pacote de contexto para IA
 
 ## `sema.config.json`
 
-O estado atual da Sema assume projeto configurado.
-
-Exemplo:
+Exemplo de configuracao para projeto real:
 
 ```json
 {
@@ -162,136 +134,30 @@ Exemplo:
 
 ## Gerar codigo
 
-### Scaffold base
+Scaffold base:
 
 ```bash
-node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo typescript --saida ./saida/typescript
-node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo python --saida ./saida/python
-node pacotes/cli/dist/index.js compilar exemplos/calculadora.sema --alvo dart --saida ./saida/dart
+sema compilar exemplos/calculadora.sema --alvo typescript --saida ./saida/typescript
+sema compilar exemplos/calculadora.sema --alvo python --saida ./saida/python
+sema compilar exemplos/calculadora.sema --alvo dart --saida ./saida/dart
 ```
 
-### Scaffold NestJS
-
-```bash
-node pacotes/cli/dist/index.js compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
-```
-
-### Scaffold FastAPI
-
-```bash
-node pacotes/cli/dist/index.js compilar contratos/pagamentos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
-```
-
-### Estruturas de saida
-
-- `flat`: tudo direto na pasta de saida
-- `modulos`: pasta por namespace/contexto e arquivo por modulo
-- `backend`: convencoes de scaffold backend
-
-## Modularizar com `use`
-
-Se voce nao quiser transformar o projeto num `.sema` gigante, use multiplos arquivos.
-
-Exemplo:
-
-```sema
-module app.pagamentos {
-  use base.contratos
-  use ts app.gateway.pagamentos
-  use py servicos.conciliacao
-  use dart app.mobile.pagamentos
-}
-```
-
-Leitura pratica:
-
-- `use base.contratos`: importa outro modulo `.sema`
-- `use ts ...`, `use py ...`, `use dart ...`: declara interop externo
-
-No estado atual:
-
-- a resolucao semantica completa acontece entre arquivos `.sema`
-- `ts`, `py` e `dart` entram como contratos externos declarados
-- `origens` no `sema.config.json` ajudam a resolver projeto maior
-
-## Ligar uma `task` a implementacoes externas com `impl`
-
-Quando voce quiser declarar onde a implementacao concreta mora:
-
-```sema
-task processar_pagamento {
-  input {
-    pagamento_id: Id required
-  }
-  output {
-    protocolo: Id
-  }
-  impl {
-    ts: app.gateway.pagamentos.processar
-    py: servicos.pagamentos.processar
-    dart: app.mobile.pagamentos.processar
-  }
-  guarantees {
-    protocolo existe
-  }
-}
-```
-
-Na pratica:
-
-- `impl` nao substitui a semantica da task
-- ele so declara onde a implementacao concreta mora
-- isso aparece na IR e nos geradores como rastreabilidade multi-stack
-
-## Preparar contexto para IA
-
-Se voce quiser preparar um pacote de contexto para uma IA trabalhar num modulo especifico:
-
-```bash
-sema contexto-ia exemplos/pagamento.sema
-```
-
-Esse comando gera um pacote em `.tmp/contexto-ia/...` com:
-
-- `validar.json`
-- `diagnosticos.json`
-- `ast.json`
-- `ir.json`
-- `README.md` com o fluxo recomendado para o agente
-
-Se a tarefa pedir codigo derivado, o comando que nao pode ser ignorado e:
+Scaffold backend:
 
 ```bash
 sema compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
+sema compilar contratos/pagamentos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
 ```
 
 ## Extensao VS Code
 
-A extensao fica em [../pacotes/editor-vscode](../pacotes/editor-vscode) e cobre:
-
-- highlight de sintaxe
-- snippets
-- formatacao
-- diagnosticos semanticos em tempo real
-- hover basico
-- reinicio manual do servidor de linguagem
-
-Configuracoes importantes:
-
-- `sema.cliPath`: caminho explicito para a CLI da Sema
-- `sema.diagnosticosAoDigitar`: liga ou desliga recalculo durante digitacao
-
-### Empacotar a extensao
+Empacotar:
 
 ```bash
 npm run extensao:empacotar
 ```
 
-O `.vsix` sai em:
-
-- `.tmp/editor-vscode/sema-language-tools-0.1.1.vsix`
-
-### Instalar a extensao no VS Code
+Instalar localmente:
 
 ```bash
 npm run extensao:instalar-local
@@ -300,64 +166,17 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.1.1.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.0.vsix --force
 ```
 
-## Usar a CLI em outro projeto
+## Resumo honesto
 
-Se voce quiser levar a CLI para outro projeto sem arrastar o repositorio inteiro:
+Hoje o jeito certo de testar a Sema e:
 
-```bash
-npm run cli:empacotar
-```
+1. instalar a CLI da release publica
+2. rodar `sema iniciar`
+3. validar `contratos/pedidos.sema`
+4. rodar `sema doctor` se o ambiente estiver de sacanagem
+5. abrir o showcase oficial se quiser ver backend vivo
 
-Isso gera um pacote `.tgz` em `.tmp/pacotes`.
-
-Depois, no outro projeto:
-
-```bash
-npm install caminho/para/o/pacote/sema-cli-0.1.0.tgz
-npx sema validar contratos/exemplo.sema
-```
-
-## Problemas comuns
-
-### `node` ou `npm` nao encontrados
-
-Seu ambiente ainda nao tem Node.js corretamente instalado ou configurado no `PATH`.
-
-### `pytest` nao encontrado
-
-O fluxo de verificacao com alvo Python depende de `pytest`.
-
-### `validar` falha em modulo com `use`
-
-Confira:
-
-- se o `sema.config.json` do projeto foi encontrado
-- se `origens` aponta para a pasta certa
-- se o modulo existe no conjunto de arquivos `.sema` resolvido
-
-Para `use ts`, `use py` e `use dart`, o comportamento e diferente: esses imports sao tratados como interoperabilidade declarada, nao como modulo `.sema` que precisa existir no projeto.
-
-### `formatar --check` falha
-
-Isso significa que o arquivo ainda nao esta no estilo canonico. Rode o formatador sem `--check` e tente de novo.
-
-### `compilar --framework nestjs` ou `fastapi` falha
-
-Confere se:
-
-- `nestjs` esta sendo usado com alvo `typescript`
-- `fastapi` esta sendo usado com alvo `python`
-- `dart` esta sendo usado com `framework base`
-
-## Caminho recomendado para comecar
-
-1. ler [../README.md](../README.md)
-2. rodar `npm install`
-3. rodar `npm run build`
-4. rodar `sema inspecionar --json`
-5. validar [../exemplos/calculadora.sema](../exemplos/calculadora.sema)
-6. inspecionar [../exemplos/pagamento.sema](../exemplos/pagamento.sema)
-7. rodar `npm run project:check`
+Clone + build + `npm link` continua util, mas agora e fluxo de oficina, nao vitrine.

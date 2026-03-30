@@ -1,8 +1,8 @@
 {
   "name": "@sema/cli",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "type": "module",
-  "description": "CLI da Sema para validar contratos, compilar scaffolding backend e operar a linguagem em projetos reais.",
+  "description": "CLI do Protocolo de Governanca de Intencao Sema para validar contratos, medir drift e operar backend vivo.",
   "icon": "logo.png",
   "bin": {
     "sema": "dist/index.js"
@@ -17,6 +17,7 @@
     "@sema/gerador-dart": "file:../gerador-dart",
     "@sema/gerador-python": "file:../gerador-python",
     "@sema/gerador-typescript": "file:../gerador-typescript",
-    "@sema/padroes": "file:../padroes"
+    "@sema/padroes": "file:../padroes",
+    "typescript": "^5.8.3"
   }
 }

@@ -1,0 +1,113 @@
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import path from "node:path";
+
+const raiz = process.cwd();
+const manifestRaiz = JSON.parse(await readFile(path.join(raiz, "package.json"), "utf8"));
+const manifestExtensao = JSON.parse(await readFile(path.join(raiz, "pacotes", "editor-vscode", "package.json"), "utf8"));
+const versao = manifestRaiz.version;
+
+if (manifestExtensao.version !== versao) {
+  throw new Error(`A extensao esta em ${manifestExtensao.version}, mas a release publica esta em ${versao}.`);
+}
+
+const pastaPacotes = path.join(raiz, ".tmp", "pacotes-publicos");
+const pastaVsix = path.join(raiz, ".tmp", "editor-vscode");
+const pastaRelease = path.join(raiz, ".tmp", "release-assets");
+
+const cliVersionado = path.join(pastaPacotes, `sema-cli-${versao}.tgz`);
+const cliLatest = path.join(pastaRelease, "sema-cli-latest.tgz");
+const vsixVersionado = path.join(pastaVsix, `sema-language-tools-${versao}.vsix`);
+const vsixLatest = path.join(pastaRelease, "sema-language-tools-latest.vsix");
+const installSh = path.join(raiz, "install-sema.sh");
+const installPs1 = path.join(raiz, "install-sema.ps1");
+
+async function sha256(caminho) {
+  const conteudo = await readFile(caminho);
+  return createHash("sha256").update(conteudo).digest("hex");
+}
+
+async function main() {
+  await rm(pastaRelease, { recursive: true, force: true });
+  await mkdir(pastaRelease, { recursive: true });
+
+  await copyFile(cliVersionado, path.join(pastaRelease, `sema-cli-${versao}.tgz`));
+  await copyFile(cliVersionado, cliLatest);
+  await copyFile(vsixVersionado, path.join(pastaRelease, `sema-language-tools-${versao}.vsix`));
+  await copyFile(vsixVersionado, vsixLatest);
+  await copyFile(installSh, path.join(pastaRelease, "install-sema.sh"));
+  await copyFile(installPs1, path.join(pastaRelease, "install-sema.ps1"));
+
+  const arquivos = [
+    `sema-cli-${versao}.tgz`,
+    "sema-cli-latest.tgz",
+    `sema-language-tools-${versao}.vsix`,
+    "sema-language-tools-latest.vsix",
+    "install-sema.sh",
+    "install-sema.ps1",
+  ];
+
+  const checksums = await Promise.all(
+    arquivos.map(async (arquivo) => `${await sha256(path.join(pastaRelease, arquivo))}  ${arquivo}`),
+  );
+
+  const notas = `# Sema ${versao}
+
+Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
+
+## Instalar a CLI sem clonar o repo
+
+Linux, Windows PowerShell e macOS:
+
+\`\`\`bash
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+mkdir sema-demo
+cd sema-demo
+sema iniciar
+sema validar contratos/pedidos.sema --json
+sema --help
+\`\`\`
+
+Instalacao local ao projeto:
+
+\`\`\`bash
+npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npx sema --help
+\`\`\`
+
+## Instalar a extensao VS Code
+
+Linux/macOS:
+
+\`\`\`bash
+curl -L -o sema-language-tools.vsix https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix
+code --install-extension ./sema-language-tools.vsix --force
+\`\`\`
+
+Windows PowerShell:
+
+\`\`\`powershell
+Invoke-WebRequest -Uri https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix -OutFile sema-language-tools.vsix
+code --install-extension .\\sema-language-tools.vsix --force
+\`\`\`
+
+## Artefatos
+
+- \`sema-cli-${versao}.tgz\`
+- \`sema-cli-latest.tgz\`
+- \`sema-language-tools-${versao}.vsix\`
+- \`sema-language-tools-latest.vsix\`
+- \`install-sema.sh\`
+- \`install-sema.ps1\`
+`;
+
+  await writeFile(path.join(pastaRelease, "SHA256SUMS.txt"), `${checksums.join("\n")}\n`, "utf8");
+  await writeFile(path.join(pastaRelease, "release-notes.md"), notas, "utf8");
+  console.log(`Release publica preparada em ${pastaRelease}`);
+}
+
+main().catch((erro) => {
+  console.error("Falha ao preparar os artefatos da release publica.");
+  console.error(erro instanceof Error ? erro.stack ?? erro.message : erro);
+  process.exit(1);
+});

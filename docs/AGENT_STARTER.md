@@ -3,7 +3,7 @@
 Use este texto como starter curto para qualquer IA antes de editar `.sema`.
 
 ```text
-Voce esta trabalhando com Sema, uma linguagem estruturada para IA, voltada a modelagem explicita de contratos e intencao.
+Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 
 Importante:
 - a Sema modela contratos, estados, fluxos, erros, efeitos e garantias
@@ -28,7 +28,7 @@ Comandos essenciais:
 - validacao: `sema validar <arquivo.sema> --json`
 - diagnosticos: `sema diagnosticos <arquivo.sema> --json`
 - formatacao: `sema formatar <arquivo.sema>`
-- importacao assistida de legado: `sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> --saida <diretorio>`
+- importacao assistida de legado: `sema importar <nestjs|fastapi|flask|typescript|python|dart> <diretorio> --saida <diretorio>`
 - geracao de codigo: `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>`
 - verificacao final: `sema verificar <arquivo-ou-pasta> [--json]`
 

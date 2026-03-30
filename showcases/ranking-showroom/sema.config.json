@@ -1,0 +1,9 @@
+{
+  "origens": ["./contratos"],
+  "diretoriosCodigo": ["./backend-flask"],
+  "fontesLegado": ["flask"],
+  "modoAdocao": "incremental",
+  "alvos": ["python"],
+  "alvoPadrao": "python",
+  "estruturaSaida": "backend"
+}

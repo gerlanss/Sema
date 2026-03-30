@@ -1,10 +1,8 @@
 # Sema Language Tools
 
-Suporte de editor para a linguagem **Sema**, uma linguagem estruturada para IA, voltada a modelagem explicita de contratos e intencao.
+Suporte de editor para o protocolo **Sema**, a camada semantica que governa contrato, fluxo, erro, efeito e garantia acima da stack real.
 
-Na pratica, a extensao assume a mesma tese da linguagem: reduzir ambiguidade semantica e deixar **significado, fluxo, estado, erros e garantias** explicitos para IA e humanos.
-
-Esta extensao leva a Sema para dentro do VS Code sem transformar o editor num circo pesado: highlight, snippets, formatacao e um servidor de linguagem inicial de verdade.
+Na implementacao, a Sema continua sendo uma linguagem de intencao. No editor, a extensao existe para fazer essa camada semantica ficar util de verdade, sem transformar o VS Code num circo pesado.
 
 ## Recursos
 
@@ -14,7 +12,7 @@ Esta extensao leva a Sema para dentro do VS Code sem transformar o editor num ci
 - comando `Sema: Formatar Documento`
 - servidor de linguagem inicial com:
   - diagnosticos semanticos
-  - hover basico para palavras-chave centrais
+  - hover basico
   - formatacao de documento
 - integracao com a CLI da Sema
 
@@ -25,17 +23,7 @@ Esta extensao leva a Sema para dentro do VS Code sem transformar o editor num ci
 - formatar com o estilo canonico da linguagem
 - trabalhar com a CLI local ou instalada no sistema
 
-## O que ela ainda nao tenta fazer
-
-- LSP completo com autocomplete rico e code actions avancadas
-- runtime web
-- geracao automatica de interface
-
-Ela existe para respeitar a camada semantica da Sema, nao para inventar moda por cima dela.
-
 ## Como a extensao encontra a CLI
-
-A extensao tenta localizar a CLI nesta ordem:
 
 1. `sema.cliPath`, se voce configurar manualmente
 2. bin `sema` disponivel no sistema
@@ -44,28 +32,27 @@ A extensao tenta localizar a CLI nesta ordem:
 
 Se o comando `sema` funciona no terminal, a extensao quase sempre vai funcionar feliz tambem.
 
-## Comandos disponiveis
-
-- `Sema: Formatar Documento`
-- `Sema: Reiniciar Servidor de Linguagem`
-
-## Configuracoes
-
-### `sema.cliPath`
-
-Permite apontar manualmente para a CLI da Sema quando ela nao estiver no `PATH`.
-
-### `sema.diagnosticosAoDigitar`
-
-Liga ou desliga o recalculo de diagnosticos semanticos durante a digitacao.
-
 ## Instalacao
 
-### Pela loja do VS Code
+### Via GitHub Release, sem clonar o repo
 
-Procure por **Sema Language Tools** e clique em instalar.
+Linux/macOS:
 
-### Via VSIX
+```bash
+curl -L -o sema-language-tools.vsix https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix
+code --install-extension ./sema-language-tools.vsix --force
+```
+
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest -Uri https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix -OutFile sema-language-tools.vsix
+code --install-extension .\sema-language-tools.vsix --force
+```
+
+Esse e o caminho oficial publico hoje. Se a extensao for publicada na loja depois, otimo; por enquanto a release do GitHub e a rota honesta e reproduzivel.
+
+### Via VSIX local
 
 No repositorio principal da Sema:
 
@@ -77,7 +64,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.1.1.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.0.vsix --force
 ```
 
 ## Fluxo recomendado
@@ -93,7 +80,7 @@ sema diagnosticos modulo.sema --json
 sema verificar . --json
 ```
 
-## Sobre a linguagem
+## Sobre a Sema
 
 A Sema nao quer substituir React, TypeScript ou Python.
 
@@ -106,11 +93,4 @@ Ela governa a camada de significado:
 - efeitos
 - garantias
 
-Ela funciona, antes de tudo, como linguagem de intencao. Ou seja: a implementacao concreta pode morar em outras stacks, mas o significado continua sendo governado pela Sema.
-
-Esta extensao ajuda o editor a respeitar isso sem transformar sua tela numa planilha sem alma.
-
-## Repositorio
-
-- GitHub: [gerlanss/Sema](https://github.com/gerlanss/Sema)
-- Issues: [github.com/gerlanss/Sema/issues](https://github.com/gerlanss/Sema/issues)
+Repositorio: [gerlanss/Sema](https://github.com/gerlanss/Sema)

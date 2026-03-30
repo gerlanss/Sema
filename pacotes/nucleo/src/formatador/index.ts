@@ -132,8 +132,11 @@ function eLiteralEscalar(texto: string): boolean {
 }
 
 function deveColocarAspas(contexto: string, campo: CampoAst, combinado: string): boolean {
-  if (campo.nome === "caminho" || campo.nome === "metodo") {
+  if (campo.nome === "metodo") {
     return false;
+  }
+  if (campo.nome === "caminho") {
+    return /[{}]/.test(combinado);
   }
   if (contexto === "docs" || contexto === "comments") {
     return true;
