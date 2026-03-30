@@ -27,6 +27,7 @@ import {
 } from "./projeto.js";
 import type { EstruturaSaida } from "./tipos.js";
 import { importarProjetoLegado, resumoImportacao, type FonteImportacao } from "./importador.js";
+import { analisarDriftLegado } from "./drift.js";
 
 type Comando =
   | "iniciar"
@@ -39,6 +40,7 @@ type Comando =
   | "diagnosticos"
   | "verificar"
   | "inspecionar"
+  | "drift"
   | "importar"
   | "formatar"
   | "ajuda-ia"
@@ -380,6 +382,7 @@ Comandos:
   sema diagnosticos <arquivo.sema> [--json]
   sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]
   sema inspecionar [arquivo-ou-pasta] [--json]
+  sema drift <arquivo-ou-pasta> [--json]
   sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
   sema formatar <arquivo-ou-pasta> [--check] [--json]
   sema ajuda-ia
@@ -968,6 +971,9 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
       alvos,
       saidas,
       origens: contextoProjeto.origensProjeto,
+      diretoriosCodigo: contextoProjeto.diretoriosCodigo,
+      fontesLegado: contextoProjeto.fontesLegado,
+      modoAdocao: contextoProjeto.modoAdocao,
     },
     projeto: {
       arquivos: contextoProjeto.arquivosProjeto,
@@ -991,6 +997,7 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
   console.log(`- Framework: ${payload.configuracao.framework}`);
   console.log(`- Estrutura de saida: ${payload.configuracao.estruturaSaida}`);
   console.log(`- Alvos: ${payload.configuracao.alvos.join(", ")}`);
+  console.log(`- Modo de adocao: ${payload.configuracao.modoAdocao}`);
   console.log("- Saidas por alvo:");
   for (const [alvo, saida] of Object.entries(payload.configuracao.saidas)) {
     console.log(`  - ${alvo}: ${saida}`);
@@ -999,11 +1006,61 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
   for (const origem of payload.configuracao.origens) {
     console.log(`  - ${origem}`);
   }
+  console.log("- Diretorios de codigo:");
+  for (const diretorio of payload.configuracao.diretoriosCodigo) {
+    console.log(`  - ${diretorio}`);
+  }
+  console.log(`- Fontes de legado detectadas: ${payload.configuracao.fontesLegado.join(", ") || "nenhuma"}`);
   console.log("- Modulos selecionados:");
   for (const modulo of payload.projeto.modulos) {
     console.log(`  - ${modulo.modulo ?? "(sem modulo)"} :: ${modulo.caminho} :: diagnosticos=${modulo.diagnosticos}`);
   }
   return 0;
+}
+
+async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = process.cwd()): Promise<number> {
+  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const resultado = await analisarDriftLegado(contextoProjeto);
+
+  if (emJson) {
+    console.log(JSON.stringify(resultado, null, 2));
+    return resultado.sucesso ? 0 : 1;
+  }
+
+  console.log("Drift entre Sema e codigo legado");
+  console.log(`- Modulos analisados: ${resultado.modulos.length}`);
+  console.log(`- Tasks analisadas: ${resultado.tasks.length}`);
+  console.log(`- Impl validos: ${resultado.impls_validos.length}`);
+  console.log(`- Impl quebrados: ${resultado.impls_quebrados.length}`);
+  console.log(`- Rotas divergentes: ${resultado.rotas_divergentes.length}`);
+
+  if (resultado.impls_quebrados.length > 0) {
+    console.log("- Impl quebrados:");
+    for (const impl of resultado.impls_quebrados) {
+      console.log(`  - ${impl.modulo}.${impl.task} :: ${impl.origem}:${impl.caminho}`);
+    }
+  }
+
+  if (resultado.rotas_divergentes.length > 0) {
+    console.log("- Rotas divergentes:");
+    for (const rota of resultado.rotas_divergentes) {
+      console.log(`  - ${rota.modulo}.${rota.route} :: ${rota.metodo ?? "?"} ${rota.caminho ?? "?"}`);
+    }
+  }
+
+  const semImpl = resultado.tasks.filter((task) => task.semImplementacao);
+  if (semImpl.length > 0) {
+    console.log("- Tasks sem implementacao vinculada:");
+    for (const task of semImpl) {
+      console.log(`  - ${task.modulo}.${task.task}`);
+    }
+  }
+
+  if (resultado.diagnosticos.length === 0) {
+    console.log("Nenhum drift relevante encontrado.");
+  }
+
+  return resultado.sucesso ? 0 : 1;
 }
 
 async function comandoImportar(
@@ -1585,6 +1642,9 @@ async function principal(): Promise<void> {
       break;
     case "inspecionar":
       codigoSaida = await comandoInspecionar(posicionais[0], possuiFlag(resto, "--json"), cwd);
+      break;
+    case "drift":
+      codigoSaida = await comandoDrift(posicionais[0], possuiFlag(resto, "--json"), cwd);
       break;
     case "importar":
       {

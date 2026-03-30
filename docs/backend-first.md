@@ -8,7 +8,7 @@ Leitura direta:
 - ela continua governando contrato e significado
 - mas agora o foco pratico e **criar e editar backends reais**
 
-No marco `0.6 backend-first`, a Sema ja cobre:
+No marco `0.7 legado incremental`, a Sema ja cobre:
 
 - scaffold base para TypeScript, Python e Dart
 - scaffold orientado a framework para:
@@ -18,6 +18,7 @@ No marco `0.6 backend-first`, a Sema ja cobre:
 - configuracao de projeto com `sema.config.json`
 - resolucao de `use` em multiplas origens do projeto
 - inspecao nao destrutiva com `sema inspecionar`
+- governanca de drift com `sema drift`
 - vinculacao de `task` com implementacao externa via `impl`
 
 ## O que isso muda na pratica
@@ -41,8 +42,9 @@ Para projeto que nao nasceu com Sema, o fluxo vira:
 1. importar o legado com `sema importar`
 2. revisar o rascunho `.sema`
 3. validar, formatar e lapidar a intencao
-4. compilar scaffold quando fizer sentido
-5. usar `impl` para amarrar o contrato ao codigo vivo
+4. usar `impl` para amarrar o contrato ao codigo vivo
+5. medir `sema drift --json`
+6. compilar scaffold quando fizer sentido
 
 ## Templates iniciais
 
@@ -85,7 +87,25 @@ Esse comando mostra:
 - estrutura de saida
 - alvos do projeto
 - origens resolvidas
+- diretorios de codigo candidatos
+- fontes de legado detectadas
+- modo de adocao
 - modulos encontrados
+
+## Governar drift depois da importacao
+
+Depois de ligar `impl`, rode:
+
+```bash
+sema drift --json
+```
+
+Esse comando existe para mostrar:
+
+- implementacoes externas resolvidas
+- implementacoes externas quebradas
+- tasks ainda sem ligacao com codigo vivo
+- rotas publicas divergentes, quando NestJS/FastAPI forem reconheciveis
 
 ## Gerar scaffold NestJS
 

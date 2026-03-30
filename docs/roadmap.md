@@ -47,6 +47,15 @@
 - `impl` reforcado como ponte entre contrato e implementacao viva
 - diagnosticos melhores para `flow` e `use`
 
+## Marco 0.7 Legado Incremental
+
+- status: em andamento
+- importacao assistida mais forte para NestJS, FastAPI, TypeScript, Python e Dart
+- `sema drift` para comparar contrato vs codigo vivo
+- `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
+- `sema.config.json` ampliado com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
+- foco em adocao incremental de projeto que nao nasceu com Sema
+
 ## Proximo Ciclo
 
 - criacao de scaffolding ainda mais util para projeto vivo

@@ -16,6 +16,10 @@ export interface IrCampo {
 export interface IrImplementacaoTask {
   origem: "ts" | "py" | "dart";
   caminho: string;
+  origemArquivo?: string;
+  origemSimbolo?: string;
+  resolucaoImpl?: string;
+  statusImpl?: "nao_verificado" | "resolvido" | "quebrado" | "nao_resolvido";
 }
 
 export interface IrBlocoDeclarativo {
@@ -89,6 +93,7 @@ export interface IrRoutePublica {
   errors: IrErroPublico[];
   effects: EfeitoSemantico[];
   garantiasMinimas: string[];
+  divergenciasPublicas?: string[];
 }
 
 export interface IrTaskStateContract {

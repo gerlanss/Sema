@@ -6,7 +6,7 @@ Sema e uma linguagem estruturada para IA, voltada a modelagem explicita de contr
 
 Na pratica, a Sema nasce como linguagem de intencao. Ela nao quer substituir TypeScript, Python, Dart ou framework nenhum. Ela governa a camada de significado acima deles: contrato, fluxo, estado, erro, efeito, garantia e teste.
 
-No marco atual, `0.6 backend-first`, o foco deixou de ser so “fechar MVP” e virou algo bem mais util: **criar e editar projetos backend reais** com scaffold forte, configuracao de projeto, integracao com frameworks e adocao incremental em codigo vivo.
+No marco atual, `0.7 legado incremental`, o foco deixou de ser so “fechar MVP” e virou algo bem mais util: **criar, importar e editar projetos backend reais** com scaffold forte, configuracao de projeto, integracao com frameworks e governanca incremental em codigo vivo.
 
 ## O que significa ser uma linguagem estruturada para IA
 
@@ -90,7 +90,23 @@ Fluxo recomendado:
 2. revisar e lapidar o contrato
 3. rodar `sema formatar` e `sema validar --json`
 4. conectar implementacoes reais via `impl`
-5. compilar scaffold quando fizer sentido
+5. rodar `sema drift --json`
+6. compilar scaffold quando fizer sentido
+
+### Governar drift entre contrato e codigo vivo
+
+Depois de importar e ligar `impl`, a CLI tambem consegue mostrar onde o contrato e o projeto real estao se afastando.
+
+```bash
+sema drift --json
+```
+
+O `drift` destaca:
+
+- `impl` resolvido
+- `impl` quebrado
+- `task` sem implementacao ligada
+- rota publica divergente em NestJS/FastAPI, quando houver pista suficiente
 
 Regra pratica:
 

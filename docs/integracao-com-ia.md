@@ -2,7 +2,7 @@
 
 A Sema foi desenhada para reduzir ambiguidade na colaboracao com IA. A prioridade de design do projeto e permitir que modelos entendam, validem, transformem e operem sobre contratos semanticos explicitos.
 
-No marco `0.6 backend-first`, essa integracao deixa de ser so leitura de contrato e passa a incluir **geracao de scaffold backend util**. Em bom portugues: se a tarefa pedir codigo derivado, a IA tem que parar de agir como jumento e colocar `sema compilar` no fluxo.
+No marco `0.7 legado incremental`, essa integracao deixa de ser so leitura de contrato e passa a incluir **geracao de scaffold backend util** e **governanca de legado**. Em bom portugues: se a tarefa pedir codigo derivado, a IA tem que parar de agir como jumento e colocar `sema compilar` no fluxo; se a tarefa envolver projeto vivo, tambem tem que lembrar do `sema drift`.
 
 ## Documentos de apoio
 

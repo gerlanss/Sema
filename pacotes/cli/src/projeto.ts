@@ -1,4 +1,4 @@
-import { stat, readFile } from "node:fs/promises";
+import { stat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import {
   compilarProjeto,
@@ -6,7 +6,7 @@ import {
   listarArquivosSema,
   type ResultadoCompilacaoProjetoModulo,
 } from "@sema/nucleo";
-import type { EstruturaSaida } from "./tipos.js";
+import type { EstruturaSaida, FonteLegado, ModoAdocao } from "./tipos.js";
 import type { AlvoGeracao, FrameworkGeracao } from "@sema/padroes";
 
 export interface SemaConfigProjeto {
@@ -20,6 +20,9 @@ export interface SemaConfigProjeto {
   framework?: FrameworkGeracao;
   diretoriosSaidaPorAlvo?: Partial<Record<AlvoGeracao, string>>;
   convencoesGeracaoPorProjeto?: "base" | "backend";
+  diretoriosCodigo?: string[];
+  fontesLegado?: FonteLegado[];
+  modoAdocao?: ModoAdocao;
 }
 
 export interface ConfiguracaoProjetoCarregada {
@@ -33,6 +36,9 @@ export interface ContextoProjetoCarregado {
   configCarregada?: ConfiguracaoProjetoCarregada;
   arquivosProjeto: string[];
   origensProjeto: string[];
+  diretoriosCodigo: string[];
+  fontesLegado: FonteLegado[];
+  modoAdocao: ModoAdocao;
   modulosSelecionados: Array<{
     caminho: string;
     codigo: string;
@@ -148,6 +154,119 @@ function resolverOrigensProjeto(
   return [path.dirname(entradaResolvida)];
 }
 
+function normalizarFonteLegado(valor: string): FonteLegado | undefined {
+  if (valor === "nestjs" || valor === "fastapi" || valor === "typescript" || valor === "python" || valor === "dart") {
+    return valor;
+  }
+  return undefined;
+}
+
+function normalizarModoAdocao(valor?: string): ModoAdocao {
+  return valor === "incremental" ? valor : "incremental";
+}
+
+async function lerConteudoSeExistir(caminhoAlvo: string): Promise<string | undefined> {
+  try {
+    return await readFile(caminhoAlvo, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+async function listarDiretoriosFilhos(diretorioBase: string): Promise<string[]> {
+  try {
+    const entradas = await readdir(diretorioBase, { withFileTypes: true });
+    return entradas
+      .filter((entrada) => entrada.isDirectory())
+      .map((entrada) => path.join(diretorioBase, entrada.name));
+  } catch {
+    return [];
+  }
+}
+
+async function inferirDiretoriosCodigo(
+  entradaResolvida: string,
+  configCarregada?: ConfiguracaoProjetoCarregada,
+): Promise<string[]> {
+  const infoEntrada = await stat(entradaResolvida);
+  const baseProjeto = configCarregada?.baseDiretorio
+    ?? (infoEntrada.isDirectory() ? entradaResolvida : path.dirname(entradaResolvida));
+
+  if (configCarregada?.config.diretoriosCodigo?.length) {
+    return [...new Set(configCarregada.config.diretoriosCodigo
+      .map((diretorio) => path.resolve(configCarregada.baseDiretorio, diretorio))
+      .filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
+
+  const candidatosFixos = ["src", "app", "backend", "lib"]
+    .map((segmento) => path.join(baseProjeto, segmento));
+  const existentes = [];
+  for (const candidato of candidatosFixos) {
+    if (await caminhoExiste(candidato)) {
+      existentes.push(path.resolve(candidato));
+    }
+  }
+
+  if (existentes.length > 0) {
+    return [...new Set(existentes)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
+
+  const filhos = await listarDiretoriosFilhos(baseProjeto);
+  const uteis = filhos.filter((diretorio) => ![".git", "node_modules", "dist", "build", ".tmp", "generated"].includes(path.basename(diretorio).toLowerCase()));
+  return uteis.sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+async function inferirFontesLegado(
+  diretoriosCodigo: string[],
+  configCarregada?: ConfiguracaoProjetoCarregada,
+): Promise<FonteLegado[]> {
+  if (configCarregada?.config.fontesLegado?.length) {
+    return [...new Set(configCarregada.config.fontesLegado
+      .map((fonte) => normalizarFonteLegado(fonte))
+      .filter((fonte): fonte is FonteLegado => Boolean(fonte)))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
+
+  const encontrados = new Set<FonteLegado>();
+  const baseProjeto = configCarregada?.baseDiretorio;
+  const packageJson = baseProjeto ? await lerConteudoSeExistir(path.join(baseProjeto, "package.json")) : undefined;
+  if (packageJson) {
+    if (/@nestjs\/common|@nestjs\/core/.test(packageJson)) {
+      encontrados.add("nestjs");
+    }
+    if (/typescript/.test(packageJson)) {
+      encontrados.add("typescript");
+    }
+  }
+
+  for (const diretorio of diretoriosCodigo) {
+    const arquivos = await readdir(diretorio, { withFileTypes: true }).catch(() => []);
+    const nomes = arquivos.map((arquivo) => arquivo.name.toLowerCase());
+    if (nomes.some((nome) => nome.endsWith(".ts"))) {
+      encontrados.add(packageJson && /@nestjs\/common|@nestjs\/core/.test(packageJson) ? "nestjs" : "typescript");
+    }
+    if (nomes.some((nome) => nome.endsWith(".py"))) {
+      const algumPy = await Promise.all(
+        arquivos
+          .filter((arquivo) => arquivo.isFile() && arquivo.name.toLowerCase().endsWith(".py"))
+          .slice(0, 5)
+          .map((arquivo) => lerConteudoSeExistir(path.join(diretorio, arquivo.name))),
+      );
+      if (algumPy.some((texto) => /from\s+fastapi\s+import|APIRouter|FastAPI/.test(texto ?? ""))) {
+        encontrados.add("fastapi");
+      } else {
+        encontrados.add("python");
+      }
+    }
+    if (nomes.some((nome) => nome.endsWith(".dart"))) {
+      encontrados.add("dart");
+    }
+  }
+
+  return [...encontrados].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
 export async function carregarProjeto(
   entrada: string | undefined,
   cwd: string,
@@ -158,6 +277,9 @@ export async function carregarProjeto(
   const infoEntrada = await stat(entradaResolvida);
   const origensProjeto = resolverOrigensProjeto(entradaResolvida, configCarregada);
   const arquivosProjeto = await listarArquivosDeOrigens(origensProjeto);
+  const diretoriosCodigo = await inferirDiretoriosCodigo(entradaResolvida, configCarregada);
+  const fontesLegado = await inferirFontesLegado(diretoriosCodigo, configCarregada);
+  const modoAdocao = normalizarModoAdocao(configCarregada?.config.modoAdocao);
 
   const arquivosSelecionados = infoEntrada.isFile()
     ? new Set([path.resolve(entradaResolvida)])
@@ -179,6 +301,9 @@ export async function carregarProjeto(
     configCarregada,
     arquivosProjeto,
     origensProjeto,
+    diretoriosCodigo,
+    fontesLegado,
+    modoAdocao,
     modulosSelecionados: fontes
       .filter((fonte) => arquivosSelecionados.has(path.resolve(fonte.caminho)))
       .map((fonte) => ({

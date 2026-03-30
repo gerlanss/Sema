@@ -233,6 +233,9 @@ test("cli inspeciona projeto backend-first com configuracao carregada", async ()
       path.join(baseTemporaria, "sema.config.json"),
       JSON.stringify({
         origens: ["./contratos"],
+        diretoriosCodigo: ["./src"],
+        fontesLegado: ["nestjs"],
+        modoAdocao: "incremental",
         saida: "./generated/nestjs",
         alvos: ["typescript"],
         alvoPadrao: "typescript",
@@ -282,6 +285,9 @@ test("cli inspeciona projeto backend-first com configuracao carregada", async ()
     assert.equal(json.comando, "inspecionar");
     assert.equal(json.configuracao.framework, "nestjs");
     assert.equal(json.configuracao.estruturaSaida, "backend");
+    assert.deepEqual(json.configuracao.fontesLegado, ["nestjs"]);
+    assert.equal(json.configuracao.modoAdocao, "incremental");
+    assert.equal(json.configuracao.diretoriosCodigo[0], path.join(baseTemporaria, "src"));
     assert.equal(json.projeto.modulos[0].modulo, "app.pedidos");
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });

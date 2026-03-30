@@ -205,10 +205,10 @@ module exemplo.impl {
   const arquivosDart = gerarDart(resultado.ir!);
 
   assert.ok(arquivosTs[0]?.conteudo.includes("Implementacoes externas vinculadas"));
-  assert.ok(arquivosTs[0]?.conteudo.includes('origem: "ts", caminho: "app.gateway.pagamentos.processar"'));
-  assert.ok(arquivosPy[0]?.conteudo.includes("Implementacao externa vinculada: origem=py caminho=servicos.pagamentos.processar"));
+  assert.ok(arquivosTs[0]?.conteudo.includes('origem: "ts", caminho: "app.gateway.pagamentos.processar", resolucaoImpl: "app.gateway.pagamentos.processar", statusImpl: "nao_verificado"'));
+  assert.ok(arquivosPy[0]?.conteudo.includes("Implementacao externa vinculada: origem=py caminho=servicos.pagamentos.processar status=nao_verificado"));
   assert.ok(arquivosPy[0]?.conteudo.includes('"impl": ['));
-  assert.ok(arquivosDart[0]?.conteudo.includes("impl=ts:app.gateway.pagamentos.processar, py:servicos.pagamentos.processar, dart:app.mobile.pagamentos.processar"));
+  assert.ok(arquivosDart[0]?.conteudo.includes("impl=ts:app.gateway.pagamentos.processar[nao_verificado], py:servicos.pagamentos.processar[nao_verificado], dart:app.mobile.pagamentos.processar[nao_verificado]"));
 });
 
 test("geradores refletem estruturas semanticas mais ricas no exemplo de pagamento", async () => {

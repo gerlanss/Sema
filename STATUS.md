@@ -7,7 +7,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Ultima atualizacao: 2026-03-30
 - Ultimo commit de referencia: `98ae431`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: marco `0.6 backend-first` fechado, com foco oficial em criacao e edicao de projetos backend reais
+- Estagio atual: marco `0.7 legado incremental` em consolidacao, com foco oficial em adocao incremental de projeto vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: linguagem estruturada para IA, mantida como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
 - Principais areas concluidas:
@@ -22,6 +22,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - vertical oficial de pagamento modularizado como referencia do `0.5`
   - modo backend-first com scaffold para NestJS e FastAPI
   - `sema.config.json` com defaults de projeto e multiplas origens
+  - importacao assistida de legado com `sema drift` para governar contrato vs codigo vivo
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
@@ -51,6 +52,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Fase 4 encerrada como marco tecnico do MVP base
 - `[x]` Marco `0.5` util de verdade fechado com o vertical oficial de pagamento
 - `[x]` Marco `0.6 backend-first` fechado com scaffold backend, configuracao de projeto e integracao inicial com frameworks
+- `[x]` Marco `0.7 legado incremental` iniciado com importacao assistida fortalecida, `sema drift` e adocao incremental mais clara
 - Foco imediato:
   - aprofundar criacao e edicao de backends reais
   - amadurecer orquestracao backend
@@ -59,7 +61,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Proxima Fase
 
-- `[ ]` Pos-0.6 backend-first
+- `[ ]` Pos-0.7 legado incremental
 - Prioridade sugerida:
   - aprofundar criacao de backend em projeto vivo
   - amadurecer `use` para projetos maiores
@@ -114,6 +116,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Adicionar `sema inspecionar` para diagnostico nao destrutivo de projeto
 - `[x]` Melhorar diagnosticos de `use` e `flow` para contexto real de backend
 - `[x]` Atualizar a documentacao operacional para o marco `0.6 backend-first`
+- `[x]` Adicionar `sema drift` para governar contrato e codigo vivo em projeto legado
+- `[x]` Enriquecer `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
+- `[x]` Expandir `sema.config.json` com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
 
 ## Fundacao do Projeto
 

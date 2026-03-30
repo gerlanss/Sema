@@ -95,13 +95,13 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
       .map((campo) => {
         const origem = campo.nome.toLowerCase();
         if (origem === "ts" || origem === "typescript") {
-          return { origem: "ts" as const, caminho: campo.valor };
+          return { origem: "ts" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
         }
         if (origem === "py" || origem === "python") {
-          return { origem: "py" as const, caminho: campo.valor };
+          return { origem: "py" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
         }
         if (origem === "dart") {
-          return { origem: "dart" as const, caminho: campo.valor };
+          return { origem: "dart" as const, caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" as const };
         }
         return undefined;
       })
@@ -211,6 +211,7 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
         errors: errosPublicosResolvidos,
         effects: efeitosPublicosDeclarados,
         garantiasMinimas: garantiasPublicasMinimas,
+        divergenciasPublicas: [],
       },
     };
   });

@@ -10,6 +10,7 @@ Leitura honesta:
 - ela puxa um rascunho forte a partir de codigo vivo
 - esse rascunho serve para adocao incremental
 - depois voce revisa, lapida, valida e conecta com o projeto real
+- depois voce mede `drift` para saber onde contrato e codigo vivo estao se afastando
 
 ## Fontes suportadas
 
@@ -55,7 +56,28 @@ sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <dire
 4. rode `sema formatar`
 5. rode `sema validar --json`
 6. conecte implementacoes reais com `impl`
-7. rode `sema compilar` para gerar scaffold quando fizer sentido
+7. rode `sema drift --json`
+8. rode `sema compilar` para gerar scaffold quando fizer sentido
+
+## Governar drift
+
+Depois que o rascunho virou contrato revisado e voce ligou `impl`, a CLI consegue inspecionar o afastamento entre a Sema e o projeto vivo:
+
+```bash
+sema drift --json
+```
+
+O `drift` acusa:
+
+- `impl` valido
+- `impl` quebrado
+- `task` sem implementacao
+- rota publica divergente em NestJS/FastAPI quando houver sinal suficiente
+
+Leitura certa:
+
+- `drift` nao substitui revisao humana
+- `drift` existe para impedir que o contrato apodreca enquanto o projeto anda
 
 ## Exemplos
 

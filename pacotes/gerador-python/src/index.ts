@@ -218,7 +218,7 @@ function gerarMetadadosTask(task: IrTask): string {
     : `[\n${task.efeitosEstruturados.map((efeito) => `    {"categoria": "${efeito.categoria}", "alvo": "${efeito.alvo}"${efeito.detalhe ? `, "detalhe": ${JSON.stringify(efeito.detalhe)}` : ""}${efeito.criticidade ? `, "criticidade": "${efeito.criticidade}"` : ""}},`).join("\n")}\n]`;
   const implementacoes = task.implementacoesExternas.length === 0
     ? "[]"
-    : `[\n${task.implementacoesExternas.map((impl) => `    {"origem": "${impl.origem}", "caminho": "${impl.caminho}"},`).join("\n")}\n]`;
+    : `[\n${task.implementacoesExternas.map((impl) => `    {"origem": "${impl.origem}", "caminho": "${impl.caminho}", "resolucaoImpl": "${impl.resolucaoImpl ?? impl.caminho}", "statusImpl": "${impl.statusImpl ?? "nao_verificado"}"},`).join("\n")}\n]`;
 
   return `contrato_${normalizarNomeParaSimbolo(task.nome)} = {
     "nome": "${task.nome}",
@@ -352,7 +352,7 @@ function gerarTask(task: IrTask): string {
     ? "    # Nenhum efeito declarado."
     : task.effects.map((efeito) => `    # Efeito declarado: ${efeito}`).join("\n");
   const implementacoes = task.implementacoesExternas.length > 0
-    ? task.implementacoesExternas.map((impl) => `    # Implementacao externa vinculada: origem=${impl.origem} caminho=${impl.caminho}`).join("\n")
+    ? task.implementacoesExternas.map((impl) => `    # Implementacao externa vinculada: origem=${impl.origem} caminho=${impl.caminho} status=${impl.statusImpl ?? "nao_verificado"}`).join("\n")
     : "";
 
   const garantias = `    verificar_garantias_${nome}(saida)\n    return saida`;

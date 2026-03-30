@@ -245,7 +245,7 @@ function gerarMetadadosTask(task: IrTask): string {
     : `[\n${task.efeitosEstruturados.map((efeito) => `  { categoria: "${efeito.categoria}", alvo: "${efeito.alvo}"${efeito.detalhe ? `, detalhe: ${JSON.stringify(efeito.detalhe)}` : ""}${efeito.criticidade ? `, criticidade: "${efeito.criticidade}"` : ""} },`).join("\n")}\n]`;
   const implementacoes = task.implementacoesExternas.length === 0
     ? "[]"
-    : `[\n${task.implementacoesExternas.map((impl) => `  { origem: "${impl.origem}", caminho: "${impl.caminho}" },`).join("\n")}\n]`;
+    : `[\n${task.implementacoesExternas.map((impl) => `  { origem: "${impl.origem}", caminho: "${impl.caminho}", resolucaoImpl: "${impl.resolucaoImpl ?? impl.caminho}", statusImpl: "${impl.statusImpl ?? "nao_verificado"}" },`).join("\n")}\n]`;
 
   return `export const contrato_${normalizarNomeParaSimbolo(task.nome)} = {
   nome: "${task.nome}",
@@ -374,7 +374,7 @@ export async function executar_${nomeSimbolo}(entrada: ${task.nome}Entrada): Pro
   validar_${nomeSimbolo}(entrada);
 ${cenariosErro.map((caso) => `  if (JSON.stringify(entrada) === JSON.stringify(${JSON.stringify(caso.entrada)})) throw new ${task.nome}_${caso.tipoErro}Erro();`).join("\n")}
 ${task.stateContract ? `  // Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n  // Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
-${task.implementacoesExternas.length > 0 ? `  // Implementacoes externas vinculadas:\n${task.implementacoesExternas.map((impl) => `  // - ${impl.origem}: ${impl.caminho}`).join("\n")}` : ""}
+${task.implementacoesExternas.length > 0 ? `  // Implementacoes externas vinculadas:\n${task.implementacoesExternas.map((impl) => `  // - ${impl.origem}: ${impl.caminho} [${impl.statusImpl ?? "nao_verificado"}]`).join("\n")}` : ""}
   // Efeitos declarados:
 ${task.efeitosEstruturados.map((efeito) => `  // - categoria=${efeito.categoria} alvo=${efeito.alvo}${efeito.detalhe ? ` detalhe=${efeito.detalhe}` : ""}${efeito.criticidade ? ` criticidade=${efeito.criticidade}` : ""}`).join("\n") || task.effects.map((efeito) => `  // - ${efeito}`).join("\n") || "  // - Nenhum efeito declarado."}
 ${gerarPreparacaoSaida(task)}

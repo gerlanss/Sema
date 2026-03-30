@@ -12,12 +12,13 @@ A CLI da Sema e a interface oficial para:
 - inspecao de projeto
 - onboarding de IA
 
-No marco `0.6 backend-first`, ela tambem virou a fonte de verdade para:
+No marco `0.7 legado incremental`, ela tambem virou a fonte de verdade para:
 
 - configuracao de projeto via `sema.config.json`
 - scaffold orientado a framework para NestJS e FastAPI
 - resolucao de multiplas origens `.sema`
 - importacao assistida de legado para rascunho `.sema`
+- governanca de drift entre contrato e codigo vivo
 - inspecao nao destrutiva de projeto antes de gerar qualquer coisa
 
 ## Comandos disponiveis
@@ -141,9 +142,33 @@ Campos tipicos:
 - estrutura de saida
 - alvos
 - origens resolvidas
+- diretorios de codigo candidatos
+- fontes de legado detectadas
+- modo de adocao
 - modulos encontrados
 
 Esse comando existe para evitar aquela merda de “a CLI nao achou meu modulo” sem ninguem saber qual contexto ela estava usando.
+
+### `sema drift <arquivo-ou-pasta> [--json]`
+
+Compara o contrato `.sema` com o codigo vivo ligado por `impl`.
+
+O comando aponta:
+
+- `impl` valido
+- `impl` quebrado
+- `task` sem implementacao ligada
+- rota publica divergente em NestJS/FastAPI, quando houver contexto suficiente
+
+Com `--json`, a saida inclui:
+
+- `modulos`
+- `tasks`
+- `impls_validos`
+- `impls_quebrados`
+- `rotas_divergentes`
+- `diagnosticos`
+- `sucesso`
 
 ### `sema importar <nestjs|fastapi|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]`
 
