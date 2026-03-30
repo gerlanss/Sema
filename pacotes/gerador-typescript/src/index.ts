@@ -35,6 +35,13 @@ function gerarInterface(nome: string, campos: IrCampo[]): string {
   return `export interface ${nome} {\n${propriedades}\n}\n`;
 }
 
+function gerarComentarioInvariantesTypeScript(invariantes: ExpressaoSemantica[]): string {
+  if (invariantes.length === 0) {
+    return "";
+  }
+  return `${invariantes.map((invariante) => `// Invariante: ${invariante.textoOriginal}`).join("\n")}\n`;
+}
+
 function gerarLiteralCamposTypeScript(campos: IrCampo[]): string {
   if (campos.length === 0) {
     return "[]";
@@ -440,7 +447,10 @@ function gerarTypeScriptBase(modulo: IrModulo): ArquivoGerado[] {
     .map((tipo) => `export type ${tipo} = any; // Tipo externo referenciado por use ou por contrato compartilhado.\n`)
     .join("\n");
   const entidades = modulo.entities
-    .map((entity) => gerarInterface(entity.nome, entity.campos))
+    .map((entity) => `${gerarComentarioInvariantesTypeScript(entity.invariantes)}${gerarInterface(entity.nome, entity.campos)}`)
+    .join("\n");
+  const tipos = modulo.types
+    .map((type) => `${gerarComentarioInvariantesTypeScript(type.invariantes)}${gerarInterface(type.nome, type.definicao.campos)}`)
     .join("\n");
   const enums = modulo.enums
     .map((enumeracao) => `export type ${enumeracao.nome} = ${enumeracao.valores.map((valor) => `"${valor}"`).join(" | ")};\n`)
@@ -457,7 +467,7 @@ function gerarTypeScriptBase(modulo: IrModulo): ArquivoGerado[] {
   const tasks = modulo.tasks.map(gerarTask).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
-  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\n${tiposExternos}\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
+  const codigo = `// Arquivo gerado automaticamente pela Sema.\n// Modulo de origem: ${modulo.nome}\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\n${tiposExternos}\n${tipos}\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
   const testes = gerarTestes(modulo);
 
   return [

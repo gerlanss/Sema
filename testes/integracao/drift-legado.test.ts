@@ -159,6 +159,11 @@ export class PedidosController {
     assert.equal(json.impls_quebrados.length, 1);
     assert.equal(json.rotas_divergentes.length, 1);
     assert.equal(json.tasks.some((task: { task: string; semImplementacao: boolean }) => task.task === "revisar_manual" && task.semImplementacao), true);
+    assert.equal(json.impls_validos[0].arquivo.endsWith(path.join("src", "pedidos", "pedidos.service.ts")), true);
+    assert.equal(json.impls_validos[0].simbolo, "criar");
+    assert.equal(json.impls_validos[0].caminhoResolvido, "src.pedidos.pedidos_service.criar");
+    assert.equal(json.impls_quebrados[0].candidatos.some((candidato: { caminho: string }) => candidato.caminho === "src.pedidos.pedidos_service.criar"), true);
+    assert.equal(json.tasks.some((task: { task: string; arquivosReferenciados: string[] }) => task.task === "criar_pedido" && task.arquivosReferenciados.length === 1), true);
     assert.equal(json.diagnosticos.some((diag: { tipo: string }) => diag.tipo === "task_sem_impl"), true);
   } finally {
     await rm(base, { recursive: true, force: true });

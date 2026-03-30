@@ -63,6 +63,21 @@
 - ampliar `use` para cenarios ainda maiores
 - fortalecer orquestracao backend sem inflar a linguagem
 - amadurecer editor e automacao em cima da camada backend-first
+- fortalecer o acoplamento entre contrato Sema e codigo real via `impl`, `drift` e mapeamento de arquivo vivo
+- explicitar melhor invariantes de dominio em modulos que hoje estao bons de fluxo, mas ainda frouxos de garantia
+- introduzir contratos mais estaveis para dominios operacionais recorrentes, como estrategia, gate, slice e versao ativa
+- melhorar a trilha "`modulo Sema -> arquivos reais`" para IA conseguir editar projeto vivo com menos adivinhacao
+
+## Sinal de Produto Vindo de Projeto Real
+
+Feedback externo recente, vindo do uso da Sema por IA em um backend operacional real, reforca quatro pontos:
+
+- a Sema ja entrega muito valor em fluxo, efeito, garantia e fronteira de responsabilidade
+- `impl` ja ajuda, mas ainda esta mais para ponte de referencia do que acoplamento forte com a implementacao viva
+- dominios operacionais mais chatos pedem contratos reutilizaveis e invariantes mais estaveis
+- o proximo salto nao e "mais documento bonito"; e "mais rastreabilidade util para editar sem quebrar"
+
+Traduzindo sem perfume: se a IA entende o contrato mas ainda precisa farejar Python na unha para achar a verdade, o produto ainda nao blindou direito a ultima milha.
 
 ## Observacao
 

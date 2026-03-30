@@ -146,6 +146,7 @@ Campos tipicos:
 - fontes de legado detectadas
 - modo de adocao
 - modulos encontrados
+- resumo de implementacao viva por modulo, com `impls` validos, quebrados, tasks sem `impl` e arquivos relacionados
 
 Esse comando existe para evitar aquela merda de “a CLI nao achou meu modulo” sem ninguem saber qual contexto ela estava usando.
 
@@ -164,8 +165,15 @@ Com `--json`, a saida inclui:
 
 - `modulos`
 - `tasks`
+  - `arquivosReferenciados`
+  - `simbolosReferenciados`
+  - `candidatosImpl`
 - `impls_validos`
+  - `arquivo`
+  - `simbolo`
+  - `caminhoResolvido`
 - `impls_quebrados`
+  - `candidatos`
 - `rotas_divergentes`
 - `diagnosticos`
 - `sucesso`

@@ -211,13 +211,17 @@ test("cli gera pacote de contexto de ia para modulo com use", async () => {
 
     const validar = JSON.parse(await readFile(path.join(baseTemporaria, "validar.json"), "utf8"));
     const ir = JSON.parse(await readFile(path.join(baseTemporaria, "ir.json"), "utf8"));
+    const drift = JSON.parse(await readFile(path.join(baseTemporaria, "drift.json"), "utf8"));
     const readme = await readFile(path.join(baseTemporaria, "README.md"), "utf8");
 
     assert.equal(validar.comando, "validar");
     assert.equal(validar.resultados[0].sucesso, true);
     assert.equal(ir.comando, "ir");
     assert.equal(ir.modulo, "exemplos.pagamento");
+    assert.equal(drift.comando, "drift");
+    assert.equal(drift.modulo, "exemplos.pagamento");
     assert.match(readme, /Contexto de IA para exemplos.pagamento/);
+    assert.match(readme, /drift\.json/);
     assert.match(readme, /sema starter-ia/);
     assert.match(readme, /sema prompt-ia/);
   } finally {
@@ -289,6 +293,8 @@ test("cli inspeciona projeto backend-first com configuracao carregada", async ()
     assert.equal(json.configuracao.modoAdocao, "incremental");
     assert.equal(json.configuracao.diretoriosCodigo[0], path.join(baseTemporaria, "src"));
     assert.equal(json.projeto.modulos[0].modulo, "app.pedidos");
+    assert.equal(json.projeto.modulos[0].implementacao.implsValidos, 0);
+    assert.equal(json.projeto.modulos[0].implementacao.tasksSemImplementacao, 1);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
   }

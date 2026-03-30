@@ -125,6 +125,7 @@ Regra pratica:
 - [docs/integracao-com-ia.md](./docs/integracao-com-ia.md)
 - [docs/da-sema-para-codigo.md](./docs/da-sema-para-codigo.md)
 - [docs/importacao-legado.md](./docs/importacao-legado.md)
+- [docs/feedback-futebot.md](./docs/feedback-futebot.md)
 - [docs/adocao-nestjs-existente.md](./docs/adocao-nestjs-existente.md)
 - [docs/adocao-fastapi-existente.md](./docs/adocao-fastapi-existente.md)
 - [docs/nestjs-prisma-sema.md](./docs/nestjs-prisma-sema.md)

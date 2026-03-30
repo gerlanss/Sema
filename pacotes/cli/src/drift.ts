@@ -6,7 +6,7 @@ import type { ContextoProjetoCarregado } from "./projeto.js";
 import type { FonteLegado } from "./tipos.js";
 
 interface SimboloResolvido {
-  origem: FonteLegado | "ts" | "py" | "dart";
+  origem: "ts" | "py" | "dart";
   caminho: string;
   arquivo: string;
   simbolo: string;
@@ -35,7 +35,9 @@ interface RegistroImplDrift {
   caminho: string;
   arquivo?: string;
   simbolo?: string;
+  caminhoResolvido?: string;
   status: "resolvido" | "quebrado";
+  candidatos?: SimboloCandidatoDrift[];
 }
 
 interface RegistroRotaDivergente {
@@ -44,6 +46,27 @@ interface RegistroRotaDivergente {
   metodo?: string;
   caminho?: string;
   motivo: string;
+}
+
+interface SimboloCandidatoDrift {
+  origem: "ts" | "py" | "dart";
+  caminho: string;
+  arquivo: string;
+  simbolo: string;
+  confianca: "alta" | "media";
+  motivo: string;
+}
+
+interface ResumoTaskDrift {
+  modulo: string;
+  task: string;
+  impls: number;
+  implsValidos: number;
+  implsQuebrados: number;
+  semImplementacao: boolean;
+  arquivosReferenciados: string[];
+  simbolosReferenciados: string[];
+  candidatosImpl: SimboloCandidatoDrift[];
 }
 
 export interface ResultadoDrift {
@@ -55,14 +78,7 @@ export interface ResultadoDrift {
     tasks: number;
     routes: number;
   }>;
-  tasks: Array<{
-    modulo: string;
-    task: string;
-    impls: number;
-    implsValidos: number;
-    implsQuebrados: number;
-    semImplementacao: boolean;
-  }>;
+  tasks: ResumoTaskDrift[];
   impls_validos: RegistroImplDrift[];
   impls_quebrados: RegistroImplDrift[];
   rotas_divergentes: RegistroRotaDivergente[];
@@ -343,6 +359,145 @@ function normalizarCaminhoRota(caminho?: string): string {
   return normalizado.endsWith("/") && normalizado !== "/" ? normalizado.slice(0, -1) : normalizado;
 }
 
+function ultimoSegmentoSimbolico(caminho: string): string {
+  const partes = caminho.split(".").filter(Boolean);
+  return paraIdentificadorModulo(partes[partes.length - 1] ?? caminho);
+}
+
+function pontuarCandidatoDeclarado(candidato: SimboloResolvido, origem: "ts" | "py" | "dart", caminhoDeclarado: string): SimboloCandidatoDrift | undefined {
+  if (candidato.origem !== origem) {
+    return undefined;
+  }
+
+  const caminhoNormalizado = paraIdentificadorModulo(caminhoDeclarado.replace(/\./g, "_"));
+  const candidatoNormalizado = paraIdentificadorModulo(candidato.caminho.replace(/\./g, "_"));
+  const ultimoDeclarado = ultimoSegmentoSimbolico(caminhoDeclarado);
+  const ultimoCandidato = ultimoSegmentoSimbolico(candidato.caminho);
+  const prefixoDeclarado = caminhoDeclarado.split(".").slice(0, -1).join(".");
+  const prefixoCandidato = candidato.caminho.split(".").slice(0, -1).join(".");
+
+  if (candidato.caminho === caminhoDeclarado) {
+    return {
+      origem: candidato.origem,
+      caminho: candidato.caminho,
+      arquivo: candidato.arquivo,
+      simbolo: candidato.simbolo,
+      confianca: "alta",
+      motivo: "Caminho simbolico bate exatamente com o declarado.",
+    };
+  }
+
+  if (ultimoDeclarado && ultimoDeclarado === ultimoCandidato) {
+    return {
+      origem: candidato.origem,
+      caminho: candidato.caminho,
+      arquivo: candidato.arquivo,
+      simbolo: candidato.simbolo,
+      confianca: "alta",
+      motivo: "Ultimo simbolo bate com a implementacao declarada.",
+    };
+  }
+
+  if (ultimoDeclarado && (candidatoNormalizado.includes(ultimoDeclarado) || caminhoNormalizado.includes(ultimoCandidato))) {
+    return {
+      origem: candidato.origem,
+      caminho: candidato.caminho,
+      arquivo: candidato.arquivo,
+      simbolo: candidato.simbolo,
+      confianca: "media",
+      motivo: "Trecho relevante do caminho simbolico parece compativel com o declarado.",
+    };
+  }
+
+  if (prefixoDeclarado && prefixoDeclarado === prefixoCandidato) {
+    return {
+      origem: candidato.origem,
+      caminho: candidato.caminho,
+      arquivo: candidato.arquivo,
+      simbolo: candidato.simbolo,
+      confianca: "media",
+      motivo: "Prefixo do caminho simbolico bate com a implementacao declarada; o simbolo final pode ter mudado.",
+    };
+  }
+
+  return undefined;
+}
+
+function pontuarCandidatoPorTask(candidato: SimboloResolvido, task: string): SimboloCandidatoDrift | undefined {
+  const taskNormalizada = paraIdentificadorModulo(task);
+  const simboloNormalizado = paraIdentificadorModulo(candidato.simbolo.replace(/\./g, "_"));
+  const caminhoNormalizado = paraIdentificadorModulo(candidato.caminho.replace(/\./g, "_"));
+
+  if (!taskNormalizada) {
+    return undefined;
+  }
+
+  if (simboloNormalizado === taskNormalizada || ultimoSegmentoSimbolico(candidato.caminho) === taskNormalizada) {
+    return {
+      origem: candidato.origem,
+      caminho: candidato.caminho,
+      arquivo: candidato.arquivo,
+      simbolo: candidato.simbolo,
+      confianca: "alta",
+      motivo: "Nome da task bate com o simbolo encontrado no codigo vivo.",
+    };
+  }
+
+  if (simboloNormalizado.includes(taskNormalizada) || taskNormalizada.includes(simboloNormalizado) || caminhoNormalizado.includes(taskNormalizada)) {
+    return {
+      origem: candidato.origem,
+      caminho: candidato.caminho,
+      arquivo: candidato.arquivo,
+      simbolo: candidato.simbolo,
+      confianca: "media",
+      motivo: "Nome da task parece compativel com o simbolo encontrado no codigo vivo.",
+    };
+  }
+
+  return undefined;
+}
+
+function deduplicarCandidatos(candidatos: SimboloCandidatoDrift[]): SimboloCandidatoDrift[] {
+  const mapa = new Map<string, SimboloCandidatoDrift>();
+  for (const candidato of candidatos) {
+    const chave = `${candidato.origem}:${candidato.caminho}:${candidato.arquivo}:${candidato.simbolo}`;
+    const anterior = mapa.get(chave);
+    if (!anterior || (anterior.confianca === "media" && candidato.confianca === "alta")) {
+      mapa.set(chave, candidato);
+    }
+  }
+  return [...mapa.values()];
+}
+
+function ordenarCandidatos(candidatos: SimboloCandidatoDrift[]): SimboloCandidatoDrift[] {
+  return [...candidatos].sort((a, b) => {
+    if (a.confianca !== b.confianca) {
+      return a.confianca === "alta" ? -1 : 1;
+    }
+    return a.caminho.localeCompare(b.caminho, "pt-BR");
+  });
+}
+
+function sugerirCandidatosParaImpl(
+  simbolos: SimboloResolvido[],
+  origem: "ts" | "py" | "dart",
+  caminhoDeclarado: string,
+): SimboloCandidatoDrift[] {
+  return ordenarCandidatos(deduplicarCandidatos(
+    simbolos
+      .map((candidato) => pontuarCandidatoDeclarado(candidato, origem, caminhoDeclarado))
+      .filter((item): item is SimboloCandidatoDrift => Boolean(item)),
+  )).slice(0, 5);
+}
+
+function sugerirCandidatosParaTaskSemImpl(simbolos: SimboloResolvido[], nomeTask: string): SimboloCandidatoDrift[] {
+  return ordenarCandidatos(deduplicarCandidatos(
+    simbolos
+      .map((candidato) => pontuarCandidatoPorTask(candidato, nomeTask))
+      .filter((item): item is SimboloCandidatoDrift => Boolean(item)),
+  )).slice(0, 5);
+}
+
 function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "fastapi"> {
   if (fontesLegado.includes("nestjs")) {
     return ["nestjs"];
@@ -363,6 +518,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const indexTs = await indexarTypeScript(contexto.diretoriosCodigo);
   const indexPy = await indexarPython(contexto.diretoriosCodigo);
   const indexDart = await indexarDart(contexto.diretoriosCodigo);
+  const todosSimbolos = [...indexTs.simbolos, ...indexPy.simbolos, ...indexDart];
   const mapaImpl = new Map<string, SimboloResolvido>([
     ...indexTs.simbolos.map((item) => [item.caminho, item] as const),
     ...indexPy.simbolos.map((item) => [item.caminho, item] as const),
@@ -384,8 +540,14 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     for (const task of ir.tasks) {
       let validos = 0;
       let quebrados = 0;
+      const arquivosReferenciados = new Set<string>();
+      const simbolosReferenciados = new Set<string>();
+      const candidatosTask = new Map<string, SimboloCandidatoDrift>();
 
       if (task.implementacoesExternas.length === 0) {
+        for (const candidato of sugerirCandidatosParaTaskSemImpl(todosSimbolos, task.nome)) {
+          candidatosTask.set(`${candidato.origem}:${candidato.caminho}:${candidato.arquivo}:${candidato.simbolo}`, candidato);
+        }
         diagnosticos.push({
           tipo: "task_sem_impl",
           modulo: ir.nome,
@@ -403,13 +565,20 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
           caminho: impl.caminho,
           arquivo: resolvido?.arquivo,
           simbolo: resolvido?.simbolo,
+          caminhoResolvido: resolvido?.caminho,
           status: resolvido ? "resolvido" : "quebrado",
         };
 
         if (resolvido) {
+          arquivosReferenciados.add(resolvido.arquivo);
+          simbolosReferenciados.add(resolvido.simbolo);
           implsValidos.push(registro);
           validos += 1;
         } else {
+          registro.candidatos = sugerirCandidatosParaImpl(todosSimbolos, impl.origem, impl.caminho);
+          for (const candidato of registro.candidatos) {
+            candidatosTask.set(`${candidato.origem}:${candidato.caminho}:${candidato.arquivo}:${candidato.simbolo}`, candidato);
+          }
           implsQuebrados.push(registro);
           quebrados += 1;
           diagnosticos.push({
@@ -428,6 +597,9 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         implsValidos: validos,
         implsQuebrados: quebrados,
         semImplementacao: task.implementacoesExternas.length === 0,
+        arquivosReferenciados: [...arquivosReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")),
+        simbolosReferenciados: [...simbolosReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")),
+        candidatosImpl: ordenarCandidatos([...candidatosTask.values()]).slice(0, 5),
       });
     }
 

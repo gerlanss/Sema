@@ -695,6 +695,40 @@ function garantirArquivoSema(caminhoArquivo: string): void {
   }
 }
 
+function resumirDriftPorModulo(
+  modulo: string | null,
+  caminho: string,
+  resultadoDrift: Awaited<ReturnType<typeof analisarDriftLegado>>,
+) {
+  const tasks = modulo
+    ? resultadoDrift.tasks.filter((task) => task.modulo === modulo)
+    : [];
+  const implsValidos = modulo
+    ? resultadoDrift.impls_validos.filter((impl) => impl.modulo === modulo)
+    : [];
+  const implsQuebrados = modulo
+    ? resultadoDrift.impls_quebrados.filter((impl) => impl.modulo === modulo)
+    : [];
+  const rotasDivergentes = modulo
+    ? resultadoDrift.rotas_divergentes.filter((rota) => rota.modulo === modulo)
+    : [];
+
+  return {
+    caminho,
+    modulo,
+    implsValidos: implsValidos.length,
+    implsQuebrados: implsQuebrados.length,
+    tasksSemImplementacao: tasks.filter((task) => task.semImplementacao).length,
+    arquivosRelacionados: [...new Set([
+      ...tasks.flatMap((task) => task.arquivosReferenciados),
+      ...implsValidos.map((impl) => impl.arquivo).filter((item): item is string => Boolean(item)),
+      ...implsQuebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.arquivo) ?? []),
+    ])].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    tasks,
+    rotasDivergentes,
+  };
+}
+
 async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: string): Promise<ContextoIaGerado> {
   const arquivo = path.resolve(arquivoEntrada);
   garantirArquivoSema(arquivo);
@@ -714,6 +748,15 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
 
   const sucesso = !temErros(resultadoModulo.diagnosticos);
   const modulo = resultadoModulo.modulo?.nome ?? path.basename(arquivo, ".sema");
+  const resultadoDrift = await analisarDriftLegado(contextoProjeto);
+  const drift = {
+    comando: "drift",
+    caminho: arquivo,
+    modulo: resultadoModulo.modulo?.nome ?? null,
+    sucesso: resultadoDrift.sucesso,
+    resumo: resumirDriftPorModulo(resultadoModulo.modulo?.nome ?? null, arquivo, resultadoDrift),
+    drift: resultadoDrift,
+  };
 
   const validar = {
     comando: "validar",
@@ -757,6 +800,7 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
   await writeFile(path.join(pastaBase, "diagnosticos.json"), `${JSON.stringify(diagnosticos, null, 2)}\n`, "utf8");
   await writeFile(path.join(pastaBase, "ast.json"), `${JSON.stringify(ast, null, 2)}\n`, "utf8");
   await writeFile(path.join(pastaBase, "ir.json"), `${JSON.stringify(ir, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "drift.json"), `${JSON.stringify(drift, null, 2)}\n`, "utf8");
 
   const resumo = `# Contexto de IA para ${modulo}
 
@@ -771,16 +815,18 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
 - \`diagnosticos.json\`
 - \`ast.json\`
 - \`ir.json\`
+- \`drift.json\`
 
 ## Fluxo recomendado para o agente
 
 1. Ler \`ast.json\` para entender a forma escrita.
 2. Ler \`ir.json\` para entender a forma semantica resolvida.
-3. Ler \`diagnosticos.json\` se houver falha ou aviso relevante.
-4. Editar o arquivo \`.sema\`.
-5. Rodar \`sema formatar "${arquivo}"\`.
-6. Rodar \`sema validar "${arquivo}" --json\`.
-7. Fechar com \`sema verificar exemplos --json --saida ./.tmp/verificacao-ia\` ou \`npm run project:check\`.
+3. Ler \`drift.json\` para ver quais arquivos e simbolos vivos sustentam a implementacao.
+4. Ler \`diagnosticos.json\` se houver falha ou aviso relevante.
+5. Editar o arquivo \`.sema\`.
+6. Rodar \`sema formatar "${arquivo}"\`.
+7. Rodar \`sema validar "${arquivo}" --json\`.
+8. Fechar com \`sema verificar exemplos --json --saida ./.tmp/verificacao-ia\` ou \`npm run project:check\`.
 
 ## Textos base para onboarding do agente
 
@@ -795,7 +841,7 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
     arquivo,
     modulo,
     pastaSaida: pastaBase,
-    artefatos: ["validar.json", "diagnosticos.json", "ast.json", "ir.json", "README.md"],
+    artefatos: ["validar.json", "diagnosticos.json", "ast.json", "ir.json", "drift.json", "README.md"],
   };
 }
 
@@ -957,6 +1003,7 @@ async function comandoValidarJson(entrada?: string): Promise<number> {
 
 async function comandoInspecionar(entrada: string | undefined, emJson: boolean, cwd = process.cwd()): Promise<number> {
   const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const resultadoDrift = await analisarDriftLegado(contextoProjeto);
   const framework = resolverFrameworkPadrao(undefined, contextoProjeto.configCarregada);
   const estruturaSaida = resolverEstruturaSaidaPadrao(undefined, framework, contextoProjeto.configCarregada);
   const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
@@ -982,6 +1029,7 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
         modulo: item.resultado.modulo?.nome ?? null,
         sucesso: !temErros(item.resultado.diagnosticos),
         diagnosticos: item.resultado.diagnosticos.length,
+        implementacao: resumirDriftPorModulo(item.resultado.modulo?.nome ?? null, item.caminho, resultadoDrift),
       })),
     },
   };
@@ -1014,6 +1062,10 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
   console.log("- Modulos selecionados:");
   for (const modulo of payload.projeto.modulos) {
     console.log(`  - ${modulo.modulo ?? "(sem modulo)"} :: ${modulo.caminho} :: diagnosticos=${modulo.diagnosticos}`);
+    console.log(`    impls validos=${modulo.implementacao.implsValidos} quebrados=${modulo.implementacao.implsQuebrados} sem_impl=${modulo.implementacao.tasksSemImplementacao}`);
+    for (const arquivoRelacionado of modulo.implementacao.arquivosRelacionados.slice(0, 5)) {
+      console.log(`    arquivo relacionado: ${arquivoRelacionado}`);
+    }
   }
   return 0;
 }
@@ -1038,6 +1090,12 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
     console.log("- Impl quebrados:");
     for (const impl of resultado.impls_quebrados) {
       console.log(`  - ${impl.modulo}.${impl.task} :: ${impl.origem}:${impl.caminho}`);
+      if (impl.candidatos && impl.candidatos.length > 0) {
+        console.log("    candidatos provaveis:");
+        for (const candidato of impl.candidatos) {
+          console.log(`      - [${candidato.confianca}] ${candidato.caminho} :: ${candidato.arquivo} :: ${candidato.simbolo}`);
+        }
+      }
     }
   }
 
@@ -1053,6 +1111,12 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
     console.log("- Tasks sem implementacao vinculada:");
     for (const task of semImpl) {
       console.log(`  - ${task.modulo}.${task.task}`);
+      if (task.candidatosImpl.length > 0) {
+        console.log("    candidatos provaveis:");
+        for (const candidato of task.candidatosImpl) {
+          console.log(`      - [${candidato.confianca}] ${candidato.caminho} :: ${candidato.arquivo} :: ${candidato.simbolo}`);
+        }
+      }
     }
   }
 

@@ -28,6 +28,13 @@ function gerarDataclass(nome: string, campos: IrCampo[]): string {
   return `@dataclass\nclass ${nome}:\n${linhas}\n`;
 }
 
+function gerarComentarioInvariantesPython(invariantes: ExpressaoSemantica[]): string {
+  if (invariantes.length === 0) {
+    return "";
+  }
+  return `${invariantes.map((invariante) => `# Invariante: ${invariante.textoOriginal}`).join("\n")}\n`;
+}
+
 function gerarListaCamposPython(campos: IrCampo[]): string {
   if (campos.length === 0) {
     return "[]";
@@ -406,14 +413,15 @@ function gerarPythonBase(modulo: IrModulo): ArquivoGerado[] {
     .map((tipo) => `class ${tipo}(SimpleNamespace):\n    pass\n`)
     .join("\n");
   const enums = modulo.enums.map((enumeracao) => `class ${enumeracao.nome}:\n${enumeracao.valores.map((valor) => `    ${valor} = "${valor}"`).join("\n")}\n`).join("\n");
-  const entidades = modulo.entities.map((entity) => gerarDataclass(entity.nome, entity.campos)).join("\n");
+  const tipos = modulo.types.map((type) => `${gerarComentarioInvariantesPython(type.invariantes)}${gerarDataclass(type.nome, type.definicao.campos)}`).join("\n");
+  const entidades = modulo.entities.map((entity) => `${gerarComentarioInvariantesPython(entity.invariantes)}${gerarDataclass(entity.nome, entity.campos)}`).join("\n");
   const states = modulo.states.map((state) => `# State${state.nome ? ` ${state.nome}` : ""}: campos=${state.campos.length} invariantes=${state.invariantes.length} transicoes=${state.transicoes.length}`).join("\n");
   const flows = modulo.flows.map((flow) => `# Flow ${flow.nome}: etapas=${flow.linhas.length} tasks=${flow.tasksReferenciadas.join(", ") || "nenhuma"} ramificacoes=${flow.etapasEstruturadas.filter((etapa) => etapa.emSucesso || etapa.emErro).length} mapeamentos=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.mapeamentos.length, 0)} rotas_erro=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.porErro.length, 0)} efeitos=${flow.efeitosEstruturados.map((efeito) => `${efeito.categoria}:${efeito.alvo}`).join(", ") || "nenhum"}`).join("\n");
   const routes = modulo.routes.map((route) => `# Route ${route.nome}: metodo=${route.metodo ?? "nao_definido"} caminho=${route.caminho ?? "nao_definido"} task=${route.task ?? "nao_definida"} input_publico=${route.inputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} output_publico=${route.outputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} erros_publicos=${route.errosPublicos.map((erro) => erro.nome).join(", ") || "padrao_task"} effects_publicos=${route.efeitosPublicos.map((efeito) => `${efeito.categoria}:${efeito.alvo}`).join(", ") || "nenhum"} garantias_publicas=${route.garantiasPublicasMinimas.length}`).join("\n");
   const tasks = modulo.tasks.map(gerarTask).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
-  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
+  const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${tipos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
   const testes = gerarTestes(modulo);
 
   return [

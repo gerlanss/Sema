@@ -320,6 +320,77 @@ module exemplo.geracao.negacao {
   assert.ok(arquivosPy[0]?.conteudo.includes("not ("));
 });
 
+test("geradores carregam invariantes de entity e type para codigo gerado", () => {
+  const codigo = `
+module exemplo.operacao {
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  type Janela {
+    fields {
+      semana: Data
+      strategy_id: Id
+    }
+    invariants {
+      semana existe
+      strategy_id existe
+    }
+  }
+
+  entity Slice {
+    fields {
+      id: Id
+      gate: StatusGate
+    }
+    invariants {
+      id existe
+      gate em [ABERTO, FECHADO]
+    }
+  }
+
+  task registrar {
+    input {
+      id: Id required
+    }
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "s1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "operacao.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosTs = gerarTypeScript(resultado.ir!);
+  const arquivoTs = arquivosTs.find((arquivo) => arquivo.caminhoRelativo === "exemplo_operacao.ts");
+  assert.ok(arquivoTs);
+  assert.match(arquivoTs.conteudo, /Invariante: semana existe/);
+  assert.match(arquivoTs.conteudo, /Invariante: gate em \[\s*ABERTO\s*,\s*FECHADO\s*\]/);
+
+  const arquivosPy = gerarPython(resultado.ir!);
+  const arquivoPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "exemplo_operacao.py");
+  assert.ok(arquivoPy);
+  assert.match(arquivoPy.conteudo, /Invariante: strategy_id existe/);
+  assert.match(arquivoPy.conteudo, /Invariante: id existe/);
+});
+
 test("cli verifica todos os exemplos em lote", () => {
   const execucao = spawnSync(
     "node",

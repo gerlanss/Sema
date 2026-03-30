@@ -75,12 +75,18 @@ function ehUseInterop(
 export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], contexto?: ContextoSemantico): IrModulo {
   const types: IrType[] = modulo.types.map((type) => ({
     nome: type.nome,
-    definicao: converterBloco(type.corpo),
+    definicao: converterBloco(encontrarSubBloco(type.corpo, "fields") ?? type.corpo),
+    invariantes: (encontrarSubBloco(type.corpo, "invariants")?.linhas ?? [])
+      .map((linha) => parsearExpressaoSemantica(linha.conteudo))
+      .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
   }));
 
   const entities: IrEntity[] = modulo.entities.map((entity) => ({
     nome: entity.nome,
     campos: converterCampos(encontrarSubBloco(entity.corpo, "fields")),
+    invariantes: (encontrarSubBloco(entity.corpo, "invariants")?.linhas ?? [])
+      .map((linha) => parsearExpressaoSemantica(linha.conteudo))
+      .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
   }));
 
   const tasks: IrTask[] = modulo.tasks.map((task) => ({

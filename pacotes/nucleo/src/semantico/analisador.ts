@@ -548,6 +548,32 @@ function validarState(
   }
 }
 
+function validarInvariantesDeCampos(
+  bloco: BlocoGenericoAst,
+  nomeBloco: string,
+  diagnosticos: Diagnostico[],
+): void {
+  const fields = localizarBloco(bloco, "fields");
+  const nomesCampos = new Set([
+    ...bloco.campos.map((campo) => campo.nome),
+    ...(fields?.campos ?? []).map((campo) => campo.nome),
+  ]);
+
+  const invariants = localizarBloco(bloco, "invariants");
+  if (!invariants) {
+    return;
+  }
+
+  validarExpressoesDeclaradas(invariants.linhas, diagnosticos, {
+    codigoErroSintaxe: "SEM062",
+    codigoErroReferencia: "SEM063",
+    nomeBloco: `invariants de ${nomeBloco}`,
+    simbolosPermitidos: nomesCampos,
+    dicaSintaxe: "Use expressoes como \"campo existe\", \"campo == valor\" ou \"campo em [A, B]\".",
+    dicaReferencia: "Referencie apenas campos declarados no proprio bloco ao escrever invariantes de dominio.",
+  });
+}
+
 function validarFlow(
   flow: FlowAst,
   tasksConhecidas: Set<string>,
@@ -709,14 +735,14 @@ function validarFlow(
     if (item.etapa.condicao) {
       const referencias = extrairReferenciasDaExpressao(item.etapa.condicao).map((referencia) => extrairRaiz(referencia));
       for (const referencia of referencias) {
-        if (!ehMarcadorSemantico(referencia) && !tasksConhecidas.has(referencia) && !nomesEtapas.has(referencia)) {
+        if (!ehMarcadorSemantico(referencia) && !tasksConhecidas.has(referencia) && !nomesEtapas.has(referencia) && !contextoFlow.has(referencia)) {
           diagnosticos.push(
             criarDiagnostico(
               "SEM035",
               `Condicao da etapa "${item.etapa.nome}" em flow "${flow.nome}" referencia "${referencia}" fora do contexto atual.`,
               "erro",
               item.linha.intervalo,
-              "No MVP atual, condicoes de flow devem apontar para marcadores semanticos, tasks conhecidas ou etapas anteriores.",
+              "No MVP atual, condicoes de flow devem apontar para marcadores semanticos, campos do flow, tasks conhecidas ou etapas anteriores.",
             ),
           );
         }
@@ -1406,6 +1432,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     if (fields) {
       validarCamposDeTipos(fields.campos, tiposConhecidos, diagnosticos, `fields do type ${type.nome}`);
     }
+    validarInvariantesDeCampos(type.corpo, `type ${type.nome}`, diagnosticos);
   }
 
   for (const entity of modulo.entities) {
@@ -1423,6 +1450,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     } else {
       validarCamposDeTipos(fields.campos, tiposConhecidos, diagnosticos, `entity ${entity.nome}`);
     }
+    validarInvariantesDeCampos(entity.corpo, `entity ${entity.nome}`, diagnosticos);
   }
 
   for (const task of modulo.tasks) {

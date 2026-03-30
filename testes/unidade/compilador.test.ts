@@ -628,6 +628,118 @@ module exemplo.pagamento.avancado {
   assert.equal(resultado.ir?.states[0]?.transicoes.length, 3);
 });
 
+test("compilador valida invariantes em entity e type como contrato de dominio", () => {
+  const codigo = `
+module exemplo.operacao {
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  type Janela {
+    fields {
+      semana: Data
+      strategy_id: Id
+    }
+    invariants {
+      semana existe
+      strategy_id existe
+    }
+  }
+
+  entity Slice {
+    fields {
+      id: Id
+      gate: StatusGate
+      janela: Janela
+    }
+    invariants {
+      id existe
+      gate em [ABERTO, FECHADO]
+      janela existe
+    }
+  }
+
+  task registrar {
+    input {
+      id: Id required
+    }
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "s1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.types[0]?.invariantes.length, 2);
+  assert.equal(resultado.ir?.entities[0]?.invariantes.length, 3);
+});
+
+test("compilador rejeita invariantes de entity e type referenciando campos inexistentes", () => {
+  const codigo = `
+module exemplo.operacao {
+  type Janela {
+    fields {
+      semana: Data
+    }
+    invariants {
+      strategy_id existe
+    }
+  }
+
+  entity Slice {
+    fields {
+      id: Id
+    }
+    invariants {
+      gate existe
+    }
+  }
+
+  task registrar {
+    input {
+      id: Id required
+    }
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "s1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM063"));
+});
+
 test("compilador formaliza expressoes compostas e etapas estruturadas de flow", () => {
   const codigo = `
 module exemplo.flow.avancado {

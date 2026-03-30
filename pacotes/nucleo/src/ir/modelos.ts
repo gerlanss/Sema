@@ -38,11 +38,13 @@ export interface IrCasoTeste {
 export interface IrType {
   nome: string;
   definicao: IrBlocoDeclarativo;
+  invariantes: ExpressaoSemantica[];
 }
 
 export interface IrEntity {
   nome: string;
   campos: IrCampo[];
+  invariantes: ExpressaoSemantica[];
 }
 
 export interface IrEnum {

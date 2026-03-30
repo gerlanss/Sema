@@ -203,6 +203,7 @@ Esse comando gera um pacote em `.tmp/contexto-ia/...` com:
 - `diagnosticos.json`
 - `ast.json`
 - `ir.json`
+- `drift.json`
 - `README.md` com o fluxo operacional recomendado
 
 ## Quando a tarefa envolve interface grafica

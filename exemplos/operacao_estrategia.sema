@@ -1,0 +1,224 @@
+module exemplos.operacao_estrategia {
+  type JanelaDiscovery {
+    fields {
+      semana_referencia: Data
+      strategy_id: Id
+      versao_modelo: Texto
+    }
+    invariants {
+      semana_referencia existe
+      strategy_id existe
+      versao_modelo existe
+    }
+  }
+
+  entity Strategy {
+    fields {
+      id: Id
+      versao_modelo: Texto
+      status: StatusStrategy
+      gate_global: StatusGate
+      discovery_atual: JanelaDiscovery
+    }
+    invariants {
+      id existe
+      versao_modelo existe
+      status em [ATIVA, QUARENTENA, DESATIVADA]
+      gate_global em [ABERTO, FECHADO]
+      discovery_atual existe
+    }
+  }
+
+  entity Slice {
+    fields {
+      id: Id
+      strategy_id: Id
+      status: StatusSlice
+      gate: StatusGate
+      versao_modelo: Texto
+    }
+    invariants {
+      id existe
+      strategy_id existe
+      status em [ATIVO, QUARENTENA, DESLIGADO]
+      gate em [ABERTO, FECHADO]
+      versao_modelo existe
+    }
+  }
+
+  enum StatusStrategy {
+    RASCUNHO,
+    ATIVA,
+    QUARENTENA,
+    DESATIVADA
+  }
+
+  enum StatusSlice {
+    ATIVO,
+    QUARENTENA,
+    DESLIGADO
+  }
+
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  state operacao_estrategia {
+    fields {
+      status: StatusStrategy
+      slice_status: StatusSlice
+      gate: StatusGate
+      versao_modelo: Texto
+    }
+    invariants {
+      status em [ATIVA, QUARENTENA, DESATIVADA]
+      slice_status em [ATIVO, QUARENTENA, DESLIGADO]
+      gate em [ABERTO, FECHADO]
+      versao_modelo existe
+    }
+    transitions {
+      ATIVA -> QUARENTENA
+      QUARENTENA -> ATIVA
+      ATIVA -> DESATIVADA
+    }
+  }
+
+  task registrar_discovery_semanal {
+    input {
+      strategy_id: Id required
+      semana_referencia: Data required
+      versao_modelo: Texto required
+    }
+    output {
+      janela: JanelaDiscovery
+      registrado: Booleano
+    }
+    rules {
+      strategy_id existe
+      semana_referencia existe
+      versao_modelo existe
+    }
+    effects {
+      persistencia discovery_semanal criticidade = media
+      auditoria strategy criticidade = alta
+    }
+    guarantees {
+      janela existe
+      registrado == verdadeiro
+    }
+    tests {
+      caso "registra janela da semana" {
+        given {
+          strategy_id: "strat_1"
+          semana_referencia: "2026-03-30"
+          versao_modelo: "modelo_2026_13"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task colocar_slice_em_quarentena {
+    input {
+      strategy_id: Id required
+      slice_id: Id required
+      motivo: Texto required
+    }
+    output {
+      slice_status: StatusSlice
+      gate: StatusGate
+    }
+    rules {
+      strategy_id existe
+      slice_id existe
+      motivo existe
+    }
+    effects {
+      persistencia slice criticidade = alta
+      notificacao operacao criticidade = alta
+      auditoria quarentena criticidade = alta
+    }
+    state operacao_estrategia {
+      transitions {
+        ATIVA -> QUARENTENA
+      }
+    }
+    guarantees {
+      slice_status == QUARENTENA
+      gate == FECHADO
+    }
+    tests {
+      caso "quarentena slice ruim" {
+        given {
+          strategy_id: "strat_1"
+          slice_id: "slice_7"
+          motivo: "drawdown_excessivo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task ativar_strategy_com_nova_versao {
+    input {
+      strategy_id: Id required
+      versao_modelo: Texto required
+      aprovacao_manual: Booleano required
+    }
+    output {
+      strategy_status: StatusStrategy
+      versao_ativa: Texto
+    }
+    rules {
+      strategy_id existe
+      versao_modelo existe
+      aprovacao_manual == verdadeiro
+    }
+    effects {
+      persistencia strategy criticidade = alta
+      evento strategy_ativada criticidade = alta
+      auditoria rollout criticidade = alta
+    }
+    state operacao_estrategia {
+      transitions {
+        QUARENTENA -> ATIVA
+      }
+    }
+    guarantees {
+      strategy_status == ATIVA
+      versao_ativa existe
+    }
+    tests {
+      caso "reativa strategy apos retreino" {
+        given {
+          strategy_id: "strat_1"
+          versao_modelo: "modelo_2026_14"
+          aprovacao_manual: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow governanca_operacional {
+    strategy_id: Id
+    semana_referencia: Data
+    versao_modelo: Texto
+    slice_id: Id
+    motivo: Texto
+    aprovacao_manual: Booleano
+    etapa discovery usa registrar_discovery_semanal com strategy_id = strategy_id, semana_referencia = semana_referencia, versao_modelo = versao_modelo
+    etapa quarentena usa colocar_slice_em_quarentena com strategy_id = strategy_id, slice_id = slice_id, motivo = motivo quando motivo existe
+    etapa reativacao usa ativar_strategy_com_nova_versao com strategy_id = strategy_id, versao_modelo = versao_modelo, aprovacao_manual = aprovacao_manual quando aprovacao_manual == verdadeiro depende_de quarentena
+  }
+}

@@ -61,12 +61,17 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Proxima Fase
 
+- `[x]` Feedback externo de uso por IA em projeto real consolidado como insumo de produto
 - `[ ]` Pos-0.7 legado incremental
 - Prioridade sugerida:
   - aprofundar criacao de backend em projeto vivo
   - amadurecer `use` para projetos maiores
   - enriquecer contratos de execucao, efeitos e erros
   - ampliar integracao com IA sobre JSON estavel, formatacao canonica e scaffold backend
+  - fortalecer `impl` e `drift` como ponte concreta com arquivo, simbolo e rota da implementacao viva
+  - subir o nivel de invariantes para modulos operacionais que hoje estao bons de fluxo, mas ainda frouxos de garantia
+  - mapear melhor `modulo Sema -> arquivos reais` para reduzir adivinhacao de IA em Python, TypeScript e frameworks
+  - estudar contratos mais estaveis para estrategia, gate, slice e versao ativa em dominios operacionais
 
 ## Criterios de Fechamento do Marco 0.5
 
@@ -119,6 +124,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Adicionar `sema drift` para governar contrato e codigo vivo em projeto legado
 - `[x]` Enriquecer `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
 - `[x]` Expandir `sema.config.json` com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
+- `[x]` Registrar feedback externo do FuteBot como validacao de valor e ajuste de prioridade para a ultima milha entre contrato e implementacao viva
 
 ## Fundacao do Projeto
 
