@@ -19,9 +19,9 @@ A IA precisa saber como a linguagem e escrita.
 
 Fontes principais:
 
-- [gramatica-inicial.md](C:\GitHub\Sema\docs\gramatica-inicial.md)
-- [sintaxe.md](C:\GitHub\Sema\docs\sintaxe.md)
-- [gramatica.ebnf](C:\GitHub\Sema\pacotes\nucleo\src\parser\gramatica.ebnf)
+- [gramatica-inicial.md](./gramatica-inicial.md)
+- [sintaxe.md](./sintaxe.md)
+- [gramatica.ebnf](../pacotes/nucleo/src/parser/gramatica.ebnf)
 
 Objetivo dessa camada:
 
@@ -36,9 +36,9 @@ Depois de saber ler, a IA precisa saber o que cada bloco significa.
 
 Fontes principais:
 
-- [README.md](C:\GitHub\Sema\README.md)
-- [especificacao-inicial.md](C:\GitHub\Sema\docs\especificacao-inicial.md)
-- [pagamento-ponta-a-ponta.md](C:\GitHub\Sema\docs\pagamento-ponta-a-ponta.md)
+- [README.md](../README.md)
+- [especificacao-inicial.md](./especificacao-inicial.md)
+- [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md)
 
 Objetivo dessa camada:
 
@@ -79,11 +79,11 @@ Modelo aprende muito por padrao. Por isso, bons exemplos valem quase tanto quant
 
 Arquivos recomendados:
 
-- [pagamento.sema](C:\GitHub\Sema\exemplos\pagamento.sema)
-- [pagamento_dominio.sema](C:\GitHub\Sema\exemplos\pagamento_dominio.sema)
-- [automacao.sema](C:\GitHub\Sema\exemplos\automacao.sema)
-- [tratamento_erro.sema](C:\GitHub\Sema\exemplos\tratamento_erro.sema)
-- [crud_simples.sema](C:\GitHub\Sema\exemplos\crud_simples.sema)
+- [pagamento.sema](../exemplos/pagamento.sema)
+- [pagamento_dominio.sema](../exemplos/pagamento_dominio.sema)
+- [automacao.sema](../exemplos/automacao.sema)
+- [tratamento_erro.sema](../exemplos/tratamento_erro.sema)
+- [crud_simples.sema](../exemplos/crud_simples.sema)
 
 O vertical de pagamento do `0.5` deve ser tratado como a referencia principal.
 
@@ -107,10 +107,10 @@ O vertical de pagamento do `0.5` deve ser tratado como a referencia principal.
 
 Se voce for instruir uma IA para trabalhar com Sema, entregue o contexto nesta ordem:
 
-1. [README.md](C:\GitHub\Sema\README.md)
-2. [como-ensinar-a-sema-para-ia.md](C:\GitHub\Sema\docs\como-ensinar-a-sema-para-ia.md)
-3. [pagamento-ponta-a-ponta.md](C:\GitHub\Sema\docs\pagamento-ponta-a-ponta.md)
-4. [prompt-base-ia-sema.md](C:\GitHub\Sema\docs\prompt-base-ia-sema.md)
+1. [README.md](../README.md)
+2. [como-ensinar-a-sema-para-ia.md](./como-ensinar-a-sema-para-ia.md)
+3. [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md)
+4. [prompt-base-ia-sema.md](./prompt-base-ia-sema.md)
 5. `ast --json`, `ir --json` e `diagnosticos --json` do modulo alvo
 
 Essa ordem faz a IA ir de contexto geral para contexto operacional, em vez de cair direto num arquivo cru e sair chutando.

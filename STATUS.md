@@ -5,7 +5,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-29
-- Ultimo commit de referencia: `e47512f`
+- Ultimo commit de referencia: `a378402`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: Fase 4 encerrada, com MVP base completo e marco `0.5` de utilidade real controlada atingido
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
@@ -17,10 +17,10 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - exemplos obrigatorios e documentacao-base
   - semantica operacional do nucleo
   - operacionalizacao real inicial da linguagem
-  - ferramentas de adocao com JSON estavel, formatador e extensao basica de editor
+  - ferramentas de adocao com JSON estavel, formatador, extensao de editor e servidor de linguagem inicial
   - vertical oficial de pagamento modularizado como referencia do `0.5`
 - Principais areas parciais:
-  - suporte de editor ainda e basico, sem LSP
+  - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos maiores ainda nao esta maduro
   - contratos de execucao, efeitos e erros ainda podem ficar mais fortes no pos-MVP
 
@@ -219,6 +219,9 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Guia oficial de pagamento ponta a ponta para o marco `0.5`
 - `[x]` Guia de onboarding para ensinar a Sema a IA, com prompt-base oficial e fluxo pratico de agente
 - `[x]` Starter curto para agente e script para preparar contexto de IA com `validar`, `diagnosticos`, `ast` e `ir`
+- `[x]` Guia de instalacao e primeiro uso com requisitos, comandos e problemas comuns
+- `[x]` Fluxo de distribuicao inicial da CLI com instalacao local por `npm link` e empacotamento `.tgz`
+- `[x]` Comandos nativos da CLI para onboarding de IA: `starter-ia`, `prompt-ia` e `contexto-ia`
 
 ## Testes e Verificacao
 

@@ -20,13 +20,13 @@ Se a IA seguir isso, ela trabalha com contexto. Se nao seguir, vira adivinhacao 
 
 Antes de tocar em qualquer arquivo, a IA deve ler:
 
-- [README.md](C:\GitHub\Sema\README.md)
-- [integracao-com-ia.md](C:\GitHub\Sema\docs\integracao-com-ia.md)
-- [como-ensinar-a-sema-para-ia.md](C:\GitHub\Sema\docs\como-ensinar-a-sema-para-ia.md)
+- [README.md](../README.md)
+- [integracao-com-ia.md](./integracao-com-ia.md)
+- [como-ensinar-a-sema-para-ia.md](./como-ensinar-a-sema-para-ia.md)
 
 Se o trabalho estiver ligado a pagamento, ler tambem:
 
-- [pagamento-ponta-a-ponta.md](C:\GitHub\Sema\docs\pagamento-ponta-a-ponta.md)
+- [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md)
 
 ### Etapa 2. Ler o modulo alvo e um exemplo parecido
 
@@ -38,9 +38,9 @@ A IA deve identificar:
 
 Regra pratica:
 
-- automacao: [automacao.sema](C:\GitHub\Sema\exemplos\automacao.sema)
-- erros e fluxos de falha: [tratamento_erro.sema](C:\GitHub\Sema\exemplos\tratamento_erro.sema)
-- borda publica e pagamento: [pagamento.sema](C:\GitHub\Sema\exemplos\pagamento.sema)
+- automacao: [automacao.sema](../exemplos/automacao.sema)
+- erros e fluxos de falha: [tratamento_erro.sema](../exemplos/tratamento_erro.sema)
+- borda publica e pagamento: [pagamento.sema](../exemplos/pagamento.sema)
 
 ### Etapa 3. Consultar AST e IR
 
@@ -143,3 +143,7 @@ Ela deve trabalhar sempre com:
 - formatador
 
 Esse conjunto e o que faz a linguagem ser amigavel para IA de verdade, e nao so no discurso bonito.
+
+## Observacao sobre caminhos
+
+Esta documentacao usa caminhos relativos ao repositorio, nao caminhos locais de maquina. Isso permite que qualquer pessoa clone o projeto e use os links e referencias sem depender de uma pasta especifica no proprio ambiente.

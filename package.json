@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Sema e uma DSL semantica para especificacao executavel de regras de negocio.",
+  "icon": "logo.png",
   "type": "module",
   "workspaces": [
     "pacotes/*"
@@ -12,6 +13,9 @@
     "test": "npm run build && node --import tsx --test testes/unidade/**/*.test.ts testes/integracao/**/*.test.ts",
     "lint": "tsc -b --pretty false",
     "cli": "node pacotes/cli/dist/index.js",
+    "cli:instalar-local": "npm run build && node scripts/garantir-path-cli-windows.mjs && npm link --workspace @sema/cli",
+    "cli:desinstalar-local": "npm unlink -g @sema/cli",
+    "cli:empacotar": "npm run build && node -e \"require('node:fs').mkdirSync('.tmp/pacotes',{recursive:true})\" && npm pack --workspace @sema/cli --pack-destination ./.tmp/pacotes",
     "dev:cli": "node scripts/dev-cli.mjs",
     "format:check": "node pacotes/cli/dist/index.js formatar exemplos --check",
     "ia:preparar-contexto": "node scripts/preparar-contexto-ia.mjs",

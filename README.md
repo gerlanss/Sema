@@ -1,5 +1,7 @@
 # Sema
 
+![Logo da Sema](./logo.png)
+
 Sema e uma DSL semantica, declarativa e orientada a intencao para descrever contratos de negocio de forma executavel. Em vez de esconder regra, efeito colateral, garantia e teste no meio de codigo imperativo, a Sema assume que esses elementos merecem cidadania de primeira classe.
 
 O projeto foi desenhado como uma camada acima de Python e TypeScript. A ideia nao e substituir essas linguagens, e sim governar a camada de especificacao, validacao e geracao de codigo com mais previsibilidade.
@@ -13,6 +15,8 @@ O guia para ensinar a linguagem a agentes esta em [docs/como-ensinar-a-sema-para
 O prompt-base oficial para IA esta em [docs/prompt-base-ia-sema.md](C:\GitHub\Sema\docs\prompt-base-ia-sema.md).
 O fluxo pratico de onboarding de agente esta em [docs/fluxo-pratico-ia-sema.md](C:\GitHub\Sema\docs\fluxo-pratico-ia-sema.md).
 O starter curto para colar em qualquer agente esta em [docs/AGENT_STARTER.md](C:\GitHub\Sema\docs\AGENT_STARTER.md).
+O guia de instalacao e primeiro uso esta em [docs/instalacao-e-primeiro-uso.md](C:\GitHub\Sema\docs\instalacao-e-primeiro-uso.md).
+O guia de distribuicao da CLI esta em [docs/distribuicao-da-cli.md](C:\GitHub\Sema\docs\distribuicao-da-cli.md).
 
 Para sincronizar a data e o commit de referencia do status:
 
@@ -37,6 +41,89 @@ Para rodar a checagem operacional completa do projeto:
 ```bash
 npm run project:check
 ```
+
+## Instalar no Windows
+
+Se voce esta no Windows e quer sair usando sem dor de cabeca, o fluxo certo e este:
+
+```powershell
+npm install
+npm run build
+npm run cli:instalar-local
+```
+
+Esse script agora faz duas coisas:
+
+1. garante que o prefixo global do npm entre no `PATH` do usuario no Windows
+2. executa o `npm link` da CLI da Sema
+
+Ou seja: ele tenta deixar o comando `sema` visivel no PowerShell sem voce precisar catar `PATH` na mao igual um corno.
+
+Depois disso, feche e abra o terminal de novo para o PowerShell recarregar o `PATH`.
+
+Teste assim:
+
+```powershell
+sema
+sema validar exemplos/calculadora.sema
+```
+
+Se o comando `sema` ainda nao aparecer, use a CLI direto por arquivo enquanto o ambiente se acerta:
+
+```powershell
+node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
+```
+
+Para remover o comando global linkado no Windows:
+
+```powershell
+npm run cli:desinstalar-local
+```
+
+## Instalar a CLI localmente como comando `sema`
+
+```bash
+npm run cli:instalar-local
+```
+
+No Windows, esse script tambem tenta colocar automaticamente o prefixo global do npm no `PATH` do usuario.
+
+Depois disso, voce pode usar:
+
+```bash
+sema validar exemplos/calculadora.sema
+sema ajuda-ia
+sema starter-ia
+sema prompt-ia
+sema prompt-ia-ui
+sema prompt-ia-react
+sema prompt-ia-sema-primeiro
+sema exemplos-prompt-ia
+sema contexto-ia exemplos/pagamento.sema
+```
+
+## Extensao VS Code
+
+A extensao da Sema para VS Code ja esta num ponto bem mais util do que antes.
+
+Ela hoje oferece:
+
+- associacao automatica de `.sema`
+- destaque de sintaxe
+- snippets
+- comando `Sema: Formatar Documento`
+- servidor de linguagem com diagnosticos semanticos
+- hover basico para palavras-chave centrais
+- formatacao via servidor e via CLI
+
+Para resolver a dor de uso fora do repositorio da Sema, a extensao tenta localizar a CLI nesta ordem:
+
+1. `sema.cliPath`, se voce configurar manualmente
+2. bin `sema` no sistema
+3. `node_modules/.bin/sema` do projeto atual
+4. CLI local do proprio repositorio da Sema, quando existir
+
+O pacote da extensao tambem ja usa o logo oficial da Sema como icone.
 
 ## Por que a Sema existe
 
@@ -109,6 +196,8 @@ module exemplos.calculadora {
 npm install
 npm run build
 ```
+
+No Windows, se voce so quiser o caminho mais objetivo, use a secao `Instalar no Windows` ali em cima e pronto.
 
 ## Validar um arquivo
 

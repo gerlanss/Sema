@@ -83,6 +83,66 @@ Comportamento:
 - com `--check`, falha com codigo de saida nao zero quando houver diferencas
 - com `--json`, emite relatorio estruturado por arquivo
 
+### `sema starter-ia`
+
+Imprime o texto curto de onboarding para colar em qualquer agente antes de editar arquivos `.sema`.
+
+Tambem informa:
+
+- origem da instalacao atual da CLI
+- base detectada da instalacao
+- documentos locais encontrados, quando existirem na instalacao atual
+
+### `sema ajuda-ia`
+
+Imprime um guia curto e direto explicando qual comando de IA usar em cada situacao.
+
+Esse comando serve como porta de entrada unica para nao deixar onboarding, prompting e contexto espalhados igual bagunca de feira.
+
+### `sema prompt-ia`
+
+Imprime o prompt-base oficial para orientar uma IA a trabalhar com a Sema sem improvisar sintaxe ou semantica.
+
+Assim como `starter-ia`, tambem mostra a origem da instalacao e os documentos locais detectados.
+
+### `sema prompt-ia-ui`
+
+Imprime um prompt oficial para tarefas em que a Sema deve ser usada junto com interface grafica, especialmente em combinacao com React + TypeScript.
+
+Esse comando existe para evitar aquela cagada classica de pedir "um app bonito" e a IA devolver so um `index.html` solto, ignorando a camada semantica.
+
+### `sema prompt-ia-react`
+
+Imprime um prompt mais especifico para projeto com Sema + React + TypeScript, incluindo orientacao de arquitetura, componentes e separacao entre contrato semantico e interface.
+
+### `sema prompt-ia-sema-primeiro`
+
+Imprime um prompt oficial para forcar a estrategia "Sema primeiro".
+
+Esse modo exige que a IA modele primeiro o dominio em `.sema` e so depois gere interface, backend ou qualquer implementacao derivada.
+
+### `sema exemplos-prompt-ia`
+
+Imprime exemplos prontos de prompt para:
+
+- estrategia `Sema primeiro`
+- `Sema + React + TypeScript`
+- revisao e correcao de modulo `.sema`
+- casos de UI sem perder a ancora semantica
+
+### `sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--json]`
+
+Gera um pacote de contexto para IA com:
+
+- `validar.json`
+- `diagnosticos.json`
+- `ast.json`
+- `ir.json`
+- `README.md` com o fluxo operacional recomendado
+
+Sem `--json`, imprime um resumo humano e informa a pasta gerada.
+Com `--json`, retorna um envelope estruturado com arquivo, modulo, pasta de saida e artefatos gerados.
+
 ## Ordem canonica do formatador
 
 ### Blocos de `module`
@@ -224,6 +284,18 @@ node pacotes/cli/dist/index.js validar exemplos
 
 ```bash
 node pacotes/cli/dist/index.js validar exemplos --json
+```
+
+### Starter, prompts e exemplos para IA
+
+```bash
+sema starter-ia
+sema ajuda-ia
+sema prompt-ia
+sema prompt-ia-ui
+sema prompt-ia-react
+sema prompt-ia-sema-primeiro
+sema exemplos-prompt-ia
 ```
 
 ### Formatar todos os exemplos

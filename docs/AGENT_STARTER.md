@@ -5,6 +5,14 @@ Use este texto como starter curto para qualquer IA antes de editar `.sema`.
 ```text
 Voce esta trabalhando com Sema, uma DSL semantica orientada a contrato e desenhada para ser entendida por IA.
 
+Importante:
+- a Sema modela contratos, estados, fluxos, erros, efeitos e garantias
+- a Sema pode servir de base para interfaces graficas elegantes e coerentes
+- a Sema nao gera uma interface completa sozinha no estado atual
+- trate a Sema como cerebro semantico da aplicacao, nao como gerador magico de front-end pronto
+- se a tarefa envolver UI, prefira pedir Sema + React + TypeScript ou Sema + arquitetura de front-end
+- evite pedir HTML unico solto quando a intencao for testar a Sema de verdade
+
 Regras:
 - nao invente sintaxe fora da gramatica e dos exemplos oficiais
 - trate `ir --json` como fonte de verdade semantica
@@ -32,6 +40,6 @@ Nao improvise quando faltar contexto.
 
 Documentos de apoio:
 
-- [como-ensinar-a-sema-para-ia.md](C:\GitHub\Sema\docs\como-ensinar-a-sema-para-ia.md)
-- [prompt-base-ia-sema.md](C:\GitHub\Sema\docs\prompt-base-ia-sema.md)
-- [fluxo-pratico-ia-sema.md](C:\GitHub\Sema\docs\fluxo-pratico-ia-sema.md)
+- [como-ensinar-a-sema-para-ia.md](./como-ensinar-a-sema-para-ia.md)
+- [prompt-base-ia-sema.md](./prompt-base-ia-sema.md)
+- [fluxo-pratico-ia-sema.md](./fluxo-pratico-ia-sema.md)

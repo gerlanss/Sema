@@ -6,10 +6,21 @@ Na Fase 4, essa integracao deixou de ser so uma boa ideia e ganhou contrato oper
 
 Documentos complementares para onboarding de agente:
 
-- [AGENT_STARTER.md](C:\GitHub\Sema\docs\AGENT_STARTER.md)
-- [como-ensinar-a-sema-para-ia.md](C:\GitHub\Sema\docs\como-ensinar-a-sema-para-ia.md)
-- [prompt-base-ia-sema.md](C:\GitHub\Sema\docs\prompt-base-ia-sema.md)
-- [fluxo-pratico-ia-sema.md](C:\GitHub\Sema\docs\fluxo-pratico-ia-sema.md)
+- [AGENT_STARTER.md](./AGENT_STARTER.md)
+- [como-ensinar-a-sema-para-ia.md](./como-ensinar-a-sema-para-ia.md)
+- [prompt-base-ia-sema.md](./prompt-base-ia-sema.md)
+- [fluxo-pratico-ia-sema.md](./fluxo-pratico-ia-sema.md)
+
+Comandos dedicados da CLI para onboarding e prompting:
+
+- `sema ajuda-ia`
+- `sema starter-ia`
+- `sema prompt-ia`
+- `sema prompt-ia-ui`
+- `sema prompt-ia-react`
+- `sema prompt-ia-sema-primeiro`
+- `sema exemplos-prompt-ia`
+- `sema contexto-ia <arquivo.sema>`
 
 ## O que a Sema ja oferece para IA
 
@@ -31,6 +42,7 @@ Os comandos abaixo devem ser tratados como contrato publico principal para IA e 
 - `sema ir --json`
 - `sema verificar --json`
 - `sema formatar --json`
+- `sema contexto-ia --json`
 
 ## Como consumir cada comando
 
@@ -136,14 +148,14 @@ Ele serve como referencia para:
 - erros publicos e garantias finais
 - geracao coerente em Python e TypeScript
 
-O guia oficial desse fluxo esta em [pagamento-ponta-a-ponta.md](C:\GitHub\Sema\docs\pagamento-ponta-a-ponta.md).
+O guia oficial desse fluxo esta em [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md).
 
 ## Preparar contexto para um agente
 
 Quando a IA for atuar em um modulo especifico, o caminho mais seguro e gerar um pacote de contexto dedicado:
 
 ```bash
-npm run ia:preparar-contexto -- exemplos/pagamento.sema
+sema contexto-ia exemplos/pagamento.sema
 ```
 
 Esse comando gera um pacote em `.tmp/contexto-ia/...` com:
@@ -155,6 +167,29 @@ Esse comando gera um pacote em `.tmp/contexto-ia/...` com:
 - `README.md` com o fluxo operacional recomendado
 
 Na pratica, esse pacote reduz bastante a chance de a IA sair inventando regra onde deveria estar lendo contrato.
+
+## Quando a tarefa envolve interface grafica
+
+Se a tarefa envolver UI, o caminho certo nao e pedir um `index.html` solto e torcer.
+
+O fluxo recomendado e:
+
+1. usar `sema starter-ia`
+2. usar `sema prompt-ia-react` quando a tarefa for `Sema + React + TypeScript`
+3. usar `sema prompt-ia-ui` quando a tarefa for visual, mas ainda mais aberta
+4. usar `sema prompt-ia-sema-primeiro` quando voce quiser forcar a modelagem semantica antes da implementacao
+5. usar `sema exemplos-prompt-ia` para pegar modelos de prompt prontos
+
+Regra pratica:
+
+- se o objetivo for testar a Sema de verdade, peca `.sema` + arquitetura de app
+- nao peca apenas HTML unico quando a camada semantica for parte central da solucao
+
+Se voce preferir integrar isso em automacao, use:
+
+```bash
+sema contexto-ia exemplos/pagamento.sema --json
+```
 
 ## Beneficios praticos para IA
 
@@ -169,8 +204,8 @@ Na pratica, esse pacote reduz bastante a chance de a IA sair inventando regra on
 
 ## Limites atuais
 
-- ainda nao ha LSP completo
-- a extensao de editor e basica
+- o servidor de linguagem atual cobre diagnosticos, hover e formatacao, mas ainda nao entrega navegacao simbolica profunda, code actions ou completions ricos
+- a extensao de editor melhorou bastante, mas ainda pode crescer em ergonomia e inteligencia contextual
 - `use` avancado para projetos maiores ainda nao esta maduro
 - a linguagem ainda pode ganhar expressoes e contratos mais ricos no pos-MVP
 

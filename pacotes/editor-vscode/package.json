@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "sema",
   "private": true,
+  "icon": "logo.png",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -12,9 +13,13 @@
     "Programming Languages",
     "Formatters"
   ],
+  "extensionKind": [
+    "workspace"
+  ],
   "activationEvents": [
     "onLanguage:sema",
-    "onCommand:sema.formatarDocumento"
+    "onCommand:sema.formatarDocumento",
+    "onCommand:sema.reiniciarServidor"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -48,7 +53,32 @@
       {
         "command": "sema.formatarDocumento",
         "title": "Sema: Formatar Documento"
+      },
+      {
+        "command": "sema.reiniciarServidor",
+        "title": "Sema: Reiniciar Servidor de Linguagem"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Sema",
+      "properties": {
+        "sema.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Caminho opcional para o executavel da CLI da Sema. Quando vazio, a extensao tenta usar o bin `sema`, depois o bin local do projeto e por fim a CLI do proprio repositorio."
+        },
+        "sema.diagnosticosAoDigitar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Quando ativo, o servidor de linguagem recalcula diagnosticos semanticos durante a digitacao."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@sema/nucleo": "file:../nucleo",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
   }
 }

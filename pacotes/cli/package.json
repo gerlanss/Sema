@@ -2,6 +2,7 @@
   "name": "@sema/cli",
   "version": "0.1.0",
   "type": "module",
+  "icon": "logo.png",
   "bin": {
     "sema": "dist/index.js"
   },
@@ -17,4 +18,3 @@
     "@sema/padroes": "file:../padroes"
   }
 }
-
