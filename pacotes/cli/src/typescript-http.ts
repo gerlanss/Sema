@@ -39,6 +39,7 @@ export interface SemanticaHandlerTypeScriptHttp {
 interface ValorLocalTypeScriptHttp {
   tipoTexto?: string;
   campos: CampoInferidoTypeScriptHttp[];
+  status?: number;
 }
 
 const METODOS_HTTP = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
@@ -78,6 +79,22 @@ function deduplicarCampos(campos: CampoInferidoTypeScriptHttp[]): CampoInferidoT
 
 function deduplicarNumeros(valores: number[]): number[] {
   return [...new Set(valores)].sort((a, b) => a - b);
+}
+
+function desembrulharExpressao(expr: ts.Expression): ts.Expression {
+  let atual = expr;
+
+  while (true) {
+    if (ts.isParenthesizedExpression(atual) || ts.isAsExpression(atual) || ts.isSatisfiesExpression(atual) || ts.isTypeAssertionExpression(atual)) {
+      atual = atual.expression;
+      continue;
+    }
+    if (ts.isAwaitExpression(atual)) {
+      atual = atual.expression;
+      continue;
+    }
+    return atual;
+  }
 }
 
 function extrairNomeExportado(statement: ts.Statement, sourceFile: ts.SourceFile): string[] {
@@ -250,6 +267,87 @@ function tipoInferidoPorNomeCampo(nome: string): string | undefined {
     : undefined;
 }
 
+function normalizarTypeNode(typeNode: ts.TypeNode | undefined): ts.TypeNode | undefined {
+  if (!typeNode) {
+    return undefined;
+  }
+  if (ts.isParenthesizedTypeNode(typeNode)) {
+    return normalizarTypeNode(typeNode.type);
+  }
+  if (ts.isUnionTypeNode(typeNode)) {
+    const uteis = typeNode.types
+      .filter((item) => item.kind !== ts.SyntaxKind.NullKeyword && item.kind !== ts.SyntaxKind.UndefinedKeyword)
+      .map((item) => normalizarTypeNode(item))
+      .filter((item): item is ts.TypeNode => Boolean(item));
+    if (uteis.length === 1) {
+      return uteis[0];
+    }
+  }
+  return typeNode;
+}
+
+function extrairCamposTypeNode(typeNode: ts.TypeNode | undefined, sourceFile: ts.SourceFile): CampoInferidoTypeScriptHttp[] {
+  const normalizado = normalizarTypeNode(typeNode);
+  if (!normalizado || !ts.isTypeLiteralNode(normalizado)) {
+    return [];
+  }
+
+  const campos: CampoInferidoTypeScriptHttp[] = [];
+  for (const membro of normalizado.members) {
+    if (!ts.isPropertySignature(membro) || !membro.name) {
+      continue;
+    }
+
+    let nome: string | undefined;
+    if (ts.isIdentifier(membro.name) || ts.isStringLiteralLike(membro.name) || ts.isNumericLiteral(membro.name)) {
+      nome = membro.name.text;
+    }
+
+    if (!nome) {
+      continue;
+    }
+
+    campos.push({
+      nome,
+      tipoTexto: membro.type?.getText(sourceFile) ?? tipoInferidoPorNomeCampo(nome),
+      obrigatorio: !membro.questionToken,
+    });
+  }
+
+  return deduplicarCampos(campos);
+}
+
+function extrairMetadadosTipoExplicito(
+  expr: ts.Expression,
+  sourceFile: ts.SourceFile,
+  typeNodeDeclarado?: ts.TypeNode,
+): { tipoTexto?: string; campos: CampoInferidoTypeScriptHttp[] } {
+  const typeNode =
+    normalizarTypeNode(typeNodeDeclarado)
+    ?? (() => {
+      let atual: ts.Expression = expr;
+      while (true) {
+        if (ts.isParenthesizedExpression(atual)) {
+          atual = atual.expression;
+          continue;
+        }
+        if (ts.isAsExpression(atual) || ts.isSatisfiesExpression(atual) || ts.isTypeAssertionExpression(atual)) {
+          return normalizarTypeNode(atual.type);
+        }
+        if (ts.isAwaitExpression(atual)) {
+          atual = atual.expression;
+          continue;
+        }
+        return undefined;
+      }
+    })();
+
+  return {
+    tipoTexto: typeNode?.getText(sourceFile),
+    campos: extrairCamposTypeNode(typeNode, sourceFile),
+  };
+}
+
 function inferirTipoBasicoDeExpressao(expr: ts.Expression | undefined, nomeCampo?: string): string | undefined {
   if (!expr) {
     return nomeCampo ? tipoInferidoPorNomeCampo(nomeCampo) : undefined;
@@ -342,12 +440,14 @@ function ehNewUrl(expr: ts.Expression, requestNames: Set<string>): boolean {
 }
 
 function ehSearchParamsSource(expr: ts.Expression, requestNames: Set<string>, urlAliases: Set<string>, searchParamsAliases: Set<string>): boolean {
-  if (ts.isIdentifier(expr)) {
-    return searchParamsAliases.has(expr.text);
+  const normalizado = desembrulharExpressao(expr);
+
+  if (ts.isIdentifier(normalizado)) {
+    return searchParamsAliases.has(normalizado.text);
   }
 
-  if (ts.isPropertyAccessExpression(expr) && expr.name.text === "searchParams") {
-    const alvo = expr.expression;
+  if (ts.isPropertyAccessExpression(normalizado) && normalizado.name.text === "searchParams") {
+    const alvo = normalizado.expression;
     if (ts.isPropertyAccessExpression(alvo) && alvo.name.text === "nextUrl" && ts.isIdentifier(alvo.expression) && requestNames.has(alvo.expression.text)) {
       return true;
     }
@@ -360,7 +460,7 @@ function ehSearchParamsSource(expr: ts.Expression, requestNames: Set<string>, ur
 }
 
 function ehCallRequest(expr: ts.Expression, requestNames: Set<string>, metodo: "json" | "formData"): boolean {
-  const alvo = ts.isAwaitExpression(expr) ? expr.expression : expr;
+  const alvo = desembrulharExpressao(expr);
   return ts.isCallExpression(alvo)
     && ts.isPropertyAccessExpression(alvo.expression)
     && alvo.expression.name.text === metodo
@@ -377,6 +477,90 @@ function obterNomeSchema(call: ts.CallExpression): string | undefined {
     return undefined;
   }
   return alvo.text;
+}
+
+function resolverMetadadosOrigemBody(
+  expr: ts.Expression,
+  sourceFile: ts.SourceFile,
+  requestNames: Set<string>,
+  bodyAliases: Map<string, { tipoTexto?: string; campos: CampoInferidoTypeScriptHttp[] }>,
+  jsonAliases: Set<string>,
+  safeParseAliases: Map<string, CampoInferidoTypeScriptHttp[]>,
+  schemasZod: Map<string, CampoInferidoTypeScriptHttp[]>,
+  typeNodeDeclarado?: ts.TypeNode,
+): { tipoTexto?: string; campos: CampoInferidoTypeScriptHttp[] } | undefined {
+  const normalizado = desembrulharExpressao(expr);
+
+  if (ts.isIdentifier(normalizado) && bodyAliases.has(normalizado.text)) {
+    return bodyAliases.get(normalizado.text);
+  }
+
+  if (ehCallRequest(expr, requestNames, "json")) {
+    return extrairMetadadosTipoExplicito(expr, sourceFile, typeNodeDeclarado);
+  }
+
+  if (
+    ts.isCallExpression(normalizado)
+    && ts.isPropertyAccessExpression(normalizado.expression)
+    && ["parse", "safeParse"].includes(normalizado.expression.name.text)
+  ) {
+    const schemaNome = obterNomeSchema(normalizado);
+    const schemaCampos = schemaNome ? schemasZod.get(schemaNome) : undefined;
+    const argumento = normalizado.arguments[0];
+    const argumentoNormalizado = argumento ? desembrulharExpressao(argumento) : undefined;
+    if (
+      schemaCampos
+      && argumento
+      && (
+        ehCallRequest(argumento, requestNames, "json")
+        || (argumentoNormalizado && ts.isIdentifier(argumentoNormalizado) && jsonAliases.has(argumentoNormalizado.text))
+      )
+    ) {
+      return {
+        tipoTexto: undefined,
+        campos: schemaCampos,
+      };
+    }
+  }
+
+  if (
+    ts.isPropertyAccessExpression(normalizado)
+    && normalizado.name.text === "data"
+    && ts.isIdentifier(normalizado.expression)
+    && safeParseAliases.has(normalizado.expression.text)
+  ) {
+    return {
+      tipoTexto: undefined,
+      campos: safeParseAliases.get(normalizado.expression.text) ?? [],
+    };
+  }
+
+  return undefined;
+}
+
+function extrairCamposBindingPattern(
+  pattern: ts.ObjectBindingPattern,
+  sourceFile: ts.SourceFile,
+  camposConhecidos: CampoInferidoTypeScriptHttp[],
+): CampoInferidoTypeScriptHttp[] {
+  const conhecidos = new Map(camposConhecidos.map((campo) => [campo.nome, campo]));
+  const campos: CampoInferidoTypeScriptHttp[] = [];
+
+  for (const elemento of pattern.elements) {
+    if (!ts.isIdentifier(elemento.name)) {
+      continue;
+    }
+
+    const nomeCampo = elemento.propertyName?.getText(sourceFile) ?? elemento.name.text;
+    const conhecido = conhecidos.get(nomeCampo);
+    campos.push({
+      nome: nomeCampo,
+      tipoTexto: conhecido?.tipoTexto ?? inferirTipoBasicoDeExpressao(elemento.initializer, nomeCampo) ?? tipoInferidoPorNomeCampo(nomeCampo),
+      obrigatorio: conhecido?.obrigatorio ?? false,
+    });
+  }
+
+  return deduplicarCampos(campos);
 }
 
 function extrairCampoZod(expr: ts.Expression, nome: string): CampoInferidoTypeScriptHttp {
@@ -547,18 +731,16 @@ function extrairRetornoHttp(
   sourceFile: ts.SourceFile,
   valoresLocais: Map<string, ValorLocalTypeScriptHttp>,
 ): { campos: CampoInferidoTypeScriptHttp[]; tipoTexto?: string; status?: number } | undefined {
-  if (ts.isParenthesizedExpression(expr) || ts.isAsExpression(expr) || ts.isSatisfiesExpression(expr) || ts.isTypeAssertionExpression(expr)) {
-    return extrairRetornoHttp(expr.expression, sourceFile, valoresLocais);
-  }
+  const normalizado = desembrulharExpressao(expr);
 
-  if (ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression)) {
-    const alvo = expr.expression.expression.getText(sourceFile);
-    const metodo = expr.expression.name.text;
+  if (ts.isCallExpression(normalizado) && ts.isPropertyAccessExpression(normalizado.expression)) {
+    const alvo = normalizado.expression.expression.getText(sourceFile);
+    const metodo = normalizado.expression.name.text;
     if ((alvo === "NextResponse" || alvo === "Response") && metodo === "json") {
-      const primeiro = expr.arguments[0];
-      const segundo = expr.arguments[1];
+      const primeiro = normalizado.arguments[0];
+      const segundo = normalizado.arguments[1];
       let campos: CampoInferidoTypeScriptHttp[] = [];
-      let tipoTexto = expr.typeArguments?.[0]?.getText(sourceFile);
+      let tipoTexto = normalizado.typeArguments?.[0]?.getText(sourceFile);
 
       if (primeiro && ts.isObjectLiteralExpression(primeiro)) {
         campos = extrairCamposObjetoLiteral(primeiro, sourceFile);
@@ -578,27 +760,28 @@ function extrairRetornoHttp(
     }
   }
 
-  if (ts.isNewExpression(expr) && ts.isIdentifier(expr.expression) && expr.expression.text === "Response") {
-    const tipoTexto = expr.typeArguments?.[0]?.getText(sourceFile);
+  if (ts.isNewExpression(normalizado) && ts.isIdentifier(normalizado.expression) && normalizado.expression.text === "Response") {
+    const tipoTexto = normalizado.typeArguments?.[0]?.getText(sourceFile);
     return {
       campos: [],
       tipoTexto,
-      status: extrairStatusHttp(expr.arguments?.[1]),
+      status: extrairStatusHttp(normalizado.arguments?.[1]),
     };
   }
 
-  if (ts.isObjectLiteralExpression(expr)) {
+  if (ts.isObjectLiteralExpression(normalizado)) {
     return {
-      campos: extrairCamposObjetoLiteral(expr, sourceFile),
+      campos: extrairCamposObjetoLiteral(normalizado, sourceFile),
     };
   }
 
-  if (ts.isIdentifier(expr)) {
-    const valorLocal = valoresLocais.get(expr.text);
+  if (ts.isIdentifier(normalizado)) {
+    const valorLocal = valoresLocais.get(normalizado.text);
     if (valorLocal) {
       return {
         campos: valorLocal.campos,
         tipoTexto: valorLocal.tipoTexto,
+        status: valorLocal.status,
       };
     }
   }
@@ -634,6 +817,7 @@ export function inferirSemanticaHandlerTypeScriptHttp(
   const jsonAliases = new Set<string>();
   const formAliases = new Set<string>();
   const bodyAliases = new Map<string, { tipoTexto?: string; campos: CampoInferidoTypeScriptHttp[] }>();
+  const bodyDeclaracoesDiretas: CampoInferidoTypeScriptHttp[] = [];
   const safeParseAliases = new Map<string, CampoInferidoTypeScriptHttp[]>();
   const valoresLocais = new Map<string, ValorLocalTypeScriptHttp>();
   const schemasZod = extrairSchemasZodLocais(sourceFile);
@@ -646,6 +830,8 @@ export function inferirSemanticaHandlerTypeScriptHttp(
 
   const visitarDeclaracoes = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node) && node.initializer) {
+      const inicializadorNormalizado = desembrulharExpressao(node.initializer);
+
       if (ts.isIdentifier(node.name)) {
         const nome = node.name.text;
 
@@ -658,10 +844,11 @@ export function inferirSemanticaHandlerTypeScriptHttp(
         }
 
         if (ehCallRequest(node.initializer, requestNames, "json")) {
+          const metadadosBody = extrairMetadadosTipoExplicito(node.initializer, sourceFile, node.type);
           jsonAliases.add(nome);
           bodyAliases.set(nome, {
-            tipoTexto: node.type?.getText(sourceFile),
-            campos: [],
+            tipoTexto: metadadosBody.tipoTexto,
+            campos: metadadosBody.campos,
           });
         }
 
@@ -670,15 +857,18 @@ export function inferirSemanticaHandlerTypeScriptHttp(
         }
 
         if (
-          ts.isCallExpression(node.initializer)
-          && ts.isPropertyAccessExpression(node.initializer.expression)
-          && ["parse", "safeParse"].includes(node.initializer.expression.name.text)
+          ts.isCallExpression(inicializadorNormalizado)
+          && ts.isPropertyAccessExpression(inicializadorNormalizado.expression)
+          && ["parse", "safeParse"].includes(inicializadorNormalizado.expression.name.text)
         ) {
-          const schemaNome = obterNomeSchema(node.initializer);
-          const arg = node.initializer.arguments[0];
+          const chamada = inicializadorNormalizado;
+          const acessoChamada = chamada.expression as ts.PropertyAccessExpression;
+          const schemaNome = obterNomeSchema(chamada);
+          const arg = chamada.arguments[0];
           const schemaCampos = schemaNome ? schemasZod.get(schemaNome) : undefined;
-          if (schemaCampos && arg && (ehCallRequest(arg, requestNames, "json") || (ts.isIdentifier(arg) && jsonAliases.has(arg.text)))) {
-            if (node.initializer.expression.name.text === "parse") {
+          const argNormalizado = arg ? desembrulharExpressao(arg) : undefined;
+          if (schemaCampos && arg && (ehCallRequest(arg, requestNames, "json") || (argNormalizado && ts.isIdentifier(argNormalizado) && jsonAliases.has(argNormalizado.text)))) {
+            if (acessoChamada.name.text === "parse") {
               bodyAliases.set(nome, { campos: schemaCampos, tipoTexto: undefined });
             } else {
               safeParseAliases.set(nome, schemaCampos);
@@ -687,13 +877,15 @@ export function inferirSemanticaHandlerTypeScriptHttp(
         }
 
         if (
-          ts.isPropertyAccessExpression(node.initializer)
-          && node.initializer.name.text === "data"
-          && ts.isIdentifier(node.initializer.expression)
-          && safeParseAliases.has(node.initializer.expression.text)
+          ts.isPropertyAccessExpression(inicializadorNormalizado)
+          && inicializadorNormalizado.name.text === "data"
+          && ts.isIdentifier(inicializadorNormalizado.expression)
+          && safeParseAliases.has(inicializadorNormalizado.expression.text)
         ) {
+          const acesso = inicializadorNormalizado;
+          const alvoAcesso = acesso.expression as ts.Identifier;
           bodyAliases.set(nome, {
-            campos: safeParseAliases.get(node.initializer.expression.text) ?? [],
+            campos: safeParseAliases.get(alvoAcesso.text) ?? [],
             tipoTexto: undefined,
           });
         }
@@ -705,30 +897,45 @@ export function inferirSemanticaHandlerTypeScriptHttp(
           });
         } else if (ts.isIdentifier(node.initializer) && valoresLocais.has(node.initializer.text)) {
           valoresLocais.set(nome, valoresLocais.get(node.initializer.text)!);
+        } else {
+          const retornoHttp = extrairRetornoHttp(node.initializer, sourceFile, valoresLocais);
+          if (retornoHttp) {
+            valoresLocais.set(nome, {
+              tipoTexto: retornoHttp.tipoTexto,
+              campos: retornoHttp.campos,
+              status: retornoHttp.status,
+            });
+          }
         }
       }
 
-      if (
-        ts.isObjectBindingPattern(node.name)
-        && ts.isIdentifier(node.initializer)
-        && bodyAliases.has(node.initializer.text)
-      ) {
-        const campos = bodyAliases.get(node.initializer.text)?.campos ?? [];
-        for (const elemento of node.name.elements) {
-          if (!ts.isIdentifier(elemento.name)) {
-            continue;
+      if (ts.isObjectBindingPattern(node.name)) {
+        const metadadosBody = resolverMetadadosOrigemBody(
+          node.initializer,
+          sourceFile,
+          requestNames,
+          bodyAliases,
+          jsonAliases,
+          safeParseAliases,
+          schemasZod,
+          node.type,
+        );
+
+        if (metadadosBody) {
+          const camposBinding = extrairCamposBindingPattern(node.name, sourceFile, metadadosBody.campos);
+          bodyDeclaracoesDiretas.push(...camposBinding);
+
+          const inicializadorNormalizado = desembrulharExpressao(node.initializer);
+          if (ts.isIdentifier(inicializadorNormalizado) && bodyAliases.has(inicializadorNormalizado.text)) {
+            bodyAliases.set(inicializadorNormalizado.text, {
+              tipoTexto: bodyAliases.get(inicializadorNormalizado.text)?.tipoTexto ?? metadadosBody.tipoTexto,
+              campos: deduplicarCampos([
+                ...(bodyAliases.get(inicializadorNormalizado.text)?.campos ?? []),
+                ...camposBinding,
+              ]),
+            });
           }
-          const nomeCampo = elemento.propertyName?.getText(sourceFile) ?? elemento.name.text;
-          campos.push({
-            nome: nomeCampo,
-            tipoTexto: tipoInferidoPorNomeCampo(nomeCampo),
-            obrigatorio: false,
-          });
         }
-        bodyAliases.set(node.initializer.text, {
-          tipoTexto: bodyAliases.get(node.initializer.text)?.tipoTexto,
-          campos: deduplicarCampos(campos),
-        });
       }
 
       if (
@@ -799,16 +1006,15 @@ export function inferirSemanticaHandlerTypeScriptHttp(
       }
     }
 
-      if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression) && bodyAliases.has(node.expression.text)) {
+    if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression) && bodyAliases.has(node.expression.text)) {
         const bodyAlias = bodyAliases.get(node.expression.text)!;
-        body.push({
-          nome: node.name.text,
-          tipoTexto: inferirTipoPorContexto(node, node.name.text) ?? "string",
-          obrigatorio: false,
-        });
-        if (bodyAlias.campos.length > 0) {
-          body.push(...bodyAlias.campos);
-      }
+        if (!bodyAlias.campos.some((campo) => campo.nome === node.name.text)) {
+          body.push({
+            nome: node.name.text,
+            tipoTexto: inferirTipoPorContexto(node, node.name.text) ?? "string",
+            obrigatorio: false,
+          });
+        }
       bodyTipoTexto ??= bodyAlias.tipoTexto;
     }
 
@@ -830,6 +1036,7 @@ export function inferirSemanticaHandlerTypeScriptHttp(
 
   visitarSemantica(exportacao.corpo);
 
+  adicionarBodyCampos(bodyDeclaracoesDiretas);
   for (const bodyAlias of bodyAliases.values()) {
     adicionarBodyCampos(bodyAlias.campos, bodyAlias.tipoTexto);
   }

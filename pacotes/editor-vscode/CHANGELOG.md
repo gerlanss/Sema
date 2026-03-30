@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.2
+
+- fortalece o `importar nextjs` em handlers com `request.json()` tipado ou com cast inline
+- reconhece melhor `NextResponse.json(...)` quando a resposta passa por variavel local antes do `return`
+- fecha o buraco de bootstrap semantico em casos reais como `auth/login` e `local-firestore/query`
+
 ## 0.8.1
 
 - melhora o importador `nextjs` com bootstrap semantico mais forte para `params`, `query`, `body`, `status` e `response`

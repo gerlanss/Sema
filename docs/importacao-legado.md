@@ -54,7 +54,7 @@ No caso de `Next.js App Router`, o bootstrap automatico ficou mais forte:
 
 - aceita raiz do repo, `app/`, `src/app/`, `app/api/`, `src/app/api/` e subpasta concreta de rota
 - puxa `params`, `query`, `body`, `status` e `response` quando o handler entrega sinal forte
-- entende melhor `request.json()`, `searchParams`, `NextResponse.json(...)` e schema local simples com `zod`
+- entende melhor `request.json()` com cast inline, destructuring comum, `searchParams`, `NextResponse.json(...)` direto ou via variavel local e schema local simples com `zod`
 - continua caindo em `Json` so quando nao houver informacao confiavel
 
 ## O que ela nao promete

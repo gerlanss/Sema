@@ -728,6 +728,21 @@ function camposDeSemanticaTypeScriptHttp(
   return campos.map((campo) => mapearCampoInferidoTypeScriptHttp(campo, tipos, entidadesReferenciadas, enumsReferenciados));
 }
 
+function camposEstruturadosTypeScriptHttp(
+  nomeParametro: string,
+  tipoTexto: string | undefined,
+  tipos: Map<string, TipoDescoberto>,
+  entidadesReferenciadas: Set<string>,
+  enumsReferenciados: Set<string>,
+): CampoImportado[] {
+  const campos = expandirCamposTs(nomeParametro, tipoTexto, tipos, entidadesReferenciadas, enumsReferenciados, false);
+  const nomeWrapper = normalizarNomeCampoImportado(nomeParametro);
+  if (campos.length === 1 && campos[0]?.nome === nomeWrapper && campos[0]?.tipo === "Json") {
+    return [];
+  }
+  return campos;
+}
+
 function errosPorStatusHttp(statuses: number[]): ErroImportado[] {
   return [...new Set(statuses)].map((status) => {
     switch (status) {
@@ -1414,13 +1429,8 @@ async function importarNextJsBase(diretorio: string, namespaceBase: string): Pro
         const input = deduplicarCampos([
           ...camposDeParametrosRotaTypeScript(rota.parametros),
           ...camposDeSemanticaTypeScriptHttp(semantica?.query ?? [], tiposGlobais, entitiesRef, enumsRef),
-          ...(
-            (semantica?.body ?? []).length > 0
-              ? camposDeSemanticaTypeScriptHttp(semantica?.body ?? [], tiposGlobais, entitiesRef, enumsRef)
-              : semantica?.bodyTipoTexto
-                ? expandirCamposTs("body", semantica.bodyTipoTexto, tiposGlobais, entitiesRef, enumsRef, false)
-                : []
-          ),
+          ...camposEstruturadosTypeScriptHttp("body", semantica?.bodyTipoTexto, tiposGlobais, entitiesRef, enumsRef),
+          ...camposDeSemanticaTypeScriptHttp(semantica?.body ?? [], tiposGlobais, entitiesRef, enumsRef),
         ]);
         const output = semantica && semantica.response.length > 0
           ? deduplicarCampos(camposDeSemanticaTypeScriptHttp(semantica.response, tiposGlobais, entitiesRef, enumsRef))

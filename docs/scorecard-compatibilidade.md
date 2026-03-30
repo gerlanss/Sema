@@ -86,7 +86,7 @@ Regra de honestidade:
 - cobre `app/api/**/route.ts` e `src/app/api/**/route.ts`
 - cobre `[id]`, `[...slug]` e `[[...slug]]`
 - `importar nextjs` aceita raiz do repo, `app/`, `src/app/`, `app/api/`, `src/app/api/` e subpastas de rota
-- o bootstrap puxa melhor `params`, `query`, `body`, `status` e `response` quando houver sinal forte
+- o bootstrap puxa melhor `params`, `query`, `body`, `status` e `response` quando houver sinal forte, inclusive com `request.json()` tipado/cast inline e `NextResponse.json(...)` retornado via variavel local
 - `Pages API`, `Express`, `Hono` e derivados continuam fora desta fatia oficial
 
 ### Node / Firebase worker

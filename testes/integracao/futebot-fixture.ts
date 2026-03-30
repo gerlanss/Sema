@@ -1022,7 +1022,9 @@ export async function POST() {
 export async function criarProjetoNextJsAppRouterSemantico(base: string): Promise<void> {
   await Promise.all([
     mkdir(path.join(base, "src", "app", "api", "auth", "session"), { recursive: true }),
+    mkdir(path.join(base, "src", "app", "api", "auth", "login"), { recursive: true }),
     mkdir(path.join(base, "src", "app", "api", "catalogo", "busca"), { recursive: true }),
+    mkdir(path.join(base, "src", "app", "api", "local-firestore", "query"), { recursive: true }),
     mkdir(path.join(base, "src", "app", "api", "reposicao", "[itemId]"), { recursive: true }),
     mkdir(path.join(base, "src", "app", "api", "fallback"), { recursive: true }),
   ]);
@@ -1081,7 +1083,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body: CreateSessionBody = await request.json();
+  const body = (await request.json()) as CreateSessionBody;
   const parsed = sessionSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -1091,11 +1093,57 @@ export async function POST(request: Request) {
   if (parsed.data.email === "blocked@example.com") {
     return NextResponse.json({ error: "blocked" }, { status: 403 });
   }
-
-  return NextResponse.json<SessionResponse>({
+  const response = NextResponse.json<SessionResponse>({
     session_id: parsed.data.email,
     user_id: parsed.data.email,
   }, { status: 201 });
+
+  return response;
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/api/auth/login/route.ts",
+    `import { NextResponse } from "next/server";
+
+interface LoginBody {
+  email?: string;
+  password?: string;
+  rememberMe?: boolean;
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as LoginBody;
+    const email = body.email?.trim().toLowerCase() || "";
+    const password = body.password || "";
+    const rememberMe = body.rememberMe ?? true;
+
+    if (!email || !password) {
+      return NextResponse.json({ error: "missing_credentials" }, { status: 400 });
+    }
+
+    if (email === "blocked@example.com") {
+      return NextResponse.json({ error: "blocked" }, { status: 401 });
+    }
+
+    const response = NextResponse.json({
+      ok: true,
+      user: {
+        email,
+        remember_me: rememberMe,
+      },
+    });
+
+    return response;
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "unexpected_failure" },
+      { status: 500 },
+    );
+  }
 }
 `,
   );
@@ -1114,6 +1162,31 @@ export async function GET(request: Request) {
     termo,
     limite,
     total: 0,
+  });
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/api/local-firestore/query/route.ts",
+    `import { NextResponse } from "next/server";
+
+export async function POST(request: Request) {
+  const body = (await request.json()) as {
+    collection?: string;
+    filters?: Array<{ field: string; operator: string; value: string }>;
+    orderBy?: { field: string; direction: "asc" | "desc" } | null;
+    limit?: number | null;
+  };
+
+  if (!body.collection) {
+    return NextResponse.json({ error: "missing_collection" }, { status: 400 });
+  }
+
+  return NextResponse.json({
+    docs: [],
+    total: body.limit ?? 0,
   });
 }
 `,

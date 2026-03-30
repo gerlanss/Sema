@@ -229,8 +229,8 @@ test("cli importa projeto Next.js App Router legado com bootstrap semantico mais
     const json = JSON.parse(execucao.stdout);
     assert.equal(json.fonte, "nextjs");
     assert.equal(json.resumo.sucesso, true);
-    assert.equal(json.resumo.rotas >= 4, true);
-    assert.equal(json.resumo.tarefas >= 4, true);
+    assert.equal(json.resumo.rotas >= 6, true);
+    assert.equal(json.resumo.tarefas >= 6, true);
 
     const arquivoSessao = await readFile(path.join(base, "sema", "api", "auth", "session.sema"), "utf8");
     assert.match(arquivoSessao, /route api_auth_session_get_publico/);
@@ -250,6 +250,22 @@ test("cli importa projeto Next.js App Router legado com bootstrap semantico mais
     assert.match(arquivoBusca, /termo: Texto/);
     assert.match(arquivoBusca, /limite: Decimal/);
     assert.match(arquivoBusca, /total: Decimal/);
+
+    const arquivoLogin = await readFile(path.join(base, "sema", "api", "auth", "login.sema"), "utf8");
+    assert.match(arquivoLogin, /email: Texto/);
+    assert.match(arquivoLogin, /password: Texto/);
+    assert.match(arquivoLogin, /remember_me: Booleano/);
+    assert.match(arquivoLogin, /ok: Booleano required/);
+    assert.match(arquivoLogin, /user: Json required/);
+    assert.match(arquivoLogin, /nao_autorizado/);
+    assert.match(arquivoLogin, /erro_interno/);
+
+    const arquivoQuery = await readFile(path.join(base, "sema", "api", "local_firestore", "query.sema"), "utf8");
+    assert.match(arquivoQuery, /collection: Texto/);
+    assert.match(arquivoQuery, /filters: Json/);
+    assert.match(arquivoQuery, /order_by: Json/);
+    assert.match(arquivoQuery, /limit: Decimal/);
+    assert.match(arquivoQuery, /docs_campo: Json required/);
 
     const arquivoDinamico = await readFile(path.join(base, "sema", "api", "reposicao", "itemid.sema"), "utf8");
     assert.match(arquivoDinamico, /caminho: "\/api\/reposicao\/\{itemId\}"/);
@@ -273,14 +289,14 @@ test("cli importa projeto Next.js App Router a partir de app, api e subpasta con
     assert.equal(execucaoApp.status, 0, execucaoApp.stderr || execucaoApp.stdout);
     const jsonApp = JSON.parse(execucaoApp.stdout);
     assert.equal(jsonApp.resumo.sucesso, true);
-    assert.equal(jsonApp.resumo.modulos >= 4, true);
+    assert.equal(jsonApp.resumo.modulos >= 6, true);
 
     const saidaApi = path.join(base, "sema-api");
     const execucaoApi = executarImportacao(["importar", "nextjs", path.join(base, "src", "app", "api"), "--saida", saidaApi, "--json"]);
     assert.equal(execucaoApi.status, 0, execucaoApi.stderr || execucaoApi.stdout);
     const jsonApi = JSON.parse(execucaoApi.stdout);
     assert.equal(jsonApi.resumo.sucesso, true);
-    assert.equal(jsonApi.resumo.modulos >= 4, true);
+    assert.equal(jsonApi.resumo.modulos >= 6, true);
 
     const saidaSubpasta = path.join(base, "sema-subpasta");
     const execucaoSubpasta = executarImportacao([
@@ -582,7 +598,7 @@ if (existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")) {
     try {
       const diretorioRaiz = "C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard";
       const diretorioApi = path.join(diretorioRaiz, "src", "app", "api");
-      const diretorioSubpasta = path.join(diretorioApi, "auth", "session");
+      const diretorioSubpasta = path.join(diretorioApi, "auth", "login");
 
       const execucaoRaiz = executarImportacao(["importar", "nextjs", diretorioRaiz, "--saida", baseRaiz, "--json"], path.resolve("."));
       assert.equal(execucaoRaiz.status, 0, execucaoRaiz.stderr || execucaoRaiz.stdout);
@@ -590,6 +606,11 @@ if (existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")) {
       assert.equal(jsonRaiz.resumo.sucesso, true);
       assert.equal(jsonRaiz.resumo.modulos >= 1, true);
       assert.equal(jsonRaiz.resumo.rotas >= 1, true);
+      const arquivoQuery = path.join(baseRaiz, "api", "local_firestore", "query.sema");
+      if (existsSync(arquivoQuery)) {
+        const conteudoQuery = await readFile(arquivoQuery, "utf8");
+        assert.match(conteudoQuery, /collection: Texto/);
+      }
 
       const execucaoApi = executarImportacao(["importar", "nextjs", diretorioApi, "--saida", baseApi, "--json"], path.resolve("."));
       assert.equal(execucaoApi.status, 0, execucaoApi.stderr || execucaoApi.stdout);
@@ -605,8 +626,11 @@ if (existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")) {
       assert.equal(jsonSubpasta.resumo.modulos, 1);
       assert.equal(jsonSubpasta.resumo.rotas >= 1, true);
 
-      const arquivoSessao = path.join(baseSubpasta, "api", "auth", "session.sema");
-      assert.equal(existsSync(arquivoSessao), true);
+      const arquivoLogin = path.join(baseSubpasta, "api", "auth", "login.sema");
+      assert.equal(existsSync(arquivoLogin), true);
+      const conteudoLogin = await readFile(arquivoLogin, "utf8");
+      assert.match(conteudoLogin, /email: Texto/);
+      assert.match(conteudoLogin, /password: Texto/);
 
       const validacaoSubpasta = executarImportacao(["validar", baseSubpasta, "--json"], path.resolve("."));
       assert.equal(validacaoSubpasta.status, 0, validacaoSubpasta.stderr || validacaoSubpasta.stdout);

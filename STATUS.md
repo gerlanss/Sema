@@ -10,7 +10,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Estagio atual: marco publico `0.8.x backend generico` em consolidacao, com foco oficial em familias backend first-class e adocao incremental de projeto vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `0.8.1`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `0.8.2`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
   - lexer, parser, AST, diagnosticos, analise semantica e IR
@@ -33,6 +33,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - `sema doctor` para saneamento rapido de ambiente
   - instaladores oficiais `install-sema.sh` e `install-sema.ps1`
   - importador `Next.js App Router` com bootstrap semantico mais forte para `params`, `query`, `body`, `status` e `response`
+  - importador `Next.js App Router` com inferencia melhor de body via `request.json()` tipado/cast inline e resposta HTTP retornada por variavel local
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
@@ -140,7 +141,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Enriquecer `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
 - `[x]` Expandir `sema.config.json` com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
 - `[x]` Registrar feedback externo do FuteBot como validacao de valor e ajuste de prioridade para a ultima milha entre contrato e implementacao viva
-- `[x]` Alinhar release publica `0.8.1` entre CLI, pacotes e extensao
+- `[x]` Alinhar release publica `0.8.2` entre CLI, pacotes e extensao
 - `[x]` Fortalecer o bootstrap semantico de `importar nextjs` sem degradar o fallback honesto
 - `[x]` Entregar pacote publico da CLI instalavel fora do monorrepo
 - `[x]` Publicar showcase oficial reproduzivel para demonstrar valor em backend Flask vivo
