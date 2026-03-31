@@ -43,18 +43,18 @@ Ela entra acima disso para impedir humano e IA de mexerem em backend vivo no esc
 
 ## CTA oficial atual
 
-Hoje o CTA principal continua sendo GitHub Release:
+Hoje o CTA principal passa a ser npm:
 
 ```bash
-npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install -g @semacode/cli
 sema --help
 sema doctor
 ```
 
-Agora que o pacote publico usa o scope da organizacao `semacode`, o CTA curto pode virar:
+CTA alternativo por GitHub Release:
 
 ```bash
-npm install -g @semacode/cli
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
 sema --help
 ```
 
@@ -87,7 +87,7 @@ Hoje a Sema ja cobre bem fluxo incremental em `Flask`, `FastAPI`, `NestJS`, `Nex
 Instalacao:
 
 ```bash
-npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install -g @semacode/cli
 ```
 
 Repositorio:
@@ -107,7 +107,7 @@ Contrato, erro, efeito, garantia, `impl`, `drift` e contexto para IA acima da st
 A rodada mais nova fortaleceu `Next.js App Router` em casos reais de `request.json()` tipado/cast inline.
 
 Instalacao:
-`npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz`
+`npm install -g @semacode/cli`
 
 Repo:
 [github.com/gerlanss/Sema](https://github.com/gerlanss/Sema)
@@ -121,7 +121,7 @@ Thread curta:
 3. A rodada nova melhorou bastante `Next.js App Router`, especialmente em body inference com `request.json()` tipado/cast inline.
 
 4. Instalacao hoje:
-`npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz`
+`npm install -g @semacode/cli`
 
 5. Repo:
 [https://github.com/gerlanss/Sema](https://github.com/gerlanss/Sema)

@@ -42,12 +42,12 @@ Nao e so “mais uma DSL”. E uma camada semantica para governar o que a stack 
 
 ## Quickstart em 2 minutos
 
-Hoje voce **nao precisa clonar o repo** para instalar a CLI. O canal oficial de instalacao continua sendo a GitHub Release com um tarball estavel.
+Hoje voce **nao precisa clonar o repo** para instalar a CLI. A instalacao oficial agora e pelo pacote npm `@semacode/cli`.
 
 Linux, Windows PowerShell e macOS:
 
 ```bash
-npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install -g @semacode/cli
 mkdir sema-demo
 cd sema-demo
 sema iniciar
@@ -58,14 +58,14 @@ sema doctor
 Se quiser instalar local ao projeto:
 
 ```bash
-npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install @semacode/cli
 npx sema --help
 ```
 
-Se voce quer instalacao via npm registry, o pacote publico da CLI passa a ser `@semacode/cli`.
+Se voce prefere instalar pela GitHub Release com tarball estavel:
 
 ```bash
-npm install -g @semacode/cli
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
 sema --help
 ```
 
@@ -149,10 +149,10 @@ Se quiser instalar sem decorar a novela toda:
 
 Hoje a distribuicao publica da Sema fica assim:
 
-- GitHub Release como canal oficial de instalacao
+- npm como canal oficial de instalacao via `@semacode/cli`
+- GitHub Release como canal alternativo com tarball estavel
 - tarball da CLI instalavel sem clone
 - VSIX da extensao para VS Code
-- fluxo pronto para `npm publish` da CLI quando a conta estiver autenticada
 
 Para a trilha de distribuicao e publicacao, veja [docs/distribuicao-da-cli.md](./docs/distribuicao-da-cli.md).
 

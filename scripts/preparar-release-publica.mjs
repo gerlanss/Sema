@@ -55,24 +55,31 @@ async function main() {
 
 Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
 
-## Instalar a CLI sem clonar o repo
+## Instalar a CLI
 
 Linux, Windows PowerShell e macOS:
 
 \`\`\`bash
-npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install -g @semacode/cli
 mkdir sema-demo
 cd sema-demo
 sema iniciar
 sema validar contratos/pedidos.sema --json
-sema --help
+sema doctor
 \`\`\`
 
 Instalacao local ao projeto:
 
 \`\`\`bash
-npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install @semacode/cli
 npx sema --help
+\`\`\`
+
+Instalacao alternativa por GitHub Release:
+
+\`\`\`bash
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+sema --help
 \`\`\`
 
 ## Instalar a extensao VS Code

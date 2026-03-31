@@ -6,26 +6,26 @@ Este documento explica como distribuir a CLI da Sema fora do monorrepo sem vende
 
 A trilha publica principal da Sema passa a ser:
 
-1. baixar da GitHub Release
-2. instalar o `.tgz`
-3. rodar `sema`
+1. instalar `@semacode/cli` pelo npm
+2. rodar `sema`
+3. usar a GitHub Release so como canal alternativo com tarball estavel
 
-O pacote da CLI tambem ja fica **pronto para npm registry**. A publicacao so depende de autenticacao da conta e do comando de publish.
+O pacote da CLI ja esta **publicado no npm registry** como `@semacode/cli`.
 
 Se voce precisa anunciar a release sem ficar improvisando texto em cima da hora, use tambem o [kit de lancamento publico](./kit-lancamento-publico.md).
 
 Instalacao sem clone em Linux, Windows PowerShell e macOS:
 
 ```bash
-npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install -g @semacode/cli
 sema --help
 sema doctor
 ```
 
-Instalacao via npm registry:
+Instalacao via GitHub Release:
 
 ```bash
-npm install -g @semacode/cli
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
 sema --help
 sema doctor
 ```
@@ -38,7 +38,7 @@ Instaladores auxiliares:
 Instalacao local ao projeto:
 
 ```bash
-npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
+npm install @semacode/cli
 npx sema --help
 ```
 
@@ -67,7 +67,7 @@ npm run cli:publicar-npm
 
 Notas importantes:
 
-- o pacote preparado para npm continua sendo `@semacode/cli`
+- o pacote publico da CLI e `@semacode/cli`
 - o script publica o tarball gerado em `.tmp/pacotes-publicos`
 - a conta desta maquina precisa estar autenticada com `npm adduser` ou `npm login`
 - o package name publico passa a ser `@semacode/cli`, publicado no scope da organizacao `semacode`
@@ -140,14 +140,15 @@ Ele passa a ser tratado como **empacotamento interno/dev**, bom para inspecao ra
 
 ## O que ainda nao entra nesta rodada
 
-- publicacao oficial em registry publico
 - instalador multiplataforma dedicado
 - updater automatico
 - runtime web acoplado
 
 ## Regra pratica
 
-Se a pessoa quer **usar** a Sema, entregue o `.tgz` publico.
+Se a pessoa quer **usar** a Sema, entregue `npm install -g @semacode/cli`.
+
+Se a pessoa prefere pacote fechado ou esta com algum problema no registry, entregue o `.tgz` publico da release.
 
 Se a pessoa quer **desenvolver** a Sema, use o monorrepo.
 
