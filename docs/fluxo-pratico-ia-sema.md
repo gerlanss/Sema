@@ -47,8 +47,8 @@ Regra pratica:
 Antes de alterar, a IA deve executar:
 
 ```bash
-node pacotes/cli/dist/index.js ast caminho\\arquivo.sema --json
-node pacotes/cli/dist/index.js ir caminho\\arquivo.sema --json
+sema ast caminho/arquivo.sema --json
+sema ir caminho/arquivo.sema --json
 ```
 
 Objetivo:
@@ -71,8 +71,8 @@ Ao editar, a IA deve:
 Depois da edicao:
 
 ```bash
-node pacotes/cli/dist/index.js formatar caminho\\arquivo.sema
-node pacotes/cli/dist/index.js formatar caminho\\arquivo.sema --check
+sema formatar caminho/arquivo.sema
+sema formatar caminho/arquivo.sema --check
 ```
 
 Se `--check` falhar, o trabalho ainda nao esta pronto.
@@ -82,8 +82,8 @@ Se `--check` falhar, o trabalho ainda nao esta pronto.
 Depois da formatacao:
 
 ```bash
-node pacotes/cli/dist/index.js validar caminho\\arquivo.sema --json
-node pacotes/cli/dist/index.js diagnosticos caminho\\arquivo.sema --json
+sema validar caminho/arquivo.sema --json
+sema diagnosticos caminho/arquivo.sema --json
 ```
 
 Se houver falha:
@@ -96,7 +96,7 @@ Se houver falha:
 Se a tarefa nao for so editar contrato, mas tambem gerar base de implementacao, a IA deve rodar explicitamente:
 
 ```bash
-node pacotes/cli/dist/index.js compilar caminho\\arquivo.sema --alvo typescript --saida .\\saida\\typescript
+sema compilar caminho/arquivo.sema --alvo typescript --saida ./saida/typescript
 ```
 
 Ou trocar o alvo para `python` ou `dart`, conforme o caso.
@@ -111,13 +111,7 @@ Regra pratica:
 No fechamento:
 
 ```bash
-node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-ia
-```
-
-Ou, no fluxo consolidado do projeto:
-
-```bash
-npm run project:check
+sema verificar arquivo-ou-pasta --json --saida ./.tmp/verificacao-ia
 ```
 
 ## Fluxo minimo para automacao
@@ -125,9 +119,9 @@ npm run project:check
 Se voce quiser o menor fluxo aceitavel para uma IA:
 
 ```bash
-node pacotes/cli/dist/index.js ir caminho\\arquivo.sema --json
-node pacotes/cli/dist/index.js formatar caminho\\arquivo.sema
-node pacotes/cli/dist/index.js validar caminho\\arquivo.sema --json
+sema ir caminho/arquivo.sema --json
+sema formatar caminho/arquivo.sema
+sema validar caminho/arquivo.sema --json
 ```
 
 Mas, sendo sincero, o fluxo bom mesmo e fechar com `verificar`.
@@ -135,10 +129,10 @@ Mas, sendo sincero, o fluxo bom mesmo e fechar com `verificar`.
 Se a tarefa envolver codigo derivado, o fluxo minimo aceitavel vira:
 
 ```bash
-node pacotes/cli/dist/index.js ir caminho\\arquivo.sema --json
-node pacotes/cli/dist/index.js formatar caminho\\arquivo.sema
-node pacotes/cli/dist/index.js validar caminho\\arquivo.sema --json
-node pacotes/cli/dist/index.js compilar caminho\\arquivo.sema --alvo typescript --saida .\\saida\\typescript
+sema ir caminho/arquivo.sema --json
+sema formatar caminho/arquivo.sema
+sema validar caminho/arquivo.sema --json
+sema compilar caminho/arquivo.sema --alvo typescript --saida ./saida/typescript
 ```
 
 ## Checklist de saida
@@ -170,4 +164,4 @@ Esse conjunto e o que faz a linguagem ser amigavel para IA de verdade, e nao so 
 
 ## Observacao sobre caminhos
 
-Esta documentacao usa caminhos relativos ao repositorio, nao caminhos locais de maquina. Isso permite que qualquer pessoa clone o projeto e use os links e referencias sem depender de uma pasta especifica no proprio ambiente.
+Esta documentacao usa placeholders de arquivo e pasta, nao caminhos do monorepo da Sema. A IA deve adaptar isso ao projeto atual e continuar tratando `sema` como interface publica principal.

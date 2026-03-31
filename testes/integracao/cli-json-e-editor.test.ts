@@ -129,8 +129,8 @@ test("cli expoe starter e prompt de ia", () => {
   );
   assert.equal(starter.status, 0, starter.stderr || starter.stdout);
   assert.match(starter.stdout, /Starter de IA da Sema/);
-  assert.match(starter.stdout, /Origem da instalacao:/);
-  assert.match(starter.stdout, /Documentos locais encontrados:/);
+  assert.match(starter.stdout, /Modo IA-first da instalacao atual/);
+  assert.doesNotMatch(starter.stdout, /Origem da instalacao:/);
   assert.match(starter.stdout, /AGENT_STARTER\.md/);
   assert.match(starter.stdout, /Sema, um Protocolo de Governanca de Intencao para IA e backend vivo/);
   assert.match(starter.stdout, /nao invente sintaxe/);
@@ -143,7 +143,7 @@ test("cli expoe starter e prompt de ia", () => {
   );
   assert.equal(prompt.status, 0, prompt.stderr || prompt.stdout);
   assert.match(prompt.stdout, /Prompt-base de IA da Sema/);
-  assert.match(prompt.stdout, /Origem da instalacao:/);
+  assert.match(prompt.stdout, /Modo IA-first da instalacao atual/);
   assert.match(prompt.stdout, /prompt-base-ia-sema\.md/);
   assert.match(prompt.stdout, /Trate a Sema como camada semantica e linguagem de especificacao executavel/);
   assert.match(prompt.stdout, /use o formatador oficial da Sema como fonte unica de estilo/);

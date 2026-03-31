@@ -46,7 +46,11 @@ npx sema --help
 ## Primeiro teste
 
 ```bash
-sema validar exemplos/calculadora.sema --json
+mkdir sema-demo
+cd sema-demo
+sema iniciar
+sema validar contratos/pedidos.sema --json
+sema starter-ia
 ```
 
 Repositorio: https://github.com/gerlanss/Sema

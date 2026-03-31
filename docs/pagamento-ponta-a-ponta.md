@@ -1,6 +1,6 @@
 # Pagamento Ponta a Ponta na Sema
 
-Este documento descreve o vertical oficial de pagamento da Sema no marco `0.5`.
+Este documento descreve o vertical oficial de pagamento da Sema no fluxo publico atual.
 
 O objetivo nao e mostrar um exemplo fofo. O objetivo e demonstrar que a linguagem ja consegue modelar um fluxo de negocio real com:
 
@@ -119,26 +119,26 @@ Use o dominio compartilhado em um modulo e a operacao em outro modulo.
 ### 2. Aplicar o formato canonico
 
 ```bash
-node pacotes/cli/dist/index.js formatar exemplos
+sema formatar exemplos
 ```
 
 ### 3. Validar semanticamente
 
 ```bash
-node pacotes/cli/dist/index.js validar exemplos/pagamento.sema
+sema validar exemplos/pagamento.sema
 ```
 
 ### 4. Gerar codigo
 
 ```bash
-node pacotes/cli/dist/index.js compilar exemplos/pagamento.sema --alvo typescript --saida ./.tmp/pagamento-ts
-node pacotes/cli/dist/index.js compilar exemplos/pagamento.sema --alvo python --saida ./.tmp/pagamento-py
+sema compilar exemplos/pagamento.sema --alvo typescript --saida ./.tmp/pagamento-ts
+sema compilar exemplos/pagamento.sema --alvo python --saida ./.tmp/pagamento-py
 ```
 
 ### 5. Verificar o vertical completo
 
 ```bash
-node pacotes/cli/dist/index.js verificar exemplos/pagamento.sema --json --saida ./.tmp/verificacao-pagamento
+sema verificar exemplos/pagamento.sema --json --saida ./.tmp/verificacao-pagamento
 ```
 
 ## O que esse vertical prova
@@ -152,4 +152,4 @@ Se esse vertical passa, a Sema ja consegue demonstrar que:
 - gera artefatos coerentes para TypeScript e Python
 - executa testes gerados sem gambiarra conceitual
 
-Esse e o criterio pratico que sustenta o marco `0.5` da linguagem.
+Esse e o criterio pratico que sustenta o uso publico do vertical de pagamento como referencia para IA e geracao.

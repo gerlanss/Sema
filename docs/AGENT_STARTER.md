@@ -51,7 +51,7 @@ Depois de editar:
 2. rode `sema validar --json`
 3. se houver falha, use `diagnosticos --json`
 4. se a tarefa pedir codigo derivado, rode `sema compilar`
-5. feche com `sema verificar` ou `npm run project:check`
+5. feche com `sema verificar <arquivo-ou-pasta> --json`
 
 Priorize sempre:
 - exemplos oficiais

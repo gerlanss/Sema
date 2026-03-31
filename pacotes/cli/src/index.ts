@@ -165,7 +165,7 @@ Depois de editar:
 3. se houver falha, use \`diagnosticos --json\`
 4. rode \`sema drift\` de novo quando mexer em codigo vivo
 5. se a tarefa pedir codigo derivado, rode \`sema compilar\`
-6. feche com \`sema verificar\` ou \`npm run project:check\`
+6. feche com \`sema verificar <arquivo-ou-pasta> --json\`
 
 Priorize sempre:
 - exemplos oficiais
@@ -791,20 +791,18 @@ async function descobrirDocsIa(): Promise<DescobertaDocsIa> {
 }
 
 function renderizarCabecalhoDocsIa(descoberta: DescobertaDocsIa): string {
+  const documentos = descoberta.documentos.map((documento) => `\`${documento.nome}\``);
   const linhas = [
-    "Informacoes da instalacao atual",
-    `- Origem da instalacao: ${descoberta.origemInstalacao}`,
-    `- Base detectada: ${descoberta.baseDetectada ?? "nao encontrada"}`,
+    "Modo IA-first da instalacao atual",
+    "- Use `sema` como interface publica principal.",
+    "- Nao assuma monorepo, `node pacotes/cli/dist/index.js`, `npm run project:check` ou uma pasta `exemplos` externa ao projeto atual.",
+    "- Priorize `sema starter-ia`, `sema ajuda-ia`, `sema ast --json`, `sema ir --json`, `sema drift --json` e `sema contexto-ia`.",
   ];
 
-  if (descoberta.documentos.length > 0) {
-    linhas.push("- Documentos locais encontrados:");
-    for (const documento of descoberta.documentos) {
-      linhas.push(`  - ${documento.nome}: ${documento.caminho}`);
-    }
+  if (documentos.length > 0) {
+    linhas.push(`- Documentos locais empacotados: ${documentos.join(", ")}.`);
   } else {
-    linhas.push("- Documentos locais encontrados: nenhum");
-    linhas.push("  - Esta instalacao da CLI nao conseguiu localizar a pasta docs ao redor do pacote atual.");
+    linhas.push("- Documentos locais empacotados: nenhum extra detectado. Siga a CLI, o contrato atual e os artefatos JSON.");
   }
 
   return linhas.join("\n");
@@ -933,7 +931,7 @@ function criarBriefingAgente(
     testesMinimos: [
       "sema validar <arquivo> --json",
       "sema drift <arquivo> --json",
-      "sema verificar exemplos --json",
+      "sema verificar <arquivo-ou-pasta> --json",
     ],
   };
 }
@@ -1045,7 +1043,7 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
 6. Editar o arquivo \`.sema\`.
 7. Rodar \`sema formatar "${arquivo}"\`.
 8. Rodar \`sema validar "${arquivo}" --json\`.
-9. Fechar com \`sema verificar exemplos --json --saida ./.tmp/verificacao-ia\` ou \`npm run project:check\`.
+9. Fechar com \`sema verificar <arquivo-ou-pasta> --json --saida ./.tmp/verificacao-ia\`.
 
 ## Textos base para onboarding do agente
 

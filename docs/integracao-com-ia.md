@@ -176,9 +176,9 @@ sema validar ./sema/importado --json
 sema drift ./sema/importado --json
 ```
 
-## Showcase oficial
+## Showcase oficial do repo
 
-O showcase [showcases/ranking-showroom](../showcases/ranking-showroom/) continua sendo a melhor vitrine do fluxo certo:
+Se voce estiver no monorepo da Sema, o showcase [showcases/ranking-showroom](../showcases/ranking-showroom/) continua sendo a melhor vitrine do fluxo completo:
 
 ```bash
 cd showcases/ranking-showroom
@@ -191,10 +191,10 @@ O valor aqui nao e so "validou". O valor e sair com score, confianca, drift e br
 
 ## Fechamento operacional
 
-Quando a IA terminar a mudanca:
+Quando a IA terminar a mudanca fora do monorepo:
 
 ```bash
-npm test
-npm run format:check
-npm run project:check
+sema formatar contratos/modulo.sema
+sema validar contratos/modulo.sema --json
+sema verificar contratos --json --saida ./.tmp/verificacao-final
 ```

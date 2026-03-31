@@ -35,10 +35,12 @@ npm install @semacode/cli
 npx sema --help
 ```
 
-Instaladores auxiliares:
+Instaladores auxiliares para a linha publica atual:
 
-- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
-- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v0.9.0/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v0.9.0/install-sema.ps1 | iex`
+
+Se voce quiser reproducao estrita, prefira o npm registry ou o tarball da GitHub Release.
 
 ## Primeiro teste sem clonar o repo
 
@@ -59,15 +61,14 @@ sema formatar contratos/pedidos.sema
 sema verificar contratos --saida ./.tmp/verificacao
 ```
 
-## Primeiro fluxo de valor real
+## Primeiro fluxo de IA real
 
-Se quiser ver a Sema onde ela fica mais forte hoje, use o showcase oficial:
+Sem clonar o repo, o fluxo que mais mostra a proposta da Sema hoje e:
 
 ```bash
-cd showcases/ranking-showroom
 sema inspecionar . --json
-sema drift contratos/ranking_showroom.sema --json
-sema contexto-ia contratos/ranking_showroom.sema --saida ./.tmp/contexto-ranking --json
+sema drift contratos/pedidos.sema --json
+sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto-pedidos --json
 ```
 
 Esse fluxo mostra:
@@ -104,16 +105,16 @@ Exemplo de configuracao para projeto real:
 Scaffold base:
 
 ```bash
-sema compilar exemplos/calculadora.sema --alvo typescript --saida ./saida/typescript
-sema compilar exemplos/calculadora.sema --alvo python --saida ./saida/python
-sema compilar exemplos/calculadora.sema --alvo dart --saida ./saida/dart
+sema compilar contratos/pedidos.sema --alvo typescript --saida ./saida/typescript
+sema compilar contratos/pedidos.sema --alvo python --saida ./saida/python
+sema compilar contratos/pedidos.sema --alvo dart --saida ./saida/dart
 ```
 
 Scaffold backend:
 
 ```bash
 sema compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
-sema compilar contratos/pagamentos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
+sema compilar contratos/pedidos.sema --alvo python --framework fastapi --estrutura backend --saida ./generated/fastapi
 ```
 
 ## Extensao VS Code
@@ -143,7 +144,8 @@ Se o objetivo for desenvolver a propria Sema:
 ```bash
 npm install
 npm run build
-node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
+npm run cli:instalar-local
+sema validar exemplos/calculadora.sema
 ```
 
 Se quiser validar tudo de cara:
@@ -164,7 +166,7 @@ Serve para:
 
 - testar a experiencia de terminal no proprio ambiente
 - desenvolver a CLI
-- evitar ficar chamando `node pacotes/cli/dist/index.js`
+- usar `sema` como interface principal mesmo durante o desenvolvimento local
 
 Para remover:
 

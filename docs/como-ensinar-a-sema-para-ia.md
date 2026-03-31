@@ -2,6 +2,8 @@
 
 Este documento explica como fazer uma IA entender a Sema sem depender de memoria previa do modelo. A estrategia correta nao e presumir que a IA "ja conhece a linguagem", e sim entregar contexto suficiente para ela operar com seguranca.
 
+Leia isso do ponto de vista da CLI publica. A IA nao deve assumir que esta dentro do monorepo da Sema, nem que precisa chamar `node pacotes/cli/dist/index.js`.
+
 ## Principio central
 
 Uma IA entende uma linguagem nova quando recebe quatro camadas de contexto:
@@ -28,9 +30,9 @@ A IA precisa saber como a linguagem e escrita.
 
 Fontes principais:
 
-- [gramatica-inicial.md](./gramatica-inicial.md)
+- [README.md](../README.md)
 - [sintaxe.md](./sintaxe.md)
-- [gramatica.ebnf](../pacotes/nucleo/src/parser/gramatica.ebnf)
+- [integracao-com-ia.md](./integracao-com-ia.md)
 
 Objetivo dessa camada:
 
@@ -46,7 +48,7 @@ Depois de saber ler, a IA precisa saber o que cada bloco significa.
 Fontes principais:
 
 - [README.md](../README.md)
-- [especificacao-inicial.md](./especificacao-inicial.md)
+- [integracao-com-ia.md](./integracao-com-ia.md)
 - [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md)
 
 Objetivo dessa camada:
@@ -68,11 +70,11 @@ Em vez de confiar que a IA vai interpretar `.sema` cru de primeira, use a CLI co
 Comandos principais:
 
 ```bash
-node pacotes/cli/dist/index.js validar arquivo.sema --json
-node pacotes/cli/dist/index.js diagnosticos arquivo.sema --json
-node pacotes/cli/dist/index.js ast arquivo.sema --json
-node pacotes/cli/dist/index.js ir arquivo.sema --json
-node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-ia
+sema validar arquivo.sema --json
+sema diagnosticos arquivo.sema --json
+sema ast arquivo.sema --json
+sema ir arquivo.sema --json
+sema verificar arquivo-ou-pasta --json --saida ./.tmp/verificacao-ia
 ```
 
 Como cada comando ajuda:
@@ -97,7 +99,7 @@ Arquivos recomendados:
 - [tratamento_erro.sema](../exemplos/tratamento_erro.sema)
 - [crud_simples.sema](../exemplos/crud_simples.sema)
 
-O vertical de pagamento do `0.5` deve ser tratado como a referencia principal.
+O vertical oficial de pagamento deve ser tratado como a referencia principal.
 
 ## O que a IA nao deve fazer
 

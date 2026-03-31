@@ -117,13 +117,15 @@ const resumo = `# Contexto de IA para ${modulo}
 2. Ler \`ir.json\` para entender a forma semantica resolvida.
 3. Ler \`diagnosticos.json\` se houver falha ou aviso relevante.
 4. Editar o arquivo \`.sema\`.
-5. Rodar \`node pacotes/cli/dist/index.js formatar "${arquivo}"\`.
-6. Rodar \`node pacotes/cli/dist/index.js validar "${arquivo}" --json\`.
-7. Fechar com \`node pacotes/cli/dist/index.js verificar exemplos --json --saida ./.tmp/verificacao-ia\` ou \`npm run project:check\`.
+5. Rodar \`sema formatar "${arquivo}"\`.
+6. Rodar \`sema validar "${arquivo}" --json\`.
+7. Fechar com \`sema verificar <arquivo-ou-pasta> --json --saida ./.tmp/verificacao-ia\`.
 
 ## Documentos que ajudam a IA
 
 - \`docs/AGENT_STARTER.md\`
+- \`docs/sintaxe.md\`
+- \`docs/integracao-com-ia.md\`
 - \`docs/como-ensinar-a-sema-para-ia.md\`
 - \`docs/prompt-base-ia-sema.md\`
 - \`docs/fluxo-pratico-ia-sema.md\`

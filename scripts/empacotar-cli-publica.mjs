@@ -11,6 +11,10 @@ const DOCS_IA_PUBLICOS = [
   "como-ensinar-a-sema-para-ia.md",
   "prompt-base-ia-sema.md",
   "fluxo-pratico-ia-sema.md",
+  "sintaxe.md",
+  "integracao-com-ia.md",
+  "instalacao-e-primeiro-uso.md",
+  "pagamento-ponta-a-ponta.md",
 ];
 
 const PACOTES_RUNTIME = [
@@ -40,6 +44,7 @@ async function prepararStageBase() {
   await rm(stageDir, { recursive: true, force: true });
   await mkdir(path.join(stageDir, "dist"), { recursive: true });
   await mkdir(path.join(stageDir, "docs"), { recursive: true });
+  await mkdir(path.join(stageDir, "exemplos"), { recursive: true });
   await mkdir(saidaDir, { recursive: true });
 
   await cp(path.join(origemCli, "dist"), path.join(stageDir, "dist"), { recursive: true });
@@ -48,6 +53,7 @@ async function prepararStageBase() {
   for (const nomeDoc of DOCS_IA_PUBLICOS) {
     await cp(path.join(raiz, "docs", nomeDoc), path.join(stageDir, "docs", nomeDoc));
   }
+  await cp(path.join(raiz, "exemplos"), path.join(stageDir, "exemplos"), { recursive: true });
 }
 
 async function prepararPacotesRuntime() {
@@ -123,6 +129,7 @@ async function prepararManifestPublico() {
     files: [
       "dist",
       "docs",
+      "exemplos",
       "logo.png",
       "README.md",
       "LICENSE",
