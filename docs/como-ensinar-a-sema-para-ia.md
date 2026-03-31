@@ -13,6 +13,15 @@ Uma IA entende uma linguagem nova quando recebe quatro camadas de contexto:
 
 Sem essas quatro camadas, o modelo comeca a adivinhar. E adivinhacao em linguagem de contrato e pedir para nascer bug feio.
 
+Antes de qualquer outra coisa, a IA tambem precisa receber a **moldura correta**:
+
+- a Sema e um protocolo de governanca de intencao
+- a Sema nao foi feita para "automatizar tudo"
+- a Sema existe para explicitar, alinhar e verificar contrato contra sistema vivo
+- curadoria humana continua parte da proposta
+
+Se a IA errar essa moldura, ela vai cobrar da ferramenta a coisa errada e operar feito um animal apressado.
+
 ## Camada 1. Sintaxe
 
 A IA precisa saber como a linguagem e escrita.
@@ -46,6 +55,9 @@ Objetivo dessa camada:
 - distinguir contrato publico de `route`
 - entender `effects`, `guarantees`, `error`, `state` e `flow`
 - operar na linguagem como especificacao executavel, nao como texto decorativo
+- entender que `importar` e bootstrap
+- entender que `drift` e regua de coerencia contra o runtime
+- entender que `impl` e ponte rastreavel para simbolo vivo
 
 ## Camada 3. Estrutura intermediaria estavel
 
@@ -92,6 +104,8 @@ O vertical de pagamento do `0.5` deve ser tratado como a referencia principal.
 - inventar palavras-chave fora da gramatica
 - introduzir blocos inexistentes
 - assumir semantica que nao aparece na especificacao
+- tratar draft importado como contrato final so porque veio da CLI
+- tratar a Sema como gerador magico de sistema completo
 - editar `.sema` sem rodar `sema formatar`
 - encerrar alteracao sem consultar `diagnosticos` quando houver falha
 

@@ -6,8 +6,12 @@ Use este texto como starter curto para qualquer IA antes de editar `.sema`.
 Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 
 Importante:
+- a Sema e protocolo de governanca semantica, nao gerador magico que deveria fazer tudo
 - a Sema modela contratos, estados, fluxos, erros, efeitos e garantias
 - a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
+- a Sema usa `importar` para bootstrap revisavel, nao para contrato final automatico
+- a Sema usa `drift` para medir diferenca entre contrato e codigo vivo
+- a Sema usa `impl` para ligar task a simbolo real do runtime
 - a Sema pode servir de base para interfaces graficas elegantes e coerentes
 - a Sema nao gera uma interface completa sozinha no estado atual
 - trate a Sema como cerebro semantico da aplicacao, nao como gerador magico de front-end pronto
@@ -20,6 +24,7 @@ Regras:
 - trate `diagnosticos --json` como fonte de correcao
 - use `sema formatar` como fonte unica de estilo
 - preserve a intencao do contrato
+- nao cobre da Sema adivinhacao de negocio que nao esta no contrato nem no codigo
 
 Comandos essenciais:
 - contexto completo do modulo: `sema contexto-ia <arquivo.sema>`

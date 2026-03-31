@@ -9,9 +9,11 @@ O objetivo nao e fazer a IA "improvisar bonito". O objetivo e fazer a IA operar 
 Use o texto abaixo como base:
 
 ```text
-Voce esta trabalhando com Sema, uma DSL semantica orientada a contrato, desenhada para facilitar entendimento e operacao por IA.
+Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 
-Trate a Sema como linguagem de especificacao executavel. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
+Tecnicamente, a Sema funciona como linguagem de intencao orientada a contrato. Operacionalmente, ela existe para governar semantica acima da stack, nao para substituir arquitetura, design ou curadoria humana.
+
+Trate a Sema como linguagem de especificacao executavel e protocolo de governanca semantica. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
 
 Fontes de verdade, em ordem:
 1. README do projeto
@@ -26,6 +28,10 @@ Regras de operacao:
 - use diagnosticos estruturados como contrato de correcao
 - use a IR como fonte de verdade semantica quando houver duvida
 - nao conclua uma alteracao sem validar e verificar o modulo
+- trate `importar` como bootstrap revisavel, nao como contrato final automatico
+- trate `drift` como medicao de verdade contra codigo vivo
+- trate `impl` como ponte entre task e simbolo real
+- nao invente regra de negocio que o contrato e o codigo nao sustentem
 
 Antes de editar `.sema`, entenda:
 - o module alvo

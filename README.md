@@ -8,6 +8,23 @@ Ele nao tenta substituir TypeScript, Python, Dart, Flask, FastAPI ou NestJS. A p
 
 Tecnicamente, a Sema continua sendo uma **linguagem de intencao**. Publicamente, o posicionamento fica mais honesto: ela e o protocolo que ajuda IA e humano a editar sistema vivo com menos adivinhacao e mais verificacao.
 
+## O que a Sema e, e o que ela nao e
+
+Para evitar leitura torta, aqui vai sem perfume:
+
+- a Sema **e** um protocolo de governanca semantica para contrato, intencao, fluxo, erro, efeito, garantia e vinculo com codigo vivo
+- a Sema **e** uma camada acima da stack para reduzir ambiguidade entre runtime, contrato, documentacao e IA
+- a Sema **nao e** gerador messianico de sistema completo
+- a Sema **nao e** substituta de decisao arquitetural
+- a Sema **nao e** telepatia de regra de negocio
+
+Em termos praticos:
+
+- `importar` serve para bootstrap revisavel, nao para contrato final automatico
+- `impl` serve para ligar contrato a simbolo vivo, nao para fingir que o runtime se explica sozinho
+- `drift` serve para medir verdade contra codigo real, nao para decorar o projeto com JSON bonito
+- `contexto-ia` serve para preparar uma IA para editar com menos chute, nao para terceirizar pensamento
+
 ## O que ela entrega
 
 - contrato semantico explicito para operacoes, bordas HTTP, erros, efeitos e garantias
@@ -276,7 +293,7 @@ npm run extensao:empacotar
 
 Pacote gerado:
 
-- `.tmp/editor-vscode/sema-language-tools-0.8.3.vsix`
+- `.tmp/editor-vscode/sema-language-tools-0.8.4.vsix`
 
 Para instalar localmente:
 
@@ -287,7 +304,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.3.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.4.vsix --force
 ```
 
 ## Observacao honesta

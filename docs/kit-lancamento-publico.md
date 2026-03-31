@@ -60,7 +60,7 @@ sema --help
 
 ## Texto para GitHub Release
 
-Sema 0.8.3 fortalece a importacao de `Next.js App Router` em casos reais onde o handler usa `request.json()` com tipo/cast inline e retorna `NextResponse.json(...)` via variavel local, e passa a carregar os docs essenciais de IA no pacote publicado do npm.
+Sema 0.8.4 deixa mais explicito para IA e humano apressado o que a ferramenta faz de verdade: protocolo de governanca semantica, nao gerador messianico de sistema. Essa rodada fortalece o onboarding embutido da CLI em `starter-ia` e `ajuda-ia`, alem de manter a instalacao oficial pelo npm em `@semacode/cli`.
 
 Na pratica, isso fecha um buraco importante do bootstrap semantico: o importador deixa de cair em `input {}` e `resultado: Json` em endpoints como `auth/login` e `local-firestore/query`, desde que o codigo entregue sinal forte suficiente.
 

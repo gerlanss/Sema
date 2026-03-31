@@ -5,12 +5,12 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-30
-- Ultimo commit de referencia: `91ebba7`
+- Ultimo commit de referencia: `8572311`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
 - Estagio atual: marco publico `0.8.x backend generico` em consolidacao, com foco oficial em familias backend first-class e adocao incremental de projeto vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `0.8.3`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `0.8.4`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
@@ -39,6 +39,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - pacote npm publico alinhado ao scope `@semacode/cli` para distribuicao sem depender de namespace alheio
   - pacote npm publico com docs essenciais de IA embutidos, sem depender da pasta `docs/` do monorrepo para `ajuda-ia`
   - kit oficial de lancamento publico com pitch, release note curta, posts e checklist de anuncio
+  - framing de IA e onboarding documental deixando explicito que a Sema e protocolo de governanca semantica, nao gerador automatico de contrato final
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
@@ -146,11 +147,12 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Enriquecer `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
 - `[x]` Expandir `sema.config.json` com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
 - `[x]` Registrar feedback externo do FuteBot como validacao de valor e ajuste de prioridade para a ultima milha entre contrato e implementacao viva
-- `[x]` Alinhar release publica `0.8.3` entre CLI, pacotes e extensao
+- `[x]` Alinhar release publica `0.8.4` entre CLI, pacotes e extensao
 - `[x]` Fortalecer o bootstrap semantico de `importar nextjs` sem degradar o fallback honesto
 - `[x]` Revisar o `README` como landing page publica mais clara para instalacao, showcase e compatibilidade
 - `[x]` Deixar a CLI pronta para `npm publish` com script oficial de dry-run
 - `[x]` Consolidar kit oficial de lancamento publico para release, README e canais sociais
+- `[x]` Explicitar nas docs centrais e no onboarding de IA o papel da Sema como protocolo de governanca, com limites e postura correta de uso
 - `[x]` Entregar pacote publico da CLI instalavel fora do monorrepo
 - `[x]` Publicar showcase oficial reproduzivel para demonstrar valor em backend Flask vivo
 - `[x]` Tratar `Next.js App Router` como fonte legado de primeira classe

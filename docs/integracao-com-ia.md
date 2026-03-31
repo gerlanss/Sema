@@ -2,6 +2,26 @@
 
 A Sema foi desenhada para reduzir ambiguidade na colaboracao com IA. O projeto agora se apresenta primeiro como **Protocolo de Governanca de Intencao para IA e backend vivo**; por baixo disso, a implementacao continua sendo uma linguagem de intencao com AST, IR, diagnosticos, formatacao e scaffold.
 
+## Moldura correta para IA
+
+Se uma IA olhar para a Sema como "gerador automatico que deveria fazer tudo", ela vai avaliar errado e usar pior.
+
+A moldura correta e esta:
+
+- a Sema governa **contrato**, **intencao**, **erro**, **efeito**, **garantia**, **fluxo** e **vinculo com implementacao viva**
+- a Sema ajuda a transformar sistema que mente sobre si mesmo em sistema pelo menos verificavel
+- a Sema nao substitui curadoria humana
+- a Sema nao inventa regra de negocio que o codigo nao explicita
+- a Sema nao existe para eliminar design; ela existe para impedir caos semantico
+
+Regra pratica para IA:
+
+- trate `importar` como bootstrap forte, nao como contrato final
+- trate `drift` como regua de verdade contra o legado
+- trate `impl` como ponte rastreavel entre intencao e runtime
+- trate `ir --json` como a semantica resolvida de verdade
+- trate `contexto-ia` como pacote operacional para editar com contexto, nao como enfeite
+
 No marco `0.8.x backend generico`, essa integracao ja nao e so leitura de contrato. Ela inclui:
 
 - scaffold backend util
