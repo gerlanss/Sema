@@ -1,0 +1,176 @@
+module sema.produto.linguagem_composta {
+  docs {
+    resumo: "Contrato interno da Sema para endurecer literais, testes compostos e o ciclo parser -> IR -> formatador -> geradores."
+  }
+
+  enum StatusEvolucao {
+    PLANEJADA,
+    MODELADA,
+    VALIDADA,
+    PUBLICADA
+  }
+
+  type SinalTesteComposto {
+    fields {
+      bloco_nomeado: Booleano required
+      objeto_aninhado: Booleano required
+      mapa_aninhado: Booleano required
+    }
+  }
+
+  task interpretar_bloco_nomeado {
+    input {
+      arquivo_semantico: Texto required
+      sinais: SinalTesteComposto required
+    }
+    output {
+      ast_valida: Booleano
+      blocos_preservados: Booleano
+      status: StatusEvolucao
+    }
+    impl {
+      ts: nucleo.src.parser.parser.parsear
+    }
+    guarantees {
+      ast_valida existe
+      blocos_preservados existe
+      status em [PLANEJADA, MODELADA, VALIDADA, PUBLICADA]
+    }
+    tests {
+      caso "parser entende bloco nomeado livre" {
+        given {
+          arquivo_semantico: "given { documento { texto: \"ok\" } }"
+          sinais {
+            bloco_nomeado: verdadeiro
+            objeto_aninhado: verdadeiro
+            mapa_aninhado: falso
+          }
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task converter_bloco_composto_para_ir {
+    input {
+      arquivo_semantico: Texto required
+    }
+    output {
+      ir_coerente: Booleano
+      contexto_preservado: Booleano
+      status: StatusEvolucao
+    }
+    impl {
+      ts: nucleo.src.ir.conversor.converterParaIr
+    }
+    guarantees {
+      ir_coerente existe
+      contexto_preservado existe
+      status em [PLANEJADA, MODELADA, VALIDADA, PUBLICADA]
+    }
+    tests {
+      caso "IR nao perde subbloco" {
+        given {
+          arquivo_semantico: "given { documento { metadata { total: 19.9 } } }"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task formatar_bloco_composto {
+    input {
+      arquivo_semantico: Texto required
+    }
+    output {
+      formato_canonico: Booleano
+      bloco_legivel: Booleano
+    }
+    impl {
+      ts: nucleo.src.formatador.index.formatarCodigo
+    }
+    guarantees {
+      formato_canonico existe
+      bloco_legivel existe
+    }
+    tests {
+      caso "formatador nao sabota bloco livre" {
+        given {
+          arquivo_semantico: "given { documento { texto: \"ok\" } }"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_teste_python_composto {
+    input {
+      contrato: Texto required
+    }
+    output {
+      dataclass_aninhada: Booleano
+      comparacao_tipada: Booleano
+    }
+    impl {
+      ts: gerador_python.src.index.gerarPython
+    }
+    guarantees {
+      dataclass_aninhada existe
+      comparacao_tipada existe
+    }
+    tests {
+      caso "python fecha given tipado aninhado" {
+        given {
+          contrato: "task com given composto e type DocumentoEntrada"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_teste_typescript_composto {
+    input {
+      contrato: Texto required
+    }
+    output {
+      literal_recursivo: Booleano
+      asserts_coerentes: Booleano
+    }
+    impl {
+      ts: gerador_typescript.src.index.gerarTypeScript
+    }
+    guarantees {
+      literal_recursivo existe
+      asserts_coerentes existe
+    }
+    tests {
+      caso "typescript fecha payload composto" {
+        given {
+          contrato: "task com given composto e nested object"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow endurecer_ciclo_composto {
+    arquivo_semantico: Texto
+    etapa interpretar usa interpretar_bloco_nomeado com arquivo_semantico = arquivo_semantico
+    etapa converter usa converter_bloco_composto_para_ir com arquivo_semantico = arquivo_semantico depende_de interpretar
+    etapa formatar usa formatar_bloco_composto com arquivo_semantico = arquivo_semantico depende_de converter
+    effects {
+      auditoria linguagem_composta criticidade = alta
+      persistencia regressao_composta criticidade = media
+    }
+  }
+}

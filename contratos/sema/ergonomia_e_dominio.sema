@@ -1,0 +1,199 @@
+module sema.produto.ergonomia_e_dominio {
+  docs {
+    resumo: "Contrato interno da Sema para reduzir atrito sintatico, enriquecer dominio e governar compatibilidade sem virar linguagem maldita."
+  }
+
+  enum PerfilCompatibilidade {
+    PUBLICO,
+    INTERNO,
+    EXPERIMENTAL,
+    LEGADO,
+    DEPRECADO
+  }
+
+  state maturidade_contrato {
+    origem: sema_produto
+    fields {
+      eixo: Texto
+      status: PerfilCompatibilidade
+      perfil: PerfilCompatibilidade
+      validado: Booleano
+    }
+    transitions {
+      EXPERIMENTAL -> PUBLICO
+      PUBLICO -> LEGADO
+      LEGADO -> DEPRECADO
+    }
+  }
+
+  task reduzir_atrito_sintatico_em_contrato_rico {
+    input {
+      contrato_atual: Texto required
+      repeticao_detectada: Booleano required
+    }
+    output {
+      leitura_mais_limpa: Booleano
+      ambiguidade_controlada: Booleano
+      perfil: PerfilCompatibilidade
+    }
+    impl {
+      ts: nucleo.src.formatador.index.formatarCodigo
+    }
+    state maturidade_contrato {
+      transitions {
+        EXPERIMENTAL -> PUBLICO
+      }
+    }
+    guarantees {
+      leitura_mais_limpa existe
+      ambiguidade_controlada existe
+      perfil em [PUBLICO, INTERNO, EXPERIMENTAL, LEGADO, DEPRECADO]
+    }
+    tests {
+      caso "atalho sem ruido" {
+        given {
+          contrato_atual: "input e output com campos repetidos"
+          repeticao_detectada: verdadeiro
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task modelar_payload_com_mais_precisao {
+    input {
+      contrato_atual: Texto required
+      payload_json_generico: Booleano required
+    }
+    output {
+      tipo_composto_explicito: Booleano
+      cardinalidade_explicita: Booleano
+      shape_rico: Booleano
+    }
+    impl {
+      ts: nucleo.src.semantico.analisador.analisarSemantica
+    }
+    guarantees {
+      tipo_composto_explicito existe
+      cardinalidade_explicita existe
+      shape_rico existe
+    }
+    tests {
+      caso "payload sai do jsonzao" {
+        given {
+          contrato_atual: "payload com lista, mapa e tipo composto"
+          payload_json_generico: verdadeiro
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task explicitar_variacao_e_compatibilidade {
+    input {
+      contrato_atual: Texto required
+      perfil_atual: PerfilCompatibilidade required
+    }
+    output {
+      versao_explicita: Booleano
+      fallback_claro: Booleano
+      contrato_publico_distinto: Booleano
+    }
+    impl {
+      ts: nucleo.src.ir.conversor.converterParaIr
+    }
+    guarantees {
+      versao_explicita existe
+      fallback_claro existe
+      contrato_publico_distinto existe
+    }
+    tests {
+      caso "perfil experimental para publico" {
+        given {
+          contrato_atual: "route publica e task interna com rollout"
+          perfil_atual: EXPERIMENTAL
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task separar_validacao_regra_e_poscondicao {
+    input {
+      contrato_atual: Texto required
+      garantias_confusas: Booleano required
+    }
+    output {
+      validacao_de_input_clara: Booleano
+      regra_de_negocio_clara: Booleano
+      pos_condicao_clara: Booleano
+    }
+    impl {
+      ts: nucleo.src.semantico.analisador.analisarSemantica
+    }
+    guarantees {
+      validacao_de_input_clara existe
+      regra_de_negocio_clara existe
+      pos_condicao_clara existe
+    }
+    tests {
+      caso "garantia nao vira lixo semantico" {
+        given {
+          contrato_atual: "guarantees misturando input e regra"
+          garantias_confusas: verdadeiro
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task consultar_scorecard_compatibilidade {
+    input {
+      familia: Texto required
+      perfil: PerfilCompatibilidade required
+    }
+    output {
+      nota: Decimal
+      resumo: Texto
+    }
+    impl {
+      ts: cli.src.projeto.resolverAlvosVerificacao
+    }
+    guarantees {
+      nota existe
+      resumo existe
+    }
+    tests {
+      caso "scorecard publico" {
+        given {
+          familia: "Next.js App Router"
+          perfil: PUBLICO
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow evoluir_contrato_sem_ruido {
+    contrato_atual: Texto
+    perfil_atual: PerfilCompatibilidade
+    etapa atrito usa reduzir_atrito_sintatico_em_contrato_rico com contrato_atual = contrato_atual, repeticao_detectada = verdadeiro
+    etapa dominio usa modelar_payload_com_mais_precisao com contrato_atual = contrato_atual, payload_json_generico = verdadeiro depende_de atrito
+    etapa compatibilidade usa explicitar_variacao_e_compatibilidade com contrato_atual = contrato_atual, perfil_atual = perfil_atual depende_de dominio
+    etapa garantias usa separar_validacao_regra_e_poscondicao com contrato_atual = contrato_atual, garantias_confusas = verdadeiro depende_de compatibilidade
+    effects {
+      auditoria ergonomia_semantica criticidade = alta
+      persistencia scorecard_compatibilidade criticidade = media
+    }
+  }
+}

@@ -1,0 +1,138 @@
+module sema.produto.governanca_ia {
+  docs {
+    resumo: "Contrato interno da Sema para projeto, drift e leitura orientada a IA sem adivinhacao frouxa."
+  }
+
+  task mapear_projeto_sem_adivinhacao {
+    input {
+      entrada: Texto required
+      explicito: Booleano required
+    }
+    output {
+      base_resolvida: Booleano
+      origens_coerentes: Booleano
+      codigo_vivo_detectado: Booleano
+    }
+    impl {
+      ts: cli.src.projeto.carregarProjeto
+    }
+    guarantees {
+      base_resolvida existe
+      origens_coerentes existe
+      codigo_vivo_detectado existe
+    }
+    tests {
+      caso "entrada explicita vence chute" {
+        given {
+          entrada: "exemplos/calculadora.sema"
+          explicito: verdadeiro
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task normalizar_saida_sem_ruido {
+    input {
+      estrutura_desejada: Texto required
+    }
+    output {
+      estrutura_canonica: Booleano
+      alias_confuso: Booleano
+    }
+    impl {
+      ts: cli.src.projeto.normalizarEstruturaSaida
+    }
+    guarantees {
+      estrutura_canonica existe
+      alias_confuso existe
+    }
+    tests {
+      caso "estrutura oficial prevalece" {
+        given {
+          estrutura_desejada: "modulos"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task medir_drift_contra_codigo_vivo {
+    input {
+      contrato_alvo: Texto required
+      codigo_vivo: Texto required
+    }
+    output {
+      impls_resolvidas: Booleano
+      rotas_resolvidas: Booleano
+      ambiguidades_explicitas: Booleano
+    }
+    impl {
+      ts: cli.src.drift.analisarDriftLegado
+    }
+    guarantees {
+      impls_resolvidas existe
+      rotas_resolvidas existe
+      ambiguidades_explicitas existe
+    }
+    tests {
+      caso "drift guia edicao real" {
+        given {
+          contrato_alvo: "contratos/sema/*.sema"
+          codigo_vivo: "pacotes/**/*.ts"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task padronizar_nomes_para_leitura_de_ia {
+    input {
+      contrato_atual: Texto required
+      sinonimos_em_excesso: Booleano required
+    }
+    output {
+      nomes_consistentes: Booleano
+      leitura_rapida: Booleano
+      casos_especiais_reduzidos: Booleano
+    }
+    impl {
+      ts: nucleo.src.formatador.index.formatarCodigo
+    }
+    guarantees {
+      nomes_consistentes existe
+      leitura_rapida existe
+      casos_especiais_reduzidos existe
+    }
+    tests {
+      caso "ia le sem tropeco" {
+        given {
+          contrato_atual: "task, route, flow, state e tests com nomes regulares"
+          sinonimos_em_excesso: falso
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow operar_contexto_ia_com_contrato {
+    entrada: Texto
+    codigo_vivo: Texto
+    etapa mapear usa mapear_projeto_sem_adivinhacao com entrada = entrada, explicito = verdadeiro
+    etapa normalizar usa normalizar_saida_sem_ruido com estrutura_desejada = modulos depende_de mapear
+    etapa drift usa medir_drift_contra_codigo_vivo com contrato_alvo = entrada, codigo_vivo = codigo_vivo depende_de normalizar
+    etapa leitura usa padronizar_nomes_para_leitura_de_ia com contrato_atual = entrada, sinonimos_em_excesso = falso depende_de drift
+    effects {
+      auditoria contexto_ia criticidade = alta
+      persistencia mapa_projeto criticidade = media
+    }
+  }
+}

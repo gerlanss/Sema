@@ -33,6 +33,16 @@ Em termos práticos:
 - importação incremental de legado
 - contexto acionável para IA antes de editar projeto real
 
+## A Sema tambem governa a propria Sema
+
+O repo agora tem contratos internos em [contratos/sema](./contratos/sema/) para modelar a evolucao da propria linguagem e da toolchain.
+
+- `linguagem_composta.sema`: parser, IR, formatador e geradores para literais e testes compostos
+- `ergonomia_e_dominio.sema`: atrito sintatico, riqueza de payload, compatibilidade e separacao entre regra, validacao e pos-condicao
+- `governanca_ia.sema`: projeto, drift e leitura orientada a IA sem adivinhacao frouxa
+
+Isso nao e auto-hospedagem performatica de maluco. E dogfooding de governanca: o proprio produto passa a descrever e verificar parte da sua evolucao semantica.
+
 ## O problema que resolve
 
 Em projeto vivo, a verdade costuma ficar espalhada:

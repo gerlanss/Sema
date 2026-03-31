@@ -78,6 +78,7 @@
 
 ## Proximo Ciclo
 
+- modelar a evolucao da propria Sema em `contratos/sema`, com `drift` ligado ao codigo vivo do parser, formatador, geradores e CLI
 - criacao de scaffolding ainda mais util para projeto vivo
 - aprofundar edicao assistida de backends existentes
 - ampliar `use` para cenarios ainda maiores

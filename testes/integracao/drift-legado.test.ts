@@ -234,6 +234,39 @@ test("cli drift resolve impl python em projeto estilo FuteBot sem sema.config", 
   }
 });
 
+test("cli valida e mede drift dos contratos internos do proprio Sema", () => {
+  const validar = executar(["validar", "contratos/sema", "--json"], path.resolve("."));
+  assert.equal(validar.status, 0, validar.stderr || validar.stdout);
+
+  const jsonValidar = JSON.parse(validar.stdout);
+  assert.equal(jsonValidar.comando, "validar");
+  assert.equal(jsonValidar.sucesso, true);
+  assert.equal(jsonValidar.resultados.length >= 3, true);
+  assert.equal(jsonValidar.resultados.every((resultado: { sucesso: boolean }) => resultado.sucesso), true);
+
+  const drift = executar(["drift", "contratos/sema", "--json"], path.resolve("."));
+  assert.equal(drift.status, 0, drift.stderr || drift.stdout);
+
+  const jsonDrift = JSON.parse(drift.stdout);
+  assert.equal(jsonDrift.comando, "drift");
+  assert.equal(jsonDrift.impls_quebrados.length, 0);
+
+  const caminhosValidos = new Set(jsonDrift.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+  for (const caminhoEsperado of [
+    "nucleo.src.parser.parser.parsear",
+    "nucleo.src.ir.conversor.converterParaIr",
+    "nucleo.src.formatador.index.formatarCodigo",
+    "nucleo.src.semantico.analisador.analisarSemantica",
+    "gerador_python.src.index.gerarPython",
+    "gerador_typescript.src.index.gerarTypeScript",
+    "cli.src.projeto.carregarProjeto",
+    "cli.src.projeto.normalizarEstruturaSaida",
+    "cli.src.drift.analisarDriftLegado",
+  ]) {
+    assert.equal(caminhosValidos.has(caminhoEsperado), true, `impl interno nao resolvido: ${caminhoEsperado}`);
+  }
+});
+
 test("cli drift resolve impls e rotas Flask em fixture estilo Gestech", async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-flask-"));
 
