@@ -4,13 +4,13 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Quadro-resumo
 
-- Ultima atualizacao: 2026-03-30
+- Ultima atualizacao: 2026-03-31
 - Ultimo commit de referencia: `8572311`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: marco publico `0.9.x intervencao segura para IA` em consolidacao, com foco oficial em vinculos, execucao, contexto acionavel e superficies modernas em backend vivo
+- Estagio atual: linha publica `1.0.0` fechada como primeira release estavel, com foco oficial em vinculos, execucao, contexto acionavel, compressao semantica por capacidade de IA e superficies modernas em backend vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `0.9.1`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `1.0.0`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
@@ -40,6 +40,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - pacote npm publico com docs essenciais de IA embutidos, sem depender da pasta `docs/` do monorrepo para `ajuda-ia`
   - kit oficial de lancamento publico com pitch, release note curta, posts e checklist de anuncio
   - framing de IA e onboarding documental deixando explicito que a Sema e protocolo de governanca semantica, nao gerador automatico de contrato final
+  - compressao semantica por capacidade de IA com `sema resumo`, `prompt-curto`, `briefing.min.json`, `resumo.*` e `SEMA_BRIEF.*`
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais

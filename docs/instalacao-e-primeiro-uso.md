@@ -37,8 +37,8 @@ npx sema --help
 
 Instaladores auxiliares para a linha publica atual:
 
-- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v0.9.1/install-sema.sh | bash`
-- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v0.9.1/install-sema.ps1 | iex`
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.0.0/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v1.0.0/install-sema.ps1 | iex`
 
 Se voce quiser reproducao estrita, prefira o npm registry ou o tarball da GitHub Release.
 
@@ -67,6 +67,7 @@ Sem clonar o repo, o fluxo que mais mostra a proposta da Sema hoje e:
 
 ```bash
 sema inspecionar . --json
+sema resumo contratos/pedidos.sema --micro --para mudanca
 sema drift contratos/pedidos.sema --json
 sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto-pedidos --json
 ```
@@ -74,10 +75,11 @@ sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto-pedidos --json
 Esse fluxo mostra:
 
 - base de projeto resolvida
+- cartao semantico curto para IA pequena ou gratuita
 - codigo vivo detectado
 - `impl` e `vinculos` resolvidos
 - score, confianca e lacunas do `drift`
-- `briefing.json` para IA antes da edicao
+- `briefing.min.json` e `briefing.json` para IA antes da edicao
 
 ## `sema.config.json`
 
@@ -134,7 +136,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.9.1.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-1.0.0.vsix --force
 ```
 
 ## Caminho de contribuinte
@@ -181,7 +183,7 @@ Hoje o jeito certo de testar a Sema e:
 1. instalar a CLI pelo npm ou pela GitHub Release
 2. rodar `sema iniciar`
 3. validar `contratos/pedidos.sema`
-4. usar `inspecionar -> drift -> contexto-ia` quando o projeto for vivo
-5. ler `briefing.json` antes de mandar a IA sair cavando arquivo
+4. usar `inspecionar -> resumo -> drift -> contexto-ia` quando o projeto for vivo
+5. ler `briefing.min.json` ou `briefing.json` antes de mandar a IA sair cavando arquivo
 
 Clone + build + `npm link` continua bom para oficina, nao para landing page publica.

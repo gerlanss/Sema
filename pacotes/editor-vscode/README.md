@@ -62,7 +62,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.9.1.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-1.0.0.vsix --force
 ```
 
 ## Fluxo recomendado

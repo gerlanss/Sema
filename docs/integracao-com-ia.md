@@ -1,6 +1,6 @@
 # Integracao com IA
 
-A Sema foi desenhada para ajudar agente e humano a editar backend vivo com menos chute. O ponto nao e "a IA gera tudo"; o ponto e deixar contrato, vinculo e contexto operacional estruturados o bastante para a IA nao trabalhar igual um bicho tonto.
+A Sema foi desenhada para IA editar backend vivo com menos chute. O ponto nao e "a IA gera tudo"; o ponto e deixar contrato, vinculo e contexto operacional estruturados o bastante para a IA nao trabalhar igual um bicho tonto. Leitura humana continua possivel, mas nao e o centro do desenho.
 
 ## Moldura correta
 
@@ -20,6 +20,7 @@ Quando o trabalho cair em projeto vivo, o fluxo canonico agora e:
 
 ```bash
 sema inspecionar . --json
+sema resumo contratos/modulo.sema --micro --para mudanca
 sema drift contratos/modulo.sema --json
 sema contexto-ia contratos/modulo.sema --saida ./.tmp/contexto --json
 ```
@@ -27,12 +28,34 @@ sema contexto-ia contratos/modulo.sema --saida ./.tmp/contexto --json
 Leitura rapida:
 
 1. `inspecionar` descobre base do projeto, diretorios de codigo, fontes legado e modulos relevantes.
-2. `drift` mede impls, vinculos, rotas, recursos, score semantico e confianca.
-3. `contexto-ia` gera o pacote que a IA deveria ler antes de editar.
+2. `resumo` entrega o menor cartao semantico util para a IA atual.
+3. `drift` mede impls, vinculos, rotas, recursos, score semantico e confianca.
+4. `contexto-ia` gera o pacote que a IA deveria ler antes de editar.
+
+## Capacidade da IA
+
+A Sema agora assume explicitamente que nem toda IA aguenta o pacote completo.
+
+- IA pequena ou gratuita: comece em `resumo.micro.txt`, `briefing.min.json` e `prompt-curto.txt`
+- IA media: suba para `resumo.curto.txt`, `briefing.min.json` e `drift.json`
+- IA grande ou com tool use: leia `README.md`, `resumo.md`, `briefing.json`, `drift.json`, `ir.json` e `ast.json`
+
+Se voce joga `ast.json` inteiro em modelo pequeno e depois reclama da resposta, foi voce que fez cagada operacional.
 
 ## O que a IA deve consumir
 
-No minimo:
+No minimo, para IA pequena:
+
+- `resumo.micro.txt`
+- `briefing.min.json`
+
+No minimo, para IA media:
+
+- `resumo.curto.txt`
+- `briefing.min.json`
+- `drift.json`
+
+No minimo, para IA grande:
 
 - `ir.json`
 - `drift.json`
@@ -53,6 +76,11 @@ O `briefing.json` agora e a peca mais operacional do pacote. Ele responde pergun
 
 Hoje o pacote pode incluir:
 
+- `resumo.micro.txt`
+- `resumo.curto.txt`
+- `resumo.md`
+- `briefing.min.json`
+- `prompt-curto.txt`
 - `ast.json`
 - `ir.json`
 - `diagnosticos.json`

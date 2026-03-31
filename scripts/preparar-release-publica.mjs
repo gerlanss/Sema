@@ -55,6 +55,14 @@ async function main() {
 
 Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
 
+## Destaques
+
+- \`sema resumo\` com tamanhos \`micro\`, \`curto\` e \`medio\`
+- \`sema prompt-curto\` para IA pequena ou gratuita
+- \`contexto-ia\` com \`briefing.min.json\`, \`resumo.micro.txt\`, \`resumo.curto.txt\`, \`resumo.md\` e \`prompt-curto.txt\`
+- \`SEMA_BRIEF.*\` e \`SEMA_INDEX.json\` como entrada semantica de projeto
+- docs e onboarding explicitamente IA-first
+
 ## Instalar a CLI
 
 Linux, Windows PowerShell e macOS:
@@ -65,6 +73,7 @@ mkdir sema-demo
 cd sema-demo
 sema iniciar
 sema validar contratos/pedidos.sema --json
+sema resumo contratos/pedidos.sema --micro --para onboarding
 sema doctor
 \`\`\`
 

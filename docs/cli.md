@@ -6,6 +6,7 @@ A CLI da Sema e a interface oficial do protocolo Sema para:
 
 - validacao semantica
 - exportacao de AST e IR
+- compressao semantica por capacidade de IA
 - compilacao e scaffold de codigo
 - formatacao canonica
 - verificacao em lote
@@ -401,16 +402,27 @@ Casos praticos:
 ### `sema starter-ia`
 
 Imprime o texto curto de onboarding para colar em qualquer agente antes de editar arquivos `.sema`.
-
-Tambem informa:
-
-- origem da instalacao atual da CLI
-- base detectada da instalacao
-- documentos locais encontrados, quando existirem
+O texto assume postura IA-first e deixa claro que a linguagem nao foi desenhada para ergonomia humana como prioridade.
 
 ### `sema ajuda-ia`
 
 Imprime um guia curto e direto explicando qual comando de IA usar em cada situacao.
+
+### `sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--saida <diretorio>] [--raiz] [--json]`
+
+Gera o menor resumo semantico util para a capacidade atual da IA.
+
+- `--micro`: cartao minimo para IA gratuita ou de contexto curto
+- `--curto`: resumo operacional intermediario
+- `--medio`: markdown mais rico, ainda menor que o pacote completo
+- `--para`: ajusta a enfase do resumo para onboarding, review, mudanca, bug ou arquitetura
+- `--saida`: grava artefatos compactos no diretorio informado
+- `--raiz`: quando a entrada for projeto, grava `SEMA_BRIEF.*` e `SEMA_INDEX.json` na raiz
+- `--json`: devolve envelope estruturado com resumo, guia por capacidade e caminhos gerados
+
+### `sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--json]`
+
+Imprime um prompt curto e pronto para colar em IA pequena, derivado do resumo compacto.
 
 ### `sema prompt-ia`
 
@@ -440,14 +452,20 @@ Imprime exemplos prontos de prompt para estrategias como:
 
 Gera um pacote de contexto para IA com:
 
+- `resumo.micro.txt`
+- `resumo.curto.txt`
+- `resumo.md`
+- `briefing.min.json`
+- `prompt-curto.txt`
 - `validar.json`
 - `diagnosticos.json`
 - `ast.json`
 - `ir.json`
 - `drift.json`
-- `README.md` com o fluxo operacional recomendado
+- `briefing.json`
+- `README.md` com fluxo operacional por capacidade de IA
 
-Sem `--json`, imprime um resumo humano e informa a pasta gerada.
+Sem `--json`, imprime um resumo operacional e informa a pasta gerada.
 Com `--json`, retorna um envelope estruturado com arquivo, modulo, pasta de saida e artefatos gerados.
 
 ## Ordem canonica do formatador
@@ -668,6 +686,8 @@ sema importar dart ./lib --saida ./sema/importado
 ```bash
 sema starter-ia
 sema ajuda-ia
+sema resumo contratos/pedidos.sema --micro --para onboarding
+sema prompt-curto contratos/pedidos.sema --curto --para mudanca
 sema prompt-ia
 sema prompt-ia-ui
 sema prompt-ia-react

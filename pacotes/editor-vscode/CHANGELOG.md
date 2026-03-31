@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0
+
+- fecha a primeira linha publica estavel da Sema com camada compacta para IA pequena, media e grande
+- acompanha `sema resumo`, `prompt-curto`, `briefing.min.json`, `SEMA_BRIEF.*` e o reposicionamento explicitamente IA-first
+- alinha instalacao, release e documentacao publica na linha `1.0.0`
+
 ## 0.9.1
 
 - consolida a instalacao publica da CLI e da extensao na linha `0.9.1`

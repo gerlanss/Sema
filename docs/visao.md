@@ -22,7 +22,7 @@ Permitir que equipes descrevam regras de negocio com clareza suficiente para:
 - facilitar entendimento e manipulacao por IA
 - validar consistencia antes da implementacao
 - gerar scaffold previsivel
-- apoiar revisao humana com menos ambiguidade
+- deixar revisao humana menos ambigua como efeito colateral
 - editar backend vivo com menos adivinhacao
 
 ## Publico principal
@@ -30,7 +30,7 @@ Permitir que equipes descrevam regras de negocio com clareza suficiente para:
 - equipes de produto e plataforma focadas em sistemas de negocio
 - arquitetos e desenvolvedores que precisam rastrear contratos
 - times que sofrem com codigo dispersando regra, efeito e validacao
-- pessoas que querem usar IA sem entregar a ela um pantano semantico
+- equipes que querem usar IA sem entregar a ela um pantano semantico
 
 ## Resultado esperado
 

@@ -50,4 +50,4 @@ Uma camada semantica que deixa nitido:
 - os cenarios de teste
 - a ligacao com a implementacao real
 
-Se isso estiver claro, IA e humano param de brigar com o codigo e passam a governar a intencao.
+Se isso estiver claro, a IA para de brigar com o codigo e passa a governar a intencao com muito menos chute. A leitura humana melhora junto, mas nao e o alvo principal.

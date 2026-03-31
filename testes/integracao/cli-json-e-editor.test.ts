@@ -133,6 +133,7 @@ test("cli expoe starter e prompt de ia", () => {
   assert.doesNotMatch(starter.stdout, /Origem da instalacao:/);
   assert.match(starter.stdout, /AGENT_STARTER\.md/);
   assert.match(starter.stdout, /Sema, um Protocolo de Governanca de Intencao para IA e backend vivo/);
+  assert.match(starter.stdout, /sema resumo/);
   assert.match(starter.stdout, /nao invente sintaxe/);
   assert.match(starter.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
 
@@ -158,9 +159,36 @@ test("cli expoe ajuda de ia com mapa de comandos", () => {
   assert.equal(ajuda.status, 0, ajuda.stderr || ajuda.stdout);
   assert.match(ajuda.stdout, /Ajuda de IA da Sema/);
   assert.match(ajuda.stdout, /sema starter-ia/);
+  assert.match(ajuda.stdout, /sema resumo <arquivo> --micro --para onboarding/);
+  assert.match(ajuda.stdout, /sema prompt-curto <arquivo> --curto --para mudanca/);
   assert.match(ajuda.stdout, /sema prompt-ia-react/);
   assert.match(ajuda.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
   assert.match(ajuda.stdout, /nao peca so HTML solto/);
+});
+
+test("cli gera resumo compacto e prompt curto para modulo", () => {
+  const resumo = spawnSync(
+    "node",
+    [CLI, "resumo", "exemplos/pagamento.sema", "--micro", "--para", "mudanca", "--json"],
+    { stdio: "pipe", encoding: "utf8" },
+  );
+  assert.equal(resumo.status, 0, resumo.stderr || resumo.stdout);
+  const jsonResumo = JSON.parse(resumo.stdout);
+  assert.equal(jsonResumo.comando, "resumo");
+  assert.equal(jsonResumo.tamanho, "micro");
+  assert.equal(jsonResumo.modulo, "exemplos.pagamento");
+  assert.equal(jsonResumo.guiaPorCapacidade.pequena.artefatos.includes("briefing.min.json"), true);
+  assert.match(jsonResumo.texto, /MODULO: exemplos.pagamento/);
+
+  const promptCurto = spawnSync(
+    "node",
+    [CLI, "prompt-curto", "exemplos/pagamento.sema", "--curto", "--para", "mudanca"],
+    { stdio: "pipe", encoding: "utf8" },
+  );
+  assert.equal(promptCurto.status, 0, promptCurto.stderr || promptCurto.stdout);
+  assert.match(promptCurto.stdout, /Capacidade alvo: media/);
+  assert.match(promptCurto.stdout, /Contexto compacto:/);
+  assert.match(promptCurto.stdout, /MODULO: exemplos.pagamento/);
 });
 
 test("cli expoe prompts especializados para ui e sema primeiro", () => {
@@ -222,10 +250,14 @@ test("cli gera pacote de contexto de ia para modulo com use", async () => {
     const json = JSON.parse(execucao.stdout);
     assert.equal(json.sucesso, true);
     assert.equal(json.modulo, "exemplos.pagamento");
+    assert.equal(json.artefatosCompactos.includes("briefing.min.json"), true);
+    assert.equal(json.guiaPorCapacidade.pequena.artefatos.includes("resumo.micro.txt"), true);
 
     const validar = JSON.parse(await readFile(path.join(baseTemporaria, "validar.json"), "utf8"));
     const ir = JSON.parse(await readFile(path.join(baseTemporaria, "ir.json"), "utf8"));
     const drift = JSON.parse(await readFile(path.join(baseTemporaria, "drift.json"), "utf8"));
+    const briefingMinimo = JSON.parse(await readFile(path.join(baseTemporaria, "briefing.min.json"), "utf8"));
+    const resumoMicro = await readFile(path.join(baseTemporaria, "resumo.micro.txt"), "utf8");
     const readme = await readFile(path.join(baseTemporaria, "README.md"), "utf8");
 
     assert.equal(validar.comando, "validar");
@@ -234,10 +266,75 @@ test("cli gera pacote de contexto de ia para modulo com use", async () => {
     assert.equal(ir.modulo, "exemplos.pagamento");
     assert.equal(drift.comando, "drift");
     assert.equal(drift.modulo, "exemplos.pagamento");
+    assert.equal(briefingMinimo.comando, "briefing-minimo");
+    assert.match(resumoMicro, /MODULO: exemplos.pagamento/);
     assert.match(readme, /Contexto de IA para exemplos.pagamento/);
+    assert.match(readme, /resumo\.micro\.txt/);
+    assert.match(readme, /briefing\.min\.json/);
     assert.match(readme, /drift\.json/);
     assert.match(readme, /sema starter-ia/);
-    assert.match(readme, /sema prompt-ia/);
+    assert.match(readme, /sema prompt-curto/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli gera resumo de projeto na raiz com arquivos SEMA_BRIEF", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-resumo-projeto-"));
+
+  try {
+    await writeFile(
+      path.join(baseTemporaria, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["./src"],
+        fontesLegado: ["typescript"],
+      }, null, 2),
+      "utf8",
+    );
+    await mkdir(path.join(baseTemporaria, "contratos"), { recursive: true });
+    await mkdir(path.join(baseTemporaria, "src"), { recursive: true });
+    await writeFile(
+      path.join(baseTemporaria, "contratos", "pedidos.sema"),
+      `module app.pedidos {
+  task criar_pedido {
+    input {
+      cliente_id: Id required
+    }
+    output {
+      pedido_id: Id
+    }
+    impl {
+      ts: app.pedidos.criarPedido
+    }
+    guarantees {
+      pedido_id existe
+    }
+  }
+}
+`,
+      "utf8",
+    );
+    await writeFile(
+      path.join(baseTemporaria, "src", "pedidos.ts"),
+      `export function criarPedido(cliente_id: string) {
+  return { pedido_id: cliente_id };
+}
+`,
+      "utf8",
+    );
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "resumo", baseTemporaria, "--curto", "--raiz", "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.comando, "resumo");
+    assert.equal(json.artefatos.includes("SEMA_BRIEF.md"), true);
+    assert.equal(await readFile(path.join(baseTemporaria, "SEMA_BRIEF.md"), "utf8").then((conteudo) => /Sema e IA-first/.test(conteudo)), true);
+    assert.equal(await readFile(path.join(baseTemporaria, "SEMA_INDEX.json"), "utf8").then((conteudo) => /"comando": "resumo-projeto"/.test(conteudo)), true);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
   }

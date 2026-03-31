@@ -6,7 +6,7 @@ Sema e um **Protocolo de Governanca de Intencao para IA e backend vivo**.
 
 Ela nao tenta substituir TypeScript, Python, Flask, FastAPI, NestJS, Next.js, ASP.NET Core ou qualquer stack real. O papel da Sema e outro: governar a camada de significado acima do runtime, com contrato explicito, vinculo rastreavel, fluxo, erro, efeito, garantia, execucao e contexto operacional para IA.
 
-Tecnicamente, a Sema continua sendo uma linguagem de intencao. Publicamente, o framing fica mais honesto: ela e o protocolo que ajuda humano e IA a mexer em sistema vivo com menos adivinhacao e mais verificacao.
+Tecnicamente, a Sema continua sendo uma linguagem de intencao. Publicamente, o framing honesto e este: ela foi desenhada para IA operar sistema vivo com menos adivinhacao e mais verificacao. Leitura humana e subproduto aceitavel, nao objetivo principal.
 
 ## O que a Sema e
 
@@ -14,6 +14,7 @@ Tecnicamente, a Sema continua sendo uma linguagem de intencao. Publicamente, o f
 - vinculo com implementacao viva via `impl` e `vinculos`
 - contrato operacional via `execucao`
 - auditoria de coerencia contra codigo real via `drift`
+- cartoes semanticos compactos via `resumo` e `prompt-curto`
 - pacote de contexto para agente via `contexto-ia`
 - camada semantica acima da stack, nao no lugar dela
 
@@ -33,7 +34,9 @@ Tecnicamente, a Sema continua sendo uma linguagem de intencao. Publicamente, o f
 - `execucao` para timeout, retry, compensacao, idempotencia e criticidade
 - tipos compostos como `Lista<T>`, `Mapa<K, V>`, `Opcional<T>` e uniao controlada
 - `drift` com score semantico, confianca, risco e lacunas
-- `contexto-ia` com `ast.json`, `ir.json`, `drift.json`, `briefing.json` e README local
+- `resumo` com modos `micro`, `curto` e `medio` para IA de capacidade diferente
+- `prompt-curto` para colar contexto compacto em IA gratuita ou com janela curta
+- `contexto-ia` com `ast.json`, `ir.json`, `drift.json`, `briefing.json`, `briefing.min.json` e resumos locais
 - scaffold e geracao para TypeScript, Python e Dart
 - scaffold backend para NestJS e FastAPI
 - importacao incremental de legado
@@ -134,6 +137,7 @@ Quando a tarefa envolver backend ja existente, o fluxo canonico agora e:
 
 ```bash
 sema inspecionar . --json
+sema resumo contratos/modulo.sema --micro --para mudanca
 sema drift contratos/modulo.sema --json
 sema contexto-ia contratos/modulo.sema --saida ./.tmp/contexto --json
 ```
@@ -141,10 +145,21 @@ sema contexto-ia contratos/modulo.sema --saida ./.tmp/contexto --json
 Leitura pratica:
 
 1. `inspecionar` descobre base do projeto, diretorios de codigo e fontes legado.
-2. `drift` mede impls, vinculos, rotas, score, confianca, risco e lacunas.
-3. `contexto-ia` gera o pacote para a IA editar com contexto, incluindo `briefing.json`.
+2. `resumo` gera o menor cartao semantico util para a IA atual.
+3. `drift` mede impls, vinculos, rotas, score, confianca, risco e lacunas.
+4. `contexto-ia` gera o pacote completo, incluindo `briefing.json`, `briefing.min.json`, `resumo.micro.txt` e `resumo.curto.txt`.
 
 Se a IA for mexer em sistema real sem olhar isso, ela esta basicamente pedindo para fazer merda.
+
+## Capacidade da IA
+
+Use o menor artefato que resolva a tarefa:
+
+- IA pequena ou gratuita: `sema resumo --micro`, `resumo.micro.txt`, `briefing.min.json`, `prompt-curto.txt`
+- IA media: `sema resumo --curto`, `resumo.curto.txt`, `briefing.min.json`, `drift.json`
+- IA grande ou com tool use: `resumo.md`, `briefing.json`, `drift.json`, `ir.json`, `ast.json`
+
+O erro classico e entupir modelo pequeno com JSON gigante e depois reclamar que ele virou um animal confuso. O protocolo agora deixa explicito o que cada faixa aguenta.
 
 ## Compatibilidade atual
 

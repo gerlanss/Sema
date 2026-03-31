@@ -50,6 +50,8 @@ try {
   Write-Host "Teste rapido:"
   Write-Host "  sema --help"
   Write-Host "  sema doctor"
+  Write-Host "  sema starter-ia"
+  Write-Host "  sema resumo . --curto"
 }
 finally {
   Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue

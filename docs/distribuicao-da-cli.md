@@ -37,9 +37,9 @@ npx sema --help
 
 Cada release publica entrega:
 
-- `sema-cli-0.9.1.tgz`
+- `sema-cli-1.0.0.tgz`
 - `sema-cli-latest.tgz`
-- `sema-language-tools-0.9.1.vsix`
+- `sema-language-tools-1.0.0.vsix`
 - `sema-language-tools-latest.vsix`
 - `install-sema.sh`
 - `install-sema.ps1`
@@ -124,8 +124,8 @@ Ele e bom para inspeção interna, nao para a narrativa publica principal.
 
 ## Regra pratica
 
-Se a pessoa quer usar a Sema, entregue `npm install -g @semacode/cli`.
+Se o objetivo for usar a Sema como interface publica para IA, entregue `npm install -g @semacode/cli`.
 
-Se a pessoa prefere pacote fechado ou esta com problema no registry, entregue o `.tgz` da GitHub Release.
+Se o ambiente preferir pacote fechado ou estiver com problema no registry, entregue o `.tgz` da GitHub Release.
 
-Se a pessoa quer desenvolver a Sema, use o monorrepo.
+Se o objetivo for desenvolver a propria Sema, use o monorrepo.

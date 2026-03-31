@@ -18,6 +18,7 @@ Sem essas quatro camadas, o modelo comeca a adivinhar. E adivinhacao em linguage
 Antes de qualquer outra coisa, a IA tambem precisa receber a **moldura correta**:
 
 - a Sema e um protocolo de governanca de intencao
+- a Sema foi feita para IA, nao para ergonomia humana
 - a Sema nao foi feita para "automatizar tudo"
 - a Sema existe para explicitar, alinhar e verificar contrato contra sistema vivo
 - curadoria humana continua parte da proposta
@@ -70,6 +71,7 @@ Em vez de confiar que a IA vai interpretar `.sema` cru de primeira, use a CLI co
 Comandos principais:
 
 ```bash
+sema resumo arquivo.sema --micro --para onboarding
 sema validar arquivo.sema --json
 sema diagnosticos arquivo.sema --json
 sema ast arquivo.sema --json
@@ -79,13 +81,14 @@ sema verificar arquivo-ou-pasta --json --saida ./.tmp/verificacao-ia
 
 Como cada comando ajuda:
 
+- `resumo`: entrega cartao semantico pequeno para IA com janela curta
 - `validar --json`: diz se a base esta semanticamente valida
 - `diagnosticos --json`: devolve erros e avisos como contrato estruturado
 - `ast --json`: mostra a forma sintatica escrita
 - `ir --json`: mostra a forma semantica resolvida
 - `verificar --json`: mostra o estado operacional do projeto
 
-Se a IA puder consumir `ir --json`, melhor ainda. E ali que a linguagem fica menos ambigua e mais utilizavel para automacao.
+Se a IA puder consumir `ir --json`, melhor ainda. E ali que a linguagem fica menos ambigua e mais utilizavel para automacao. Mas nao seja um animal: para modelo pequeno, comece em `resumo` e `briefing.min.json`.
 
 ## Camada 4. Exemplos reais
 
@@ -127,7 +130,8 @@ Se voce for instruir uma IA para trabalhar com Sema, entregue o contexto nesta o
 2. [como-ensinar-a-sema-para-ia.md](./como-ensinar-a-sema-para-ia.md)
 3. [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md)
 4. [prompt-base-ia-sema.md](./prompt-base-ia-sema.md)
-5. `ast --json`, `ir --json` e `diagnosticos --json` do modulo alvo
+5. `sema resumo --micro` ou `sema resumo --curto`, conforme a capacidade da IA
+6. `ast --json`, `ir --json` e `diagnosticos --json` do modulo alvo, se a capacidade aguentar
 
 Essa ordem faz a IA ir de contexto geral para contexto operacional, em vez de cair direto num arquivo cru e sair chutando.
 

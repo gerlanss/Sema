@@ -2,7 +2,7 @@
   "name": "sema-language-tools",
   "displayName": "Sema Language Tools",
   "description": "Suporte de editor para o protocolo Sema, com diagnosticos, hover, formatacao, snippets e LSP inicial.",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "publisher": "OtimiTare",
   "private": true,
   "icon": "logo.png",

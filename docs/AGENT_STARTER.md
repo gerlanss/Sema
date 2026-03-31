@@ -6,12 +6,14 @@ Use este texto como starter curto para qualquer IA antes de editar `.sema`.
 Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 
 Importante:
-- a Sema e protocolo de governanca semantica, nao gerador magico que deveria fazer tudo
-- a Sema modela contratos, estados, fluxos, erros, efeitos e garantias
+- a Sema e protocolo de governanca semantica desenhado para IA, nao para ergonomia humana
+- leitura humana e bonus toleravel, nao centro do produto
+- a Sema modela contratos, estados, fluxos, erros, efeitos, garantias, vinculos e execucao
 - a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
 - a Sema usa `importar` para bootstrap revisavel, nao para contrato final automatico
 - a Sema usa `drift` para medir diferenca entre contrato e codigo vivo
 - a Sema usa `impl` para ligar task a simbolo real do runtime
+- a Sema usa `resumo` e `prompt-curto` para IA pequena ou gratuita
 - a Sema pode servir de base para interfaces graficas elegantes e coerentes
 - a Sema nao gera uma interface completa sozinha no estado atual
 - trate a Sema como cerebro semantico da aplicacao, nao como gerador magico de front-end pronto
@@ -20,6 +22,7 @@ Importante:
 
 Regras:
 - nao invente sintaxe fora da gramatica e dos exemplos oficiais
+- se a IA for pequena, comece em `sema resumo` e `briefing.min.json`
 - trate `ir --json` como fonte de verdade semantica
 - trate `diagnosticos --json` como fonte de correcao
 - use `sema formatar` como fonte unica de estilo
@@ -27,6 +30,8 @@ Regras:
 - nao cobre da Sema adivinhacao de negocio que nao esta no contrato nem no codigo
 
 Comandos essenciais:
+- resumo por capacidade: `sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]`
+- prompt curto: `sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]`
 - contexto completo do modulo: `sema contexto-ia <arquivo.sema>`
 - estrutura sintatica: `sema ast <arquivo.sema> --json`
 - estrutura semantica: `sema ir <arquivo.sema> --json`
@@ -44,7 +49,8 @@ Regra pratica de ouro:
 
 Antes de editar:
 1. leia README, docs de IA e um exemplo oficial parecido
-2. consulte AST e IR do modulo alvo
+2. se a IA for pequena, rode `sema resumo <arquivo> --micro`
+3. se a tarefa pedir contexto mais rico, consulte `drift`, `briefing.min.json` e depois AST/IR
 
 Depois de editar:
 1. rode `sema formatar`

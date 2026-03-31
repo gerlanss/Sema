@@ -17,7 +17,7 @@ Sema e um **Protocolo de Governanca de Intencao para IA e backend vivo**.
 
 Sema ajuda a transformar contrato implicito em contrato verificavel.
 
-Ela governa intencao, erro, efeito, garantia, execucao, vinculos, superfícies modernas, `impl`, `drift` e contexto para IA acima da stack, sem pedir reescrita burra do projeto existente.
+Ela governa intencao, erro, efeito, garantia, execucao, vinculos, superficies modernas, `impl`, `drift` e contexto para IA acima da stack, sem pedir reescrita burra do projeto existente.
 
 ## Pitch medio
 
@@ -30,17 +30,17 @@ A Sema junta isso numa camada semantica governavel:
 - vinculo com implementacao real via `impl` e `vinculos`
 - contrato operacional via `execucao`
 - divergencia real entre contrato e codigo vivo via `drift`
-- contexto acionavel para IA com `briefing.json`
+- compressao semantica por capacidade com `resumo`, `prompt-curto` e `briefing.min.json`
 
 Ela nao tenta substituir TypeScript, Python, Flask, FastAPI ou NestJS.
 
-Ela entra acima disso para impedir humano e IA de mexerem em backend vivo no escuro feito dois confiantes sem contexto.
+Ela entra acima disso para impedir a IA de mexer em backend vivo no escuro feito um agente confiante sem contexto. Se leitura humana melhorar junto, otimo, mas nao e a metrica principal.
 
 ## Prova de valor em 3 linhas
 
 - `Flask`: contrato + `impl.py` + `vinculos` + `drift` verde em backend real
 - `Next.js App Router`: importacao incremental e `drift` de rota publica sem falso positivo idiota
-- `contexto-ia`: AST, IR, diagnosticos, `drift.json` e `briefing.json` para agente editar com menos adivinhacao
+- `contexto-ia`: `briefing.min.json`, `resumo.micro.txt`, `drift.json` e `briefing.json` para agente editar com menos adivinhacao
 
 ## CTA oficial
 
@@ -61,31 +61,32 @@ sema --help
 
 ## Texto para GitHub Release
 
-Sema 0.9.1 fecha a linha publica 0.9 com um ajuste importante: a experiencia de instalacao e onboarding para IA agora fica coerente com a CLI publica, sem depender de monorepo nem de caminho interno da propria Sema.
+Sema 1.0.0 fecha a primeira linha publica estavel do protocolo com um salto que muda como IA pequena, media e grande consomem contexto.
 
-Na pratica, esta patch:
+Na pratica, esta release:
 
-- limpa docs e prompts que ainda ensinavam `node pacotes/cli/dist/index.js` ou `project:check` como fluxo normal
-- reforca `sema` como interface publica principal para agente e usuario
-- leva docs e exemplos uteis junto com o pacote publico da CLI
-- consolida a trilha IA-first para `starter-ia`, `ajuda-ia`, `contexto-ia` e instalacao
+- adiciona `sema resumo` com tamanhos `micro`, `curto` e `medio`
+- adiciona `sema prompt-curto` para colar contexto compacto em IA gratuita ou de janela curta
+- faz `contexto-ia` gerar `briefing.min.json`, `resumo.micro.txt`, `resumo.curto.txt`, `resumo.md` e `prompt-curto.txt`
+- gera `SEMA_BRIEF.*` e `SEMA_INDEX.json` como ponto de entrada semantico de projeto
+- deixa explicito em docs e onboarding que a Sema e feita para IA, nao para ergonomia humana como prioridade
 
-O resultado e simples: menos ruído, menos contexto acidental de repo e menos chance da IA operar como se estivesse dentro do monorepo quando o alvo real e um projeto qualquer.
+O resultado e simples: menos desperdicio de contexto, menos chute de modelo pequeno e mais diferenciacao operacional entre o que cada faixa de IA aguenta consumir.
 
 ## Texto para LinkedIn
 
-Publiquei a linha 0.9.1 da Sema.
+Publiquei a 1.0.0 da Sema.
 
 Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
 
 Ela nao tenta substituir a stack. Ela governa a camada semantica acima da stack: contrato, erro, efeito, garantia, fluxo, `impl`, `vinculos`, `execucao`, `drift` e contexto para IA.
 
-Nessa patch, o foco foi consolidar a superficie publica para IA:
+Na 1.0.0, o foco foi fechar a primeira linha estavel com contexto por capacidade de IA:
 
-- docs e prompts sem vazamento de monorepo
-- `sema` como interface publica principal
-- pacote npm com docs e exemplos uteis para agente
-- onboarding mais coerente para instalacao real
+- `sema resumo` para IA pequena, media e grande
+- `prompt-curto` para prompt compacto e colavel
+- `briefing.min.json` e `SEMA_BRIEF.*` como entrada semantica enxuta
+- docs e onboarding assumindo sem vergonha que a linguagem e IA-first
 
 Instalacao:
 
@@ -103,15 +104,16 @@ Showcase oficial:
 
 Versao curta:
 
-Sema 0.9.1.
+Sema 1.0.0.
 
 Protocolo de Governanca de Intencao para IA e backend vivo.
 
-Patch focada em deixar a experiencia publica realmente IA-first:
+Release focada em deixar a experiencia publica realmente IA-first por capacidade:
 
-- menos vazamento de monorepo
-- docs e prompts mais coerentes
-- pacote publico com exemplos e docs uteis
+- `sema resumo`
+- `prompt-curto`
+- `briefing.min.json`
+- `SEMA_BRIEF.*`
 
 Instalacao:
 `npm install -g @semacode/cli`
@@ -125,7 +127,7 @@ Thread curta:
 
 2. Sema entra para governar a camada semantica acima da stack: contrato, fluxo, erro, efeito, garantia, `impl`, `vinculos`, `execucao`, `drift` e contexto para IA.
 
-3. A linha 0.9.1 limpa a camada publica para agente: menos ruído, menos suposicao errada e menos caminho interno vazando.
+3. A linha 1.0.0 fecha a compressao semantica para agente: menos ruido, menos desperdicio de contexto e menos chute em IA pequena.
 
 4. Instalacao hoje:
 `npm install -g @semacode/cli`

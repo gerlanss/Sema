@@ -7,12 +7,13 @@ Se a IA seguir isso, ela trabalha com contexto. Se nao seguir, vira adivinhacao 
 ## Fluxo curto
 
 1. ler contexto do projeto
-2. identificar o modulo alvo
-3. consultar AST e IR
-4. editar
-5. formatar
-6. validar
-7. verificar
+2. identificar a capacidade da IA
+3. identificar o modulo alvo
+4. consultar o menor artefato semantico suficiente
+5. editar
+6. formatar
+7. validar
+8. verificar
 
 ## Fluxo detalhado
 
@@ -28,7 +29,15 @@ Se o trabalho estiver ligado a pagamento, ler tambem:
 
 - [pagamento-ponta-a-ponta.md](./pagamento-ponta-a-ponta.md)
 
-### Etapa 2. Ler o modulo alvo e um exemplo parecido
+### Etapa 2. Escolher a faixa de capacidade
+
+Antes de despejar contexto na IA, escolha o que ela aguenta:
+
+- IA pequena ou gratuita: `sema resumo --micro` e `briefing.min.json`
+- IA media: `sema resumo --curto`, `briefing.min.json` e `drift.json`
+- IA grande: `contexto-ia`, `briefing.json`, `drift.json`, `ir.json` e `ast.json`
+
+### Etapa 3. Ler o modulo alvo e um exemplo parecido
 
 A IA deve identificar:
 
@@ -42,22 +51,23 @@ Regra pratica:
 - erros e fluxos de falha: [tratamento_erro.sema](../exemplos/tratamento_erro.sema)
 - borda publica e pagamento: [pagamento.sema](../exemplos/pagamento.sema)
 
-### Etapa 3. Consultar AST e IR
+### Etapa 4. Consultar AST e IR quando fizer sentido
 
 Antes de alterar, a IA deve executar:
 
 ```bash
+sema resumo caminho/arquivo.sema --curto --para mudanca
 sema ast caminho/arquivo.sema --json
 sema ir caminho/arquivo.sema --json
 ```
 
 Objetivo:
 
-- ver a forma sintatica
-- ver a forma semantica resolvida
+- ver a forma sintatica quando a capacidade aguentar
+- ver a forma semantica resolvida quando a capacidade aguentar
 - evitar interpretar errado o contrato
 
-### Etapa 4. Editar o `.sema`
+### Etapa 5. Editar o `.sema`
 
 Ao editar, a IA deve:
 
@@ -66,7 +76,7 @@ Ao editar, a IA deve:
 - evitar criar bloco ou operador nao suportado
 - preferir a forma ja usada nos exemplos oficiais
 
-### Etapa 5. Formatar
+### Etapa 6. Formatar
 
 Depois da edicao:
 
@@ -77,7 +87,7 @@ sema formatar caminho/arquivo.sema --check
 
 Se `--check` falhar, o trabalho ainda nao esta pronto.
 
-### Etapa 6. Validar e diagnosticar
+### Etapa 7. Validar e diagnosticar
 
 Depois da formatacao:
 
@@ -91,7 +101,7 @@ Se houver falha:
 - usar os diagnosticos estruturados como contrato de correcao
 - nao insistir em leitura manual teimosa quando a CLI ja disse onde esta a merda
 
-### Etapa 6.5. Compilar quando a tarefa pedir codigo derivado
+### Etapa 7.5. Compilar quando a tarefa pedir codigo derivado
 
 Se a tarefa nao for so editar contrato, mas tambem gerar base de implementacao, a IA deve rodar explicitamente:
 
@@ -106,7 +116,7 @@ Regra pratica:
 - se a entrega inclui codigo derivado, `sema compilar` nao e opcional
 - se a IA ignorar `compilar`, ela pode acabar reescrevendo na mao coisa que a Sema ja gera sozinha, que e burrice operacional
 
-### Etapa 7. Verificar
+### Etapa 8. Verificar
 
 No fechamento:
 
@@ -116,10 +126,10 @@ sema verificar arquivo-ou-pasta --json --saida ./.tmp/verificacao-ia
 
 ## Fluxo minimo para automacao
 
-Se voce quiser o menor fluxo aceitavel para uma IA:
+Se voce quiser o menor fluxo aceitavel para uma IA pequena:
 
 ```bash
-sema ir caminho/arquivo.sema --json
+sema resumo caminho/arquivo.sema --micro --para mudanca
 sema formatar caminho/arquivo.sema
 sema validar caminho/arquivo.sema --json
 ```

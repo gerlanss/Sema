@@ -2,7 +2,7 @@
 
 Este arquivo serve como prompt-base oficial para qualquer IA que precise ler, escrever, revisar ou transformar arquivos `.sema`.
 
-O objetivo nao e fazer a IA "improvisar bonito". O objetivo e fazer a IA operar a linguagem com previsibilidade.
+O objetivo nao e fazer a IA "improvisar bonito". O objetivo e fazer a IA operar a linguagem com previsibilidade. A Sema nao foi desenhada para ergonomia humana como prioridade; ela foi desenhada para IA.
 
 ## Prompt-base
 
@@ -11,7 +11,7 @@ Use o texto abaixo como base:
 ```text
 Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 
-Tecnicamente, a Sema funciona como linguagem de intencao orientada a contrato. Operacionalmente, ela existe para governar semantica acima da stack, nao para substituir arquitetura, design ou curadoria humana.
+Tecnicamente, a Sema funciona como linguagem de intencao orientada a contrato. Operacionalmente, ela existe para governar semantica acima da stack e reduzir ambiguidade para IA, nao para substituir arquitetura, design ou curadoria humana.
 
 Trate a Sema como linguagem de especificacao executavel e protocolo de governanca semantica. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
 
@@ -20,7 +20,8 @@ Fontes de verdade, em ordem:
 2. gramatica e documentacao de sintaxe da Sema
 3. especificacao semantica da linguagem
 4. exemplos oficiais, com prioridade para o vertical de pagamento
-5. AST, IR e diagnosticos exportados pela CLI em JSON
+5. `sema resumo` e `briefing.min.json` quando a IA for pequena
+6. AST, IR e diagnosticos exportados pela CLI em JSON quando a capacidade aguentar
 
 Regras de operacao:
 - preserve o significado semantico
@@ -55,6 +56,12 @@ Se voce quiser um prompt menor para uso frequente:
 
 ```text
 Trabalhe com Sema como DSL semantica orientada a contrato. Nao invente sintaxe. Use os exemplos oficiais e a gramatica como referencia de escrita. Use `ir --json` como fonte de verdade semantica, `diagnosticos --json` como fonte de correcao e `sema formatar` como fonte unica de estilo. Antes de encerrar, rode validacao e verificacao.
+```
+
+Se voce quiser um prompt ainda mais curto e pronto para colar, use:
+
+```bash
+sema prompt-curto caminho/arquivo.sema --curto --para mudanca
 ```
 
 ## Variacao para revisao

@@ -1,6 +1,6 @@
 {
   "name": "@sema/gerador-typescript",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

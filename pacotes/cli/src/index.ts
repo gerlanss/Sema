@@ -47,6 +47,8 @@ type Comando =
   | "formatar"
   | "ajuda-ia"
   | "starter-ia"
+  | "resumo"
+  | "prompt-curto"
   | "prompt-ia"
   | "prompt-ia-ui"
   | "prompt-ia-react"
@@ -103,6 +105,9 @@ interface ContextoIaGerado {
   modulo: string;
   pastaSaida: string;
   artefatos: string[];
+  artefatosCompactos: string[];
+  geradoEm: string;
+  guiaPorCapacidade: Record<CapacidadeIa, GuiaCapacidadeIa>;
 }
 
 interface DescobertaDocsIa {
@@ -111,11 +116,102 @@ interface DescobertaDocsIa {
   documentos: Array<{ nome: string; caminho: string }>;
 }
 
+type TamanhoResumoIa = "micro" | "curto" | "medio";
+type ModoResumoIa = "resumo" | "onboarding" | "review" | "mudanca" | "bug" | "arquitetura";
+type CapacidadeIa = "pequena" | "media" | "grande";
+type ResultadoDriftIa = Awaited<ReturnType<typeof analisarDriftLegado>>;
+type ResumoModuloDrift = ReturnType<typeof resumirDriftPorModulo>;
+
+interface GuiaCapacidadeIa {
+  descricao: string;
+  artefatos: string[];
+  ordemLeitura: string[];
+  evitar: string[];
+}
+
+interface PacoteContextoModuloIa {
+  arquivo: string;
+  modulo: string;
+  sucesso: boolean;
+  geradoEm: string;
+  diagnosticos: ReturnType<typeof compilarCodigo>["diagnosticos"];
+  ir: IrModulo | null;
+  validar: {
+    comando: "validar";
+    sucesso: boolean;
+    resultados: Array<{
+      caminho: string;
+      modulo: string | null;
+      sucesso: boolean;
+      diagnosticos: ReturnType<typeof compilarCodigo>["diagnosticos"];
+    }>;
+  };
+  diagnosticosJson: {
+    comando: "diagnosticos";
+    caminho: string;
+    modulo: string | null;
+    diagnosticos: ReturnType<typeof compilarCodigo>["diagnosticos"];
+  };
+  ast: {
+    comando: "ast";
+    caminho: string;
+    modulo: string | null;
+    sucesso: boolean;
+    diagnosticos: ReturnType<typeof compilarCodigo>["diagnosticos"];
+    ast: unknown;
+  };
+  irJson: {
+    comando: "ir";
+    caminho: string;
+    modulo: string | null;
+    sucesso: boolean;
+    diagnosticos: ReturnType<typeof compilarCodigo>["diagnosticos"];
+    ir: IrModulo | null;
+  };
+  drift: {
+    comando: "drift";
+    caminho: string;
+    modulo: string | null;
+    sucesso: boolean;
+    resumo: ResumoModuloDrift;
+    drift: ResultadoDriftIa;
+  };
+  briefing: ReturnType<typeof criarBriefingAgente>;
+}
+
+interface ResumoSemanticoModuloIa {
+  geradoEm: string;
+  arquivo: string;
+  modulo: string;
+  perfilCompatibilidade: string;
+  scoreSemantico: number;
+  confiancaGeral: string;
+  riscoOperacional: string;
+  faz: string;
+  tarefasPrincipais: string[];
+  entradasChave: string[];
+  saidasChave: string[];
+  superficiesPublicas: string[];
+  regrasCriticas: string[];
+  efeitos: string[];
+  erros: string[];
+  entidadesAfetadas: string[];
+  arquivosProvaveis: string[];
+  simbolosRelacionados: string[];
+  riscosPrincipais: string[];
+  lacunas: string[];
+  inferido: string[];
+  checksSugeridos: string[];
+  testesMinimos: string[];
+}
+
 const STARTER_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 
 Importante:
 - a Sema se apresenta publicamente como protocolo e funciona tecnicamente como linguagem de intencao
-- a Sema e protocolo de governanca semantica, nao gerador magico que deveria fazer tudo
+- a Sema e protocolo de governanca semantica desenhado para IA, nao para ergonomia humana
+- leitura humana e bonus toleravel, nao objetivo de produto
+- a Sema nao e gerador magico que deveria fazer tudo
 - a Sema modela contratos, estados, fluxos, erros, efeitos, garantias, vinculos e execucao
 - a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
 - a Sema usa \`importar\` para bootstrap revisavel, nao para contrato final automatico
@@ -123,7 +219,8 @@ Importante:
 - a Sema usa \`vinculos\` para ligar contrato a arquivo, simbolo, recurso e superficie real
 - a Sema usa \`execucao\` para explicitar timeout, retry, compensacao e criticidade
 - a Sema usa \`drift\` para medir diferenca entre contrato e codigo vivo com score, confianca e lacunas
-- a Sema usa \`contexto-ia\` para gerar \`ast.json\`, \`ir.json\`, \`drift.json\` e \`briefing.json\` antes da edicao
+- a Sema usa \`resumo\` e \`prompt-curto\` para IA pequena ou gratuita
+- a Sema usa \`contexto-ia\` para gerar \`ast.json\`, \`ir.json\`, \`drift.json\`, \`briefing.json\` e artefatos compactos antes da edicao
 - a Sema pode servir de base para interfaces graficas elegantes e coerentes
 - a Sema nao gera uma interface completa sozinha no estado atual
 - trate a Sema como cerebro semantico da aplicacao, nao como gerador magico de front-end pronto
@@ -132,6 +229,8 @@ Importante:
 
 Regras:
 - nao invente sintaxe fora da gramatica e dos exemplos oficiais
+- se a IA for pequena, nao tente abrir tudo de uma vez
+- use \`sema resumo\` e \`briefing.min.json\` antes de subir para o pacote completo
 - trate \`ir --json\` como fonte de verdade semantica
 - trate \`briefing.json\` como plano de intervencao antes de editar projeto vivo
 - trate \`diagnosticos --json\` como fonte de correcao
@@ -140,6 +239,8 @@ Regras:
 - nao cobre da Sema adivinhacao de negocio que nao esta no contrato nem no codigo
 
 Comandos essenciais:
+- resumo compacto por capacidade: \`sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]\`
+- prompt curto para IA pequena: \`sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]\`
 - descoberta do projeto: \`sema inspecionar [arquivo-ou-pasta] --json\`
 - auditoria do contrato vivo: \`sema drift <arquivo-ou-pasta> [--json]\`
 - contexto completo do modulo: \`sema contexto-ia <arquivo.sema>\`
@@ -154,10 +255,10 @@ Comandos essenciais:
 
 Antes de editar:
 1. leia README, docs de IA e um exemplo oficial parecido
-2. rode \`sema inspecionar\` para descobrir base, codigo vivo e fontes legado
-3. rode \`sema drift\` para medir impls, vinculos, rotas, score e lacunas
-4. rode \`sema contexto-ia\` e leia \`briefing.json\`
-5. consulte AST e IR do modulo alvo
+2. se a IA for pequena, rode \`sema resumo <arquivo> --micro\` e leia \`briefing.min.json\`
+3. se a IA aguentar mais, rode \`sema drift\` para medir impls, vinculos, rotas, score e lacunas
+4. se a tarefa for pesada, rode \`sema contexto-ia\` e leia \`briefing.json\`
+5. consulte AST e IR do modulo alvo so quando a capacidade realmente aguentar
 
 Depois de editar:
 1. rode \`sema formatar\`
@@ -170,6 +271,7 @@ Depois de editar:
 Priorize sempre:
 - exemplos oficiais
 - JSON da CLI
+- o menor artefato que resolva a tarefa da IA atual
 - score, confianca e lacunas do \`drift\`
 - \`briefing.json\` como guia de mudanca
 - consistencia semantica
@@ -188,16 +290,17 @@ Superficies que a IA deve enxergar como first-class:
 Nao improvise quando faltar contexto.
 `;
 
-const PROMPT_BASE_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao orientado a contrato, desenhado para facilitar entendimento e operacao por IA.
+const PROMPT_BASE_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao orientado a contrato, desenhado para operacao por IA.
 
-Trate a Sema como camada semantica e linguagem de especificacao executavel. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
+Trate a Sema como camada semantica e linguagem de especificacao executavel feita para IA, nao para leitura humana confortavel. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
 
 Fontes de verdade, em ordem:
 1. README do projeto
 2. gramatica e documentacao de sintaxe da Sema
 3. especificacao semantica da linguagem
 4. exemplos oficiais, com prioridade para o vertical de pagamento
-5. AST, IR e diagnosticos exportados pela CLI em JSON
+5. \`sema resumo\` e \`briefing.min.json\` quando a IA for pequena
+6. AST, IR e diagnosticos exportados pela CLI em JSON quando a capacidade aguentar
 
 Regras de operacao:
 - preserve o significado semantico
@@ -205,6 +308,7 @@ Regras de operacao:
 - use diagnosticos estruturados como contrato de correcao
 - use a IR como fonte de verdade semantica quando houver duvida
 - nao conclua uma alteracao sem validar e verificar o modulo
+- comece pelo menor artefato semantico que resolva a tarefa
 
 Antes de editar \`.sema\`, entenda:
 - o module alvo
@@ -396,6 +500,8 @@ Nao transforme isso em um \`index.html\` solto.
 Comandos uteis da CLI para esse fluxo:
 - \`sema starter-ia\`
 - \`sema ajuda-ia\`
+- \`sema resumo <arquivo-ou-pasta>\`
+- \`sema prompt-curto <arquivo-ou-pasta>\`
 - \`sema prompt-ia\`
 - \`sema prompt-ia-ui\`
 - \`sema prompt-ia-react\`
@@ -434,6 +540,8 @@ Comandos:
   sema formatar <arquivo-ou-pasta> [--check] [--json]
   sema ajuda-ia
   sema starter-ia
+  sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--saida <diretorio>] [--raiz] [--json]
+  sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--json]
   sema prompt-ia
   sema prompt-ia-ui
   sema prompt-ia-react
@@ -468,17 +576,57 @@ function possuiFlag(args: string[], nome: string): boolean {
   return args.includes(nome);
 }
 
+const OPCOES_COM_VALOR = new Set([
+  "--template",
+  "--alvo",
+  "--saida",
+  "--estrutura",
+  "--framework",
+  "--namespace",
+  "--para",
+]);
+
 function obterPosicionais(args: string[]): string[] {
   const posicionais: string[] = [];
   for (let indice = 0; indice < args.length; indice += 1) {
     const atual = args[indice]!;
     if (atual.startsWith("--")) {
-      indice += 1;
+      if (OPCOES_COM_VALOR.has(atual)) {
+        indice += 1;
+      }
       continue;
     }
     posicionais.push(atual);
   }
   return posicionais;
+}
+
+function normalizarTamanhoResumo(args: string[]): TamanhoResumoIa {
+  const escolhas = [
+    possuiFlag(args, "--micro") ? "micro" : null,
+    possuiFlag(args, "--curto") ? "curto" : null,
+    possuiFlag(args, "--medio") ? "medio" : null,
+  ].filter((item): item is TamanhoResumoIa => item !== null);
+
+  if (escolhas.length > 1) {
+    throw new Error("Use apenas uma entre as flags --micro, --curto ou --medio.");
+  }
+
+  return escolhas[0] ?? "curto";
+}
+
+function normalizarModoResumo(valor?: string): ModoResumoIa {
+  if (
+    valor === "resumo"
+    || valor === "onboarding"
+    || valor === "review"
+    || valor === "mudanca"
+    || valor === "bug"
+    || valor === "arquitetura"
+  ) {
+    return valor;
+  }
+  return "resumo";
 }
 
 function comandoDisponivel(comando: string, argumentos: string[] = ["--version"]): boolean {
@@ -796,7 +944,9 @@ function renderizarCabecalhoDocsIa(descoberta: DescobertaDocsIa): string {
     "Modo IA-first da instalacao atual",
     "- Use `sema` como interface publica principal.",
     "- Nao assuma monorepo, `node pacotes/cli/dist/index.js`, `npm run project:check` ou uma pasta `exemplos` externa ao projeto atual.",
-    "- Priorize `sema starter-ia`, `sema ajuda-ia`, `sema ast --json`, `sema ir --json`, `sema drift --json` e `sema contexto-ia`.",
+    "- Se a IA tiver contexto curto, comece por `sema resumo` e `sema prompt-curto`.",
+    "- Se a IA aguentar mais contexto, suba para `sema drift --json` e `sema contexto-ia`.",
+    "- So leia `ast.json` e `ir.json` completos quando a capacidade da IA realmente aguentar esse volume.",
   ];
 
   if (documentos.length > 0) {
@@ -806,6 +956,368 @@ function renderizarCabecalhoDocsIa(descoberta: DescobertaDocsIa): string {
   }
 
   return linhas.join("\n");
+}
+
+function unicos<T>(itens: T[]): T[] {
+  return [...new Set(itens)];
+}
+
+function unicosOrdenados(itens: string[]): string[] {
+  return unicos(itens).sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function limitarLista(itens: string[], limite: number): string[] {
+  return itens.slice(0, limite);
+}
+
+function resumirListaTexto(itens: string[], limite: number, padrao = "nenhum"): string {
+  if (itens.length === 0) {
+    return padrao;
+  }
+  const visiveis = itens.slice(0, limite);
+  const restante = itens.length - visiveis.length;
+  return restante > 0 ? `${visiveis.join(", ")} (+${restante})` : visiveis.join(", ");
+}
+
+function normalizarIdentificadorResumo(valor: string): string {
+  return valor.replace(/[._]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function resumirCamposTask(
+  task: { nome: string; input?: Array<{ nome: string }>; output?: Array<{ nome: string }> },
+  campo: "input" | "output",
+  limiteCampos: number,
+): string {
+  const campos = (task[campo] ?? []).map((item) => item.nome).slice(0, limiteCampos);
+  if (campos.length === 0) {
+    return `${task.nome}(-)`;
+  }
+  return `${task.nome}(${campos.join(", ")})`;
+}
+
+function formatarEfeitoSemanticoResumido(
+  efeito: { categoria: string; alvo: string; criticidade?: string; detalhe?: string; textoOriginal?: string },
+): string {
+  if (efeito.textoOriginal) {
+    return efeito.textoOriginal;
+  }
+  const partes = [`${efeito.categoria} ${efeito.alvo}`];
+  if (efeito.criticidade) {
+    partes.push(`criticidade=${efeito.criticidade}`);
+  }
+  if (efeito.detalhe) {
+    partes.push(efeito.detalhe);
+  }
+  return partes.join(" ");
+}
+
+function calcularRiscoOperacionalResumo(resumoDrift: ResumoModuloDrift): string {
+  if (resumoDrift.tasks.some((task) => task.riscoOperacional === "alto")) {
+    return "alto";
+  }
+  if (resumoDrift.tasks.some((task) => task.riscoOperacional === "medio")) {
+    return "medio";
+  }
+  return "baixo";
+}
+
+function descreverFazModulo(ir: IrModulo | null, modulo: string): string {
+  if (!ir) {
+    return `governa o modulo ${normalizarIdentificadorResumo(modulo)}`;
+  }
+
+  const partes: string[] = [];
+  if (ir.routes.length > 0) {
+    partes.push(`${ir.routes.length} rota(s)`);
+  }
+  if (ir.superficies.length > 0) {
+    partes.push(`${ir.superficies.length} superficie(s)`);
+  }
+  if (ir.tasks.length > 0) {
+    partes.push(`${ir.tasks.length} task(s)`);
+  }
+
+  const foco = ir.routes[0]?.nome ?? ir.superficies[0]?.nome ?? ir.tasks[0]?.nome ?? modulo;
+  return partes.length > 0
+    ? `governa ${partes.join(", ")} com foco em ${normalizarIdentificadorResumo(foco)}`
+    : `governa o modulo ${normalizarIdentificadorResumo(modulo)}`;
+}
+
+function criarGuiaCapacidadeIa(): Record<CapacidadeIa, GuiaCapacidadeIa> {
+  return {
+    pequena: {
+      descricao: "IA gratuita ou com contexto curto. Leia so o cartao semantico e o briefing minimo.",
+      artefatos: ["resumo.micro.txt", "briefing.min.json", "prompt-curto.txt"],
+      ordemLeitura: ["resumo.micro.txt", "briefing.min.json", "resumo.curto.txt"],
+      evitar: ["ast.json", "ir.json", "diagnosticos.json"],
+    },
+    media: {
+      descricao: "IA com contexto medio. Aguenta resumo expandido, briefing minimo e drift.",
+      artefatos: ["resumo.curto.txt", "briefing.min.json", "drift.json", "prompt-curto.txt"],
+      ordemLeitura: ["resumo.curto.txt", "briefing.min.json", "drift.json", "resumo.md"],
+      evitar: ["ast.json"],
+    },
+    grande: {
+      descricao: "IA com contexto grande ou tool use. Pode consumir o pacote completo.",
+      artefatos: ["README.md", "resumo.md", "briefing.json", "drift.json", "ir.json", "ast.json"],
+      ordemLeitura: ["README.md", "resumo.md", "briefing.json", "drift.json", "ir.json", "ast.json"],
+      evitar: [],
+    },
+  };
+}
+
+function coletarResumoSemanticoModulo(
+  contexto: Pick<PacoteContextoModuloIa, "arquivo" | "modulo" | "geradoEm" | "ir" | "briefing" | "drift">,
+): ResumoSemanticoModuloIa {
+  const { arquivo, modulo, geradoEm, ir, briefing, drift } = contexto;
+  const tarefas = ir?.tasks ?? [];
+  const rotas = ir?.routes ?? [];
+  const superficies = ir?.superficies ?? [];
+  const regrasCriticas = unicosOrdenados([
+    ...tarefas.flatMap((task) => task.rules),
+    ...tarefas.flatMap((task) => task.guarantees),
+  ]);
+  const efeitos = unicosOrdenados([
+    ...tarefas.flatMap((task) => task.effects),
+    ...rotas.flatMap((route) => route.efeitosPublicos.map((efeito) => formatarEfeitoSemanticoResumido(efeito))),
+    ...superficies.flatMap((superficie) => superficie.effects.map((efeito) => formatarEfeitoSemanticoResumido(efeito))),
+  ]);
+  const erros = unicosOrdenados([
+    ...tarefas.flatMap((task) => Object.keys(task.errors)),
+    ...tarefas.flatMap((task) => task.errosDetalhados.map((erro) => erro.codigo)),
+    ...rotas.flatMap((route) => route.errosPublicos.map((erro) => erro.codigo)),
+  ]);
+  const entidadesAfetadas = unicosOrdenados([
+    ...(ir?.resumoAgente.entidadesAfetadas ?? []),
+    ...tarefas.flatMap((task) => task.resumoAgente.entidadesAfetadas),
+    ...rotas.flatMap((route) => route.resumoAgente.entidadesAfetadas),
+    ...superficies.flatMap((superficie) => superficie.resumoAgente.entidadesAfetadas),
+  ]);
+
+  return {
+    geradoEm,
+    arquivo,
+    modulo,
+    perfilCompatibilidade: ir?.perfilCompatibilidade ?? briefing.perfilCompatibilidade,
+    scoreSemantico: briefing.scoreSemantico,
+    confiancaGeral: briefing.confiancaGeral,
+    riscoOperacional: calcularRiscoOperacionalResumo(drift.resumo),
+    faz: descreverFazModulo(ir, modulo),
+    tarefasPrincipais: limitarLista(tarefas.map((task) => task.nome), 6),
+    entradasChave: limitarLista(tarefas.map((task) => resumirCamposTask(task, "input", 4)), 4),
+    saidasChave: limitarLista(tarefas.map((task) => resumirCamposTask(task, "output", 4)), 4),
+    superficiesPublicas: limitarLista(unicosOrdenados([
+      ...briefing.superficiesImpactadas,
+      ...rotas.map((route) => `${route.metodo ?? "?"} ${route.caminho ?? route.nome}`),
+    ]), 8),
+    regrasCriticas: limitarLista(regrasCriticas, 8),
+    efeitos: limitarLista(efeitos, 8),
+    erros: limitarLista(erros, 8),
+    entidadesAfetadas: limitarLista(entidadesAfetadas, 8),
+    arquivosProvaveis: limitarLista(unicosOrdenados(briefing.oQueTocar), 8),
+    simbolosRelacionados: limitarLista(unicosOrdenados(briefing.simbolosRelacionados), 8),
+    riscosPrincipais: limitarLista(unicosOrdenados(briefing.riscosPrincipais), 6),
+    lacunas: limitarLista(unicosOrdenados(briefing.oQueEstaFrouxo), 6),
+    inferido: limitarLista(unicosOrdenados(briefing.oQueFoiInferido), 6),
+    checksSugeridos: limitarLista(unicosOrdenados(briefing.oQueValidar), 6),
+    testesMinimos: limitarLista(unicosOrdenados(briefing.testesMinimos), 6),
+  };
+}
+
+function renderizarResumoModuloTexto(
+  resumo: ResumoSemanticoModuloIa,
+  tamanho: TamanhoResumoIa,
+  modo: ModoResumoIa,
+): string {
+  const limite = tamanho === "micro" ? 2 : tamanho === "curto" ? 4 : 6;
+  const linhas = [
+    `MODO: ${modo}`,
+    `MODULO: ${resumo.modulo}`,
+    `FAZ: ${resumo.faz}`,
+    `PERFIL: ${resumo.perfilCompatibilidade}`,
+    `PUBLICO: ${resumirListaTexto(resumo.superficiesPublicas, limite)}`,
+    `TAREFAS: ${resumirListaTexto(resumo.tarefasPrincipais, limite)}`,
+    `ENTRADAS: ${resumirListaTexto(resumo.entradasChave, limite)}`,
+    `SAIDAS: ${resumirListaTexto(resumo.saidasChave, limite)}`,
+    `REGRAS: ${resumirListaTexto(resumo.regrasCriticas, limite)}`,
+    `EFEITOS: ${resumirListaTexto(resumo.efeitos, limite)}`,
+    `ERROS: ${resumirListaTexto(resumo.erros, limite)}`,
+    `TOCAR: ${resumirListaTexto(resumo.arquivosProvaveis, limite)}`,
+    `VALIDAR: ${resumirListaTexto(resumo.checksSugeridos, limite)}`,
+    `TESTES: ${resumirListaTexto(resumo.testesMinimos, limite)}`,
+    `RISCOS: ${resumirListaTexto(resumo.riscosPrincipais, limite)}`,
+    `LACUNAS: ${resumirListaTexto(resumo.lacunas, limite)}`,
+    `INFERIDO: ${resumirListaTexto(resumo.inferido, limite)}`,
+    `CONFIANCA: ${resumo.confiancaGeral}`,
+    `RISCO_OPERACIONAL: ${resumo.riscoOperacional}`,
+    `SCORE: ${resumo.scoreSemantico}`,
+    `GERADO_EM: ${resumo.geradoEm}`,
+  ];
+
+  if (tamanho === "micro") {
+    return `${linhas.slice(0, 12).join("\n")}\n`;
+  }
+
+  return `${linhas.join("\n")}\n`;
+}
+
+function renderizarResumoModuloMarkdown(
+  resumo: ResumoSemanticoModuloIa,
+  modo: ModoResumoIa,
+  guiaPorCapacidade: Record<CapacidadeIa, GuiaCapacidadeIa>,
+): string {
+  const linhas = [
+    `# Resumo Sema para ${resumo.modulo}`,
+    "",
+    `- Modo: \`${modo}\``,
+    `- Gerado em: \`${resumo.geradoEm}\``,
+    `- Arquivo: \`${resumo.arquivo}\``,
+    `- Perfil: \`${resumo.perfilCompatibilidade}\``,
+    `- Score: \`${resumo.scoreSemantico}\``,
+    `- Confianca: \`${resumo.confiancaGeral}\``,
+    `- Risco operacional: \`${resumo.riscoOperacional}\``,
+    "",
+    "## O que este modulo faz",
+    "",
+    `- ${resumo.faz}`,
+    `- Superficies publicas: ${resumirListaTexto(resumo.superficiesPublicas, 8)}`,
+    `- Tarefas principais: ${resumirListaTexto(resumo.tarefasPrincipais, 8)}`,
+    "",
+    "## Contrato util para IA",
+    "",
+    `- Entradas chave: ${resumirListaTexto(resumo.entradasChave, 6)}`,
+    `- Saidas chave: ${resumirListaTexto(resumo.saidasChave, 6)}`,
+    `- Regras criticas: ${resumirListaTexto(resumo.regrasCriticas, 6)}`,
+    `- Efeitos: ${resumirListaTexto(resumo.efeitos, 6)}`,
+    `- Erros: ${resumirListaTexto(resumo.erros, 6)}`,
+    `- Entidades afetadas: ${resumirListaTexto(resumo.entidadesAfetadas, 6)}`,
+    "",
+    "## Intervencao segura",
+    "",
+    `- Arquivos provaveis: ${resumirListaTexto(resumo.arquivosProvaveis, 6)}`,
+    `- Simbolos relacionados: ${resumirListaTexto(resumo.simbolosRelacionados, 6)}`,
+    `- Riscos principais: ${resumirListaTexto(resumo.riscosPrincipais, 6)}`,
+    `- Lacunas: ${resumirListaTexto(resumo.lacunas, 6)}`,
+    `- O que foi inferido: ${resumirListaTexto(resumo.inferido, 6)}`,
+    `- Checks sugeridos: ${resumirListaTexto(resumo.checksSugeridos, 6)}`,
+    `- Testes minimos: ${resumirListaTexto(resumo.testesMinimos, 6)}`,
+    "",
+    "## Guia por capacidade de IA",
+    "",
+  ];
+
+  for (const capacidade of ["pequena", "media", "grande"] as const) {
+    const guia = guiaPorCapacidade[capacidade];
+    linhas.push(`### ${capacidade}`);
+    linhas.push("");
+    linhas.push(`- ${guia.descricao}`);
+    linhas.push(`- Artefatos: ${guia.artefatos.map((item) => `\`${item}\``).join(", ")}`);
+    linhas.push(`- Ordem de leitura: ${guia.ordemLeitura.map((item) => `\`${item}\``).join(" -> ")}`);
+    linhas.push(`- Evitar: ${guia.evitar.length > 0 ? guia.evitar.map((item) => `\`${item}\``).join(", ") : "nada obrigatorio"}`);
+    linhas.push("");
+  }
+
+  return `${linhas.join("\n").trim()}\n`;
+}
+
+function criarBriefingMinimo(
+  resumo: ResumoSemanticoModuloIa,
+  modo: ModoResumoIa,
+  tamanho: TamanhoResumoIa,
+): Record<string, unknown> {
+  return {
+    comando: "briefing-minimo",
+    geradoEm: resumo.geradoEm,
+    cliVersao: VERSAO_CLI,
+    modo,
+    tamanho,
+    arquivo: resumo.arquivo,
+    modulo: resumo.modulo,
+    perfilCompatibilidade: resumo.perfilCompatibilidade,
+    scoreSemantico: resumo.scoreSemantico,
+    confiancaGeral: resumo.confiancaGeral,
+    riscoOperacional: resumo.riscoOperacional,
+    faz: resumo.faz,
+    publico: resumo.superficiesPublicas,
+    tarefasPrincipais: resumo.tarefasPrincipais,
+    entradasChave: resumo.entradasChave,
+    saidasChave: resumo.saidasChave,
+    regrasCriticas: resumo.regrasCriticas,
+    efeitos: resumo.efeitos,
+    erros: resumo.erros,
+    arquivosProvaveis: resumo.arquivosProvaveis,
+    simbolosRelacionados: resumo.simbolosRelacionados,
+    riscosPrincipais: resumo.riscosPrincipais,
+    lacunas: resumo.lacunas,
+    inferido: resumo.inferido,
+    checksSugeridos: resumo.checksSugeridos,
+    testesMinimos: resumo.testesMinimos,
+  };
+}
+
+function criarPromptCurtoModulo(
+  resumo: ResumoSemanticoModuloIa,
+  modo: ModoResumoIa,
+  tamanho: TamanhoResumoIa,
+  capacidade: CapacidadeIa,
+): string {
+  const resumoTexto = renderizarResumoModuloTexto(resumo, tamanho, modo).trim();
+  return `Voce esta operando Sema em modo IA-first.
+
+Esta linguagem nao foi desenhada para agradar humano; ela existe para reduzir ambiguidade para IA.
+
+Capacidade alvo: ${capacidade}
+Modo da tarefa: ${modo}
+
+Regras:
+- nao invente sintaxe nem bloco fora da gramatica oficial
+- preserve a intencao do contrato
+- use este resumo como fonte compacta inicial
+- se a tarefa pedir mais contexto, suba para \`briefing.min.json\`, \`drift.json\` e depois \`ir.json\`
+- nao saia editando backend vivo sem olhar risco, lacuna e checks sugeridos
+
+Contexto compacto:
+${resumoTexto}
+`;
+}
+
+function renderizarResumoProjetoMarkdown(
+  geradoEm: string,
+  modulos: ResumoSemanticoModuloIa[],
+  guiaPorCapacidade: Record<CapacidadeIa, GuiaCapacidadeIa>,
+): string {
+  const linhas = [
+    "# SEMA_BRIEF",
+    "",
+    "Sema e IA-first. Este arquivo existe para IA achar o ponto de entrada do projeto sem ter que catar o repo inteiro feito barata tonta.",
+    "",
+    `- Gerado em: \`${geradoEm}\``,
+    `- Modulos: \`${modulos.length}\``,
+    "",
+    "## Guia por capacidade",
+    "",
+  ];
+
+  for (const capacidade of ["pequena", "media", "grande"] as const) {
+    const guia = guiaPorCapacidade[capacidade];
+    linhas.push(`- ${capacidade}: ${guia.descricao} Artefatos: ${guia.artefatos.join(", ")}.`);
+  }
+
+  linhas.push("");
+  linhas.push("## Modulos");
+  linhas.push("");
+
+  for (const modulo of modulos) {
+    linhas.push(`### ${modulo.modulo}`);
+    linhas.push(`- Faz: ${modulo.faz}`);
+    linhas.push(`- Publico: ${resumirListaTexto(modulo.superficiesPublicas, 4)}`);
+    linhas.push(`- Tocar: ${resumirListaTexto(modulo.arquivosProvaveis, 4)}`);
+    linhas.push(`- Score: ${modulo.scoreSemantico} | Confianca: ${modulo.confiancaGeral} | Risco: ${modulo.riscoOperacional}`);
+    linhas.push(`- Lacunas: ${resumirListaTexto(modulo.lacunas, 4)}`);
+    linhas.push("");
+  }
+
+  return `${linhas.join("\n").trim()}\n`;
 }
 
 function falharContextoIa(mensagem: string): never {
@@ -936,16 +1448,9 @@ function criarBriefingAgente(
   };
 }
 
-async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: string): Promise<ContextoIaGerado> {
+async function carregarContextoModuloIa(arquivoEntrada: string): Promise<PacoteContextoModuloIa> {
   const arquivo = path.resolve(arquivoEntrada);
   garantirArquivoSema(arquivo);
-
-  const pastaBase = pastaSaidaOpcional
-    ? path.resolve(pastaSaidaOpcional)
-    : path.resolve(process.cwd(), ".tmp", "contexto-ia", path.basename(arquivo, ".sema"));
-
-  await mkdir(pastaBase, { recursive: true });
-
   const contextoProjeto = await carregarProjeto(arquivo, process.cwd());
   const resultadoModulo = contextoProjeto.modulosSelecionados.find((item) => path.resolve(item.caminho) === arquivo)?.resultado;
 
@@ -955,9 +1460,10 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
 
   const sucesso = !temErros(resultadoModulo.diagnosticos);
   const modulo = resultadoModulo.modulo?.nome ?? path.basename(arquivo, ".sema");
+  const geradoEm = new Date().toISOString();
   const resultadoDrift = await analisarDriftLegado(contextoProjeto);
   const drift = {
-    comando: "drift",
+    comando: "drift" as const,
     caminho: arquivo,
     modulo: resultadoModulo.modulo?.nome ?? null,
     sucesso: resultadoDrift.sucesso,
@@ -966,7 +1472,7 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
   };
 
   const validar = {
-    comando: "validar",
+    comando: "validar" as const,
     sucesso,
     resultados: [
       {
@@ -979,14 +1485,14 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
   };
 
   const diagnosticos = {
-    comando: "diagnosticos",
+    comando: "diagnosticos" as const,
     caminho: arquivo,
     modulo: resultadoModulo.modulo?.nome ?? null,
     diagnosticos: resultadoModulo.diagnosticos,
   };
 
   const ast = {
-    comando: "ast",
+    comando: "ast" as const,
     caminho: arquivo,
     modulo: resultadoModulo.modulo?.nome ?? null,
     sucesso,
@@ -995,7 +1501,7 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
   };
 
   const ir = {
-    comando: "ir",
+    comando: "ir" as const,
     caminho: arquivo,
     modulo: resultadoModulo.modulo?.nome ?? null,
     sucesso,
@@ -1010,22 +1516,172 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
     resultadoDrift,
   );
 
-  await writeFile(path.join(pastaBase, "validar.json"), `${JSON.stringify(validar, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "diagnosticos.json"), `${JSON.stringify(diagnosticos, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "ast.json"), `${JSON.stringify(ast, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "ir.json"), `${JSON.stringify(ir, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "drift.json"), `${JSON.stringify(drift, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "briefing.json"), `${JSON.stringify(briefing, null, 2)}\n`, "utf8");
+  return {
+    arquivo,
+    modulo,
+    sucesso,
+    geradoEm,
+    diagnosticos: resultadoModulo.diagnosticos,
+    ir: resultadoModulo.ir ?? null,
+    validar,
+    diagnosticosJson: diagnosticos,
+    ast,
+    irJson: ir,
+    drift,
+    briefing,
+  };
+}
 
-  const resumo = `# Contexto de IA para ${modulo}
+async function gerarArquivosResumoModuloIa(
+  contexto: PacoteContextoModuloIa,
+  pastaBase: string,
+): Promise<{
+  artefatosCompactos: string[];
+  guiaPorCapacidade: Record<CapacidadeIa, GuiaCapacidadeIa>;
+}> {
+  const guiaPorCapacidade = criarGuiaCapacidadeIa();
+  const resumoSemantico = coletarResumoSemanticoModulo(contexto);
+  const resumoMicro = renderizarResumoModuloTexto(resumoSemantico, "micro", "resumo");
+  const resumoCurto = renderizarResumoModuloTexto(resumoSemantico, "curto", "resumo");
+  const resumoMarkdown = renderizarResumoModuloMarkdown(resumoSemantico, "resumo", guiaPorCapacidade);
+  const briefingMinimo = criarBriefingMinimo(resumoSemantico, "resumo", "curto");
+  const promptCurto = criarPromptCurtoModulo(resumoSemantico, "mudanca", "curto", "pequena");
 
-- Arquivo alvo: \`${arquivo}\`
-- Modulo: \`${modulo}\`
-- Sucesso em validar: \`${sucesso}\`
-- Quantidade de diagnosticos: \`${resultadoModulo.diagnosticos.length}\`
+  await writeFile(path.join(pastaBase, "resumo.micro.txt"), resumoMicro, "utf8");
+  await writeFile(path.join(pastaBase, "resumo.curto.txt"), resumoCurto, "utf8");
+  await writeFile(path.join(pastaBase, "resumo.md"), resumoMarkdown, "utf8");
+  await writeFile(path.join(pastaBase, "briefing.min.json"), `${JSON.stringify(briefingMinimo, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "prompt-curto.txt"), promptCurto, "utf8");
+
+  return {
+    artefatosCompactos: ["resumo.micro.txt", "resumo.curto.txt", "resumo.md", "briefing.min.json", "prompt-curto.txt"],
+    guiaPorCapacidade,
+  };
+}
+
+async function gerarResumoProjetoIa(
+  entrada: string | undefined,
+  pastaSaidaOpcional?: string,
+  escreverNaRaiz = false,
+): Promise<{
+  geradoEm: string;
+  baseProjeto: string;
+  pastaSaida: string;
+  artefatos: string[];
+  modulos: ResumoSemanticoModuloIa[];
+  guiaPorCapacidade: Record<CapacidadeIa, GuiaCapacidadeIa>;
+}> {
+  const contextoProjeto = await carregarProjeto(entrada, process.cwd());
+  const geradoEm = new Date().toISOString();
+  const guiaPorCapacidade = criarGuiaCapacidadeIa();
+  const resultadoDrift = await analisarDriftLegado(contextoProjeto);
+  const modulos = contextoProjeto.modulosSelecionados.map((item) => {
+    const modulo = item.resultado.modulo?.nome ?? path.basename(item.caminho, ".sema");
+    const driftResumo = resumirDriftPorModulo(modulo, item.caminho, resultadoDrift);
+    const briefing = criarBriefingAgente(item.caminho, modulo, item.resultado.ir ?? null, driftResumo, resultadoDrift);
+    return coletarResumoSemanticoModulo({
+      arquivo: item.caminho,
+      modulo,
+      geradoEm,
+      ir: item.resultado.ir ?? null,
+      briefing,
+      drift: {
+        comando: "drift",
+        caminho: item.caminho,
+        modulo,
+        sucesso: resultadoDrift.sucesso,
+        resumo: driftResumo,
+        drift: resultadoDrift,
+      },
+    });
+  });
+
+  const baseProjeto = contextoProjeto.baseProjeto;
+  const pastaSaida = escreverNaRaiz
+    ? baseProjeto
+    : pastaSaidaOpcional
+      ? path.resolve(pastaSaidaOpcional)
+      : path.resolve(baseProjeto, ".tmp", "sema-resumo");
+
+  await mkdir(pastaSaida, { recursive: true });
+
+  const semaBrief = renderizarResumoProjetoMarkdown(geradoEm, modulos, guiaPorCapacidade);
+  const indexJson = {
+    comando: "resumo-projeto",
+    geradoEm,
+    cliVersao: VERSAO_CLI,
+    baseProjeto,
+    totalModulos: modulos.length,
+    guiaPorCapacidade,
+    modulos,
+  };
+  const micro = [
+    `PROJETO: ${path.basename(baseProjeto)}`,
+    `MODULOS: ${modulos.length}`,
+    `TOP_MODULOS: ${resumirListaTexto(modulos.map((modulo) => modulo.modulo), 3)}`,
+    `TOP_RISCOS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.riscosPrincipais)), 3)}`,
+    `TOP_LACUNAS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.lacunas)), 3)}`,
+    `GERADO_EM: ${geradoEm}`,
+    "",
+  ].join("\n");
+  const curto = [
+    `PROJETO: ${path.basename(baseProjeto)}`,
+    `BASE: ${baseProjeto}`,
+    `MODULOS: ${modulos.length}`,
+    `TOP_MODULOS: ${resumirListaTexto(modulos.map((modulo) => modulo.modulo), 6)}`,
+    `TOP_RISCOS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.riscosPrincipais)), 6)}`,
+    `TOP_LACUNAS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.lacunas)), 6)}`,
+    `TOP_ARQUIVOS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.arquivosProvaveis)), 6)}`,
+    `GERADO_EM: ${geradoEm}`,
+    "",
+  ].join("\n");
+
+  await writeFile(path.join(pastaSaida, "SEMA_BRIEF.md"), semaBrief, "utf8");
+  await writeFile(path.join(pastaSaida, "SEMA_BRIEF.micro.txt"), micro, "utf8");
+  await writeFile(path.join(pastaSaida, "SEMA_BRIEF.curto.txt"), curto, "utf8");
+  await writeFile(path.join(pastaSaida, "SEMA_INDEX.json"), `${JSON.stringify(indexJson, null, 2)}\n`, "utf8");
+
+  return {
+    geradoEm,
+    baseProjeto,
+    pastaSaida,
+    artefatos: ["SEMA_BRIEF.md", "SEMA_BRIEF.micro.txt", "SEMA_BRIEF.curto.txt", "SEMA_INDEX.json"],
+    modulos,
+    guiaPorCapacidade,
+  };
+}
+
+async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: string): Promise<ContextoIaGerado> {
+  const contexto = await carregarContextoModuloIa(arquivoEntrada);
+  const pastaBase = pastaSaidaOpcional
+    ? path.resolve(pastaSaidaOpcional)
+    : path.resolve(process.cwd(), ".tmp", "contexto-ia", path.basename(contexto.arquivo, ".sema"));
+
+  await mkdir(pastaBase, { recursive: true });
+
+  await writeFile(path.join(pastaBase, "validar.json"), `${JSON.stringify(contexto.validar, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "diagnosticos.json"), `${JSON.stringify(contexto.diagnosticosJson, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "ast.json"), `${JSON.stringify(contexto.ast, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "ir.json"), `${JSON.stringify(contexto.irJson, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "drift.json"), `${JSON.stringify(contexto.drift, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "briefing.json"), `${JSON.stringify(contexto.briefing, null, 2)}\n`, "utf8");
+  const resumoGerado = await gerarArquivosResumoModuloIa(contexto, pastaBase);
+
+  const resumo = `# Contexto de IA para ${contexto.modulo}
+
+- Arquivo alvo: \`${contexto.arquivo}\`
+- Modulo: \`${contexto.modulo}\`
+- Sucesso em validar: \`${contexto.sucesso}\`
+- Quantidade de diagnosticos: \`${contexto.diagnosticos.length}\`
+- Gerado em: \`${contexto.geradoEm}\`
 
 ## Arquivos gerados neste pacote
 
+- \`resumo.micro.txt\`
+- \`resumo.curto.txt\`
+- \`resumo.md\`
+- \`briefing.min.json\`
+- \`prompt-curto.txt\`
 - \`validar.json\`
 - \`diagnosticos.json\`
 - \`ast.json\`
@@ -1035,30 +1691,63 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
 
 ## Fluxo recomendado para o agente
 
-1. Ler \`ast.json\` para entender a forma escrita.
-2. Ler \`ir.json\` para entender a forma semantica resolvida.
-3. Ler \`drift.json\` para ver quais arquivos e simbolos vivos sustentam a implementacao.
-4. Ler \`briefing.json\` para saber o que tocar, o que validar e o que esta frouxo.
-5. Ler \`diagnosticos.json\` se houver falha ou aviso relevante.
-6. Editar o arquivo \`.sema\`.
-7. Rodar \`sema formatar "${arquivo}"\`.
-8. Rodar \`sema validar "${arquivo}" --json\`.
-9. Fechar com \`sema verificar <arquivo-ou-pasta> --json --saida ./.tmp/verificacao-ia\`.
+### IA pequena ou gratuita
+
+1. Ler \`resumo.micro.txt\`.
+2. Ler \`briefing.min.json\`.
+3. Se ainda couber contexto, ler \`resumo.curto.txt\`.
+
+### IA media
+
+1. Ler \`resumo.curto.txt\`.
+2. Ler \`briefing.min.json\`.
+3. Ler \`drift.json\`.
+4. Se precisar, subir para \`resumo.md\`.
+
+### IA grande ou com tool use
+
+1. Ler \`README.md\`.
+2. Ler \`resumo.md\`.
+3. Ler \`briefing.json\`.
+4. Ler \`drift.json\`.
+5. So depois abrir \`ir.json\` e \`ast.json\`.
+
+## Fechamento
+
+1. Editar o arquivo \`.sema\`.
+2. Rodar \`sema formatar "${contexto.arquivo}"\`.
+3. Rodar \`sema validar "${contexto.arquivo}" --json\`.
+4. Rodar \`sema drift "${contexto.arquivo}" --json\`.
+5. Fechar com \`sema verificar <arquivo-ou-pasta> --json --saida ./.tmp/verificacao-ia\`.
 
 ## Textos base para onboarding do agente
 
 - \`sema starter-ia\`
+- \`sema resumo "${contexto.arquivo}" --micro --para onboarding\`
+- \`sema prompt-curto "${contexto.arquivo}" --para mudanca\`
 - \`sema prompt-ia\`
 `;
 
   await writeFile(path.join(pastaBase, "README.md"), resumo, "utf8");
 
   return {
-    sucesso: true,
-    arquivo,
-    modulo,
+    sucesso: contexto.sucesso,
+    arquivo: contexto.arquivo,
+    modulo: contexto.modulo,
     pastaSaida: pastaBase,
-    artefatos: ["validar.json", "diagnosticos.json", "ast.json", "ir.json", "drift.json", "briefing.json", "README.md"],
+    artefatos: [
+      "validar.json",
+      "diagnosticos.json",
+      "ast.json",
+      "ir.json",
+      "drift.json",
+      "briefing.json",
+      "README.md",
+      ...resumoGerado.artefatosCompactos,
+    ],
+    artefatosCompactos: resumoGerado.artefatosCompactos,
+    geradoEm: contexto.geradoEm,
+    guiaPorCapacidade: resumoGerado.guiaPorCapacidade,
   };
 }
 
@@ -2174,13 +2863,15 @@ async function comandoAjudaIa(): Promise<number> {
   console.log(renderizarCabecalhoDocsIa(descoberta));
   console.log("");
   console.log("O que a Sema faz de verdade");
+  console.log("- Foi feita para IA operar melhor; leitura humana e consequencia, nao centro de produto.");
   console.log("- Governa contrato, intencao, erro, efeito, garantia, fluxo, vinculos e execucao.");
   console.log("- Usa `importar` para bootstrap revisavel de legado.");
   console.log("- Usa `impl` para ligar contrato a simbolos reais.");
   console.log("- Usa `vinculos` para ligar contrato a arquivo, simbolo, recurso e superficie real.");
   console.log("- Usa `execucao` para explicitar timeout, retry, compensacao e criticidade.");
   console.log("- Usa `drift` para medir divergencia entre contrato e codigo vivo com score, confianca e lacunas.");
-  console.log("- Usa `contexto-ia` para preparar AST, IR, diagnosticos, drift e `briefing.json` antes da edicao.");
+  console.log("- Usa `resumo` e `prompt-curto` para IA pequena ou gratuita.");
+  console.log("- Usa `contexto-ia` para preparar AST, IR, diagnosticos, drift, `briefing.json` e artefatos compactos antes da edicao.");
   console.log("");
   console.log("O que a Sema nao promete");
   console.log("- Nao escreve contrato final sozinho.");
@@ -2189,6 +2880,8 @@ async function comandoAjudaIa(): Promise<number> {
   console.log("");
   console.log("Fluxo recomendado");
   console.log("- Use `sema starter-ia` para um texto curto de onboarding.");
+  console.log("- Use `sema resumo <arquivo> --micro --para onboarding` para IA pequena.");
+  console.log("- Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.");
   console.log("- Use `sema prompt-ia` para o prompt-base geral.");
   console.log("- Use `sema prompt-ia-ui` para tarefas visuais com Sema + UI.");
   console.log("- Use `sema prompt-ia-react` para projeto com Sema + React + TypeScript.");
@@ -2196,14 +2889,15 @@ async function comandoAjudaIa(): Promise<number> {
   console.log("- Use `sema exemplos-prompt-ia` para pegar modelos prontos de prompt.");
   console.log("- Use `sema inspecionar` para descobrir base, codigo vivo e fontes legado.");
   console.log("- Use `sema drift` para medir impls, vinculos, rotas, score e lacunas.");
-  console.log("- Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR, drift e `briefing.json` do modulo alvo.");
+  console.log("- Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json` do modulo alvo.");
   console.log("- Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>` quando a tarefa pedir codigo derivado.");
   console.log("");
   console.log("Regra pratica");
   console.log("- Se voce quer testar a Sema de verdade, nao peca so HTML solto.");
   console.log("- Peca `.sema` + arquitetura + React + TypeScript, ou use o modo `Sema primeiro`.");
   console.log("- Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.");
-  console.log("- Antes de editar backend vivo, leia `briefing.json` em vez de sair cavando arquivo na fe.");
+  console.log("- IA pequena comeca no menor artefato que resolve a tarefa; nao enfie `ast.json` inteiro nela de bobeira.");
+  console.log("- Antes de editar backend vivo, leia `briefing.min.json` ou `briefing.json` em vez de sair cavando arquivo na fe.");
   console.log("- Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.");
   return 0;
 }
@@ -2255,6 +2949,165 @@ async function comandoExemplosPromptIa(): Promise<number> {
   console.log(renderizarCabecalhoDocsIa(descoberta));
   console.log("");
   console.log(EXEMPLOS_PROMPT_IA);
+  return 0;
+}
+
+async function comandoResumo(
+  entrada: string | undefined,
+  args: string[],
+  emJson: boolean,
+): Promise<number> {
+  const tamanho = normalizarTamanhoResumo(args);
+  const modo = normalizarModoResumo(obterOpcao(args, "--para"));
+  const pastaSaida = obterOpcao(args, "--saida");
+  const escreverNaRaiz = possuiFlag(args, "--raiz");
+  const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
+
+  if (entrada && entrada.toLowerCase().endsWith(".sema")) {
+    const contexto = await carregarContextoModuloIa(alvo);
+    const resumoSemantico = coletarResumoSemanticoModulo(contexto);
+    const guiaPorCapacidade = criarGuiaCapacidadeIa();
+    const texto = tamanho === "medio"
+      ? renderizarResumoModuloMarkdown(resumoSemantico, modo, guiaPorCapacidade)
+      : renderizarResumoModuloTexto(resumoSemantico, tamanho, modo);
+
+    let pastaResumo: string | undefined;
+    let artefatosCompactos: string[] = [];
+    if (pastaSaida) {
+      pastaResumo = path.resolve(pastaSaida);
+      await mkdir(pastaResumo, { recursive: true });
+      const gerado = await gerarArquivosResumoModuloIa(contexto, pastaResumo);
+      artefatosCompactos = gerado.artefatosCompactos;
+    }
+
+    if (emJson) {
+      console.log(JSON.stringify({
+        comando: "resumo",
+        modo,
+        tamanho,
+        geradoEm: contexto.geradoEm,
+        arquivo: contexto.arquivo,
+        modulo: contexto.modulo,
+        pastaSaida: pastaResumo ?? null,
+        artefatosCompactos,
+        guiaPorCapacidade,
+        resumo: resumoSemantico,
+        texto,
+      }, null, 2));
+      return 0;
+    }
+
+    if (pastaResumo) {
+      console.log(`Resumo IA-first gerado em ${pastaResumo}`);
+      console.log("");
+    }
+    console.log(texto);
+    return 0;
+  }
+
+  const resumoProjeto = await gerarResumoProjetoIa(alvo, pastaSaida, escreverNaRaiz);
+  const arquivoResumo = tamanho === "micro"
+    ? "SEMA_BRIEF.micro.txt"
+    : tamanho === "curto"
+      ? "SEMA_BRIEF.curto.txt"
+      : "SEMA_BRIEF.md";
+  const texto = await readFile(path.join(resumoProjeto.pastaSaida, arquivoResumo), "utf8");
+
+  if (emJson) {
+    console.log(JSON.stringify({
+      comando: "resumo",
+      modo,
+      tamanho,
+      geradoEm: resumoProjeto.geradoEm,
+      baseProjeto: resumoProjeto.baseProjeto,
+      pastaSaida: resumoProjeto.pastaSaida,
+      artefatos: resumoProjeto.artefatos,
+      guiaPorCapacidade: resumoProjeto.guiaPorCapacidade,
+      modulos: resumoProjeto.modulos,
+      texto,
+    }, null, 2));
+    return 0;
+  }
+
+  console.log(`Resumo IA-first do projeto gerado em ${resumoProjeto.pastaSaida}`);
+  console.log("");
+  console.log(texto);
+  return 0;
+}
+
+async function comandoPromptCurto(
+  entrada: string | undefined,
+  args: string[],
+  emJson: boolean,
+): Promise<number> {
+  const tamanho = normalizarTamanhoResumo(args);
+  const modo = normalizarModoResumo(obterOpcao(args, "--para"));
+  const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
+
+  if (entrada && entrada.toLowerCase().endsWith(".sema")) {
+    const contexto = await carregarContextoModuloIa(alvo);
+    const resumoSemantico = coletarResumoSemanticoModulo(contexto);
+    const capacidade: CapacidadeIa = tamanho === "micro" ? "pequena" : tamanho === "curto" ? "media" : "grande";
+    const prompt = criarPromptCurtoModulo(resumoSemantico, modo, tamanho, capacidade);
+
+    if (emJson) {
+      console.log(JSON.stringify({
+        comando: "prompt-curto",
+        modo,
+        tamanho,
+        capacidade,
+        geradoEm: contexto.geradoEm,
+        arquivo: contexto.arquivo,
+        modulo: contexto.modulo,
+        prompt,
+      }, null, 2));
+      return 0;
+    }
+
+    console.log(prompt);
+    return 0;
+  }
+
+  const resumoProjeto = await gerarResumoProjetoIa(alvo);
+  const arquivoResumo = tamanho === "micro"
+    ? "SEMA_BRIEF.micro.txt"
+    : tamanho === "curto"
+      ? "SEMA_BRIEF.curto.txt"
+      : "SEMA_BRIEF.md";
+  const contextoProjeto = await readFile(path.join(resumoProjeto.pastaSaida, arquivoResumo), "utf8");
+  const capacidade: CapacidadeIa = tamanho === "micro" ? "pequena" : tamanho === "curto" ? "media" : "grande";
+  const prompt = `Voce esta operando Sema em modo IA-first.
+
+Isto nao e material feito para humano; e contexto comprimido para IA.
+
+Capacidade alvo: ${capacidade}
+Modo da tarefa: ${modo}
+
+Regras:
+- comece pelo resumo compacto abaixo
+- se a tarefa pedir mais contexto, abra \`SEMA_INDEX.json\`
+- nao tente ler o repo inteiro se o resumo ja disser onde tocar
+- preserve contrato, risco, lacuna e checks sugeridos
+
+Contexto do projeto:
+${contextoProjeto.trim()}
+`;
+
+  if (emJson) {
+    console.log(JSON.stringify({
+      comando: "prompt-curto",
+      modo,
+      tamanho,
+      capacidade,
+      geradoEm: resumoProjeto.geradoEm,
+      baseProjeto: resumoProjeto.baseProjeto,
+      pastaSaida: resumoProjeto.pastaSaida,
+      prompt,
+    }, null, 2));
+    return 0;
+  }
+
+  console.log(prompt);
   return 0;
 }
 
@@ -2566,6 +3419,20 @@ async function principal(): Promise<void> {
       break;
     case "starter-ia":
       codigoSaida = await comandoStarterIa();
+      break;
+    case "resumo":
+      codigoSaida = await comandoResumo(
+        posicionais[0],
+        resto,
+        possuiFlag(resto, "--json"),
+      );
+      break;
+    case "prompt-curto":
+      codigoSaida = await comandoPromptCurto(
+        posicionais[0],
+        resto,
+        possuiFlag(resto, "--json"),
+      );
       break;
     case "prompt-ia":
       codigoSaida = await comandoPromptIa();
