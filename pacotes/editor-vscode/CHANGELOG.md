@@ -5,6 +5,7 @@
 - troca a validacao isolada por compilacao com contexto de projeto no servidor do VS Code
 - resolve `use` cross-module na extensao com a mesma ideia de projeto compartilhado da CLI
 - respeita buffers abertos durante o diagnostico e empacota a extensao com o novo loader de projeto
+- limpa a pagina publica da extensao para destacar instalacao, links oficiais e fluxo real com a CLI
 
 ## 1.0.0
 

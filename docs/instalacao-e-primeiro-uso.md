@@ -121,22 +121,29 @@ sema compilar contratos/pedidos.sema --alvo python --framework fastapi --estrutu
 
 ## Extensao VS Code
 
-Empacotar:
+Via GitHub Release:
+
+```bash
+curl -L -o sema-language-tools.vsix https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix
+code --install-extension ./sema-language-tools.vsix --force
+```
+
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest -Uri https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix -OutFile sema-language-tools.vsix
+code --install-extension .\sema-language-tools.vsix --force
+```
+
+Pagina oficial:
+
+- [https://github.com/gerlanss/Sema/releases/latest](https://github.com/gerlanss/Sema/releases/latest)
+
+Se voce estiver desenvolvendo a propria extensao localmente, ai sim entra a trilha de contribuinte:
 
 ```bash
 npm run extensao:empacotar
-```
-
-Instalar localmente:
-
-```bash
 npm run extensao:instalar-local
-```
-
-Ou manualmente:
-
-```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-1.0.0.vsix --force
 ```
 
 ## Caminho de contribuinte

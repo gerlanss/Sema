@@ -1,7 +1,7 @@
 {
   "name": "sema-language-tools",
   "displayName": "Sema Language Tools",
-  "description": "Suporte de editor para o protocolo Sema, com diagnosticos, hover, formatacao, snippets e LSP inicial.",
+  "description": "Extensao oficial do VS Code para a Sema, com diagnosticos semanticos, contexto de projeto e integracao com a CLI IA-first.",
   "version": "1.0.1",
   "publisher": "OtimiTare",
   "private": true,

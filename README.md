@@ -265,12 +265,6 @@ Na pratica:
 
 ## Extensao VS Code
 
-Empacotar:
-
-```bash
-npm run extensao:empacotar
-```
-
 Instalar via release:
 
 ```bash
@@ -278,9 +272,22 @@ curl -L -o sema-language-tools.vsix https://github.com/gerlanss/Sema/releases/la
 code --install-extension ./sema-language-tools.vsix --force
 ```
 
-Instalar localmente:
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest -Uri https://github.com/gerlanss/Sema/releases/latest/download/sema-language-tools-latest.vsix -OutFile sema-language-tools.vsix
+code --install-extension .\sema-language-tools.vsix --force
+```
+
+Pagina oficial:
+
+- [https://github.com/gerlanss/Sema/releases/latest](https://github.com/gerlanss/Sema/releases/latest)
+- [https://github.com/gerlanss/Sema/blob/main/pacotes/editor-vscode/README.md](https://github.com/gerlanss/Sema/blob/main/pacotes/editor-vscode/README.md)
+
+Se voce estiver contribuindo no repositorio, ai sim entra a trilha local:
 
 ```bash
+npm run extensao:empacotar
 npm run extensao:instalar-local
 ```
 
