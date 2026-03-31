@@ -23,7 +23,7 @@ function executar(comando, argumentos, cwd) {
 
 async function localizarTarball() {
   const arquivos = (await readdir(pastaPacotes))
-    .filter((arquivo) => /^sema-cli-\d+\.\d+\.\d+\.tgz$/.test(arquivo))
+    .filter((arquivo) => /^(?:sema-cli|semacode-cli)-\d+\.\d+\.\d+\.tgz$/.test(arquivo))
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   return arquivos.at(-1);
@@ -74,6 +74,14 @@ async function main() {
 
     executar("npm", ["install", caminhoTarball], sandbox);
     executar("npx", ["sema", "--help"], sandbox);
+    const ajudaIa = execFileSync("npx", ["--prefix", sandbox, "sema", "ajuda-ia"], {
+      cwd: sandbox,
+      encoding: "utf8",
+      shell: process.platform === "win32",
+    });
+    if (ajudaIa.includes("Documentos locais encontrados: nenhum")) {
+      throw new Error("A CLI publicada ainda nao encontrou os docs de IA no pacote npm.");
+    }
     executar("npx", ["sema", "validar", path.join(raiz, "exemplos", "calculadora.sema"), "--json"], sandbox);
 
     const pacotesInternosAninhados = path.join(sandbox, "node_modules", "@semacode", "cli", "node_modules", "@sema");

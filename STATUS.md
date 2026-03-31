@@ -10,7 +10,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Estagio atual: marco publico `0.8.x backend generico` em consolidacao, com foco oficial em familias backend first-class e adocao incremental de projeto vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `0.8.2`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `0.8.3`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
@@ -37,6 +37,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - importador `Next.js App Router` com inferencia melhor de body via `request.json()` tipado/cast inline e resposta HTTP retornada por variavel local
   - fluxo pronto para `npm publish` da CLI com dry-run verificavel e metadados publicos mais completos
   - pacote npm publico alinhado ao scope `@semacode/cli` para distribuicao sem depender de namespace alheio
+  - pacote npm publico com docs essenciais de IA embutidos, sem depender da pasta `docs/` do monorrepo para `ajuda-ia`
   - kit oficial de lancamento publico com pitch, release note curta, posts e checklist de anuncio
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
@@ -145,7 +146,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Enriquecer `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
 - `[x]` Expandir `sema.config.json` com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
 - `[x]` Registrar feedback externo do FuteBot como validacao de valor e ajuste de prioridade para a ultima milha entre contrato e implementacao viva
-- `[x]` Alinhar release publica `0.8.2` entre CLI, pacotes e extensao
+- `[x]` Alinhar release publica `0.8.3` entre CLI, pacotes e extensao
 - `[x]` Fortalecer o bootstrap semantico de `importar nextjs` sem degradar o fallback honesto
 - `[x]` Revisar o `README` como landing page publica mais clara para instalacao, showcase e compatibilidade
 - `[x]` Deixar a CLI pronta para `npm publish` com script oficial de dry-run

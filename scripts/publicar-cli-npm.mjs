@@ -5,7 +5,7 @@ import path from "node:path";
 const raiz = process.cwd();
 const manifest = JSON.parse(await readFile(path.join(raiz, "package.json"), "utf8"));
 const versao = manifest.version;
-const tarball = path.join(raiz, ".tmp", "pacotes-publicos", `sema-cli-${versao}.tgz`);
+const tarball = path.join(raiz, ".tmp", "pacotes-publicos", `semacode-cli-${versao}.tgz`);
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const tagIndex = args.findIndex((arg) => arg === "--tag");

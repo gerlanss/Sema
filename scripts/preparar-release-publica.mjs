@@ -15,7 +15,7 @@ const pastaPacotes = path.join(raiz, ".tmp", "pacotes-publicos");
 const pastaVsix = path.join(raiz, ".tmp", "editor-vscode");
 const pastaRelease = path.join(raiz, ".tmp", "release-assets");
 
-const cliVersionado = path.join(pastaPacotes, `sema-cli-${versao}.tgz`);
+const cliVersionado = path.join(pastaPacotes, `semacode-cli-${versao}.tgz`);
 const cliLatest = path.join(pastaRelease, "sema-cli-latest.tgz");
 const vsixVersionado = path.join(pastaVsix, `sema-language-tools-${versao}.vsix`);
 const vsixLatest = path.join(pastaRelease, "sema-language-tools-latest.vsix");

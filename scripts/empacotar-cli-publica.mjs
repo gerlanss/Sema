@@ -6,6 +6,12 @@ const raiz = process.cwd();
 const stageDir = path.join(raiz, ".tmp", "cli-publica-stage");
 const saidaDir = path.join(raiz, ".tmp", "pacotes-publicos");
 const origemCli = path.join(raiz, "pacotes", "cli");
+const DOCS_IA_PUBLICOS = [
+  "AGENT_STARTER.md",
+  "como-ensinar-a-sema-para-ia.md",
+  "prompt-base-ia-sema.md",
+  "fluxo-pratico-ia-sema.md",
+];
 
 const PACOTES_RUNTIME = [
   "nucleo",
@@ -33,11 +39,15 @@ function executar(comando, argumentos, cwd) {
 async function prepararStageBase() {
   await rm(stageDir, { recursive: true, force: true });
   await mkdir(path.join(stageDir, "dist"), { recursive: true });
+  await mkdir(path.join(stageDir, "docs"), { recursive: true });
   await mkdir(saidaDir, { recursive: true });
 
   await cp(path.join(origemCli, "dist"), path.join(stageDir, "dist"), { recursive: true });
   await cp(path.join(raiz, "logo.png"), path.join(stageDir, "logo.png"));
   await cp(path.join(raiz, "LICENSE"), path.join(stageDir, "LICENSE"));
+  for (const nomeDoc of DOCS_IA_PUBLICOS) {
+    await cp(path.join(raiz, "docs", nomeDoc), path.join(stageDir, "docs", nomeDoc));
+  }
 }
 
 async function prepararPacotesRuntime() {
@@ -112,6 +122,7 @@ async function prepararManifestPublico() {
     types: manifestCli.types,
     files: [
       "dist",
+      "docs",
       "logo.png",
       "README.md",
       "LICENSE",
