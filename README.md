@@ -254,6 +254,7 @@ Na pratica:
 - [docs/roadmap.md](./docs/roadmap.md)
 - [docs/instalacao-e-primeiro-uso.md](./docs/instalacao-e-primeiro-uso.md)
 - [docs/cli.md](./docs/cli.md)
+- [docs/sintaxe.md](./docs/sintaxe.md)
 - [docs/integracao-com-ia.md](./docs/integracao-com-ia.md)
 - [docs/distribuicao-da-cli.md](./docs/distribuicao-da-cli.md)
 - [docs/kit-lancamento-publico.md](./docs/kit-lancamento-publico.md)
@@ -303,7 +304,7 @@ npm run extensao:empacotar
 
 Pacote gerado:
 
-- `.tmp/editor-vscode/sema-language-tools-0.8.6.vsix`
+- `.tmp/editor-vscode/sema-language-tools-0.8.7.vsix`
 
 Para instalar localmente:
 
@@ -314,7 +315,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.6.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.7.vsix --force
 ```
 
 ## Observação honesta

@@ -58,6 +58,85 @@ sema iniciar
 sema validar contratos/pedidos.sema --json
 ```
 
+## Sintaxe canonica de `impl`
+
+A CLI usa o bloco `impl` para ligar uma `task` a simbolos reais do codigo vivo. `drift`, `inspecionar`, `contexto-ia` e a importacao assistida dependem dessa forma estar bem escrita.
+
+Forma canonica:
+
+```sema
+task processar_pagamento {
+  input {
+    pagamento_id: Id required
+  }
+  output {
+    protocolo: Id
+  }
+  impl {
+    ts: app.pagamentos.processar
+  }
+  guarantees {
+    protocolo existe
+  }
+}
+```
+
+Regra pratica:
+
+- `impl` e um bloco dentro de `task`
+- cada linha do bloco usa `origem: caminho`
+- a `origem` aceita `ts|typescript`, `py|python`, `dart`, `cs|csharp|dotnet`, `java`, `go|golang`, `rust|rs`, `cpp|cxx|cc|c++`
+- cada origem pode aparecer no maximo uma vez dentro da mesma `task`
+- o `caminho` deve ser um identificador por pontos, como `pacote.modulo.funcao` ou `app.servico.metodo`
+- caminhos privados continuam validos quando declarados explicitamente, por exemplo `py: services.telegram_bot._callback_handler`
+
+Exemplos validos:
+
+```sema
+impl {
+  ts: app.pagamentos.processar
+  py: servicos.pagamentos.processar
+  cs: Pagamentos.Api.Controllers.PedidosController.Criar
+  java: br.com.acme.pagamentos.PedidosController.criar
+  go: internal.pagamentos.criarPedido
+  rust: app.pagamentos.criar_pedido
+  cpp: bridge.pagamentos.processar
+}
+```
+
+Exemplos invalidos:
+
+```sema
+impl: app.pagamentos.processar
+```
+
+Motivo: `impl` nao e campo simples; ele precisa abrir um bloco.
+
+```sema
+impl {
+  ts: app/pagamentos/processar
+}
+```
+
+Motivo: o caminho usa pontos, nao barras.
+
+```sema
+impl {
+  ts: app.pagamentos.processar()
+}
+```
+
+Motivo: o caminho aponta para simbolo, nao chamada com parenteses.
+
+```sema
+impl {
+  ts: app.pagamentos.processar
+  ts: app.pagamentos.processarFallback
+}
+```
+
+Motivo: a mesma origem nao pode ser repetida dentro da mesma `task`.
+
 ## Comandos disponiveis
 
 ### `sema iniciar [--template <base|nestjs|fastapi|nextjs-api|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge>]`
