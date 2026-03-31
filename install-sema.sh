@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO="${SEMA_REPO:-gerlanss/Sema}"
 VERSION="${SEMA_VERSION:-latest}"
+PACKAGE_NAME="${SEMA_NPM_PACKAGE:-@semacode/cli}"
 WITH_VSCODE=0
 
 for arg in "$@"; do
@@ -29,15 +30,13 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [[ "$VERSION" == "latest" ]]; then
-  CLI_URL="https://github.com/${REPO}/releases/latest/download/sema-cli-latest.tgz"
+  PACKAGE_SPEC="$PACKAGE_NAME"
   VSIX_URL="https://github.com/${REPO}/releases/latest/download/sema-language-tools-latest.vsix"
-  CLI_FILE="$TMP_DIR/sema-cli-latest.tgz"
   VSIX_FILE="$TMP_DIR/sema-language-tools-latest.vsix"
 else
   TAG_VERSION="${VERSION#v}"
-  CLI_URL="https://github.com/${REPO}/releases/download/v${TAG_VERSION}/sema-cli-${TAG_VERSION}.tgz"
+  PACKAGE_SPEC="${PACKAGE_NAME}@${TAG_VERSION}"
   VSIX_URL="https://github.com/${REPO}/releases/download/v${TAG_VERSION}/sema-language-tools-${TAG_VERSION}.vsix"
-  CLI_FILE="$TMP_DIR/sema-cli-${TAG_VERSION}.tgz"
   VSIX_FILE="$TMP_DIR/sema-language-tools-${TAG_VERSION}.vsix"
 fi
 
@@ -56,11 +55,8 @@ download() {
   exit 1
 }
 
-echo "Baixando CLI da Sema..."
-download "$CLI_URL" "$CLI_FILE"
-
-echo "Instalando CLI da Sema..."
-npm install -g "$CLI_FILE"
+echo "Instalando CLI da Sema via npm..."
+npm install -g "$PACKAGE_SPEC"
 
 if [[ "$WITH_VSCODE" -eq 1 ]]; then
   if ! command -v code >/dev/null 2>&1; then

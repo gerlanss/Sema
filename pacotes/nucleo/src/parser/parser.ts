@@ -335,6 +335,13 @@ class Parser {
     return this.parseCorpoBloco((palavraChave === "desconhecido" ? "desconhecido" : inicioToken.valor) as BlocoGenericoAst["palavraChave"], nome, inicioToken.intervalo.inicio);
   }
 
+  private parseBlocoNomeadoLivre(): BlocoGenericoAst {
+    const inicioToken = this.avancar();
+    const nome = inicioToken.valor;
+    this.consumirValor("{", `Era esperado abrir o bloco ${nome}.`);
+    return this.parseCorpoBloco("desconhecido", nome, inicioToken.intervalo.inicio);
+  }
+
   private parseCorpoBloco(
     palavraChave: BlocoGenericoAst["palavraChave"],
     nome?: string,
@@ -361,6 +368,11 @@ class Parser {
         ["docs", "comments", "fields", "invariants", "transitions", "input", "output", "rules", "effects", "impl", "guarantees", "state", "tests", "error", "given", "when", "expect"].includes(this.atual().valor)
       ) {
         blocos.push(this.parseBlocoGenerico(this.atual().valor as PalavraBloco));
+        continue;
+      }
+
+      if (["identificador", "palavra_chave"].includes(this.atual().tipo) && this.tokens[this.indice + 1]?.valor === "{") {
+        blocos.push(this.parseBlocoNomeadoLivre());
         continue;
       }
 

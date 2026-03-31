@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ExpressaoSemantica, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
+import type { ExpressaoSemantica, IrBlocoDeclarativo, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import {
   descreverEstruturaModulo,
   mapearTipoParaPython,
@@ -159,6 +159,29 @@ function formatarLiteralTestePython(valor: string, tipoDeclarado?: string): stri
 
 function gerarMapaLiteralPython(campos: Array<{ nome: string; valor: string }>): string {
   return `{${campos.map((campo) => `${JSON.stringify(campo.nome)}: ${campo.valor}`).join(", ")}}`;
+}
+
+function gerarLiteralBlocoTestePython(
+  bloco: IrBlocoDeclarativo,
+  tiposDeclarados?: Map<string, string>,
+): string {
+  const entradas: Array<{ nome: string; valor: string }> = [];
+
+  for (const campo of bloco.campos) {
+    entradas.push({
+      nome: campo.nome,
+      valor: formatarLiteralTestePython(campo.tipo, tiposDeclarados?.get(campo.nome)),
+    });
+  }
+
+  for (const subbloco of bloco.blocos) {
+    entradas.push({
+      nome: subbloco.nome,
+      valor: gerarLiteralBlocoTestePython(subbloco.conteudo),
+    });
+  }
+
+  return gerarMapaLiteralPython(entradas);
 }
 
 function paraPascalCase(valor: string): string {
@@ -329,10 +352,7 @@ function gerarTask(task: IrTask): string {
   const cenariosErro = task.tests
     .filter((caso) => caso.error && caso.error.campos.length > 0)
     .map((caso) => ({
-      entrada: gerarMapaLiteralPython(caso.given.campos.map((campo) => ({
-        nome: campo.nome,
-        valor: formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome)),
-      }))),
+      entrada: gerarLiteralBlocoTestePython(caso.given, tiposEntrada),
       tipoErro: caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo,
     }))
     .filter((caso) => caso.tipoErro);
@@ -392,7 +412,10 @@ function gerarTestes(modulo: IrModulo): string {
     const nomeFuncao = `executar_${normalizarNomeParaSimbolo(task.nome)}`;
     const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
     for (const caso of task.tests) {
-      const argumentos = caso.given.campos.map((campo) => `${campo.nome}=${formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome))}`).join(", ");
+      const argumentos = [
+        ...caso.given.campos.map((campo) => `${campo.nome}=${formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome))}`),
+        ...caso.given.blocos.map((subbloco) => `${subbloco.nome}=${gerarLiteralBlocoTestePython(subbloco.conteudo)}`),
+      ].join(", ");
       const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
       if (tipoErro) {
         linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    with pytest.raises(${task.nome}_${tipoErro}Erro):\n        ${nomeFuncao}(entrada)\n`);

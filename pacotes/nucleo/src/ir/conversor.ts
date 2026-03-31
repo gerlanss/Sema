@@ -30,6 +30,12 @@ function converterBloco(bloco?: BlocoGenericoAst): IrBlocoDeclarativo {
   return {
     campos: converterCampos(bloco),
     linhas: bloco?.linhas.map((linha) => linha.conteudo) ?? [],
+    blocos: (bloco?.blocos ?? [])
+      .filter((subbloco): subbloco is BlocoGenericoAst => subbloco.tipo === "bloco_generico")
+      .map((subbloco) => ({
+        nome: subbloco.nome ?? subbloco.palavraChave,
+        conteudo: converterBloco(subbloco),
+      })),
   };
 }
 

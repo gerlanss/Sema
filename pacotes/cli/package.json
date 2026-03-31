@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "type": "module",
   "description": "CLI do Protocolo de Governanca de Intencao Sema para validar contratos, medir drift e operar backend vivo.",
   "license": "MIT",

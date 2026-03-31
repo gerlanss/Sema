@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ExpressaoSemantica, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
+import type { ExpressaoSemantica, IrBlocoDeclarativo, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import {
   descreverEstruturaModulo,
   mapearTipoParaTypeScript,
@@ -166,6 +166,23 @@ function formatarLiteralTesteTypeScript(valor: string, tipoDeclarado?: string): 
     return false;
   }
   return valor;
+}
+
+function converterBlocoTesteParaValorTypeScript(
+  bloco: IrBlocoDeclarativo,
+  tiposDeclarados?: Map<string, string>,
+): Record<string, unknown> {
+  const literal: Record<string, unknown> = {};
+
+  for (const campo of bloco.campos) {
+    literal[campo.nome] = formatarLiteralTesteTypeScript(campo.tipo, tiposDeclarados?.get(campo.nome));
+  }
+
+  for (const subbloco of bloco.blocos) {
+    literal[subbloco.nome] = converterBlocoTesteParaValorTypeScript(subbloco.conteudo);
+  }
+
+  return literal;
 }
 
 function gerarPreparacaoSaida(task: IrTask): string {
@@ -360,7 +377,7 @@ function gerarTask(task: IrTask): string {
     .filter((caso) => caso.error && caso.error.campos.length > 0)
     .map((caso) => ({
       nome: caso.nome,
-      entrada: Object.fromEntries(caso.given.campos.map((campo) => [campo.nome, formatarLiteralTesteTypeScript(campo.tipo, tiposEntrada.get(campo.nome))])),
+      entrada: converterBlocoTesteParaValorTypeScript(caso.given, tiposEntrada),
       tipoErro: caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo,
     }))
     .filter((caso) => caso.tipoErro);
@@ -414,7 +431,7 @@ function gerarTestes(modulo: IrModulo): string {
     const nomeFuncao = `executar_${normalizarNomeParaSimbolo(task.nome)}`;
     const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
     for (const caso of task.tests) {
-      const entrada = Object.fromEntries(caso.given.campos.map((campo) => [campo.nome, formatarLiteralTesteTypeScript(campo.tipo, tiposEntrada.get(campo.nome))]));
+      const entrada = converterBlocoTesteParaValorTypeScript(caso.given, tiposEntrada);
       const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
       if (tipoErro) {
         linhas.push(`

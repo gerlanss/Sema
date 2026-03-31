@@ -6,6 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repo = if ($env:SEMA_REPO) { $env:SEMA_REPO } else { "gerlanss/Sema" }
+$packageName = if ($env:SEMA_NPM_PACKAGE) { $env:SEMA_NPM_PACKAGE } else { "@semacode/cli" }
 
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
   throw "npm nao encontrado. Instale Node.js antes de continuar."
@@ -15,24 +16,24 @@ $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("sema-install-" + [Syste
 New-Item -ItemType Directory -Path $tempDir | Out-Null
 
 try {
+  $packageSpec = if ($Version -eq "latest") {
+    $packageName
+  } else {
+    $tagVersion = $Version.TrimStart("v")
+    "${packageName}@${tagVersion}"
+  }
+
+  Write-Host "Instalando CLI da Sema via npm..."
+  npm install -g $packageSpec | Out-Host
+
   if ($Version -eq "latest") {
-    $cliUrl = "https://github.com/$repo/releases/latest/download/sema-cli-latest.tgz"
     $vsixUrl = "https://github.com/$repo/releases/latest/download/sema-language-tools-latest.vsix"
-    $cliFile = Join-Path $tempDir "sema-cli-latest.tgz"
     $vsixFile = Join-Path $tempDir "sema-language-tools-latest.vsix"
   } else {
     $tagVersion = $Version.TrimStart("v")
-    $cliUrl = "https://github.com/$repo/releases/download/v$tagVersion/sema-cli-$tagVersion.tgz"
     $vsixUrl = "https://github.com/$repo/releases/download/v$tagVersion/sema-language-tools-$tagVersion.vsix"
-    $cliFile = Join-Path $tempDir "sema-cli-$tagVersion.tgz"
     $vsixFile = Join-Path $tempDir "sema-language-tools-$tagVersion.vsix"
   }
-
-  Write-Host "Baixando CLI da Sema..."
-  Invoke-WebRequest -Uri $cliUrl -OutFile $cliFile
-
-  Write-Host "Instalando CLI da Sema..."
-  npm install -g $cliFile | Out-Host
 
   if ($WithVSCode) {
     if (-not (Get-Command code -ErrorAction SilentlyContinue)) {

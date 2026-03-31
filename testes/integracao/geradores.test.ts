@@ -320,6 +320,66 @@ module exemplo.geracao.negacao {
   assert.ok(arquivosPy[0]?.conteudo.includes("not ("));
 });
 
+test("geradores sintetizam given aninhado para tipos compostos", () => {
+  const codigo = `
+module exemplo.geracao.aninhado {
+  task processar_checkout {
+    input {
+      pedido: Json required
+      origem: Texto
+    }
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "checkout composto" {
+        given {
+          pedido {
+            cliente {
+              nome: "Ana"
+              vip: verdadeiro
+            }
+            itens {
+              sku: "abc-1"
+              quantidade: 2
+            }
+            total: 19.9
+          }
+          origem: "web"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "aninhado.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+  assert.equal(resultado.ir.tasks[0]?.tests[0]?.given.blocos[0]?.nome, "pedido");
+  assert.equal(resultado.ir.tasks[0]?.tests[0]?.given.blocos[0]?.conteudo.blocos[0]?.nome, "cliente");
+
+  const arquivosTs = gerarTypeScript(resultado.ir!);
+  const testesTs = arquivosTs.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_aninhado.test.ts")?.conteudo ?? "";
+  assert.match(testesTs, /"pedido": \{/);
+  assert.match(testesTs, /"cliente": \{/);
+  assert.match(testesTs, /"vip": true/);
+  assert.match(testesTs, /"total": 19\.9/);
+
+  const arquivosPy = gerarPython(resultado.ir!);
+  const testesPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "test_exemplo_geracao_aninhado.py")?.conteudo ?? "";
+  assert.match(testesPy, /pedido=\{/);
+  assert.match(testesPy, /"cliente": \{/);
+  assert.match(testesPy, /"vip": True/);
+  assert.match(testesPy, /"total": 19\.9/);
+});
+
 test("geradores carregam invariantes de entity e type para codigo gerado", () => {
   const codigo = `
 module exemplo.operacao {

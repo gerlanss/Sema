@@ -25,6 +25,12 @@ export interface IrImplementacaoTask {
 export interface IrBlocoDeclarativo {
   campos: IrCampo[];
   linhas: string[];
+  blocos: IrBlocoDeclarativoAninhado[];
+}
+
+export interface IrBlocoDeclarativoAninhado {
+  nome: string;
+  conteudo: IrBlocoDeclarativo;
 }
 
 export interface IrCasoTeste {
