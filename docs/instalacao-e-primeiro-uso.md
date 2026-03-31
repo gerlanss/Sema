@@ -1,23 +1,26 @@
 # Instalacao e Primeiro Uso
 
-Este guia mostra o caminho mais curto para testar a Sema do jeito certo, sem cair naquela confusao classica de "instalei a linguagem" quando, na verdade, voce so linkou uma CLI local de desenvolvimento.
+Este guia mostra o caminho mais curto para testar a Sema do jeito certo, sem misturar fluxo de usuario com gambiarra de contribuinte.
 
 ## Requisitos
 
 - Node.js instalado
 - npm funcionando
-- o repositorio so e necessario se voce quiser contribuir no Sema ou rodar o showcase oficial local
+- Python 3 e `pytest` se voce quiser rodar o fluxo completo de testes Python gerados
 
-Para o fluxo completo com testes Python gerados:
+O repositorio so e necessario se voce quiser contribuir na Sema, rodar o showcase oficial localmente ou empacotar release.
 
-- Python 3
-- `pytest` instalado
+## Caminho oficial
 
-## Caminho oficial: instalar da release publica
+Instalacao via npm:
 
-Voce nao precisa clonar o repo para usar a CLI.
+```bash
+npm install -g @semacode/cli
+sema --help
+sema doctor
+```
 
-Linux, Windows PowerShell e macOS:
+Se preferir o tarball oficial da GitHub Release:
 
 ```bash
 npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
@@ -25,61 +28,25 @@ sema --help
 sema doctor
 ```
 
-Se quiser um caminho ainda mais mastigado:
+Instalacao local ao projeto:
+
+```bash
+npm install @semacode/cli
+npx sema --help
+```
+
+Instaladores auxiliares:
 
 - Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
 - Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
 
-Se preferir instalar local ao projeto:
-
-```bash
-npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
-npx sema --help
-```
-
-Primeiro teste sem clonar o repo:
+## Primeiro teste sem clonar o repo
 
 ```bash
 mkdir sema-demo
 cd sema-demo
 sema iniciar
 sema validar contratos/pedidos.sema --json
-```
-
-## Caminho de contribuinte: usar direto do repo
-
-Se o objetivo for desenvolver o proprio Sema:
-
-```bash
-npm install
-npm run build
-node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
-```
-
-Se quiser validar tudo de cara:
-
-```bash
-npm run project:check
-```
-
-## `npm link` virou trilha de desenvolvimento
-
-O fluxo abaixo continua existindo, mas agora e assumidamente fluxo de contribuinte, nao trilha publica principal:
-
-```powershell
-npm run cli:instalar-local
-```
-
-Ele serve para:
-
-- testar a experiencia de terminal no proprio ambiente
-- desenvolver a CLI
-- evitar ficar chamando `node pacotes/cli/dist/index.js`
-
-Para remover:
-
-```powershell
-npm run cli:desinstalar-local
 ```
 
 ## Primeiro fluxo util
@@ -94,7 +61,7 @@ sema verificar contratos --saida ./.tmp/verificacao
 
 ## Primeiro fluxo de valor real
 
-Se quiser testar a Sema onde ela fica mais forte hoje, use o showcase oficial dentro do repo:
+Se quiser ver a Sema onde ela fica mais forte hoje, use o showcase oficial:
 
 ```bash
 cd showcases/ranking-showroom
@@ -107,9 +74,9 @@ Esse fluxo mostra:
 
 - base de projeto resolvida
 - codigo vivo detectado
-- `impl` resolvido
-- rota Flask validada
-- pacote de contexto para IA
+- `impl` e `vinculos` resolvidos
+- score, confianca e lacunas do `drift`
+- `briefing.json` para IA antes da edicao
 
 ## `sema.config.json`
 
@@ -166,17 +133,53 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.8.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.9.0.vsix --force
+```
+
+## Caminho de contribuinte
+
+Se o objetivo for desenvolver a propria Sema:
+
+```bash
+npm install
+npm run build
+node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
+```
+
+Se quiser validar tudo de cara:
+
+```bash
+npm run project:check
+```
+
+## `npm link` continua existindo
+
+Esse fluxo continua util, mas e trilha de contribuinte:
+
+```powershell
+npm run cli:instalar-local
+```
+
+Serve para:
+
+- testar a experiencia de terminal no proprio ambiente
+- desenvolver a CLI
+- evitar ficar chamando `node pacotes/cli/dist/index.js`
+
+Para remover:
+
+```powershell
+npm run cli:desinstalar-local
 ```
 
 ## Resumo honesto
 
 Hoje o jeito certo de testar a Sema e:
 
-1. instalar a CLI da release publica
+1. instalar a CLI pelo npm ou pela GitHub Release
 2. rodar `sema iniciar`
 3. validar `contratos/pedidos.sema`
-4. rodar `sema doctor` se o ambiente estiver de sacanagem
-5. abrir o showcase oficial se quiser ver backend vivo
+4. usar `inspecionar -> drift -> contexto-ia` quando o projeto for vivo
+5. ler `briefing.json` antes de mandar a IA sair cavando arquivo
 
-Clone + build + `npm link` continua util, mas agora e fluxo de oficina, nao vitrine.
+Clone + build + `npm link` continua bom para oficina, nao para landing page publica.

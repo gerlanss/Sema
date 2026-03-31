@@ -63,10 +63,10 @@
 - starters oficiais `nextjs-api` e `node-firebase-worker`
 - scorecard formal de compatibilidade por familia de stack
 
-## Marco 0.8 Backend Generico
+## Marco 0.9 Intervencao Segura para IA
 
 - status: em andamento
-- linha publica: `0.8.x`
+- linha publica: `0.9.x`
 - `ASP.NET Core` como fonte legado de primeira classe para `importar` e `drift`
 - `Spring Boot` como fonte legado de primeira classe para `importar` e `drift`
 - `Go net/http + Gin` como fonte legado de primeira classe para `importar` e `drift`
@@ -78,7 +78,7 @@
 
 ## Proximo Ciclo
 
-- modelar a evolucao da propria Sema em `contratos/sema`, com `drift` ligado ao codigo vivo do parser, formatador, geradores e CLI
+- expandir a evolucao da propria Sema em `contratos/sema`, com `drift` ligado ao codigo vivo do parser, formatador, geradores e CLI
 - criacao de scaffolding ainda mais util para projeto vivo
 - aprofundar edicao assistida de backends existentes
 - ampliar `use` para cenarios ainda maiores

@@ -1,6 +1,6 @@
 module exemplos.cadastro.usuario {
   docs {
-    resumo: "Cadastro de usuario com entidade, validacoes e persistencia declarada."
+    resumo: "Cadastro de usuario com entidade,validacoes e persistencia declarada."
   }
 
   entity Usuario {

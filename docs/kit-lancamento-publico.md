@@ -1,49 +1,50 @@
-# Kit de Lançamento Público
+# Kit de Lancamento Publico
 
-Este documento deixa a Sema pronta para ser apresentada sem enrolação e sem papo de release feita nas coxas.
+Este documento deixa a Sema pronta para ser apresentada sem improviso tosco de ultima hora.
 
 Use este kit como base para:
 
-- anúncio em GitHub, LinkedIn e X
+- anuncio em GitHub, LinkedIn e X
 - release note curta
 - post de showcase
-- checklist de lançamento em 24h
+- checklist de lancamento em 24h
 
 ## Posicionamento em 1 frase
 
-Sema é um **Protocolo de Governança de Intenção para IA e backend vivo**.
+Sema e um **Protocolo de Governanca de Intencao para IA e backend vivo**.
 
 ## Pitch curto
 
-Sema ajuda a transformar contrato implícito em contrato verificável.
+Sema ajuda a transformar contrato implicito em contrato verificavel.
 
-Ela governa intenção, borda HTTP, erro, efeito, garantia, `impl`, `drift` e contexto para IA acima da stack, sem pedir reescrita burra do projeto existente.
+Ela governa intencao, erro, efeito, garantia, execucao, vinculos, superfícies modernas, `impl`, `drift` e contexto para IA acima da stack, sem pedir reescrita burra do projeto existente.
 
-## Pitch médio
+## Pitch medio
 
-Em sistema vivo, a verdade costuma ficar espalhada entre handler, DTO, comentário vencido, regra de framework e service escondido.
+Em sistema vivo, a verdade costuma ficar espalhada entre handler, DTO, comentario vencido, regra de framework e service escondido.
 
-A Sema junta isso numa camada semântica governável:
+A Sema junta isso numa camada semantica governavel:
 
-- contrato explícito
+- contrato explicito
 - fluxo e garantia
-- vínculo com implementação real via `impl`
-- divergência real entre contrato e código vivo via `drift`
-- contexto acionável para IA antes de editar
+- vinculo com implementacao real via `impl` e `vinculos`
+- contrato operacional via `execucao`
+- divergencia real entre contrato e codigo vivo via `drift`
+- contexto acionavel para IA com `briefing.json`
 
-Ela não tenta substituir `TypeScript`, `Python`, `Flask`, `FastAPI`, `NestJS` ou `Next.js`.
+Ela nao tenta substituir TypeScript, Python, Flask, FastAPI ou NestJS.
 
-Ela entra acima disso para impedir humano e IA de mexerem em backend vivo no escuro feito dois malucos confiantes demais.
+Ela entra acima disso para impedir humano e IA de mexerem em backend vivo no escuro feito dois confiantes sem contexto.
 
 ## Prova de valor em 3 linhas
 
-- `Flask`: contrato + `impl.py` + `drift` verde em backend real
-- `Next.js App Router`: importação incremental e `drift` de rota pública sem falso positivo idiota
-- `contexto-ia`: AST, IR, diagnósticos e `drift.json` para agente editar com menos adivinhação
+- `Flask`: contrato + `impl.py` + `vinculos` + `drift` verde em backend real
+- `Next.js App Router`: importacao incremental e `drift` de rota publica sem falso positivo idiota
+- `contexto-ia`: AST, IR, diagnosticos, `drift.json` e `briefing.json` para agente editar com menos adivinhacao
 
-## CTA oficial atual
+## CTA oficial
 
-Hoje o CTA principal passa a ser npm:
+Hoje o CTA principal e npm:
 
 ```bash
 npm install -g @semacode/cli
@@ -60,35 +61,40 @@ sema --help
 
 ## Texto para GitHub Release
 
-Sema 0.8.8 fecha o ciclo do `given` composto em geradores e formatador sem quebrar a proposta da ferramenta: protocolo de governança semântica, não gerador messiânico de sistema. Essa rodada corrige o Python para objeto tipado aninhado, remove a sabotagem do formatador em bloco nomeado livre e mantém a instalação oficial pelo npm em `@semacode/cli`.
+Sema 0.9.0 leva a ferramenta para um salto bem mais adulto como linguagem de intervencao segura para IA. Essa rodada adiciona `vinculos`, `execucao`, superficies modernas de primeira classe como `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy`, alem de `drift` com score, confianca, risco e lacunas.
 
-Na prática, isso fecha um buraco importante de framing: a ferramenta fica mais honesta sobre o que governa, o que automatiza e onde a curadoria humana continua obrigatória.
+Na pratica, a Sema fica mais honesta e mais util ao mesmo tempo: nao so descreve intencao, mas ajuda agente e humano a mapear o que tocar, o que validar e o que ainda esta frouxo antes de editar backend vivo. O pacote `contexto-ia` agora entrega tambem `briefing.json`, fechando a trilha `inspecionar -> drift -> contexto-ia`.
 
-Também ficam mais redondos:
+Tambem entram nessa rodada:
 
-- README como landing page pública
-- fluxo oficial via npm
-- onboarding de IA menos ambíguo
+- README publico refeito
+- docs de sintaxe e integracao com IA atualizadas
+- onboarding de `starter-ia` e `ajuda-ia` alinhado ao 0.9
+- linha publica 0.9.0 alinhada entre CLI, pacotes internos e extensao VS Code
 
 ## Texto para LinkedIn
 
-Publiquei uma nova rodada da Sema.
+Publiquei a linha 0.9.0 da Sema.
 
-Sema é um Protocolo de Governança de Intenção para IA e backend vivo.
+Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
 
-Em vez de fingir que contrato, erro, efeito, garantia e implementação real estão "mais ou menos documentados", a ideia da Sema é governar isso de forma explícita e verificável, sem pedir reescrita total da stack.
+Ela nao tenta substituir a stack. Ela governa a camada semantica acima da stack: contrato, erro, efeito, garantia, fluxo, `impl`, `vinculos`, `execucao`, `drift` e contexto para IA.
 
-Nesta rodada, a melhora mais importante foi de posicionamento operacional: `starter-ia` e `ajuda-ia` agora deixam claro que a Sema não é gerador mágico de sistema, e sim protocolo de governança semântica para contrato, fluxo, erro, efeito, garantia, `impl` e `drift`.
+Nessa rodada, o foco foi sair de "DSL util" para "linguagem de intervencao segura para IA":
 
-Hoje a Sema já cobre bem fluxo incremental em `Flask`, `FastAPI`, `NestJS`, `Next.js App Router`, `Firebase worker`, `ASP.NET Core`, `Spring Boot`, `Go`, `Rust` e bridge genérica em `C++`.
+- `vinculos` para arquivo, simbolo, recurso e superficie real
+- `execucao` para timeout, retry, compensacao e criticidade
+- superficies modernas como `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy`
+- `drift` com score, confianca, risco e lacunas
+- `contexto-ia` com `briefing.json`
 
-Instalação:
+Instalacao:
 
 ```bash
 npm install -g @semacode/cli
 ```
 
-Repositório:
+Repo:
 [https://github.com/gerlanss/Sema](https://github.com/gerlanss/Sema)
 
 Showcase oficial:
@@ -96,15 +102,17 @@ Showcase oficial:
 
 ## Texto para X
 
-Versão curta:
+Versao curta:
 
-Sema é um Protocolo de Governança de Intenção para IA e backend vivo.
+Sema 0.9.0.
 
-Contrato, erro, efeito, garantia, `impl`, `drift` e contexto para IA acima da stack.
+Protocolo de Governanca de Intencao para IA e backend vivo.
 
-Agora o onboarding da CLI deixa isso explícito: Sema não é gerador messiânico, é governança semântica de sistema vivo.
+Agora com `vinculos`, `execucao`, superficies modernas e `drift` com score, confianca, risco e lacunas.
 
-Instalação:
+Tambem entra `briefing.json` no `contexto-ia` para a IA saber o que tocar antes de sair quebrando backend.
+
+Instalacao:
 `npm install -g @semacode/cli`
 
 Repo:
@@ -112,64 +120,40 @@ Repo:
 
 Thread curta:
 
-1. OpenAPI e DTO não resolvem tudo quando a verdade do sistema fica espalhada em handler, service, comentário velho e framework.
+1. OpenAPI e DTO nao resolvem tudo quando a verdade do sistema fica espalhada em handler, service, comentario velho e framework.
 
-2. Sema entra para governar a camada semântica acima da stack: contrato, fluxo, erro, efeito, garantia, `impl`, `drift` e contexto para IA.
+2. Sema entra para governar a camada semantica acima da stack: contrato, fluxo, erro, efeito, garantia, `impl`, `vinculos`, `execucao`, `drift` e contexto para IA.
 
-3. A rodada nova fortalece o framing público: a ferramenta deixa mais claro o que governa, o que verifica e o que continua exigindo curadoria.
+3. A linha 0.9.0 fortalece a parte operacional: score, confianca, lacunas e `briefing.json`.
 
-4. Instalação hoje:
+4. Instalacao hoje:
 `npm install -g @semacode/cli`
 
 5. Repo:
 [https://github.com/gerlanss/Sema](https://github.com/gerlanss/Sema)
 
-## Texto para README / topo do repo
+## Checklist de lancamento em 24h
 
-Sema é um Protocolo de Governança de Intenção para IA e backend vivo.
+### Bloco 1: publicacao tecnica
 
-Ela ajuda a transformar contrato implícito em contrato verificável, ligar intenção à implementação real com `impl`, medir divergência com `drift` e preparar contexto acionável para IA antes de editar projeto vivo.
-
-## Checklist de lançamento em 24h
-
-### Bloco 1: publicação técnica
-
-1. confirmar release pública mais recente no GitHub
-2. confirmar instalação pelo npm em máquina limpa
+1. confirmar release publica mais recente no GitHub
+2. confirmar instalacao pelo npm em maquina limpa
 3. confirmar `sema doctor`
 4. confirmar showcase oficial
 5. confirmar `npm run cli:publicar-npm-dry-run`
 
-### Bloco 2: superfície pública
+### Bloco 2: superficie publica
 
-1. revisar descrição curta do GitHub
-2. revisar tópicos do repositório
+1. revisar descricao curta do GitHub
+2. revisar topicos do repositorio
 3. revisar topo do README
 4. revisar link para showcase
-5. revisar link para instalação
+5. revisar link para instalacao
 
-### Bloco 3: anúncio
+### Bloco 3: anuncio
 
 1. publicar release note
 2. publicar post no LinkedIn
 3. publicar post curto ou thread no X
 4. mostrar um exemplo concreto de valor
-5. chamar feedback de instalação e uso real
-
-## Checklist de resposta para quem perguntar “por que não usar só OpenAPI?”
-
-Resposta curta:
-
-Porque OpenAPI documenta borda. A Sema governa borda, intenção, erro, efeito, garantia, fluxo e o vínculo com implementação viva.
-
-Resposta média:
-
-OpenAPI é útil para descrever HTTP. Mas ele não resolve sozinho:
-
-- garantia de negócio
-- efeito operacional
-- fluxo entre tarefas
-- vínculo rastreável com símbolo real
-- contexto acionável para IA editar projeto vivo
-
-É justamente nesse buraco que a Sema entra.
+5. chamar feedback de instalacao e uso real

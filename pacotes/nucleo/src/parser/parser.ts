@@ -36,12 +36,22 @@ type PalavraBloco =
   | "rules"
   | "effects"
   | "impl"
+  | "vinculos"
+  | "execucao"
   | "guarantees"
   | "state"
   | "tests"
   | "error"
   | "flow"
   | "route"
+  | "worker"
+  | "evento"
+  | "fila"
+  | "cron"
+  | "webhook"
+  | "cache"
+  | "storage"
+  | "policy"
   | "when"
   | "given"
   | "expect";
@@ -78,6 +88,63 @@ class Parser {
     while (["nova_linha", "comentario"].includes(this.atual().tipo)) {
       this.avancar();
     }
+  }
+
+  private tokenNaFrente(distancia = 1): Token | undefined {
+    return this.tokens[this.indice + distancia];
+  }
+
+  private iniciaBlocoSimples(keyword: string): boolean {
+    if (this.atual().valor !== keyword) {
+      return false;
+    }
+    return this.tokenNaFrente()?.valor === "{";
+  }
+
+  private iniciaBlocoComNomeObrigatorio(keyword: string): boolean {
+    if (this.atual().valor !== keyword) {
+      return false;
+    }
+    return this.tokenNaFrente()?.tipo === "identificador" && this.tokenNaFrente(2)?.valor === "{";
+  }
+
+  private iniciaBlocoState(): boolean {
+    if (this.atual().valor !== "state") {
+      return false;
+    }
+    return this.tokenNaFrente()?.valor === "{"
+      || (this.tokenNaFrente()?.tipo === "identificador" && this.tokenNaFrente(2)?.valor === "{");
+  }
+
+  private iniciaSubblocoConhecido(): boolean {
+    if (this.atual().tipo !== "palavra_chave") {
+      return false;
+    }
+
+    if (["state"].includes(this.atual().valor)) {
+      return this.iniciaBlocoState();
+    }
+
+    return [
+      "docs",
+      "comments",
+      "fields",
+      "invariants",
+      "transitions",
+      "input",
+      "output",
+      "rules",
+      "effects",
+      "impl",
+      "vinculos",
+      "execucao",
+      "guarantees",
+      "tests",
+      "error",
+      "given",
+      "when",
+      "expect",
+    ].includes(this.atual().valor) && this.iniciaBlocoSimples(this.atual().valor);
   }
 
   private consumirValor(valor: string, mensagem: string): Token {
@@ -124,12 +191,21 @@ class Parser {
     this.consumirValor("{", "Era esperado abrir o corpo do modulo com {.");
 
     const uses: UseAst[] = [];
+    let vinculos: BlocoGenericoAst | undefined;
     const types: TypeAst[] = [];
     const entities: EntityAst[] = [];
     const enums: EnumAst[] = [];
     const tasks: TaskAst[] = [];
     const flows: FlowAst[] = [];
     const routes: RouteAst[] = [];
+    const workers: BlocoGenericoAst[] = [];
+    const eventos: BlocoGenericoAst[] = [];
+    const filas: BlocoGenericoAst[] = [];
+    const crons: BlocoGenericoAst[] = [];
+    const webhooks: BlocoGenericoAst[] = [];
+    const caches: BlocoGenericoAst[] = [];
+    const storages: BlocoGenericoAst[] = [];
+    const policies: BlocoGenericoAst[] = [];
     const states: StateAst[] = [];
     const extras: BlocoGenericoAst[] = [];
     let docs: BlocoGenericoAst | undefined;
@@ -145,37 +221,144 @@ class Parser {
 
       switch (token.valor) {
         case "use":
-          uses.push(this.parseUse());
+          if (this.tokenNaFrente()?.tipo === "identificador") {
+            uses.push(this.parseUse());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "docs":
-          docs = this.parseBlocoGenerico("docs");
+          if (this.iniciaBlocoSimples("docs")) {
+            docs = this.parseBlocoGenerico("docs");
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "comments":
-          comments = this.parseBlocoGenerico("comments");
+          if (this.iniciaBlocoSimples("comments")) {
+            comments = this.parseBlocoGenerico("comments");
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "vinculos":
+          if (this.iniciaBlocoSimples("vinculos")) {
+            vinculos = this.parseBlocoGenerico("vinculos");
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "type":
-          types.push(this.parseType());
+          if (this.iniciaBlocoComNomeObrigatorio("type")) {
+            types.push(this.parseType());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "entity":
-          entities.push(this.parseEntity());
+          if (this.iniciaBlocoComNomeObrigatorio("entity")) {
+            entities.push(this.parseEntity());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "enum":
-          enums.push(this.parseEnum());
+          if (this.iniciaBlocoComNomeObrigatorio("enum")) {
+            enums.push(this.parseEnum());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "task":
-          tasks.push(this.parseTask());
+          if (this.iniciaBlocoComNomeObrigatorio("task")) {
+            tasks.push(this.parseTask());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "flow":
-          flows.push(this.parseFlow());
+          if (this.iniciaBlocoComNomeObrigatorio("flow")) {
+            flows.push(this.parseFlow());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "route":
-          routes.push(this.parseRoute());
+          if (this.iniciaBlocoComNomeObrigatorio("route")) {
+            routes.push(this.parseRoute());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "worker":
+          if (this.iniciaBlocoComNomeObrigatorio("worker")) {
+            workers.push(this.parseBlocoGenerico("worker"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "evento":
+          if (this.iniciaBlocoComNomeObrigatorio("evento")) {
+            eventos.push(this.parseBlocoGenerico("evento"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "fila":
+          if (this.iniciaBlocoComNomeObrigatorio("fila")) {
+            filas.push(this.parseBlocoGenerico("fila"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "cron":
+          if (this.iniciaBlocoComNomeObrigatorio("cron")) {
+            crons.push(this.parseBlocoGenerico("cron"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "webhook":
+          if (this.iniciaBlocoComNomeObrigatorio("webhook")) {
+            webhooks.push(this.parseBlocoGenerico("webhook"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "cache":
+          if (this.iniciaBlocoComNomeObrigatorio("cache")) {
+            caches.push(this.parseBlocoGenerico("cache"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "storage":
+          if (this.iniciaBlocoComNomeObrigatorio("storage")) {
+            storages.push(this.parseBlocoGenerico("storage"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "policy":
+          if (this.iniciaBlocoComNomeObrigatorio("policy")) {
+            policies.push(this.parseBlocoGenerico("policy"));
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "state":
-          states.push(this.parseState());
+          if (this.iniciaBlocoState()) {
+            states.push(this.parseState());
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         case "tests":
-          tests = this.parseBlocoGenerico("tests");
+          if (this.iniciaBlocoSimples("tests")) {
+            tests = this.parseBlocoGenerico("tests");
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
           break;
         default:
           extras.push(this.parseBlocoGenerico("desconhecido"));
@@ -190,6 +373,7 @@ class Parser {
       tipo: "module",
       nome,
       uses,
+      vinculos,
       docs,
       comments,
       types,
@@ -198,6 +382,14 @@ class Parser {
       tasks,
       flows,
       routes,
+      workers,
+      eventos,
+      filas,
+      crons,
+      webhooks,
+      caches,
+      storages,
+      policies,
       states,
       tests,
       extras,
@@ -280,6 +472,8 @@ class Parser {
       rules: localizar("rules"),
       effects: localizar("effects"),
       impl: localizar("impl"),
+      vinculos: localizar("vinculos"),
+      execucao: localizar("execucao"),
       guarantees: localizar("guarantees"),
       state: localizar("state"),
       tests: localizar("tests"),
@@ -294,14 +488,16 @@ class Parser {
     const inicio = this.avancar().intervalo.inicio;
     const nome = this.consumirTipo("identificador", "Era esperado o nome do flow.").valor;
     const corpo = this.parseBlocoComNomeOpcional("flow");
-    return { tipo: "flow", nome, corpo, intervalo: { inicio, fim: corpo.intervalo?.fim ?? this.anterior().intervalo.fim } };
+    const vinculos = corpo.blocos.find((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === "vinculos");
+    return { tipo: "flow", nome, corpo, vinculos, intervalo: { inicio, fim: corpo.intervalo?.fim ?? this.anterior().intervalo.fim } };
   }
 
   private parseRoute(): RouteAst {
     const inicio = this.avancar().intervalo.inicio;
     const nome = this.consumirTipo("identificador", "Era esperado o nome da route.").valor;
     const corpo = this.parseBlocoComNomeOpcional("route");
-    return { tipo: "route", nome, corpo, intervalo: { inicio, fim: corpo.intervalo?.fim ?? this.anterior().intervalo.fim } };
+    const vinculos = corpo.blocos.find((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === "vinculos");
+    return { tipo: "route", nome, corpo, vinculos, intervalo: { inicio, fim: corpo.intervalo?.fim ?? this.anterior().intervalo.fim } };
   }
 
   private parseState(): StateAst {
@@ -363,10 +559,7 @@ class Parser {
         continue;
       }
 
-      if (
-        this.atual().tipo === "palavra_chave" &&
-        ["docs", "comments", "fields", "invariants", "transitions", "input", "output", "rules", "effects", "impl", "guarantees", "state", "tests", "error", "given", "when", "expect"].includes(this.atual().valor)
-      ) {
+      if (this.iniciaSubblocoConhecido()) {
         blocos.push(this.parseBlocoGenerico(this.atual().valor as PalavraBloco));
         continue;
       }
@@ -407,10 +600,50 @@ class Parser {
     while (this.atual().tipo !== "fim_arquivo" && this.atual().tipo !== "nova_linha" && this.atual().valor !== "}") {
       partes.push(this.avancar().valor);
     }
-    const valorCompleto = partes.join(" ").trim();
-    const segmentos = valorCompleto.split(/\s+/).filter(Boolean);
-    const valor = segmentos[0] ?? "";
-    const modificadores = segmentos.slice(1);
+    const segmentos = partes.filter(Boolean);
+    const tipoTokens: string[] = [];
+    const modificadores: string[] = [];
+    let profundidadeTipo = 0;
+    let iniciouModificadores = false;
+
+    for (const segmento of segmentos) {
+      if (!iniciouModificadores) {
+        if (["<", "[", "("].includes(segmento)) {
+          profundidadeTipo += 1;
+          tipoTokens.push(segmento);
+          continue;
+        }
+        if ([">", "]", ")"].includes(segmento)) {
+          profundidadeTipo = Math.max(0, profundidadeTipo - 1);
+          tipoTokens.push(segmento);
+          continue;
+        }
+
+        const pareceModificador =
+          profundidadeTipo === 0
+          && tipoTokens.length > 0
+          && /^[a-z_][a-z0-9_]*$/u.test(segmento);
+
+        if (pareceModificador) {
+          iniciouModificadores = true;
+          modificadores.push(segmento);
+          continue;
+        }
+
+        tipoTokens.push(segmento);
+        continue;
+      }
+
+      modificadores.push(segmento);
+    }
+
+    let valor = tipoTokens
+      .join(" ")
+      .replace(/\s*([<>\[\](),|?])\s*/g, "$1")
+      .trim();
+    if (valor.includes("/")) {
+      valor = valor.replace(/\s*\/\s*/g, "/");
+    }
     if (this.atual().tipo === "nova_linha") {
       this.avancar();
     }

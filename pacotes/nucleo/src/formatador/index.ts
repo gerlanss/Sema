@@ -21,15 +21,24 @@ const ORDEM_BLOCOS_MODULO = new Map<string, number>([
   ["docs", 0],
   ["comments", 1],
   ["use", 2],
-  ["type", 3],
-  ["entity", 4],
-  ["enum", 5],
-  ["state", 6],
-  ["task", 7],
-  ["flow", 8],
-  ["route", 9],
-  ["tests", 10],
-  ["desconhecido", 11],
+  ["vinculos", 3],
+  ["type", 4],
+  ["entity", 5],
+  ["enum", 6],
+  ["state", 7],
+  ["task", 8],
+  ["flow", 9],
+  ["route", 10],
+  ["worker", 11],
+  ["evento", 12],
+  ["fila", 13],
+  ["cron", 14],
+  ["webhook", 15],
+  ["cache", 16],
+  ["storage", 17],
+  ["policy", 18],
+  ["tests", 19],
+  ["desconhecido", 20],
 ]);
 
 const ORDEM_SUBBLOCOS_TASK = new Map<string, number>([
@@ -40,21 +49,45 @@ const ORDEM_SUBBLOCOS_TASK = new Map<string, number>([
   ["rules", 4],
   ["effects", 5],
   ["impl", 6],
-  ["state", 7],
-  ["guarantees", 8],
-  ["error", 9],
-  ["tests", 10],
-  ["desconhecido", 11],
+  ["vinculos", 7],
+  ["execucao", 8],
+  ["state", 9],
+  ["guarantees", 10],
+  ["error", 11],
+  ["tests", 12],
+  ["desconhecido", 13],
 ]);
 
 const ORDEM_SUBBLOCOS_ROUTE = new Map<string, number>([
   ["input", 0],
   ["output", 1],
   ["effects", 2],
-  ["error", 3],
-  ["docs", 4],
-  ["comments", 5],
-  ["desconhecido", 6],
+  ["vinculos", 3],
+  ["error", 4],
+  ["docs", 5],
+  ["comments", 6],
+  ["desconhecido", 7],
+]);
+
+const ORDEM_SUBBLOCOS_FLOW = new Map<string, number>([
+  ["effects", 0],
+  ["vinculos", 1],
+  ["docs", 2],
+  ["comments", 3],
+  ["desconhecido", 4],
+]);
+
+const ORDEM_SUBBLOCOS_SUPERFICIE = new Map<string, number>([
+  ["input", 0],
+  ["output", 1],
+  ["effects", 2],
+  ["impl", 3],
+  ["vinculos", 4],
+  ["execucao", 5],
+  ["error", 6],
+  ["docs", 7],
+  ["comments", 8],
+  ["desconhecido", 9],
 ]);
 
 const ORDEM_SUBBLOCOS_STATE = new Map<string, number>([
@@ -74,6 +107,33 @@ const ORDEM_SUBBLOCOS_TESTE = new Map<string, number>([
   ["docs", 4],
   ["comments", 5],
   ["desconhecido", 6],
+]);
+
+const ORDEM_CAMPOS_POR_BLOCO = new Map<string, Map<string, number>>([
+  ["vinculos", new Map<string, number>([
+    ["arquivo", 0],
+    ["simbolo", 1],
+    ["rota", 2],
+    ["superficie", 3],
+    ["recurso", 4],
+    ["tabela", 5],
+    ["fila", 6],
+    ["worker", 7],
+    ["evento", 8],
+    ["cron", 9],
+    ["webhook", 10],
+    ["cache", 11],
+    ["storage", 12],
+    ["policy", 13],
+    ["teste", 14],
+  ])],
+  ["execucao", new Map<string, number>([
+    ["idempotencia", 0],
+    ["timeout", 1],
+    ["retry", 2],
+    ["compensacao", 3],
+    ["criticidade_operacional", 4],
+  ])],
 ]);
 
 export interface ResultadoFormatacao {
@@ -138,6 +198,12 @@ function deveColocarAspas(contexto: string, campo: CampoAst, combinado: string):
   if (campo.nome === "caminho") {
     return /[{}]/.test(combinado);
   }
+  if (contexto === "vinculos" && ["arquivo", "webhook"].includes(campo.nome)) {
+    return true;
+  }
+  if (contexto === "execucao" && ["timeout", "retry", "compensacao"].includes(campo.nome)) {
+    return true;
+  }
   if (contexto === "docs" || contexto === "comments") {
     return true;
   }
@@ -150,9 +216,24 @@ function deveColocarAspas(contexto: string, campo: CampoAst, combinado: string):
   return false;
 }
 
+function normalizarValorCampo(campo: CampoAst): string {
+  return [campo.valor, ...campo.modificadores]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function ordenarCampos(bloco: BlocoGenericoAst): CampoAst[] {
+  const ordem = ORDEM_CAMPOS_POR_BLOCO.get(bloco.palavraChave);
+  if (!ordem) {
+    return bloco.campos;
+  }
+  return ordenarPorMapa(bloco.campos, (campo) => campo.nome, ordem);
+}
+
 function renderizarCampo(campo: CampoAst, nivel: number, contexto: string): string {
-  const partes = [campo.valor, ...campo.modificadores].filter(Boolean);
-  let combinado = normalizarEspacos(partes.join(" "));
+  let combinado = normalizarValorCampo(campo);
 
   if (campo.nome === "caminho") {
     combinado = normalizarCaminho(combinado);
@@ -225,6 +306,12 @@ function ordenarSubblocos(bloco: BlocoGenericoAst): BlocoAst[] {
   if (bloco.palavraChave === "route") {
     return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_ROUTE);
   }
+  if (bloco.palavraChave === "flow") {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_FLOW);
+  }
+  if (["worker", "evento", "fila", "cron", "webhook", "cache", "storage", "policy"].includes(bloco.palavraChave)) {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_SUPERFICIE);
+  }
   if (bloco.palavraChave === "state") {
     return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_STATE);
   }
@@ -239,7 +326,7 @@ function renderizarBlocoGenerico(bloco: BlocoGenericoAst, nivel: number): string
     ? bloco.nome
     : `${bloco.palavraChave}${bloco.nome ? ` ${bloco.nome}` : ""}`;
   const cabecalho = `${indentacao(nivel)}${identificadorBloco} {`;
-  const linhasCampos = bloco.campos.map((campo) => renderizarCampo(campo, nivel + 1, bloco.palavraChave));
+  const linhasCampos = ordenarCampos(bloco).map((campo) => renderizarCampo(campo, nivel + 1, bloco.palavraChave));
   const linhasDeclarativas = bloco.linhas.map((linha) => renderizarLinha(linha.conteudo, nivel + 1));
   const blocosInternos = ordenarSubblocos(bloco).map((subbloco) => renderizarBlocoAst(subbloco, nivel + 1));
   const corpo = [...linhasCampos, ...linhasDeclarativas, ...blocosInternos];
@@ -280,7 +367,7 @@ function renderizarState(state: StateAst, nivel: number): string {
 
 function renderizarCorpoSimples(bloco: BlocoGenericoAst, nivel: number): string {
   const conteudo = ordenarSubblocos(bloco).map((subbloco) => renderizarBlocoAst(subbloco, nivel));
-  const campos = bloco.campos.map((campo) => renderizarCampo(campo, nivel, bloco.palavraChave));
+  const campos = ordenarCampos(bloco).map((campo) => renderizarCampo(campo, nivel, bloco.palavraChave));
   const linhas = bloco.linhas.map((linha) => renderizarLinha(linha.conteudo, nivel));
   const corpo = [...campos, ...linhas, ...conteudo];
   return corpo.join("\n");
@@ -297,6 +384,9 @@ function renderizarModulo(modulo: ModuloAst): string {
   }
   for (const use of modulo.uses) {
     blocos.push({ chave: "use", conteudo: renderizarBlocoAst(use, 1) });
+  }
+  if (modulo.vinculos) {
+    blocos.push({ chave: "vinculos", conteudo: renderizarBlocoGenerico(modulo.vinculos, 1) });
   }
   for (const type of modulo.types) {
     blocos.push({ chave: "type", conteudo: renderizarBlocoAst(type, 1) });
@@ -318,6 +408,30 @@ function renderizarModulo(modulo: ModuloAst): string {
   }
   for (const route of modulo.routes) {
     blocos.push({ chave: "route", conteudo: renderizarBlocoAst(route, 1) });
+  }
+  for (const worker of modulo.workers) {
+    blocos.push({ chave: "worker", conteudo: renderizarBlocoGenerico(worker, 1) });
+  }
+  for (const evento of modulo.eventos) {
+    blocos.push({ chave: "evento", conteudo: renderizarBlocoGenerico(evento, 1) });
+  }
+  for (const fila of modulo.filas) {
+    blocos.push({ chave: "fila", conteudo: renderizarBlocoGenerico(fila, 1) });
+  }
+  for (const cron of modulo.crons) {
+    blocos.push({ chave: "cron", conteudo: renderizarBlocoGenerico(cron, 1) });
+  }
+  for (const webhook of modulo.webhooks) {
+    blocos.push({ chave: "webhook", conteudo: renderizarBlocoGenerico(webhook, 1) });
+  }
+  for (const cache of modulo.caches) {
+    blocos.push({ chave: "cache", conteudo: renderizarBlocoGenerico(cache, 1) });
+  }
+  for (const storage of modulo.storages) {
+    blocos.push({ chave: "storage", conteudo: renderizarBlocoGenerico(storage, 1) });
+  }
+  for (const policy of modulo.policies) {
+    blocos.push({ chave: "policy", conteudo: renderizarBlocoGenerico(policy, 1) });
   }
   if (modulo.tests) {
     blocos.push({ chave: "tests", conteudo: renderizarBlocoGenerico(modulo.tests, 1) });

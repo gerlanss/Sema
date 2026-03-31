@@ -244,3 +244,55 @@ module exemplo.formatado.aninhado {
   assert.match(resultado.codigoFormatado ?? "", /given \{\n\s+documento \{/);
   assert.doesNotMatch(resultado.codigoFormatado ?? "", /desconhecido documento \{/);
 });
+
+test("formatador canoniza vinculos, execucao e superficie worker", () => {
+  const codigo = `
+module exemplo.formatado.ia {
+  worker sincronizar {
+    execucao {
+      retry: "fila"
+    }
+    vinculos {
+      fila: pedidos_sync
+    }
+    task: processar
+  }
+
+  task processar {
+    guarantees {
+      protocolo existe
+    }
+    execucao {
+      criticidade_operacional: alta
+      timeout: "30s"
+    }
+    vinculos {
+      simbolo: app.processar.executar
+      arquivo: "src/processar.ts"
+    }
+    output {
+      protocolo: Id
+    }
+    input {
+      itens: Lista<Texto> required
+    }
+    tests {
+      caso "ok" {
+        expect {
+          sucesso: verdadeiro
+        }
+        given {
+          itens: "a"
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = formatarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.match(resultado.codigoFormatado ?? "", /vinculos \{\n\s+arquivo: "src\/processar\.ts"\n\s+simbolo: app\.processar\.executar\n\s+\}/);
+  assert.match(resultado.codigoFormatado ?? "", /execucao \{\n\s+timeout: "30s"\n\s+criticidade_operacional: alta\n\s+\}/);
+  assert.match(resultado.codigoFormatado ?? "", /worker sincronizar \{/);
+});

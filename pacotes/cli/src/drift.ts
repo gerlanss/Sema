@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
-import type { IrRoute, IrTask } from "@sema/nucleo";
+import type { IrFlow, IrModulo, IrRoute, IrSuperficie, IrTask, IrVinculo, NivelConfiancaSemantica, NivelRiscoSemantico } from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
 import type { FonteLegado } from "./tipos.js";
 import { extrairSimbolosCpp } from "./cpp-symbols.js";
@@ -28,7 +28,7 @@ interface RotaResolvida {
 }
 
 export interface DiagnosticoDrift {
-  tipo: "impl_quebrado" | "task_sem_impl" | "rota_divergente" | "recurso_divergente";
+  tipo: "impl_quebrado" | "task_sem_impl" | "rota_divergente" | "recurso_divergente" | "vinculo_quebrado";
   modulo: string;
   task?: string;
   route?: string;
@@ -90,9 +90,27 @@ interface ResumoTaskDrift {
   implsValidos: number;
   implsQuebrados: number;
   semImplementacao: boolean;
+  scoreSemantico: number;
+  confiancaVinculo: NivelConfiancaSemantica;
+  riscoOperacional: NivelRiscoSemantico;
+  lacunas: string[];
   arquivosReferenciados: string[];
+  arquivosProvaveisEditar: string[];
   simbolosReferenciados: string[];
   candidatosImpl: SimboloCandidatoDrift[];
+  checksSugeridos: string[];
+}
+
+interface RegistroVinculoDrift {
+  modulo: string;
+  donoTipo: "modulo" | "task" | "flow" | "route" | "superficie";
+  dono: string;
+  tipo: string;
+  valor: string;
+  arquivo?: string;
+  simbolo?: string;
+  status: "resolvido" | "parcial" | "nao_encontrado";
+  confianca: NivelConfiancaSemantica;
 }
 
 export interface ResultadoDrift {
@@ -107,9 +125,20 @@ export interface ResultadoDrift {
   tasks: ResumoTaskDrift[];
   impls_validos: RegistroImplDrift[];
   impls_quebrados: RegistroImplDrift[];
+  vinculos_validos: RegistroVinculoDrift[];
+  vinculos_quebrados: RegistroVinculoDrift[];
   rotas_divergentes: RegistroRotaDivergente[];
   recursos_validos: RegistroRecursoDrift[];
   recursos_divergentes: RegistroRecursoDrift[];
+  resumo_operacional: {
+    scoreMedio: number;
+    confiancaGeral: NivelConfiancaSemantica;
+    riscosPrincipais: string[];
+    oQueTocar: string[];
+    oQueValidar: string[];
+    oQueEstaFrouxo: string[];
+    oQueFoiInferido: string[];
+  };
   diagnosticos: DiagnosticoDrift[];
 }
 
@@ -130,6 +159,240 @@ const DIRETORIOS_IGNORADOS = new Set([
   ".tmp",
   "generated",
 ]);
+
+function normalizarFragmentoArquivo(valor: string): string {
+  return valor.replace(/\\/g, "/").replace(/^\.?\//, "").trim().toLowerCase();
+}
+
+function escolherArquivoPorVinculo(arquivos: string[], valor: string): { arquivo?: string; confianca: NivelConfiancaSemantica; status: RegistroVinculoDrift["status"] } {
+  const normalizado = normalizarFragmentoArquivo(valor);
+  const exato = arquivos.find((arquivo) => normalizarFragmentoArquivo(arquivo) === normalizado);
+  if (exato) {
+    return { arquivo: exato, confianca: "alta", status: "resolvido" };
+  }
+
+  const porSufixo = arquivos.find((arquivo) => normalizarFragmentoArquivo(arquivo).endsWith(normalizado));
+  if (porSufixo) {
+    return { arquivo: porSufixo, confianca: "media", status: "parcial" };
+  }
+
+  return { confianca: "baixa", status: "nao_encontrado" };
+}
+
+function escolherSimboloPorVinculo(
+  simbolos: SimboloResolvido[],
+  mapaImpl: Map<string, SimboloResolvido>,
+  valor: string,
+): { simbolo?: SimboloResolvido; confianca: NivelConfiancaSemantica; status: RegistroVinculoDrift["status"] } {
+  const exato = mapaImpl.get(valor);
+  if (exato) {
+    return { simbolo: exato, confianca: "alta", status: "resolvido" };
+  }
+
+  const ultimoSegmento = valor.split(".").at(-1)?.toLowerCase();
+  const aproximado = simbolos.find((simbolo) =>
+    simbolo.caminho.toLowerCase() === valor.toLowerCase()
+    || simbolo.simbolo.toLowerCase() === ultimoSegmento
+    || simbolo.caminho.toLowerCase().endsWith(`.${ultimoSegmento}`));
+
+  if (aproximado) {
+    return { simbolo: aproximado, confianca: "media", status: "parcial" };
+  }
+
+  return { confianca: "baixa", status: "nao_encontrado" };
+}
+
+function resolverArquivoOuSimboloAncora(
+  vinculos: IrVinculo[],
+  simbolos: SimboloResolvido[],
+  mapaImpl: Map<string, SimboloResolvido>,
+  arquivos: string[],
+): { arquivo?: string; simbolo?: string; confianca: NivelConfiancaSemantica } | undefined {
+  for (const vinculo of vinculos) {
+    if (vinculo.simbolo) {
+      const resolucaoSimbolo = escolherSimboloPorVinculo(simbolos, mapaImpl, vinculo.simbolo);
+      if (resolucaoSimbolo.status !== "nao_encontrado") {
+        return {
+          arquivo: resolucaoSimbolo.simbolo?.arquivo,
+          simbolo: resolucaoSimbolo.simbolo?.simbolo,
+          confianca: resolucaoSimbolo.confianca,
+        };
+      }
+    }
+
+    if (vinculo.arquivo) {
+      const resolucaoArquivo = escolherArquivoPorVinculo(arquivos, vinculo.arquivo);
+      if (resolucaoArquivo.status !== "nao_encontrado") {
+        return {
+          arquivo: resolucaoArquivo.arquivo,
+          confianca: resolucaoArquivo.confianca,
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function encontrarAncoraSuperficie(
+  ir: IrModulo,
+  superficie: IrSuperficie,
+  simbolos: SimboloResolvido[],
+  mapaImpl: Map<string, SimboloResolvido>,
+  arquivos: string[],
+): { arquivo?: string; simbolo?: string; confianca: NivelConfiancaSemantica } | undefined {
+  const ancoraDireta = resolverArquivoOuSimboloAncora(superficie.vinculos, simbolos, mapaImpl, arquivos);
+  if (ancoraDireta) {
+    return ancoraDireta;
+  }
+
+  for (const impl of superficie.implementacoesExternas) {
+    const resolvido = mapaImpl.get(impl.caminho);
+    if (resolvido) {
+      return {
+        arquivo: resolvido.arquivo,
+        simbolo: resolvido.simbolo,
+        confianca: "alta",
+      };
+    }
+  }
+
+  if (!superficie.task) {
+    return undefined;
+  }
+
+  const taskAssociada = ir.tasks.find((task) => task.nome === superficie.task);
+  if (!taskAssociada) {
+    return undefined;
+  }
+
+  const ancoraTask = resolverArquivoOuSimboloAncora(taskAssociada.vinculos, simbolos, mapaImpl, arquivos);
+  if (ancoraTask) {
+    return ancoraTask;
+  }
+
+  for (const impl of taskAssociada.implementacoesExternas) {
+    const resolvido = mapaImpl.get(impl.caminho);
+    if (resolvido) {
+      return {
+        arquivo: resolvido.arquivo,
+        simbolo: resolvido.simbolo,
+        confianca: "alta",
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function calcularRiscoOperacional(task: IrTask): NivelRiscoSemantico {
+  if (
+    task.execucao.criticidadeOperacional === "alta"
+    || task.execucao.criticidadeOperacional === "critica"
+    || task.efeitosEstruturados.some((efeito) => efeito.categoria === "persistencia" || efeito.criticidade === "critica")
+  ) {
+    return "alto";
+  }
+
+  if (task.efeitosEstruturados.length > 0 || task.vinculos.length > 0 || task.errosDetalhados.length > 0) {
+    return "medio";
+  }
+
+  return "baixo";
+}
+
+function calcularConfiancaTask(
+  task: IrTask,
+  implsValidos: number,
+  implsQuebrados: number,
+  vinculosValidos: number,
+  vinculosQuebrados: number,
+): NivelConfiancaSemantica {
+  if ((implsValidos > 0 || vinculosValidos > 0) && implsQuebrados === 0 && vinculosQuebrados === 0) {
+    return "alta";
+  }
+  if (implsValidos > 0 || vinculosValidos > 0 || task.implementacoesExternas.length > 0 || task.vinculos.length > 0) {
+    return "media";
+  }
+  return "baixa";
+}
+
+function calcularScoreTask(
+  task: IrTask,
+  implsValidos: number,
+  implsQuebrados: number,
+  vinculosValidos: number,
+  vinculosQuebrados: number,
+  semImplementacao: boolean,
+): number {
+  let score = 45;
+  if (!semImplementacao && task.implementacoesExternas.length > 0) {
+    score += 15;
+  }
+  score += Math.min(implsValidos * 10, 20);
+  score -= Math.min(implsQuebrados * 20, 30);
+  score += Math.min(vinculosValidos * 5, 15);
+  score -= Math.min(vinculosQuebrados * 10, 20);
+  if (task.guarantees.length > 0) {
+    score += 5;
+  }
+  if (task.execucao.explicita) {
+    score += 5;
+  }
+  return Math.max(0, Math.min(100, score));
+}
+
+function resumirLacunasTask(
+  task: IrTask,
+  semImplementacao: boolean,
+  implsQuebrados: number,
+  vinculosQuebrados: number,
+): string[] {
+  const lacunas: string[] = [];
+  if (semImplementacao) {
+    lacunas.push("sem_impl");
+  }
+  if (implsQuebrados > 0) {
+    lacunas.push("impl_quebrado");
+  }
+  if (task.vinculos.length === 0) {
+    lacunas.push("sem_vinculos");
+  }
+  if (vinculosQuebrados > 0) {
+    lacunas.push("vinculo_quebrado");
+  }
+  if (!task.execucao.explicita) {
+    lacunas.push("execucao_implicita");
+  }
+  return lacunas;
+}
+
+function resumirOperacional(resultado: Omit<ResultadoDrift, "comando" | "sucesso">): ResultadoDrift["resumo_operacional"] {
+  const scoreMedio = resultado.tasks.length > 0
+    ? Math.round(resultado.tasks.reduce((total, task) => total + task.scoreSemantico, 0) / resultado.tasks.length)
+    : 0;
+  const confiancaGeral: NivelConfiancaSemantica = scoreMedio >= 80 ? "alta" : scoreMedio >= 55 ? "media" : "baixa";
+  const riscosPrincipais = [...new Set(resultado.tasks.filter((task) => task.riscoOperacional !== "baixo").map((task) => `${task.task}:${task.riscoOperacional}`))];
+  const oQueTocar = [...new Set(resultado.tasks.flatMap((task) => task.arquivosProvaveisEditar))].slice(0, 20);
+  const oQueValidar = [...new Set(resultado.tasks.flatMap((task) => task.checksSugeridos))];
+  const oQueEstaFrouxo = [...new Set(resultado.tasks.flatMap((task) => task.lacunas))];
+  const oQueFoiInferido = [
+    ...new Set([
+      ...resultado.impls_quebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.caminho) ?? []),
+      ...resultado.vinculos_quebrados.filter((vinculo) => vinculo.status === "parcial").map((vinculo) => `${vinculo.dono}:${vinculo.valor}`),
+    ]),
+  ];
+
+  return {
+    scoreMedio,
+    confiancaGeral,
+    riscosPrincipais,
+    oQueTocar,
+    oQueValidar,
+    oQueEstaFrouxo,
+    oQueFoiInferido,
+  };
+}
 
 function paraIdentificadorModulo(valor: string): string {
   return valor
@@ -307,11 +570,11 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
       }
 
       for (const node of sourceFile.statements) {
-        if (ts.isFunctionDeclaration(node) && node.name && node.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) {
+        if (ts.isFunctionDeclaration(node) && node.name) {
           registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, node.name.text);
         }
 
-        if (ts.isVariableStatement(node) && node.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) {
+        if (ts.isVariableStatement(node)) {
           for (const declaracao of node.declarationList.declarations) {
             if (!ts.isIdentifier(declaracao.name) || !declaracao.initializer) {
               continue;
@@ -333,9 +596,6 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
           if (!ts.isMethodDeclaration(member) || !member.name) {
             continue;
           }
-          if (member.modifiers?.some((m) => m.kind === ts.SyntaxKind.PrivateKeyword || m.kind === ts.SyntaxKind.ProtectedKeyword)) {
-            continue;
-          }
 
           const nomeMetodo = member.name.getText(sourceFile);
           if (nomeMetodo === "constructor") {
@@ -343,6 +603,7 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
           }
 
           registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, nomeMetodo, node.name.text);
+          const metodoEhInterno = member.modifiers?.some((m) => m.kind === ts.SyntaxKind.PrivateKeyword || m.kind === ts.SyntaxKind.ProtectedKeyword);
           for (const baseSimbolica of basesSimbolicas) {
             const caminhoMetodoDireto = `${baseSimbolica}.${nomeMetodo}`;
             if (!simbolos.has(caminhoMetodoDireto)) {
@@ -350,7 +611,7 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
             }
           }
 
-          if (controllerDecorator) {
+          if (controllerDecorator && !metodoEhInterno) {
             const httpDecorator = lerDecorator(member, ["Get", "Post", "Put", "Patch", "Delete"]);
             if (httpDecorator) {
               rotas.push({
@@ -689,7 +950,7 @@ function normalizarCaminhoRota(caminho?: string): string {
   if (!caminho) {
     return "/";
   }
-  const limpo = normalizarCaminhoFlask(caminho.trim());
+  const limpo = normalizarCaminhoFlask(caminho.trim().replace(/\s*\/\s*/g, "/"));
   const comBarra = limpo.startsWith("/") ? limpo : `/${limpo}`;
   const normalizado = comBarra.replace(/\/+/g, "/");
   return normalizado.endsWith("/") && normalizado !== "/" ? normalizado.slice(0, -1) : normalizado;
@@ -921,6 +1182,16 @@ function extrairRecursosEsperados(task: IrTask): Array<{ categoria: "persistenci
     }));
 }
 
+function coletarVinculosIr(ir: IrModulo): Array<{ donoTipo: RegistroVinculoDrift["donoTipo"]; dono: string; vinculo: IrVinculo }> {
+  return [
+    ...ir.vinculos.map((vinculo) => ({ donoTipo: "modulo" as const, dono: ir.nome, vinculo })),
+    ...ir.tasks.flatMap((task) => task.vinculos.map((vinculo) => ({ donoTipo: "task" as const, dono: task.nome, vinculo }))),
+    ...ir.flows.flatMap((flow: IrFlow) => flow.vinculos.map((vinculo) => ({ donoTipo: "flow" as const, dono: flow.nome, vinculo }))),
+    ...ir.routes.flatMap((route: IrRoute) => route.vinculos.map((vinculo) => ({ donoTipo: "route" as const, dono: route.nome, vinculo }))),
+    ...ir.superficies.flatMap((superficie: IrSuperficie) => superficie.vinculos.map((vinculo) => ({ donoTipo: "superficie" as const, dono: `${superficie.tipo}:${superficie.nome}`, vinculo }))),
+  ];
+}
+
 export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): Promise<ResultadoDrift> {
   const indexTs = await indexarTypeScript(contexto.diretoriosCodigo);
   const indexPy = await indexarPython(contexto.diretoriosCodigo);
@@ -953,22 +1224,43 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const mapaRecursos = new Map<string, RecursoResolvido>(
     indexTs.recursos.map((item) => [item.nome, item] as const),
   );
+  const todasRotasIndexadas = [
+    ...indexTs.rotas,
+    ...indexPy.rotas,
+    ...indexDotnet.rotas,
+    ...indexJava.rotas,
+    ...indexGo.rotas,
+    ...indexRust.rotas,
+  ];
+  const todosArquivosConhecidos = [...new Set([
+    ...todosSimbolos.map((item) => item.arquivo),
+    ...todasRotasIndexadas.map((item) => item.arquivo),
+    ...indexTs.recursos.map((item) => item.arquivo),
+  ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   const implsValidos: RegistroImplDrift[] = [];
   const implsQuebrados: RegistroImplDrift[] = [];
+  const vinculosValidos: RegistroVinculoDrift[] = [];
+  const vinculosQuebrados: RegistroVinculoDrift[] = [];
   const rotasDivergentes: RegistroRotaDivergente[] = [];
   const recursosValidos: RegistroRecursoDrift[] = [];
   const recursosDivergentes: RegistroRecursoDrift[] = [];
   const diagnosticos: DiagnosticoDrift[] = [];
   const tasksResumo: ResultadoDrift["tasks"] = [];
+  const taskPorChave = new Map<string, IrTask>();
+  const resumoVinculosPorTask = new Map<string, { validos: number; quebrados: number; arquivos: Set<string> }>();
 
   for (const item of contexto.modulosSelecionados) {
     const ir = item.resultado.ir;
     if (!ir) {
       continue;
     }
+    const superficiesPorChave = new Map<string, IrSuperficie>(
+      ir.superficies.map((superficie) => [`${superficie.tipo}:${superficie.nome}`, superficie]),
+    );
 
     for (const task of ir.tasks) {
+      taskPorChave.set(`${ir.nome}:${task.nome}`, task);
       let validos = 0;
       let quebrados = 0;
       const arquivosReferenciados = new Set<string>();
@@ -1028,9 +1320,15 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         implsValidos: validos,
         implsQuebrados: quebrados,
         semImplementacao: task.implementacoesExternas.length === 0,
+        scoreSemantico: 0,
+        confiancaVinculo: "baixa",
+        riscoOperacional: "baixo",
+        lacunas: [],
         arquivosReferenciados: [...arquivosReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")),
+        arquivosProvaveisEditar: [],
         simbolosReferenciados: [...simbolosReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")),
         candidatosImpl: ordenarCandidatos([...candidatosTask.values()]).slice(0, 5),
+        checksSugeridos: [],
       });
 
       for (const recursoEsperado of extrairRecursosEsperados(task)) {
@@ -1072,9 +1370,27 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         effects: [],
         efeitosEstruturados: [],
         implementacoesExternas: [],
+        vinculos: [],
+        execucao: {
+          idempotencia: false,
+          timeout: "padrao",
+          retry: "nenhum",
+          compensacao: "nenhuma",
+          criticidadeOperacional: "media",
+          explicita: false,
+        },
         guarantees: [],
         garantiasEstruturadas: [],
         errors: {},
+        errosDetalhados: [],
+        perfilCompatibilidade: "interno",
+        resumoAgente: {
+          riscos: [],
+          checks: [],
+          entidadesAfetadas: [],
+          superficiesPublicas: [],
+          mutacoesPrevistas: [],
+        },
         tests: [],
       }, contexto.fontesLegado);
 
@@ -1082,14 +1398,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         continue;
       }
 
-      const encontradas = [
-        ...indexTs.rotas,
-        ...indexPy.rotas,
-        ...indexDotnet.rotas,
-        ...indexJava.rotas,
-        ...indexGo.rotas,
-        ...indexRust.rotas,
-      ].filter((rotaResolvida) => esperadas.includes(rotaResolvida.origem));
+      const encontradas = todasRotasIndexadas.filter((rotaResolvida) => esperadas.includes(rotaResolvida.origem));
       const combina = encontradas.some((rotaResolvida) =>
         rotaResolvida.metodo === route.metodo
         && normalizarCaminhoRota(rotaResolvida.caminho) === normalizarCaminhoRota(route.caminho));
@@ -1111,11 +1420,138 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         });
       }
     }
+
+    for (const itemVinculo of coletarVinculosIr(ir)) {
+      const registro: RegistroVinculoDrift = {
+        modulo: ir.nome,
+        donoTipo: itemVinculo.donoTipo,
+        dono: itemVinculo.dono,
+        tipo: itemVinculo.vinculo.tipo,
+        valor: itemVinculo.vinculo.valor,
+        status: "nao_encontrado",
+        confianca: "baixa",
+      };
+
+      const arquivoDeclarado = itemVinculo.vinculo.arquivo ?? (itemVinculo.vinculo.tipo === "arquivo" ? itemVinculo.vinculo.valor : undefined);
+      const simboloDeclarado = itemVinculo.vinculo.simbolo ?? (itemVinculo.vinculo.tipo === "simbolo" ? itemVinculo.vinculo.valor : undefined);
+      const recursoDeclarado = itemVinculo.vinculo.recurso ?? (["recurso", "tabela", "fila", "cache", "storage"].includes(itemVinculo.vinculo.tipo) ? itemVinculo.vinculo.valor : undefined);
+      const superficieDeclarada = itemVinculo.vinculo.superficie ?? (["superficie", "rota", "worker", "cron", "webhook", "evento", "policy", "fila", "cache", "storage"].includes(itemVinculo.vinculo.tipo) ? itemVinculo.vinculo.valor : undefined);
+
+      if (simboloDeclarado) {
+        const resolucaoSimbolo = escolherSimboloPorVinculo(todosSimbolos, mapaImpl, simboloDeclarado);
+        registro.status = resolucaoSimbolo.status;
+        registro.confianca = resolucaoSimbolo.confianca;
+        registro.arquivo = resolucaoSimbolo.simbolo?.arquivo;
+        registro.simbolo = resolucaoSimbolo.simbolo?.simbolo;
+      } else if (arquivoDeclarado) {
+        const resolucaoArquivo = escolherArquivoPorVinculo(todosArquivosConhecidos, arquivoDeclarado);
+        registro.status = resolucaoArquivo.status;
+        registro.confianca = resolucaoArquivo.confianca;
+        registro.arquivo = resolucaoArquivo.arquivo;
+      } else if (recursoDeclarado) {
+        const recurso = mapaRecursos.get(recursoDeclarado);
+        if (recurso) {
+          registro.status = "resolvido";
+          registro.confianca = "alta";
+          registro.arquivo = recurso.arquivo;
+        }
+      } else if (superficieDeclarada) {
+        const rota = todasRotasIndexadas.find((rotaResolvida) =>
+          normalizarCaminhoRota(rotaResolvida.caminho) === normalizarCaminhoRota(superficieDeclarada));
+        if (rota) {
+          registro.status = "resolvido";
+          registro.confianca = "alta";
+          registro.arquivo = rota.arquivo;
+          registro.simbolo = rota.simbolo;
+        } else {
+          const resolucaoArquivo = escolherArquivoPorVinculo(todosArquivosConhecidos, superficieDeclarada);
+          registro.status = resolucaoArquivo.status;
+          registro.confianca = resolucaoArquivo.confianca;
+          registro.arquivo = resolucaoArquivo.arquivo;
+        }
+      } else {
+        const resolucaoArquivo = escolherArquivoPorVinculo(todosArquivosConhecidos, itemVinculo.vinculo.valor);
+        registro.status = resolucaoArquivo.status;
+        registro.confianca = resolucaoArquivo.confianca;
+        registro.arquivo = resolucaoArquivo.arquivo;
+      }
+
+      if (registro.status === "nao_encontrado" && itemVinculo.donoTipo === "superficie") {
+        const superficie = superficiesPorChave.get(itemVinculo.dono);
+        const ancora = superficie
+          ? encontrarAncoraSuperficie(ir, superficie, todosSimbolos, mapaImpl, todosArquivosConhecidos)
+          : undefined;
+        if (ancora) {
+          registro.status = "parcial";
+          registro.confianca = ancora.confianca === "alta" ? "media" : ancora.confianca;
+          registro.arquivo = registro.arquivo ?? ancora.arquivo;
+          registro.simbolo = registro.simbolo ?? ancora.simbolo;
+        }
+      }
+
+      if (registro.status === "nao_encontrado") {
+        vinculosQuebrados.push(registro);
+        diagnosticos.push({
+          tipo: "vinculo_quebrado",
+          modulo: ir.nome,
+          mensagem: `Vinculo ${registro.tipo}="${registro.valor}" de ${registro.donoTipo} "${registro.dono}" nao foi resolvido no codigo vivo.`,
+          ...(itemVinculo.donoTipo === "task" ? { task: itemVinculo.dono } : itemVinculo.donoTipo === "route" ? { route: itemVinculo.dono } : {}),
+        });
+      } else {
+        vinculosValidos.push(registro);
+      }
+
+      if (itemVinculo.donoTipo === "task") {
+        const chaveTask = `${ir.nome}:${itemVinculo.dono}`;
+        const resumo = resumoVinculosPorTask.get(chaveTask) ?? {
+          validos: 0,
+          quebrados: 0,
+          arquivos: new Set<string>(),
+        };
+        if (registro.status === "nao_encontrado") {
+          resumo.quebrados += 1;
+        } else {
+          resumo.validos += 1;
+        }
+        if (registro.arquivo) {
+          resumo.arquivos.add(registro.arquivo);
+        }
+        resumoVinculosPorTask.set(chaveTask, resumo);
+      }
+    }
   }
 
-  return {
+  for (const resumo of tasksResumo) {
+    const chaveTask = `${resumo.modulo}:${resumo.task}`;
+    const task = taskPorChave.get(chaveTask);
+    const resumoVinculos = resumoVinculosPorTask.get(chaveTask) ?? {
+      validos: 0,
+      quebrados: 0,
+      arquivos: new Set<string>(),
+    };
+    if (!task) {
+      continue;
+    }
+
+    resumo.confiancaVinculo = calcularConfiancaTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados);
+    resumo.riscoOperacional = calcularRiscoOperacional(task);
+    resumo.lacunas = resumirLacunasTask(task, resumo.semImplementacao, resumo.implsQuebrados, resumoVinculos.quebrados);
+    resumo.scoreSemantico = calcularScoreTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados, resumo.semImplementacao);
+    resumo.arquivosProvaveisEditar = [...new Set([
+      ...resumo.arquivosReferenciados,
+      ...resumo.candidatosImpl.map((candidato) => candidato.arquivo),
+      ...resumoVinculos.arquivos,
+    ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    resumo.checksSugeridos = [...new Set([
+      ...task.resumoAgente.checks,
+      resumo.riscoOperacional !== "baixo" ? "revisar efeitos operacionais" : "",
+      resumo.lacunas.includes("vinculo_quebrado") ? "corrigir vinculos rastreaveis" : "",
+    ].filter(Boolean))];
+  }
+
+  const payloadBase: ResultadoDrift = {
     comando: "drift",
-    sucesso: implsQuebrados.length === 0 && rotasDivergentes.length === 0 && recursosDivergentes.length === 0,
+    sucesso: implsQuebrados.length === 0 && rotasDivergentes.length === 0 && recursosDivergentes.length === 0 && vinculosQuebrados.length === 0,
     modulos: contexto.modulosSelecionados.map((item) => ({
       caminho: item.caminho,
       modulo: item.resultado.ir?.nome ?? item.resultado.modulo?.nome ?? null,
@@ -1125,9 +1561,26 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     tasks: tasksResumo,
     impls_validos: implsValidos,
     impls_quebrados: implsQuebrados,
+    vinculos_validos: vinculosValidos,
+    vinculos_quebrados: vinculosQuebrados,
     rotas_divergentes: rotasDivergentes,
     recursos_validos: recursosValidos,
     recursos_divergentes: recursosDivergentes,
     diagnosticos,
+    resumo_operacional: {
+      scoreMedio: 0,
+      confiancaGeral: "baixa" as const,
+      riscosPrincipais: [],
+      oQueTocar: [],
+      oQueValidar: [],
+      oQueEstaFrouxo: [],
+      oQueFoiInferido: [],
+    },
+  };
+  const resumoOperacional = resumirOperacional(payloadBase);
+
+  return {
+    ...payloadBase,
+    resumo_operacional: resumoOperacional,
   };
 }

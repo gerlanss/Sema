@@ -30,11 +30,13 @@ test("showcase oficial ranking-showroom valida, inspeciona, mede drift e gera co
     assert.equal(path.resolve(jsonInspecao.configuracao.baseProjeto), SHOWCASE);
     assert.equal(jsonInspecao.configuracao.fontesLegado.includes("flask"), true);
     assert.equal(jsonInspecao.configuracao.diretoriosCodigo.some((item: string) => item.endsWith(path.join("ranking-showroom", "backend-flask"))), true);
+    assert.equal(typeof jsonInspecao.configuracao.scoreDrift, "number");
 
     const drift = executar(["drift", "contratos/ranking_showroom.sema", "--json"]);
     assert.equal(drift.status, 0, drift.stderr || drift.stdout);
     const jsonDrift = JSON.parse(drift.stdout);
     assert.equal(jsonDrift.impls_quebrados.length, 0);
+    assert.equal(jsonDrift.vinculos_quebrados.length, 0);
     assert.equal(jsonDrift.rotas_divergentes.length, 0);
     assert.equal(jsonDrift.impls_validos.length, 3);
 
@@ -59,10 +61,15 @@ test("showcase oficial ranking-showroom valida, inspeciona, mede drift e gera co
     assert.equal(existsSync(path.join(pastaContexto, "ast.json")), true);
     assert.equal(existsSync(path.join(pastaContexto, "ir.json")), true);
     assert.equal(existsSync(path.join(pastaContexto, "drift.json")), true);
+    assert.equal(existsSync(path.join(pastaContexto, "briefing.json")), true);
 
     const driftContexto = JSON.parse(await readFile(path.join(pastaContexto, "drift.json"), "utf8"));
     assert.equal(driftContexto.drift.impls_quebrados.length, 0);
     assert.equal(driftContexto.drift.rotas_divergentes.length, 0);
+
+    const briefing = JSON.parse(await readFile(path.join(pastaContexto, "briefing.json"), "utf8"));
+    assert.equal(Array.isArray(briefing.oQueTocar), true);
+    assert.equal(Array.isArray(briefing.oQueValidar), true);
   } finally {
     await rm(pastaContexto, { recursive: true, force: true });
   }

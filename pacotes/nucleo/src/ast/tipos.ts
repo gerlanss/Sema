@@ -7,11 +7,21 @@ export type TipoBloco =
   | "entity"
   | "enum"
   | "task"
+  | "worker"
+  | "evento"
+  | "fila"
+  | "cron"
+  | "webhook"
+  | "cache"
+  | "storage"
+  | "policy"
   | "input"
   | "output"
   | "rules"
   | "effects"
   | "impl"
+  | "vinculos"
+  | "execucao"
   | "guarantees"
   | "state"
   | "flow"
@@ -100,6 +110,8 @@ export interface TaskAst extends NoAstBase {
   rules?: BlocoGenericoAst;
   effects?: BlocoGenericoAst;
   impl?: BlocoGenericoAst;
+  vinculos?: BlocoGenericoAst;
+  execucao?: BlocoGenericoAst;
   guarantees?: BlocoGenericoAst;
   state?: BlocoGenericoAst;
   tests?: BlocoGenericoAst;
@@ -112,12 +124,14 @@ export interface FlowAst extends NoAstBase {
   tipo: "flow";
   nome: string;
   corpo: BlocoGenericoAst;
+  vinculos?: BlocoGenericoAst;
 }
 
 export interface RouteAst extends NoAstBase {
   tipo: "route";
   nome: string;
   corpo: BlocoGenericoAst;
+  vinculos?: BlocoGenericoAst;
 }
 
 export interface StateAst extends NoAstBase {
@@ -130,6 +144,7 @@ export interface ModuloAst extends NoAstBase {
   tipo: "module";
   nome: string;
   uses: UseAst[];
+  vinculos?: BlocoGenericoAst;
   docs?: BlocoGenericoAst;
   comments?: BlocoGenericoAst;
   types: TypeAst[];
@@ -138,6 +153,14 @@ export interface ModuloAst extends NoAstBase {
   tasks: TaskAst[];
   flows: FlowAst[];
   routes: RouteAst[];
+  workers: BlocoGenericoAst[];
+  eventos: BlocoGenericoAst[];
+  filas: BlocoGenericoAst[];
+  crons: BlocoGenericoAst[];
+  webhooks: BlocoGenericoAst[];
+  caches: BlocoGenericoAst[];
+  storages: BlocoGenericoAst[];
+  policies: BlocoGenericoAst[];
   states: StateAst[];
   tests?: BlocoGenericoAst;
   extras: BlocoGenericoAst[];

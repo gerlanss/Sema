@@ -2,6 +2,9 @@ module sema.produto.ergonomia_e_dominio {
   docs {
     resumo: "Contrato interno da Sema para reduzir atrito sintatico, enriquecer dominio e governar compatibilidade sem virar linguagem maldita."
   }
+  vinculos {
+    arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+  }
 
   enum PerfilCompatibilidade {
     PUBLICO,
@@ -39,6 +42,15 @@ module sema.produto.ergonomia_e_dominio {
     impl {
       ts: nucleo.src.formatador.index.formatarCodigo
     }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/formatador/index.ts"
+      simbolo: nucleo.src.formatador.index.formatarCodigo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      criticidade_operacional: baixa
+    }
     state maturidade_contrato {
       transitions {
         EXPERIMENTAL -> PUBLICO
@@ -66,6 +78,7 @@ module sema.produto.ergonomia_e_dominio {
     input {
       contrato_atual: Texto required
       payload_json_generico: Booleano required
+      exemplos_payload: Lista<Texto> optional
     }
     output {
       tipo_composto_explicito: Booleano
@@ -74,6 +87,14 @@ module sema.produto.ergonomia_e_dominio {
     }
     impl {
       ts: nucleo.src.semantico.analisador.analisarSemantica
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+      simbolo: nucleo.src.semantico.analisador.analisarSemantica
+    }
+    execucao {
+      timeout: "10s"
+      criticidade_operacional: alta
     }
     guarantees {
       tipo_composto_explicito existe
@@ -106,6 +127,14 @@ module sema.produto.ergonomia_e_dominio {
     impl {
       ts: nucleo.src.ir.conversor.converterParaIr
     }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/ir/conversor.ts"
+      simbolo: nucleo.src.ir.conversor.converterParaIr
+    }
+    execucao {
+      timeout: "10s"
+      criticidade_operacional: media
+    }
     guarantees {
       versao_explicita existe
       fallback_claro existe
@@ -137,6 +166,14 @@ module sema.produto.ergonomia_e_dominio {
     impl {
       ts: nucleo.src.semantico.analisador.analisarSemantica
     }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+      simbolo: nucleo.src.semantico.analisador.analisarSemantica
+    }
+    execucao {
+      timeout: "10s"
+      criticidade_operacional: media
+    }
     guarantees {
       validacao_de_input_clara existe
       regra_de_negocio_clara existe
@@ -167,6 +204,14 @@ module sema.produto.ergonomia_e_dominio {
     impl {
       ts: cli.src.projeto.resolverAlvosVerificacao
     }
+    vinculos {
+      arquivo: "pacotes/cli/src/projeto.ts"
+      simbolo: cli.src.projeto.resolverAlvosVerificacao
+    }
+    execucao {
+      timeout: "10s"
+      criticidade_operacional: media
+    }
     guarantees {
       nota existe
       resumo existe
@@ -194,6 +239,29 @@ module sema.produto.ergonomia_e_dominio {
     effects {
       auditoria ergonomia_semantica criticidade = alta
       persistencia scorecard_compatibilidade criticidade = media
+    }
+    vinculos {
+      simbolo: nucleo.src.ir.conversor.converterParaIr
+    }
+  }
+
+  policy compatibilidade_publica {
+    task: explicitar_variacao_e_compatibilidade
+    vinculos {
+      policy: compatibilidade_publica
+    }
+    execucao {
+      criticidade_operacional: media
+    }
+  }
+
+  evento scorecard_atualizado {
+    task: consultar_scorecard_compatibilidade
+    vinculos {
+      evento: scorecard_compatibilidade
+    }
+    execucao {
+      criticidade_operacional: baixa
     }
   }
 }

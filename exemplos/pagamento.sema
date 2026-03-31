@@ -1,6 +1,6 @@
 module exemplos.pagamento {
   docs {
-    resumo: "Vertical oficial de pagamento da Sema 0.5, usado como referencia de utilidade real controlada."
+    resumo: "Vertical oficial de pagamento da Sema 0.5,usado como referencia de utilidade real controlada."
   }
 
   use exemplos.pagamento.dominio

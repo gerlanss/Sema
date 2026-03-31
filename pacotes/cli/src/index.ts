@@ -116,11 +116,14 @@ const STARTER_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca d
 Importante:
 - a Sema se apresenta publicamente como protocolo e funciona tecnicamente como linguagem de intencao
 - a Sema e protocolo de governanca semantica, nao gerador magico que deveria fazer tudo
-- a Sema modela contratos, estados, fluxos, erros, efeitos e garantias
+- a Sema modela contratos, estados, fluxos, erros, efeitos, garantias, vinculos e execucao
 - a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
 - a Sema usa \`importar\` para bootstrap revisavel, nao para contrato final automatico
-- a Sema usa \`drift\` para medir diferenca entre contrato e codigo vivo
 - a Sema usa \`impl\` para ligar task a simbolo real do runtime
+- a Sema usa \`vinculos\` para ligar contrato a arquivo, simbolo, recurso e superficie real
+- a Sema usa \`execucao\` para explicitar timeout, retry, compensacao e criticidade
+- a Sema usa \`drift\` para medir diferenca entre contrato e codigo vivo com score, confianca e lacunas
+- a Sema usa \`contexto-ia\` para gerar \`ast.json\`, \`ir.json\`, \`drift.json\` e \`briefing.json\` antes da edicao
 - a Sema pode servir de base para interfaces graficas elegantes e coerentes
 - a Sema nao gera uma interface completa sozinha no estado atual
 - trate a Sema como cerebro semantico da aplicacao, nao como gerador magico de front-end pronto
@@ -130,12 +133,15 @@ Importante:
 Regras:
 - nao invente sintaxe fora da gramatica e dos exemplos oficiais
 - trate \`ir --json\` como fonte de verdade semantica
+- trate \`briefing.json\` como plano de intervencao antes de editar projeto vivo
 - trate \`diagnosticos --json\` como fonte de correcao
 - use \`sema formatar\` como fonte unica de estilo
 - preserve a intencao do contrato
 - nao cobre da Sema adivinhacao de negocio que nao esta no contrato nem no codigo
 
 Comandos essenciais:
+- descoberta do projeto: \`sema inspecionar [arquivo-ou-pasta] --json\`
+- auditoria do contrato vivo: \`sema drift <arquivo-ou-pasta> [--json]\`
 - contexto completo do modulo: \`sema contexto-ia <arquivo.sema>\`
 - estrutura sintatica: \`sema ast <arquivo.sema> --json\`
 - estrutura semantica: \`sema ir <arquivo.sema> --json\`
@@ -143,26 +149,41 @@ Comandos essenciais:
 - diagnosticos: \`sema diagnosticos <arquivo.sema> --json\`
 - formatacao: \`sema formatar <arquivo.sema>\`
 - importacao assistida de legado: \`sema importar <nestjs|fastapi|flask|nextjs|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> --saida <diretorio>\`
-- auditoria de coerencia contra codigo vivo: \`sema drift <arquivo-ou-pasta> [--json]\`
 - geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>\`
 - verificacao final: \`sema verificar <arquivo-ou-pasta> [--json]\`
 
 Antes de editar:
 1. leia README, docs de IA e um exemplo oficial parecido
-2. consulte AST e IR do modulo alvo
+2. rode \`sema inspecionar\` para descobrir base, codigo vivo e fontes legado
+3. rode \`sema drift\` para medir impls, vinculos, rotas, score e lacunas
+4. rode \`sema contexto-ia\` e leia \`briefing.json\`
+5. consulte AST e IR do modulo alvo
 
 Depois de editar:
 1. rode \`sema formatar\`
 2. rode \`sema validar --json\`
 3. se houver falha, use \`diagnosticos --json\`
-4. se a tarefa partir de legado, rode \`sema drift\`
+4. rode \`sema drift\` de novo quando mexer em codigo vivo
 5. se a tarefa pedir codigo derivado, rode \`sema compilar\`
 6. feche com \`sema verificar\` ou \`npm run project:check\`
 
 Priorize sempre:
 - exemplos oficiais
 - JSON da CLI
+- score, confianca e lacunas do \`drift\`
+- \`briefing.json\` como guia de mudanca
 - consistencia semantica
+
+Superficies que a IA deve enxergar como first-class:
+- \`route\`
+- \`worker\`
+- \`evento\`
+- \`fila\`
+- \`cron\`
+- \`webhook\`
+- \`cache\`
+- \`storage\`
+- \`policy\`
 
 Nao improvise quando faltar contexto.
 `;
@@ -813,6 +834,12 @@ function resumirDriftPorModulo(
   const implsQuebrados = modulo
     ? resultadoDrift.impls_quebrados.filter((impl) => impl.modulo === modulo)
     : [];
+  const vinculosValidos = modulo
+    ? resultadoDrift.vinculos_validos.filter((vinculo) => vinculo.modulo === modulo)
+    : [];
+  const vinculosQuebrados = modulo
+    ? resultadoDrift.vinculos_quebrados.filter((vinculo) => vinculo.modulo === modulo)
+    : [];
   const rotasDivergentes = modulo
     ? resultadoDrift.rotas_divergentes.filter((rota) => rota.modulo === modulo)
     : [];
@@ -828,19 +855,86 @@ function resumirDriftPorModulo(
     modulo,
     implsValidos: implsValidos.length,
     implsQuebrados: implsQuebrados.length,
+    vinculosValidos: vinculosValidos.length,
+    vinculosQuebrados: vinculosQuebrados.length,
     recursosValidos: recursosValidos.length,
     recursosDivergentesCount: recursosDivergentes.length,
     tasksSemImplementacao: tasks.filter((task) => task.semImplementacao).length,
+    scoreMedio: tasks.length > 0 ? Math.round(tasks.reduce((total, task) => total + task.scoreSemantico, 0) / tasks.length) : 0,
+    confiancaGeral: tasks.some((task) => task.confiancaVinculo === "alta")
+      ? "alta"
+      : tasks.some((task) => task.confiancaVinculo === "media")
+        ? "media"
+        : "baixa",
     arquivosRelacionados: [...new Set([
       ...tasks.flatMap((task) => task.arquivosReferenciados),
+      ...tasks.flatMap((task) => task.arquivosProvaveisEditar),
       ...implsValidos.map((impl) => impl.arquivo).filter((item): item is string => Boolean(item)),
       ...implsQuebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.arquivo) ?? []),
+      ...vinculosValidos.map((vinculo) => vinculo.arquivo).filter((item): item is string => Boolean(item)),
       ...recursosValidos.map((recurso) => recurso.arquivo).filter(Boolean),
       ...recursosDivergentes.map((recurso) => recurso.arquivo).filter(Boolean),
     ])].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    checksSugeridos: [...new Set(tasks.flatMap((task) => task.checksSugeridos))],
+    lacunas: [...new Set(tasks.flatMap((task) => task.lacunas))],
     tasks,
     rotasDivergentes,
     recursosDivergentes,
+    vinculosQuebradosDetalhes: vinculosQuebrados,
+  };
+}
+
+function criarBriefingAgente(
+  arquivo: string,
+  modulo: string,
+  ir: IrModulo | null,
+  resumoDrift: ReturnType<typeof resumirDriftPorModulo>,
+  resultadoDrift: Awaited<ReturnType<typeof analisarDriftLegado>>,
+) {
+  const tarefasModulo = resultadoDrift.tasks.filter((task) => task.modulo === modulo);
+  return {
+    arquivo,
+    modulo,
+    perfilCompatibilidade: ir?.perfilCompatibilidade ?? "interno",
+    scoreSemantico: resumoDrift.scoreMedio,
+    confiancaGeral: resumoDrift.confiancaGeral,
+    riscosPrincipais: [...new Set([
+      ...resultadoDrift.resumo_operacional.riscosPrincipais.filter((item) => item.startsWith(`${modulo}:`) || tarefasModulo.some((task) => item.startsWith(`${task.task}:`))),
+      ...(ir?.resumoAgente.riscos ?? []),
+    ])],
+    oQueTocar: resumoDrift.arquivosRelacionados,
+    oQueValidar: [...new Set([
+      ...resumoDrift.checksSugeridos,
+      ...resultadoDrift.resumo_operacional.oQueValidar,
+    ])],
+    oQueEstaFrouxo: [...new Set([
+      ...resumoDrift.lacunas,
+      ...resultadoDrift.resumo_operacional.oQueEstaFrouxo,
+    ])],
+    oQueFoiInferido: [...new Set([
+      ...resultadoDrift.impls_quebrados
+        .filter((impl) => impl.modulo === modulo)
+        .flatMap((impl) => impl.candidatos?.map((candidato) => candidato.caminho) ?? []),
+      ...resultadoDrift.vinculos_validos
+        .filter((vinculo) => vinculo.modulo === modulo && vinculo.status === "parcial")
+        .map((vinculo) => `${vinculo.dono}:${vinculo.valor}`),
+    ])],
+    simbolosRelacionados: [...new Set([
+      ...tarefasModulo.flatMap((task) => task.simbolosReferenciados),
+      ...resultadoDrift.vinculos_validos
+        .filter((vinculo) => vinculo.modulo === modulo)
+        .map((vinculo) => vinculo.simbolo)
+        .filter((item): item is string => Boolean(item)),
+    ])],
+    superficiesImpactadas: [
+      ...(ir?.routes.map((route) => `${route.metodo ?? "?"} ${route.caminho ?? route.nome}`) ?? []),
+      ...(ir?.superficies.map((superficie) => `${superficie.tipo}:${superficie.nome}`) ?? []),
+    ],
+    testesMinimos: [
+      "sema validar <arquivo> --json",
+      "sema drift <arquivo> --json",
+      "sema verificar exemplos --json",
+    ],
   };
 }
 
@@ -910,12 +1004,20 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
     diagnosticos: resultadoModulo.diagnosticos,
     ir: resultadoModulo.ir ?? null,
   };
+  const briefing = criarBriefingAgente(
+    arquivo,
+    modulo,
+    resultadoModulo.ir ?? null,
+    drift.resumo,
+    resultadoDrift,
+  );
 
   await writeFile(path.join(pastaBase, "validar.json"), `${JSON.stringify(validar, null, 2)}\n`, "utf8");
   await writeFile(path.join(pastaBase, "diagnosticos.json"), `${JSON.stringify(diagnosticos, null, 2)}\n`, "utf8");
   await writeFile(path.join(pastaBase, "ast.json"), `${JSON.stringify(ast, null, 2)}\n`, "utf8");
   await writeFile(path.join(pastaBase, "ir.json"), `${JSON.stringify(ir, null, 2)}\n`, "utf8");
   await writeFile(path.join(pastaBase, "drift.json"), `${JSON.stringify(drift, null, 2)}\n`, "utf8");
+  await writeFile(path.join(pastaBase, "briefing.json"), `${JSON.stringify(briefing, null, 2)}\n`, "utf8");
 
   const resumo = `# Contexto de IA para ${modulo}
 
@@ -931,17 +1033,19 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
 - \`ast.json\`
 - \`ir.json\`
 - \`drift.json\`
+- \`briefing.json\`
 
 ## Fluxo recomendado para o agente
 
 1. Ler \`ast.json\` para entender a forma escrita.
 2. Ler \`ir.json\` para entender a forma semantica resolvida.
 3. Ler \`drift.json\` para ver quais arquivos e simbolos vivos sustentam a implementacao.
-4. Ler \`diagnosticos.json\` se houver falha ou aviso relevante.
-5. Editar o arquivo \`.sema\`.
-6. Rodar \`sema formatar "${arquivo}"\`.
-7. Rodar \`sema validar "${arquivo}" --json\`.
-8. Fechar com \`sema verificar exemplos --json --saida ./.tmp/verificacao-ia\` ou \`npm run project:check\`.
+4. Ler \`briefing.json\` para saber o que tocar, o que validar e o que esta frouxo.
+5. Ler \`diagnosticos.json\` se houver falha ou aviso relevante.
+6. Editar o arquivo \`.sema\`.
+7. Rodar \`sema formatar "${arquivo}"\`.
+8. Rodar \`sema validar "${arquivo}" --json\`.
+9. Fechar com \`sema verificar exemplos --json --saida ./.tmp/verificacao-ia\` ou \`npm run project:check\`.
 
 ## Textos base para onboarding do agente
 
@@ -956,7 +1060,7 @@ async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional?: stri
     arquivo,
     modulo,
     pastaSaida: pastaBase,
-    artefatos: ["validar.json", "diagnosticos.json", "ast.json", "ir.json", "drift.json", "README.md"],
+    artefatos: ["validar.json", "diagnosticos.json", "ast.json", "ir.json", "drift.json", "briefing.json", "README.md"],
   };
 }
 
@@ -1679,6 +1783,8 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
       diretoriosCodigo: contextoProjeto.diretoriosCodigo,
       fontesLegado: contextoProjeto.fontesLegado,
       modoAdocao: contextoProjeto.modoAdocao,
+      scoreDrift: resultadoDrift.resumo_operacional.scoreMedio,
+      confiancaGeral: resultadoDrift.resumo_operacional.confiancaGeral,
     },
     projeto: {
       arquivos: contextoProjeto.arquivosProjeto,
@@ -1687,6 +1793,7 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
         modulo: item.resultado.modulo?.nome ?? null,
         sucesso: !temErros(item.resultado.diagnosticos),
         diagnosticos: item.resultado.diagnosticos.length,
+        superficies: item.resultado.ir?.superficies.map((superficie) => `${superficie.tipo}:${superficie.nome}`) ?? [],
         implementacao: resumirDriftPorModulo(item.resultado.modulo?.nome ?? null, item.caminho, resultadoDrift),
       })),
     },
@@ -1705,6 +1812,8 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
   console.log(`- Estrutura de saida: ${payload.configuracao.estruturaSaida}`);
   console.log(`- Alvos: ${payload.configuracao.alvos.join(", ")}`);
   console.log(`- Modo de adocao: ${payload.configuracao.modoAdocao}`);
+  console.log(`- Score medio de drift: ${payload.configuracao.scoreDrift}`);
+  console.log(`- Confianca geral: ${payload.configuracao.confiancaGeral}`);
   console.log("- Saidas por alvo:");
   for (const [alvo, saida] of Object.entries(payload.configuracao.saidas)) {
     console.log(`  - ${alvo}: ${saida}`);
@@ -1743,9 +1852,13 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
   console.log(`- Tasks analisadas: ${resultado.tasks.length}`);
   console.log(`- Impl validos: ${resultado.impls_validos.length}`);
   console.log(`- Impl quebrados: ${resultado.impls_quebrados.length}`);
+  console.log(`- Vinculos validos: ${resultado.vinculos_validos.length}`);
+  console.log(`- Vinculos quebrados: ${resultado.vinculos_quebrados.length}`);
   console.log(`- Rotas divergentes: ${resultado.rotas_divergentes.length}`);
   console.log(`- Recursos vivos validos: ${resultado.recursos_validos.length}`);
   console.log(`- Recursos vivos divergentes: ${resultado.recursos_divergentes.length}`);
+  console.log(`- Score medio: ${resultado.resumo_operacional.scoreMedio}`);
+  console.log(`- Confianca geral: ${resultado.resumo_operacional.confiancaGeral}`);
 
   if (resultado.impls_quebrados.length > 0) {
     console.log("- Impl quebrados:");
@@ -1785,6 +1898,27 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
           console.log(`      - [${candidato.confianca}] ${candidato.caminho} :: ${candidato.arquivo} :: ${candidato.simbolo}`);
         }
       }
+    }
+  }
+
+  if (resultado.vinculos_quebrados.length > 0) {
+    console.log("- Vinculos quebrados:");
+    for (const vinculo of resultado.vinculos_quebrados) {
+      console.log(`  - ${vinculo.modulo}.${vinculo.dono} :: ${vinculo.tipo}=${vinculo.valor}`);
+    }
+  }
+
+  if (resultado.resumo_operacional.oQueTocar.length > 0) {
+    console.log("- O que tocar primeiro:");
+    for (const alvo of resultado.resumo_operacional.oQueTocar.slice(0, 8)) {
+      console.log(`  - ${alvo}`);
+    }
+  }
+
+  if (resultado.resumo_operacional.oQueValidar.length > 0) {
+    console.log("- O que validar:");
+    for (const check of resultado.resumo_operacional.oQueValidar.slice(0, 8)) {
+      console.log(`  - ${check}`);
     }
   }
 
@@ -2042,11 +2176,13 @@ async function comandoAjudaIa(): Promise<number> {
   console.log(renderizarCabecalhoDocsIa(descoberta));
   console.log("");
   console.log("O que a Sema faz de verdade");
-  console.log("- Governa contrato, intencao, erro, efeito, garantia, fluxo e vinculo com implementacao viva.");
+  console.log("- Governa contrato, intencao, erro, efeito, garantia, fluxo, vinculos e execucao.");
   console.log("- Usa `importar` para bootstrap revisavel de legado.");
   console.log("- Usa `impl` para ligar contrato a simbolos reais.");
-  console.log("- Usa `drift` para medir divergencia entre contrato e codigo vivo.");
-  console.log("- Usa `contexto-ia` para preparar AST, IR, diagnosticos e drift antes da edicao.");
+  console.log("- Usa `vinculos` para ligar contrato a arquivo, simbolo, recurso e superficie real.");
+  console.log("- Usa `execucao` para explicitar timeout, retry, compensacao e criticidade.");
+  console.log("- Usa `drift` para medir divergencia entre contrato e codigo vivo com score, confianca e lacunas.");
+  console.log("- Usa `contexto-ia` para preparar AST, IR, diagnosticos, drift e `briefing.json` antes da edicao.");
   console.log("");
   console.log("O que a Sema nao promete");
   console.log("- Nao escreve contrato final sozinho.");
@@ -2060,13 +2196,17 @@ async function comandoAjudaIa(): Promise<number> {
   console.log("- Use `sema prompt-ia-react` para projeto com Sema + React + TypeScript.");
   console.log("- Use `sema prompt-ia-sema-primeiro` para forcar modelagem semantica antes da implementacao.");
   console.log("- Use `sema exemplos-prompt-ia` para pegar modelos prontos de prompt.");
-  console.log("- Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR e diagnosticos do modulo alvo.");
+  console.log("- Use `sema inspecionar` para descobrir base, codigo vivo e fontes legado.");
+  console.log("- Use `sema drift` para medir impls, vinculos, rotas, score e lacunas.");
+  console.log("- Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR, drift e `briefing.json` do modulo alvo.");
   console.log("- Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>` quando a tarefa pedir codigo derivado.");
   console.log("");
   console.log("Regra pratica");
   console.log("- Se voce quer testar a Sema de verdade, nao peca so HTML solto.");
   console.log("- Peca `.sema` + arquitetura + React + TypeScript, ou use o modo `Sema primeiro`.");
   console.log("- Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.");
+  console.log("- Antes de editar backend vivo, leia `briefing.json` em vez de sair cavando arquivo na fe.");
+  console.log("- Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.");
   return 0;
 }
 

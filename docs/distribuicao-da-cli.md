@@ -1,20 +1,16 @@
-# Distribuição da CLI da Sema
+# Distribuicao da CLI da Sema
 
 Este documento explica como distribuir a CLI da Sema fora do monorrepo sem vender fumaça.
 
-## Modelo oficial agora
+## Modelo oficial
 
-A trilha pública principal da Sema passa a ser:
+A trilha publica principal da Sema e:
 
 1. instalar `@semacode/cli` pelo npm
 2. rodar `sema`
-3. usar a GitHub Release só como canal alternativo com tarball estável
+3. usar a GitHub Release como canal alternativo com tarball estavel
 
-O pacote da CLI já está **publicado no npm registry** como `@semacode/cli`.
-
-Se você precisa anunciar a release sem ficar improvisando texto em cima da hora, use também o [kit de lançamento público](./kit-lancamento-publico.md).
-
-Instalação sem clone em Linux, Windows PowerShell e macOS:
+Instalacao oficial:
 
 ```bash
 npm install -g @semacode/cli
@@ -22,7 +18,7 @@ sema --help
 sema doctor
 ```
 
-Instalação via GitHub Release:
+Instalacao via GitHub Release:
 
 ```bash
 npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
@@ -30,36 +26,33 @@ sema --help
 sema doctor
 ```
 
-Instaladores auxiliares:
-
-- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
-- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
-
-Instalação local ao projeto:
+Instalacao local ao projeto:
 
 ```bash
 npm install @semacode/cli
 npx sema --help
 ```
 
-Cada release pública entrega:
+## Artefatos publicos por release
 
-- `sema-cli-<versao>.tgz`
+Cada release publica entrega:
+
+- `sema-cli-0.9.0.tgz`
 - `sema-cli-latest.tgz`
-- `sema-language-tools-<versao>.vsix`
+- `sema-language-tools-0.9.0.vsix`
 - `sema-language-tools-latest.vsix`
 - `install-sema.sh`
 - `install-sema.ps1`
 
 ## Fluxo pronto para npm
 
-Dry-run de publicação:
+Dry-run:
 
 ```bash
 npm run cli:publicar-npm-dry-run
 ```
 
-Publicação real:
+Publicacao real:
 
 ```bash
 npm run cli:publicar-npm
@@ -67,20 +60,13 @@ npm run cli:publicar-npm
 
 Notas importantes:
 
-- o pacote público da CLI é `@semacode/cli`
+- o pacote publico da CLI e `@semacode/cli`
+- a conta da maquina precisa estar autenticada com `npm login`
 - o script publica o tarball gerado em `.tmp/pacotes-publicos`
-- a conta desta máquina precisa estar autenticada com `npm adduser` ou `npm login`
-- o package name público passa a ser `@semacode/cli`, publicado no scope da organização `semacode`
-
-## O que esse pacote resolve
-
-O tarball público agora carrega os pacotes internos de runtime junto, sem depender de `file:` quebrado no `package.json`.
-
-Traduzindo sem perfume: ele foi feito para funcionar fora do monorrepo, e não só para parecer empacotável no papel.
 
 ## Como validar o pacote
 
-Teste automatizado:
+Smoke automatizado:
 
 ```bash
 npm run cli:testar-pacote-publico
@@ -88,29 +74,27 @@ npm run cli:testar-pacote-publico
 
 Esse smoke:
 
-- empacota a CLI
-- instala o tarball em diretório temporário limpo
+- empacota a CLI publica
+- instala o tarball em diretorio temporario limpo
 - roda `sema --help`
-- roda `sema validar` contra um `.sema` real do repo
-- falha se o tarball ainda carregar dependência `file:`
+- roda `sema validar` contra um `.sema` real
+- falha se sobrar dependencia `file:` quebrada
 
-Se você quiser validar também a trilha de npm sem publicar de verdade, use o dry-run acima.
+## Como a release e publicada
 
-## Como a release é publicada
+O workflow [release-publica.yml](../.github/workflows/release-publica.yml) faz:
 
-O workflow [release-publica.yml](../.github/workflows/release-publica.yml) faz o seguinte:
-
-1. valida alinhamento de versão pública
-2. roda `npm run project:check`
-3. empacota a CLI pública
-4. empacota a extensão VS Code
-5. publica os artefatos versionados e os aliases `latest`
+1. validar alinhamento de versao publica
+2. rodar `npm run project:check`
+3. empacotar a CLI publica
+4. empacotar a extensao VS Code
+5. publicar os artefatos versionados e os aliases `latest`
 
 ## Fluxos que continuam existindo
 
-### Uso direto do repositório
+### Uso direto do repositorio
 
-Bom para contribuir e desenvolver a ferramenta:
+Bom para contribuir:
 
 ```bash
 npm install
@@ -118,17 +102,17 @@ npm run build
 node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
 ```
 
-### Instalação local por `npm link`
+### Instalacao local por `npm link`
 
-Bom para quem está mexendo no próprio repo da Sema:
+Bom para quem esta mexendo no proprio repo:
 
 ```bash
 npm run cli:instalar-local
 ```
 
-Isto continua útil, mas agora é **fluxo de desenvolvimento**, não distribuição pública principal.
+Isso continua util, mas e fluxo de desenvolvimento, nao de distribuicao publica.
 
-### Empacotamento antigo de workspace
+### Empacotamento de workspace
 
 O comando abaixo continua existindo:
 
@@ -136,20 +120,12 @@ O comando abaixo continua existindo:
 npm run cli:empacotar
 ```
 
-Ele passa a ser tratado como **empacotamento interno/dev**, bom para inspeção rápida de workspace, não como narrativa oficial de distribuição.
+Ele e bom para inspeção interna, nao para a narrativa publica principal.
 
-## O que ainda não entra nesta rodada
+## Regra pratica
 
-- instalador multiplataforma dedicado
-- updater automático
-- runtime web acoplado
+Se a pessoa quer usar a Sema, entregue `npm install -g @semacode/cli`.
 
-## Regra prática
+Se a pessoa prefere pacote fechado ou esta com problema no registry, entregue o `.tgz` da GitHub Release.
 
-Se a pessoa quer **usar** a Sema, entregue `npm install -g @semacode/cli`.
-
-Se a pessoa prefere pacote fechado ou está com algum problema no registry, entregue o `.tgz` público da release.
-
-Se a pessoa quer **desenvolver** a Sema, use o monorrepo.
-
-Misturar os dois fluxos era justamente a origem da experiência meio capenga que esse ciclo corrigiu.
+Se a pessoa quer desenvolver a Sema, use o monorrepo.

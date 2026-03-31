@@ -42,9 +42,9 @@ Regra de honestidade:
 
 ## Linha publica atual
 
-- linha backend publica: `0.8.x`
+- linha backend publica: `0.9.x`
 - foco desta onda: familias backend genericas com nota `9+`
-- proxima onda declarada: `0.9.x` para consumidor, desktop, mobile e frontend que ainda nao fecharem `9`
+- proxima onda declarada: `1.0.x` para consumidor, desktop, mobile e frontend que ainda nao fecharem `9`
 
 ## Benchmark oficial por familia
 
@@ -102,8 +102,8 @@ Regra de honestidade:
 
 ### Consumer/desktop/mobile
 
-- a linha `0.8.x` fecha backend
-- a linha `0.9.x` fecha consumidor e desktop onde ainda faltar trilha mais redonda
+- a linha `0.9.x` fecha backend com vinculo, execucao e contexto para IA
+- a linha `1.0.x` fecha consumidor e desktop onde ainda faltar trilha mais redonda
 
 ## O que significa `9/10` na pratica
 

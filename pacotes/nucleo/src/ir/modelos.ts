@@ -7,10 +7,25 @@ import type {
   TransicaoEstadoSemantica,
 } from "../semantico/estruturas.js";
 
+export type PerfilCompatibilidade = "publico" | "interno" | "experimental" | "legado" | "deprecado";
+export type StatusResolucaoSemantica = "nao_verificado" | "resolvido" | "parcial" | "inferido" | "quebrado" | "nao_encontrado";
+export type NivelConfiancaSemantica = "alta" | "media" | "baixa";
+export type NivelRiscoSemantico = "baixo" | "medio" | "alto";
+export type TipoSuperficieIr = "worker" | "evento" | "fila" | "cron" | "webhook" | "cache" | "storage" | "policy";
+
 export interface IrCampo {
   nome: string;
   tipo: string;
   modificadores: string[];
+  tipoOriginal: string;
+  tipoBase: string;
+  cardinalidade: "unitario" | "lista" | "mapa" | "uniao";
+  opcional: boolean;
+  tiposAlternativos: string[];
+  tipoItem?: string;
+  chaveMapa?: string;
+  valorMapa?: string;
+  refinamentos: string[];
 }
 
 export interface IrImplementacaoTask {
@@ -19,7 +34,27 @@ export interface IrImplementacaoTask {
   origemArquivo?: string;
   origemSimbolo?: string;
   resolucaoImpl?: string;
-  statusImpl?: "nao_verificado" | "resolvido" | "quebrado" | "nao_resolvido";
+  statusImpl?: StatusResolucaoSemantica;
+}
+
+export interface IrVinculo {
+  tipo: string;
+  valor: string;
+  arquivo?: string;
+  simbolo?: string;
+  recurso?: string;
+  superficie?: string;
+  statusResolucao?: StatusResolucaoSemantica;
+  confianca?: NivelConfiancaSemantica;
+}
+
+export interface IrExecucao {
+  idempotencia: boolean;
+  timeout: string;
+  retry: string;
+  compensacao: string;
+  criticidadeOperacional: "baixa" | "media" | "alta" | "critica";
+  explicita: boolean;
 }
 
 export interface IrBlocoDeclarativo {
@@ -39,6 +74,14 @@ export interface IrCasoTeste {
   when?: IrBlocoDeclarativo;
   expect: IrBlocoDeclarativo;
   error?: IrBlocoDeclarativo;
+}
+
+export interface IrResumoAgente {
+  riscos: string[];
+  checks: string[];
+  entidadesAfetadas: string[];
+  superficiesPublicas: string[];
+  mutacoesPrevistas: string[];
 }
 
 export interface IrType {
@@ -69,6 +112,17 @@ export interface IrInteropExterno {
   caminho: string;
 }
 
+export interface IrErroOperacional {
+  codigo: string;
+  mensagem: string;
+  categoria?: string;
+  recuperabilidade?: string;
+  acaoChamador?: string;
+  impactaEstado?: boolean;
+  requerCompensacao?: boolean;
+  origemTask?: string;
+}
+
 export interface IrTask {
   nome: string;
   input: IrCampo[];
@@ -78,18 +132,20 @@ export interface IrTask {
   effects: string[];
   efeitosEstruturados: EfeitoSemantico[];
   implementacoesExternas: IrImplementacaoTask[];
+  vinculos: IrVinculo[];
+  execucao: IrExecucao;
   guarantees: string[];
   garantiasEstruturadas: ExpressaoSemantica[];
   errors: Record<string, string>;
+  errosDetalhados: IrErroOperacional[];
+  perfilCompatibilidade: PerfilCompatibilidade;
   stateContract?: IrTaskStateContract;
+  resumoAgente: IrResumoAgente;
   tests: IrCasoTeste[];
 }
 
-export interface IrErroPublico {
+export interface IrErroPublico extends IrErroOperacional {
   nome: string;
-  codigo: string;
-  mensagem?: string;
-  origemTask?: string;
 }
 
 export interface IrRoutePublica {
@@ -101,6 +157,8 @@ export interface IrRoutePublica {
   errors: IrErroPublico[];
   effects: EfeitoSemantico[];
   garantiasMinimas: string[];
+  confiancaContrato?: NivelConfiancaSemantica;
+  riscoRegressao?: NivelRiscoSemantico;
   divergenciasPublicas?: string[];
 }
 
@@ -119,6 +177,9 @@ export interface IrFlow {
   etapasEstruturadas: EtapaFlowSemantica[];
   effects: string[];
   efeitosEstruturados: EfeitoSemantico[];
+  vinculos: IrVinculo[];
+  perfilCompatibilidade: PerfilCompatibilidade;
+  resumoAgente: IrResumoAgente;
 }
 
 export interface IrRoute {
@@ -132,8 +193,27 @@ export interface IrRoute {
   outputPublico: IrCampo[];
   errosPublicos: ContratoErroRouteSemantico[];
   efeitosPublicos: EfeitoSemantico[];
+  vinculos: IrVinculo[];
+  perfilCompatibilidade: PerfilCompatibilidade;
   garantiasPublicasMinimas: string[];
+  resumoAgente: IrResumoAgente;
   publico: IrRoutePublica;
+}
+
+export interface IrSuperficie {
+  tipo: TipoSuperficieIr;
+  nome: string;
+  campos: IrCampo[];
+  linhas: string[];
+  task?: string;
+  input: IrCampo[];
+  output: IrCampo[];
+  effects: EfeitoSemantico[];
+  implementacoesExternas: IrImplementacaoTask[];
+  vinculos: IrVinculo[];
+  execucao: IrExecucao;
+  perfilCompatibilidade: PerfilCompatibilidade;
+  resumoAgente: IrResumoAgente;
 }
 
 export interface IrState {
@@ -149,12 +229,16 @@ export interface IrModulo {
   uses: string[];
   imports: IrUse[];
   interoperabilidades: IrInteropExterno[];
+  vinculos: IrVinculo[];
+  perfilCompatibilidade: PerfilCompatibilidade;
   types: IrType[];
   entities: IrEntity[];
   enums: IrEnum[];
   tasks: IrTask[];
   flows: IrFlow[];
   routes: IrRoute[];
+  superficies: IrSuperficie[];
   states: IrState[];
+  resumoAgente: IrResumoAgente;
   diagnosticos: Diagnostico[];
 }

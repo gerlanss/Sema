@@ -1,6 +1,6 @@
 # Ranking Showroom
 
-Este showcase prova a tese central da Sema em um caso pequeno e reproduzivel: um backend Flask real, com `Blueprint`, `impl`, `drift` e contexto de IA, sem precisar inventar runtime novo nem reescrever a stack inteira.
+Este showcase prova a tese central da Sema em um caso pequeno e reproduzivel: um backend Flask real, com `Blueprint`, `impl`, `vinculos`, `drift` e contexto de IA, sem precisar inventar runtime novo nem reescrever a stack inteira.
 
 ## Problema
 
@@ -35,8 +35,8 @@ Saida esperada:
 
 - contrato valida sem erro
 - `inspecionar` mostra `baseProjeto`, `diretoriosCodigo` e fonte `flask`
-- `drift` resolve `impl` e rotas sem divergencia
-- `contexto-ia` gera AST, IR, diagnosticos e `drift.json`
+- `drift` resolve `impl`, `vinculos` e rotas sem divergencia
+- `contexto-ia` gera AST, IR, diagnosticos, `drift.json` e `briefing.json`
 
 ## O que isso prova
 
@@ -44,8 +44,9 @@ Este showcase deixa evidente algo que `OpenAPI + DTO + comentario espalhado` nao
 
 - a intencao da operacao fica explicita
 - `impl` aponta para simbolo vivo, nao para fantasia
+- `vinculos` deixam arquivo, simbolo e superficie rastreaveis
 - `drift` denuncia ruptura real entre contrato e backend
-- a IA recebe um pacote operacional para editar sem sair igual barata tonta caçando handler
+- a IA recebe um pacote operacional para editar sem sair igual barata tonta cacando handler
 
 ## Observacao honesta
 

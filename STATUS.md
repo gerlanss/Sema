@@ -7,10 +7,10 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Ultima atualizacao: 2026-03-30
 - Ultimo commit de referencia: `8572311`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: marco publico `0.8.x backend generico` em consolidacao, com foco oficial em familias backend first-class e adocao incremental de projeto vivo
+- Estagio atual: marco publico `0.9.x intervencao segura para IA` em consolidacao, com foco oficial em vinculos, execucao, contexto acionavel e superficies modernas em backend vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `0.8.8`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `0.9.0`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript

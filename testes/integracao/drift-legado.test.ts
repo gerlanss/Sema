@@ -181,6 +181,8 @@ export class PedidosController {
     assert.equal(json.modulos.length, 1);
     assert.equal(json.impls_validos.length, 1);
     assert.equal(json.impls_quebrados.length, 1);
+    assert.equal(typeof json.resumo_operacional.scoreMedio, "number");
+    assert.equal(["alta", "media", "baixa"].includes(json.resumo_operacional.confiancaGeral), true);
     assert.equal(json.rotas_divergentes.length, 1);
     assert.equal(json.tasks.some((task: { task: string; semImplementacao: boolean }) => task.task === "revisar_manual" && task.semImplementacao), true);
     assert.equal(json.impls_validos[0].arquivo.endsWith(path.join("src", "pedidos", "pedidos.service.ts")), true);
@@ -188,6 +190,7 @@ export class PedidosController {
     assert.equal(json.impls_validos[0].caminhoResolvido, "src.pedidos.pedidos_service.criar");
     assert.equal(json.impls_quebrados[0].candidatos.some((candidato: { caminho: string }) => candidato.caminho === "src.pedidos.pedidos_service.criar"), true);
     assert.equal(json.tasks.some((task: { task: string; arquivosReferenciados: string[] }) => task.task === "criar_pedido" && task.arquivosReferenciados.length === 1), true);
+    assert.equal(json.tasks.some((task: { task: string; lacunas: string[] }) => task.task === "cancelar_pedido" && task.lacunas.includes("impl_quebrado")), true);
     assert.equal(json.diagnosticos.some((diag: { tipo: string }) => diag.tipo === "task_sem_impl"), true);
   } finally {
     await rm(base, { recursive: true, force: true });
@@ -250,6 +253,7 @@ test("cli valida e mede drift dos contratos internos do proprio Sema", () => {
   const jsonDrift = JSON.parse(drift.stdout);
   assert.equal(jsonDrift.comando, "drift");
   assert.equal(jsonDrift.impls_quebrados.length, 0);
+  assert.equal(jsonDrift.vinculos_quebrados.length, 0);
 
   const caminhosValidos = new Set(jsonDrift.impls_validos.map((impl: { caminho: string }) => impl.caminho));
   for (const caminhoEsperado of [

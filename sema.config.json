@@ -1,0 +1,15 @@
+{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript", "python", "dart"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript",
+    "python": "./generated/python",
+    "dart": "./generated/dart"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}

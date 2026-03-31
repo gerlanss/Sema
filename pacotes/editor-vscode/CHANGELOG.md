@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- alinha a extensao com a linha publica `0.9.x` da Sema
+- atualiza a documentacao para instalacao via GitHub Release e VSIX `0.9.0`
+- acompanha o reposicionamento da Sema como linguagem de intervencao segura para IA e backend vivo
+
 ## 0.8.2
 
 - fortalece o `importar nextjs` em handlers com `request.json()` tipado ou com cast inline

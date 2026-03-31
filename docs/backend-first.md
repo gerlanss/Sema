@@ -10,7 +10,7 @@ Leitura direta:
 
 ## O que isso significa hoje
 
-No marco publico `0.8.x backend generico`, a Sema cobre:
+No marco publico `0.9.x intervencao segura para IA`, a Sema cobre:
 
 - scaffold base para TypeScript, Python e Dart
 - scaffold orientado a framework para NestJS e FastAPI

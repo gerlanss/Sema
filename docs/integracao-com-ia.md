@@ -1,113 +1,184 @@
-# Integração com IA
+# Integracao com IA
 
-A Sema foi desenhada para reduzir ambiguidade na colaboração com IA. O projeto agora se apresenta primeiro como **Protocolo de Governança de Intenção para IA e backend vivo**; por baixo disso, a implementação continua sendo uma linguagem de intenção com AST, IR, diagnósticos, formatação e scaffold.
+A Sema foi desenhada para ajudar agente e humano a editar backend vivo com menos chute. O ponto nao e "a IA gera tudo"; o ponto e deixar contrato, vinculo e contexto operacional estruturados o bastante para a IA nao trabalhar igual um bicho tonto.
 
-## Moldura correta para IA
+## Moldura correta
 
-Se uma IA olhar para a Sema como "gerador automático que deveria fazer tudo", ela vai avaliar errado e usar pior.
+Se uma IA tratar a Sema como enfeite declarativo, ela vai usar mal. A moldura certa e esta:
 
-A moldura correta é esta:
+- `impl` liga intencao a simbolo executavel
+- `vinculos` ligam contrato a arquivo, simbolo, recurso e superficie real
+- `execucao` explicita timeout, retry, compensacao e criticidade
+- `drift` mede verdade contra codigo vivo
+- `contexto-ia` empacota briefing operacional antes da edicao
 
-- a Sema governa **contrato**, **intenção**, **erro**, **efeito**, **garantia**, **fluxo** e **vínculo com implementação viva**
-- a Sema ajuda a transformar sistema que mente sobre si mesmo em sistema pelo menos verificável
-- a Sema não substitui curadoria humana
-- a Sema não inventa regra de negócio que o código não explicita
-- a Sema não existe para eliminar design; ela existe para impedir caos semântico
+Em resumo: a Sema nao serve para a IA adivinhar melhor. Ela serve para a IA precisar adivinhar menos.
 
-Regra prática para IA:
+## Fluxo recomendado
 
-- trate `importar` como bootstrap forte, nao como contrato final
-- trate `drift` como regua de verdade contra o legado
-- trate `impl` como ponte rastreavel entre intencao e runtime
-- trate `ir --json` como a semantica resolvida de verdade
-- trate `contexto-ia` como pacote operacional para editar com contexto, não como enfeite
+Quando o trabalho cair em projeto vivo, o fluxo canonico agora e:
 
-No marco `0.8.x backend generico`, essa integracao ja nao e so leitura de contrato. Ela inclui:
+```bash
+sema inspecionar . --json
+sema drift contratos/modulo.sema --json
+sema contexto-ia contratos/modulo.sema --saida ./.tmp/contexto --json
+```
 
-- scaffold backend util
-- importacao de legado
-- `impl` como ponte com codigo vivo
-- `drift` como auditoria de verdade contra a implementacao
-- `contexto-ia` com `drift.json`
+Leitura rapida:
 
-Em bom portugues: se a tarefa pedir codigo derivado, a IA tem que usar `sema compilar`; se a tarefa envolver projeto vivo, ela tem que lembrar de `sema inspecionar`, `sema drift` e `sema contexto-ia`, senao vai trabalhar igual um bicho.
+1. `inspecionar` descobre base do projeto, diretorios de codigo, fontes legado e modulos relevantes.
+2. `drift` mede impls, vinculos, rotas, recursos, score semantico e confianca.
+3. `contexto-ia` gera o pacote que a IA deveria ler antes de editar.
 
-## Documentos de apoio
+## O que a IA deve consumir
 
-- [AGENT_STARTER.md](./AGENT_STARTER.md)
-- [como-ensinar-a-sema-para-ia.md](./como-ensinar-a-sema-para-ia.md)
-- [prompt-base-ia-sema.md](./prompt-base-ia-sema.md)
-- [fluxo-pratico-ia-sema.md](./fluxo-pratico-ia-sema.md)
-- [da-sema-para-codigo.md](./da-sema-para-codigo.md)
-- [importacao-legado.md](./importacao-legado.md)
-- [backend-first.md](./backend-first.md)
+No minimo:
 
-## Comandos que a IA nao deveria ignorar
+- `ir.json`
+- `drift.json`
+- `briefing.json`
+- o proprio contrato `.sema`
 
-- `sema ast <arquivo.sema> --json`
-- `sema ir <arquivo.sema> --json`
-- `sema validar <arquivo.sema> --json`
-- `sema diagnosticos <arquivo.sema> --json`
-- `sema formatar <arquivo.sema>`
+O `briefing.json` agora e a peca mais operacional do pacote. Ele responde perguntas que agente serio precisa responder antes de mexer em codigo:
+
+- o que tocar
+- o que validar
+- o que esta frouxo
+- o que foi inferido
+- quais simbolos estao relacionados
+- quais superficies publicas podem ser afetadas
+- quais testes minimos rodar
+
+## Saida relevante do pacote `contexto-ia`
+
+Hoje o pacote pode incluir:
+
+- `ast.json`
+- `ir.json`
+- `diagnosticos.json`
+- `drift.json`
+- `briefing.json`
+- `README.md`
+- `impl.<origem>.txt` quando existir implementacao vinculada
+
+## Score, confianca e risco
+
+`drift`, `inspecionar` e `contexto-ia` passam a expor sinais que ajudam a IA a nao tratar rascunho como verdade absoluta:
+
+- `scoreSemantico`
+- `confiancaVinculo`
+- `riscoOperacional`
+- `lacunas`
+- `vinculos_validos`
+- `vinculos_quebrados`
+
+Leitura pratica:
+
+- score alto + confianca alta: a IA pode editar com trilha boa
+- score medio: ainda precisa ler contrato e conferir codigo vivo
+- vinculo quebrado: a IA deve reduzir ousadia e consertar rastreabilidade antes de refatorar igual doida
+
+## Superficies que a IA pode esperar
+
+A linguagem agora trata estas bordas como primeira classe:
+
+- `route`
+- `worker`
+- `evento`
+- `fila`
+- `cron`
+- `webhook`
+- `cache`
+- `storage`
+- `policy`
+
+Isso importa porque backend real nao vive so de HTTP. Se a IA vai editar stack viva, ela precisa enxergar job, evento, webhook e recurso assincrono como parte do contrato, nao como sobra esquecida no runtime.
+
+## Contrato operacional
+
+Dentro de `task` e superficies, a IA deve prestar atencao em:
+
+- `input`
+- `output`
+- `effects`
+- `impl`
+- `vinculos`
+- `execucao`
+- `guarantees`
+- `error`
+
+Exemplo minimo:
+
+```sema
+task medir_drift {
+  input {
+    contrato: Texto required
+  }
+  output {
+    score: Decimal
+  }
+  impl {
+    ts: cli.src.drift.analisarDriftLegado
+  }
+  vinculos {
+    arquivo: "pacotes/cli/src/drift.ts"
+    simbolo: cli.src.drift.analisarDriftLegado
+  }
+  execucao {
+    timeout: "30s"
+    retry: "3x exponencial"
+    criticidade_operacional: alta
+  }
+  guarantees {
+    score existe
+  }
+}
+```
+
+## Comandos que agente serio nao deveria ignorar
+
+- `sema ast arquivo.sema --json`
+- `sema ir arquivo.sema --json`
+- `sema validar arquivo.sema --json`
+- `sema diagnosticos arquivo.sema --json`
+- `sema formatar arquivo.sema`
 - `sema inspecionar [arquivo-ou-pasta] --json`
-- `sema importar <nestjs|fastapi|flask|nextjs|firebase|typescript|python|dart> <diretorio> [--saida <diretorio>] [--json]`
 - `sema drift [arquivo-ou-pasta] --json`
-- `sema compilar [arquivo-ou-pasta] --alvo <typescript|python|dart> --framework <base|nestjs|fastapi> --estrutura <flat|modulos|backend> --saida <diretorio>`
-- `sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--json]`
-- `sema verificar <arquivo-ou-pasta> --json`
+- `sema contexto-ia arquivo.sema [--saida <diretorio>] --json`
+- `sema verificar [arquivo-ou-pasta] --json`
 
-## O que a Sema ja oferece para IA
-
-- AST exportavel em JSON
-- IR exportavel em JSON
-- diagnosticos estruturados
-- verificacao em lote com resumo estruturado
-- formatacao canonica verificavel por CLI
-- scaffold base para TypeScript, Python e Dart
-- scaffold backend para NestJS e FastAPI
-- importacao assistida de legado para rascunho `.sema`
-- deteccao publica de rota em Flask com `Blueprint`, `url_prefix` e `@app.route`/`@bp.route`
-- deteccao publica de rota em `Next.js App Router` com `route.ts` e segmentos dinamicos
-- deteccao de recurso vivo em bridge `Node/Firebase worker`
-- `impl` para ligar contrato a implementacao real
-- `impl.dart` e trilha de bridge/consumer para app consumidor
-- `drift.json` no pacote de `contexto-ia`
-
-## Fluxo recomendado para agente
+## Fluxos comuns
 
 Quando a tarefa for so modelagem:
 
 ```bash
-sema ast arquivo.sema --json
-sema ir arquivo.sema --json
-sema formatar arquivo.sema
-sema validar arquivo.sema --json
+sema ast contratos/pedidos.sema --json
+sema ir contratos/pedidos.sema --json
+sema formatar contratos/pedidos.sema
+sema validar contratos/pedidos.sema --json
 ```
 
 Quando a tarefa envolver codigo derivado:
 
 ```bash
-sema inspecionar --json
-sema ir contratos/pedidos.sema --json
-sema formatar contratos/pedidos.sema
-sema validar contratos/pedidos.sema --json
+sema inspecionar . --json
+sema drift contratos/pedidos.sema --json
+sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto-pedidos --json
 sema compilar contratos/pedidos.sema --alvo typescript --framework nestjs --estrutura backend --saida ./generated/nestjs
 ```
 
-Quando a tarefa comecar num legado:
+Quando a tarefa nasce num legado:
 
 ```bash
 sema importar flask ./backend-flask --saida ./sema/importado --json
-sema importar nextjs ./apps/dashboard --saida ./sema/importado --json
-sema importar firebase ./apps/worker --saida ./sema/importado --json
 sema formatar ./sema/importado
 sema validar ./sema/importado --json
-sema drift contratos/modulo.sema --json
+sema drift ./sema/importado --json
 ```
 
-## Showcase oficial para IA
+## Showcase oficial
 
-O case [showcases/ranking-showroom](../showcases/ranking-showroom/) e a melhor demonstracao publica do fluxo certo:
+O showcase [showcases/ranking-showroom](../showcases/ranking-showroom/) continua sendo a melhor vitrine do fluxo certo:
 
 ```bash
 cd showcases/ranking-showroom
@@ -116,9 +187,11 @@ sema drift contratos/ranking_showroom.sema --json
 sema contexto-ia contratos/ranking_showroom.sema --saida ./.tmp/contexto-ranking --json
 ```
 
+O valor aqui nao e so "validou". O valor e sair com score, confianca, drift e briefing suficientes para editar o backend Flask real sem sair cavando arquivo a esmo.
+
 ## Fechamento operacional
 
-Quando a IA terminar:
+Quando a IA terminar a mudanca:
 
 ```bash
 npm test

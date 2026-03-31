@@ -12,7 +12,7 @@ A CLI da Sema e a interface oficial do protocolo Sema para:
 - inspecao de projeto
 - onboarding de IA
 
-No marco publico `0.8.x backend generico`, ela tambem virou a fonte de verdade para:
+No marco publico `0.9.x intervencao segura para IA`, ela tambem virou a fonte de verdade para:
 
 - configuracao de projeto via `sema.config.json`
 - scaffold orientado a framework para NestJS e FastAPI

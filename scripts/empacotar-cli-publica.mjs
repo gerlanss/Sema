@@ -137,59 +137,8 @@ async function prepararManifestPublico() {
 async function prepararReadmePublico() {
   const manifestCli = JSON.parse(await readFile(path.join(origemCli, "package.json"), "utf8"));
   const tgz = `sema-cli-${manifestCli.version}.tgz`;
-  const conteudo = `# Sema CLI
-
-Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
-
-Este pacote entrega a CLI oficial para:
-
-- validar contratos \`.sema\`
-- inspecionar projeto
-- medir \`drift\` entre contrato e codigo vivo
-- importar legado
-- preparar contexto para IA
-
-## Instalacao pelo npm registry
-
-\`\`\`bash
-npm install -g @semacode/cli
-sema --help
-\`\`\`
-
-## Instalacao via tarball da release
-
-\`\`\`bash
-npm install -g ./${tgz}
-\`\`\`
-
-Ou direto da GitHub Release:
-
-\`\`\`bash
-npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
-\`\`\`
-
-## Instalacao local ao projeto
-
-\`\`\`bash
-npm install @semacode/cli
-npx sema --help
-\`\`\`
-
-Ou, se voce estiver testando um tarball local:
-
-\`\`\`bash
-npm install ./${tgz}
-npx sema --help
-\`\`\`
-
-## Primeiro teste
-
-\`\`\`bash
-sema validar exemplos/calculadora.sema --json
-\`\`\`
-
-Repositorio: https://github.com/gerlanss/Sema
-`;
+  const modelo = await readFile(path.join(origemCli, "README.md"), "utf8");
+  const conteudo = modelo.replaceAll("{{TGZ_ARQUIVO}}", tgz);
 
   await writeFile(path.join(stageDir, "README.md"), conteudo, "utf8");
 }

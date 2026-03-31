@@ -133,7 +133,7 @@ export function tokenizar(codigo: string, arquivo?: string): ResultadoLexer {
       continue;
     }
 
-    if ("=><+-*/".includes(atual)) {
+    if ("=><+-*/|?".includes(atual)) {
       const cursor = avancar(posicao, atual);
       tokens.push(criarToken("operador", atual, inicio, cursor, arquivo));
       posicao = cursor;

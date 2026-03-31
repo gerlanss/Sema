@@ -24,7 +24,7 @@ import {
 
 export interface SimboloSemantico {
   nome: string;
-  categoria: "tipo" | "entity" | "enum" | "task" | "flow" | "route" | "state";
+  categoria: "tipo" | "entity" | "enum" | "task" | "flow" | "route" | "state" | "worker" | "evento" | "fila" | "cron" | "webhook" | "cache" | "storage" | "policy";
 }
 
 export interface CampoSemantico {
@@ -36,6 +36,11 @@ export interface CampoSemantico {
 export interface ErroSemanticoTask {
   codigo: string;
   mensagem: string;
+  categoria?: string;
+  recuperabilidade?: string;
+  acaoChamador?: string;
+  impactaEstado?: boolean;
+  requerCompensacao?: boolean;
 }
 
 export interface ResumoTaskSemantico {
@@ -97,6 +102,42 @@ const TIPOS_PRIMITIVOS = new Set([
   "Json",
   "Vazio",
 ]);
+const TIPOS_COMPOSTOS_SUPORTADOS = new Set(["Lista", "Mapa", "Opcional", "Ou"]);
+const CAMPOS_VINCULO_SUPORTADOS = new Set([
+  "arquivo",
+  "simbolo",
+  "recurso",
+  "superficie",
+  "rota",
+  "teste",
+  "tabela",
+  "fila",
+  "job",
+  "policy",
+  "artefato",
+  "evento",
+  "cache",
+  "storage",
+  "worker",
+  "cron",
+  "webhook",
+]);
+const CAMPOS_EXECUCAO_SUPORTADOS = new Set([
+  "idempotencia",
+  "timeout",
+  "retry",
+  "compensacao",
+  "criticidade_operacional",
+]);
+const CAMPOS_ERRO_OPERACIONAL = new Set([
+  "mensagem",
+  "categoria",
+  "recuperabilidade",
+  "acao_chamador",
+  "impacta_estado",
+  "requer_compensacao",
+]);
+const CRITICIDADES_OPERACIONAIS = new Set(["baixa", "media", "alta", "critica"]);
 
 const PADRAO_CAMINHO_INTEROP = /^[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)*$/;
 
@@ -134,7 +175,7 @@ function normalizarOrigemImplementacao(valor: string): ImplementacaoTaskSemantic
 
 function extrairReferenciasDeTipos(texto: string): string[] {
   const correspondencias = texto.match(/[A-Z][A-Za-z0-9_]*/g);
-  return correspondencias ?? [];
+  return (correspondencias ?? []).filter((referencia) => !TIPOS_COMPOSTOS_SUPORTADOS.has(referencia));
 }
 
 function extrairRaiz(referencia: string): string {
@@ -187,6 +228,26 @@ function localizarCampo(bloco: BlocoGenericoAst, ...nomes: string[]): CampoAst |
   return bloco.campos.find((campo) => nomes.includes(campo.nome));
 }
 
+function valorCampoCompleto(campo?: CampoAst): string | undefined {
+  if (!campo) {
+    return undefined;
+  }
+  return [campo.valor, ...campo.modificadores].join(" ").trim() || undefined;
+}
+
+function parsearBooleanoSemantico(valor?: string): boolean | undefined {
+  if (!valor) {
+    return undefined;
+  }
+  if (valor === "verdadeiro" || valor === "true") {
+    return true;
+  }
+  if (valor === "falso" || valor === "false") {
+    return false;
+  }
+  return undefined;
+}
+
 function converterCampoSemantico(campo: CampoAst): CampoSemantico {
   return {
     nome: campo.nome,
@@ -209,6 +270,26 @@ function coletarErrosTask(task: TaskAst): ErroSemanticoTask[] {
     erros.set(campo.nome, {
       codigo: campo.nome,
       mensagem: [campo.valor, ...campo.modificadores].join(" ").trim(),
+    });
+  }
+
+  for (const bloco of task.error?.blocos ?? []) {
+    if (bloco.tipo !== "bloco_generico") {
+      continue;
+    }
+    const codigo = bloco.nome ?? bloco.palavraChave;
+    if (!codigo || codigo === "desconhecido") {
+      continue;
+    }
+
+    erros.set(codigo, {
+      codigo,
+      mensagem: valorCampoCompleto(localizarCampo(bloco, "mensagem")) ?? `Erro estruturado "${codigo}".`,
+      categoria: valorCampoCompleto(localizarCampo(bloco, "categoria")),
+      recuperabilidade: valorCampoCompleto(localizarCampo(bloco, "recuperabilidade")),
+      acaoChamador: valorCampoCompleto(localizarCampo(bloco, "acao_chamador")),
+      impactaEstado: parsearBooleanoSemantico(valorCampoCompleto(localizarCampo(bloco, "impacta_estado"))),
+      requerCompensacao: parsearBooleanoSemantico(valorCampoCompleto(localizarCampo(bloco, "requer_compensacao"))),
     });
   }
 
@@ -290,6 +371,170 @@ function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnostico[]): 
       );
     }
   }
+}
+
+function validarVinculos(bloco: BlocoGenericoAst | undefined, diagnosticos: Diagnostico[], contexto: string): void {
+  if (!bloco) {
+    return;
+  }
+
+  for (const campo of bloco.campos) {
+    if (!CAMPOS_VINCULO_SUPORTADOS.has(campo.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM064",
+          `Campo de vinculo "${campo.nome}" nao e suportado em ${contexto}.`,
+          "erro",
+          campo.intervalo,
+          "Use arquivo, simbolo, recurso, superficie, rota, teste, tabela, fila, job, policy, artefato, evento, cache, storage, worker, cron ou webhook.",
+        ),
+      );
+    }
+  }
+}
+
+function validarExecucao(task: TaskAst, diagnosticos: Diagnostico[]): void {
+  if (!task.execucao) {
+    return;
+  }
+
+  for (const campo of task.execucao.campos) {
+    if (!CAMPOS_EXECUCAO_SUPORTADOS.has(campo.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM065",
+          `Campo de execucao "${campo.nome}" nao e suportado na task "${task.nome}".`,
+          "erro",
+          campo.intervalo,
+          "Use apenas idempotencia, timeout, retry, compensacao ou criticidade_operacional.",
+        ),
+      );
+      continue;
+    }
+
+    if (campo.nome === "criticidade_operacional") {
+      const criticidade = valorCampoCompleto(campo);
+      if (criticidade && !CRITICIDADES_OPERACIONAIS.has(criticidade)) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM066",
+            `Task "${task.nome}" declarou criticidade_operacional invalida: "${criticidade}".`,
+            "erro",
+            campo.intervalo,
+            "Use apenas baixa, media, alta ou critica em execucao.",
+          ),
+        );
+      }
+    }
+  }
+}
+
+function validarErroOperacional(task: TaskAst, diagnosticos: Diagnostico[]): void {
+  if (!task.error) {
+    return;
+  }
+
+  const nomes = new Set<string>();
+  for (const campo of task.error.campos) {
+    if (nomes.has(campo.nome)) {
+      diagnosticos.push(diagnosticoDuplicado(campo.nome, "Erro", campo.intervalo));
+    }
+    nomes.add(campo.nome);
+  }
+
+  for (const bloco of task.error.blocos) {
+    if (bloco.tipo !== "bloco_generico") {
+      continue;
+    }
+
+    const codigo = bloco.nome ?? bloco.palavraChave;
+    if (!codigo || codigo === "desconhecido") {
+      continue;
+    }
+
+    if (nomes.has(codigo)) {
+      diagnosticos.push(diagnosticoDuplicado(codigo, "Erro", bloco.intervalo));
+    }
+    nomes.add(codigo);
+
+    const mensagem = localizarCampo(bloco, "mensagem");
+    if (!mensagem) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM067",
+          `Erro estruturado "${codigo}" da task "${task.nome}" precisa declarar mensagem.`,
+          "erro",
+          bloco.intervalo,
+          "Use error { codigo { mensagem: \"...\" categoria: dominio ... } }.",
+        ),
+      );
+    }
+
+    for (const campo of bloco.campos) {
+      if (!CAMPOS_ERRO_OPERACIONAL.has(campo.nome)) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM068",
+            `Erro estruturado "${codigo}" da task "${task.nome}" usa o campo "${campo.nome}", que nao e suportado.`,
+            "erro",
+            campo.intervalo,
+            "Use mensagem, categoria, recuperabilidade, acao_chamador, impacta_estado ou requer_compensacao.",
+          ),
+        );
+      }
+    }
+  }
+}
+
+function validarSuperficie(
+  superficie: BlocoGenericoAst,
+  tipoSuperficie: SimboloSemantico["categoria"],
+  tasksConhecidas: Set<string>,
+  tiposConhecidos: Set<string>,
+  diagnosticos: Diagnostico[],
+): void {
+  const nomeSuperficie = superficie.nome ?? tipoSuperficie;
+  const task = localizarCampo(superficie, "task", "tarefa");
+  const input = localizarBloco(superficie, "input");
+  const output = localizarBloco(superficie, "output");
+  const effects = localizarBloco(superficie, "effects");
+  const impl = localizarBloco(superficie, "impl");
+  const vinculos = localizarBloco(superficie, "vinculos");
+
+  if (!task && !impl && !vinculos) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM069",
+        `Superficie ${tipoSuperficie} "${nomeSuperficie}" precisa declarar task, impl ou vinculos para nao virar bloco decorativo.`,
+        "erro",
+        superficie.intervalo,
+        "Declare ao menos uma task associada, um impl explicito ou vinculos rastreaveis com codigo vivo.",
+      ),
+    );
+  }
+
+  if (task && !tasksConhecidas.has(task.valor)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM070",
+        `Superficie ${tipoSuperficie} "${nomeSuperficie}" referencia task "${task.valor}" que nao existe.`,
+        "erro",
+        task.intervalo,
+        "Ajuste a task para apontar para uma task declarada ou importada.",
+      ),
+    );
+  }
+
+  if (input) {
+    validarCamposDeTipos(input.campos, tiposConhecidos, diagnosticos, `input da superficie ${tipoSuperficie} ${nomeSuperficie}`);
+  }
+  if (output) {
+    validarCamposDeTipos(output.campos, tiposConhecidos, diagnosticos, `output da superficie ${tipoSuperficie} ${nomeSuperficie}`);
+  }
+  if (effects) {
+    validarEfeitosDeclarados(effects.linhas, diagnosticos, `effects da superficie ${tipoSuperficie} ${nomeSuperficie}`);
+  }
+  validarVinculos(vinculos, diagnosticos, `${tipoSuperficie} ${nomeSuperficie}`);
 }
 
 function recomporCaminhoRoute(campo?: CampoAst): string | undefined {
@@ -614,6 +859,7 @@ function validarFlow(
   if (effects) {
     validarEfeitosDeclarados(effects.linhas, diagnosticos, `effects do flow ${flow.nome}`);
   }
+  validarVinculos(flow.vinculos, diagnosticos, `flow ${flow.nome}`);
 
   const tarefasReferenciadas = flow.corpo.campos
     .filter((campo) => campo.nome === "task" || campo.nome === "tarefa")
@@ -1078,6 +1324,7 @@ function validarRoute(
   if (effects) {
     validarEfeitosDeclarados(effects.linhas, diagnosticos, `effects da route ${route.nome}`);
   }
+  validarVinculos(route.vinculos, diagnosticos, `route ${route.nome}`);
 
   if (task && !tasksConhecidas.has(task.valor)) {
     diagnosticos.push(
@@ -1136,6 +1383,46 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   }
   for (const route of modulo.routes) {
     registrar(route.nome, "route");
+  }
+  for (const worker of modulo.workers) {
+    if (worker.nome) {
+      registrar(worker.nome, "worker");
+    }
+  }
+  for (const evento of modulo.eventos) {
+    if (evento.nome) {
+      registrar(evento.nome, "evento");
+    }
+  }
+  for (const fila of modulo.filas) {
+    if (fila.nome) {
+      registrar(fila.nome, "fila");
+    }
+  }
+  for (const cron of modulo.crons) {
+    if (cron.nome) {
+      registrar(cron.nome, "cron");
+    }
+  }
+  for (const webhook of modulo.webhooks) {
+    if (webhook.nome) {
+      registrar(webhook.nome, "webhook");
+    }
+  }
+  for (const cache of modulo.caches) {
+    if (cache.nome) {
+      registrar(cache.nome, "cache");
+    }
+  }
+  for (const storage of modulo.storages) {
+    if (storage.nome) {
+      registrar(storage.nome, "storage");
+    }
+  }
+  for (const policy of modulo.policies) {
+    if (policy.nome) {
+      registrar(policy.nome, "policy");
+    }
   }
   for (const state of modulo.states) {
     if (state.nome) {
@@ -1236,6 +1523,8 @@ function validarTask(
   if (task.effects) {
     validarEfeitosDeclarados(task.effects.linhas, diagnosticos, `effects da task ${task.nome}`);
   }
+  validarVinculos(task.vinculos, diagnosticos, `task ${task.nome}`);
+  validarExecucao(task, diagnosticos);
 
   validarImplementacoesTask(task, diagnosticos);
 
@@ -1265,15 +1554,7 @@ function validarTask(
     });
   }
 
-  if (task.error) {
-    const nomes = new Set<string>();
-    for (const campo of task.error.campos) {
-      if (nomes.has(campo.nome)) {
-        diagnosticos.push(diagnosticoDuplicado(campo.nome, "Erro", campo.intervalo));
-      }
-      nomes.add(campo.nome);
-    }
-  }
+  validarErroOperacional(task, diagnosticos);
 
   const blocoInternoTests = localizarBloco(task.corpo, "tests");
   if (blocoInternoTests && blocoInternoTests.blocos.length === 0) {
@@ -1430,6 +1711,46 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   for (const route of modulo.routes) {
     registrar(route.nome, "route", route.intervalo);
   }
+  for (const worker of modulo.workers) {
+    if (worker.nome) {
+      registrar(worker.nome, "worker", worker.intervalo);
+    }
+  }
+  for (const evento of modulo.eventos) {
+    if (evento.nome) {
+      registrar(evento.nome, "evento", evento.intervalo);
+    }
+  }
+  for (const fila of modulo.filas) {
+    if (fila.nome) {
+      registrar(fila.nome, "fila", fila.intervalo);
+    }
+  }
+  for (const cron of modulo.crons) {
+    if (cron.nome) {
+      registrar(cron.nome, "cron", cron.intervalo);
+    }
+  }
+  for (const webhook of modulo.webhooks) {
+    if (webhook.nome) {
+      registrar(webhook.nome, "webhook", webhook.intervalo);
+    }
+  }
+  for (const cache of modulo.caches) {
+    if (cache.nome) {
+      registrar(cache.nome, "cache", cache.intervalo);
+    }
+  }
+  for (const storage of modulo.storages) {
+    if (storage.nome) {
+      registrar(storage.nome, "storage", storage.intervalo);
+    }
+  }
+  for (const policy of modulo.policies) {
+    if (policy.nome) {
+      registrar(policy.nome, "policy", policy.intervalo);
+    }
+  }
   for (const state of modulo.states) {
     if (state.nome) {
       registrar(state.nome, "state", state.intervalo);
@@ -1480,6 +1801,32 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
 
   for (const route of modulo.routes) {
     validarRoute(route, tasksConhecidas, tarefasDetalhadas, diagnosticos);
+  }
+
+  validarVinculos(modulo.vinculos, diagnosticos, `modulo ${modulo.nome}`);
+  for (const worker of modulo.workers) {
+    validarSuperficie(worker, "worker", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const evento of modulo.eventos) {
+    validarSuperficie(evento, "evento", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const fila of modulo.filas) {
+    validarSuperficie(fila, "fila", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const cron of modulo.crons) {
+    validarSuperficie(cron, "cron", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const webhook of modulo.webhooks) {
+    validarSuperficie(webhook, "webhook", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const cache of modulo.caches) {
+    validarSuperficie(cache, "cache", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const storage of modulo.storages) {
+    validarSuperficie(storage, "storage", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const policy of modulo.policies) {
+    validarSuperficie(policy, "policy", tasksConhecidas, tiposConhecidos, diagnosticos);
   }
 
   const assinaturasRoute = new Map<string, RouteAst>();

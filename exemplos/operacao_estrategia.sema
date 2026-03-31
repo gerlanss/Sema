@@ -1,6 +1,6 @@
 module exemplos.operacao_estrategia {
   docs {
-    resumo: "Referencia oficial de governanca operacional para strategy, slice, gate, discovery semanal e rollout de nova versao de modelo."
+    resumo: "Referencia oficial de governanca operacional para strategy,slice,gate,discovery semanal e rollout de nova versao de modelo."
   }
 
   type JanelaDiscovery {
@@ -173,7 +173,7 @@ module exemplos.operacao_estrategia {
 
   task avaliar_slice_apos_discovery {
     docs {
-      resumo: "Decide se um slice segue aberto, entra em quarentena ou precisa ficar bloqueado ate nova avaliacao."
+      resumo: "Decide se um slice segue aberto,entra em quarentena ou precisa ficar bloqueado ate nova avaliacao."
     }
     input {
       strategy_id: Id required
@@ -223,7 +223,7 @@ module exemplos.operacao_estrategia {
 
   task colocar_slice_em_quarentena {
     docs {
-      resumo: "Transforma um problema de slice em acao operacional explicita, sem desligar a strategy inteira por reflexo idiota."
+      resumo: "Transforma um problema de slice em acao operacional explicita,sem desligar a strategy inteira por reflexo idiota."
     }
     input {
       strategy_id: Id required
