@@ -3,6 +3,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import pacoteCli from "../package.json" with { type: "json" };
 import {
   compilarCodigo,
   formatarCodigo,
@@ -382,6 +383,7 @@ Comandos uteis da CLI para esse fluxo:
 `;
 
 const DIRETORIO_CLI_ATUAL = path.dirname(fileURLToPath(import.meta.url));
+const VERSAO_CLI = pacoteCli.version;
 
 function obterArgumentos(): { comando?: Comando; resto: string[] } {
   const [, , comando, ...resto] = process.argv;
@@ -392,6 +394,9 @@ function ajuda(): string {
   return `Sema CLI
 
 Comandos:
+  sema --versao
+  sema --version
+  sema -v
   sema iniciar
   sema validar <arquivo-ou-pasta>
   sema ast <arquivo.sema>
@@ -2302,6 +2307,10 @@ async function comandoVerificarJson(
 async function principal(): Promise<void> {
   const { comando, resto } = obterArgumentos();
   const comandoCru = process.argv[2];
+  if (comandoCru === "--versao" || comandoCru === "--version" || comandoCru === "-v") {
+    console.log(VERSAO_CLI);
+    process.exit(0);
+  }
   if (!comando || comandoCru === "--help" || comandoCru === "-h") {
     console.log(ajuda());
     process.exit(0);

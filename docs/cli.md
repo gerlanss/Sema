@@ -58,6 +58,12 @@ sema iniciar
 sema validar contratos/pedidos.sema --json
 ```
 
+Checar a versao instalada:
+
+```bash
+sema --versao
+```
+
 ## Sintaxe canonica de `impl`
 
 A CLI usa o bloco `impl` para ligar uma `task` a simbolos reais do codigo vivo. `drift`, `inspecionar`, `contexto-ia` e a importacao assistida dependem dessa forma estar bem escrita.
@@ -138,6 +144,10 @@ impl {
 Motivo: a mesma origem nao pode ser repetida dentro da mesma `task`.
 
 ## Comandos disponiveis
+
+### `sema --versao` | `sema --version` | `sema -v`
+
+Imprime a versao atual da CLI instalada.
 
 ### `sema iniciar [--template <base|nestjs|fastapi|nextjs-api|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge>]`
 

@@ -60,7 +60,7 @@ sema --help
 
 ## Texto para GitHub Release
 
-Sema 0.8.7 fecha o ciclo do `given` composto em geradores e formatador sem quebrar a proposta da ferramenta: protocolo de governança semântica, não gerador messiânico de sistema. Essa rodada corrige o Python para objeto tipado aninhado, remove a sabotagem do formatador em bloco nomeado livre e mantém a instalação oficial pelo npm em `@semacode/cli`.
+Sema 0.8.8 fecha o ciclo do `given` composto em geradores e formatador sem quebrar a proposta da ferramenta: protocolo de governança semântica, não gerador messiânico de sistema. Essa rodada corrige o Python para objeto tipado aninhado, remove a sabotagem do formatador em bloco nomeado livre e mantém a instalação oficial pelo npm em `@semacode/cli`.
 
 Na prática, isso fecha um buraco importante de framing: a ferramenta fica mais honesta sobre o que governa, o que automatiza e onde a curadoria humana continua obrigatória.
 
