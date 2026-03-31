@@ -1,20 +1,20 @@
-# Distribuicao da CLI da Sema
+# Distribuição da CLI da Sema
 
 Este documento explica como distribuir a CLI da Sema fora do monorrepo sem vender fumaça.
 
 ## Modelo oficial agora
 
-A trilha publica principal da Sema passa a ser:
+A trilha pública principal da Sema passa a ser:
 
 1. instalar `@semacode/cli` pelo npm
 2. rodar `sema`
-3. usar a GitHub Release so como canal alternativo com tarball estavel
+3. usar a GitHub Release só como canal alternativo com tarball estável
 
-O pacote da CLI ja esta **publicado no npm registry** como `@semacode/cli`.
+O pacote da CLI já está **publicado no npm registry** como `@semacode/cli`.
 
-Se voce precisa anunciar a release sem ficar improvisando texto em cima da hora, use tambem o [kit de lancamento publico](./kit-lancamento-publico.md).
+Se você precisa anunciar a release sem ficar improvisando texto em cima da hora, use também o [kit de lançamento público](./kit-lancamento-publico.md).
 
-Instalacao sem clone em Linux, Windows PowerShell e macOS:
+Instalação sem clone em Linux, Windows PowerShell e macOS:
 
 ```bash
 npm install -g @semacode/cli
@@ -22,7 +22,7 @@ sema --help
 sema doctor
 ```
 
-Instalacao via GitHub Release:
+Instalação via GitHub Release:
 
 ```bash
 npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
@@ -35,14 +35,14 @@ Instaladores auxiliares:
 - Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
 - Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
 
-Instalacao local ao projeto:
+Instalação local ao projeto:
 
 ```bash
 npm install @semacode/cli
 npx sema --help
 ```
 
-Cada release publica entrega:
+Cada release pública entrega:
 
 - `sema-cli-<versao>.tgz`
 - `sema-cli-latest.tgz`
@@ -53,13 +53,13 @@ Cada release publica entrega:
 
 ## Fluxo pronto para npm
 
-Dry-run de publicacao:
+Dry-run de publicação:
 
 ```bash
 npm run cli:publicar-npm-dry-run
 ```
 
-Publicacao real:
+Publicação real:
 
 ```bash
 npm run cli:publicar-npm
@@ -67,16 +67,16 @@ npm run cli:publicar-npm
 
 Notas importantes:
 
-- o pacote publico da CLI e `@semacode/cli`
+- o pacote público da CLI é `@semacode/cli`
 - o script publica o tarball gerado em `.tmp/pacotes-publicos`
-- a conta desta maquina precisa estar autenticada com `npm adduser` ou `npm login`
-- o package name publico passa a ser `@semacode/cli`, publicado no scope da organizacao `semacode`
+- a conta desta máquina precisa estar autenticada com `npm adduser` ou `npm login`
+- o package name público passa a ser `@semacode/cli`, publicado no scope da organização `semacode`
 
 ## O que esse pacote resolve
 
-O tarball publico agora carrega os pacotes internos de runtime junto, sem depender de `file:` quebrado no `package.json`.
+O tarball público agora carrega os pacotes internos de runtime junto, sem depender de `file:` quebrado no `package.json`.
 
-Traduzindo sem perfume: ele foi feito para funcionar fora do monorrepo, e nao so para parecer empacotavel no papel.
+Traduzindo sem perfume: ele foi feito para funcionar fora do monorrepo, e não só para parecer empacotável no papel.
 
 ## Como validar o pacote
 
@@ -89,26 +89,26 @@ npm run cli:testar-pacote-publico
 Esse smoke:
 
 - empacota a CLI
-- instala o tarball em diretorio temporario limpo
+- instala o tarball em diretório temporário limpo
 - roda `sema --help`
 - roda `sema validar` contra um `.sema` real do repo
-- falha se o tarball ainda carregar dependencia `file:`
+- falha se o tarball ainda carregar dependência `file:`
 
-Se voce quiser validar tambem a trilha de npm sem publicar de verdade, use o dry-run acima.
+Se você quiser validar também a trilha de npm sem publicar de verdade, use o dry-run acima.
 
-## Como a release e publicada
+## Como a release é publicada
 
 O workflow [release-publica.yml](../.github/workflows/release-publica.yml) faz o seguinte:
 
-1. valida alinhamento de versao publica
+1. valida alinhamento de versão pública
 2. roda `npm run project:check`
-3. empacota a CLI publica
-4. empacota a extensao VS Code
+3. empacota a CLI pública
+4. empacota a extensão VS Code
 5. publica os artefatos versionados e os aliases `latest`
 
 ## Fluxos que continuam existindo
 
-### Uso direto do repositorio
+### Uso direto do repositório
 
 Bom para contribuir e desenvolver a ferramenta:
 
@@ -118,15 +118,15 @@ npm run build
 node pacotes/cli/dist/index.js validar exemplos/calculadora.sema
 ```
 
-### Instalacao local por `npm link`
+### Instalação local por `npm link`
 
-Bom para quem esta mexendo no proprio repo da Sema:
+Bom para quem está mexendo no próprio repo da Sema:
 
 ```bash
 npm run cli:instalar-local
 ```
 
-Isto continua util, mas agora e **fluxo de desenvolvimento**, nao distribuicao publica principal.
+Isto continua útil, mas agora é **fluxo de desenvolvimento**, não distribuição pública principal.
 
 ### Empacotamento antigo de workspace
 
@@ -136,20 +136,20 @@ O comando abaixo continua existindo:
 npm run cli:empacotar
 ```
 
-Ele passa a ser tratado como **empacotamento interno/dev**, bom para inspecao rapida de workspace, nao como narrativa oficial de distribuicao.
+Ele passa a ser tratado como **empacotamento interno/dev**, bom para inspeção rápida de workspace, não como narrativa oficial de distribuição.
 
-## O que ainda nao entra nesta rodada
+## O que ainda não entra nesta rodada
 
 - instalador multiplataforma dedicado
-- updater automatico
+- updater automático
 - runtime web acoplado
 
-## Regra pratica
+## Regra prática
 
 Se a pessoa quer **usar** a Sema, entregue `npm install -g @semacode/cli`.
 
-Se a pessoa prefere pacote fechado ou esta com algum problema no registry, entregue o `.tgz` publico da release.
+Se a pessoa prefere pacote fechado ou está com algum problema no registry, entregue o `.tgz` público da release.
 
 Se a pessoa quer **desenvolver** a Sema, use o monorrepo.
 
-Misturar os dois fluxos era justamente a origem da experiencia meio capenga que esse ciclo corrigiu.
+Misturar os dois fluxos era justamente a origem da experiência meio capenga que esse ciclo corrigiu.

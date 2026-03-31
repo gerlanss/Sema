@@ -2,36 +2,36 @@
 
 ![Logo da Sema](./logo.png)
 
-Sema e um **Protocolo de Governanca de Intencao para IA e backend vivo**.
+Sema é um **Protocolo de Governança de Intenção para IA e backend vivo**.
 
-Ele nao tenta substituir TypeScript, Python, Dart, Flask, FastAPI ou NestJS. A proposta e mais util do que isso: governar a camada de significado acima da stack, com contrato explicito, fluxo, erro, efeito, garantia, `impl`, `drift` e contexto operacional para IA.
+Ele não tenta substituir TypeScript, Python, Dart, Flask, FastAPI ou NestJS. A proposta é mais útil do que isso: governar a camada de significado acima da stack, com contrato explícito, fluxo, erro, efeito, garantia, `impl`, `drift` e contexto operacional para IA.
 
-Tecnicamente, a Sema continua sendo uma **linguagem de intencao**. Publicamente, o posicionamento fica mais honesto: ela e o protocolo que ajuda IA e humano a editar sistema vivo com menos adivinhacao e mais verificacao.
+Tecnicamente, a Sema continua sendo uma **linguagem de intenção**. Publicamente, o posicionamento fica mais honesto: ela é o protocolo que ajuda IA e humano a editar sistema vivo com menos adivinhação e mais verificação.
 
-## O que a Sema e, e o que ela nao e
+## O que a Sema é, e o que ela não é
 
 Para evitar leitura torta, aqui vai sem perfume:
 
-- a Sema **e** um protocolo de governanca semantica para contrato, intencao, fluxo, erro, efeito, garantia e vinculo com codigo vivo
-- a Sema **e** uma camada acima da stack para reduzir ambiguidade entre runtime, contrato, documentacao e IA
-- a Sema **nao e** gerador messianico de sistema completo
-- a Sema **nao e** substituta de decisao arquitetural
-- a Sema **nao e** telepatia de regra de negocio
+- a Sema **é** um protocolo de governança semântica para contrato, intenção, fluxo, erro, efeito, garantia e vínculo com código vivo
+- a Sema **é** uma camada acima da stack para reduzir ambiguidade entre runtime, contrato, documentação e IA
+- a Sema **não é** gerador messiânico de sistema completo
+- a Sema **não é** substituta de decisão arquitetural
+- a Sema **não é** telepatia de regra de negócio
 
-Em termos praticos:
+Em termos práticos:
 
-- `importar` serve para bootstrap revisavel, nao para contrato final automatico
-- `impl` serve para ligar contrato a simbolo vivo, nao para fingir que o runtime se explica sozinho
-- `drift` serve para medir verdade contra codigo real, nao para decorar o projeto com JSON bonito
-- `contexto-ia` serve para preparar uma IA para editar com menos chute, nao para terceirizar pensamento
+- `importar` serve para bootstrap revisável, não para contrato final automático
+- `impl` serve para ligar contrato a símbolo vivo, não para fingir que o runtime se explica sozinho
+- `drift` serve para medir verdade contra código real, não para decorar o projeto com JSON bonito
+- `contexto-ia` serve para preparar uma IA para editar com menos chute, não para terceirizar pensamento
 
 ## O que ela entrega
 
-- contrato semantico explicito para operacoes, bordas HTTP, erros, efeitos e garantias
-- vinculo com implementacao real via `impl`
-- medicao de divergencia real entre contrato e codigo vivo via `drift`
-- importacao incremental de legado
-- contexto acionavel para IA antes de editar projeto real
+- contrato semântico explícito para operações, bordas HTTP, erros, efeitos e garantias
+- vínculo com implementação real via `impl`
+- medição de divergência real entre contrato e código vivo via `drift`
+- importação incremental de legado
+- contexto acionável para IA antes de editar projeto real
 
 ## O problema que resolve
 
@@ -39,27 +39,27 @@ Em projeto vivo, a verdade costuma ficar espalhada:
 
 - contrato numa ponta
 - DTO em outra
-- comentario vencido no canto
+- comentário vencido no canto
 - framework escondendo regra no meio do handler
-- IA adivinhando simbolo e fluxo como se fosse paranormal
+- IA adivinhando símbolo e fluxo como se fosse paranormal
 
-A Sema junta isso num ponto governavel:
+A Sema junta isso num ponto governável:
 
-- intencao da operacao
-- contrato de entrada e saida
-- regras obrigatorias
+- intenção da operação
+- contrato de entrada e saída
+- regras obrigatórias
 - efeitos operacionais
 - erros esperados
 - garantias finais
-- fluxo e estado do dominio
-- vinculo com implementacao real via `impl`
-- divergencia real entre contrato e codigo vivo via `drift`
+- fluxo e estado do domínio
+- vínculo com implementação real via `impl`
+- divergência real entre contrato e código vivo via `drift`
 
-Nao e so “mais uma DSL”. E uma camada semantica para governar o que a stack costuma deixar espalhado, opaco ou velho.
+Não é só “mais uma DSL”. É uma camada semântica para governar o que a stack costuma deixar espalhado, opaco ou velho.
 
 ## Quickstart em 2 minutos
 
-Hoje voce **nao precisa clonar o repo** para instalar a CLI. A instalacao oficial agora e pelo pacote npm `@semacode/cli`.
+Hoje você **não precisa clonar o repo** para instalar a CLI. A instalação oficial agora é pelo pacote npm `@semacode/cli`.
 
 Linux, Windows PowerShell e macOS:
 
@@ -79,14 +79,14 @@ npm install @semacode/cli
 npx sema --help
 ```
 
-Se voce prefere instalar pela GitHub Release com tarball estavel:
+Se você prefere instalar pela GitHub Release com tarball estável:
 
 ```bash
 npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
 sema --help
 ```
 
-Se depois voce quiser ver a Sema em backend vivo, ai sim entre no repo e rode o case oficial:
+Se depois você quiser ver a Sema em backend vivo, aí sim entre no repo e rode o case oficial:
 
 ```bash
 cd showcases/ranking-showroom
@@ -96,17 +96,17 @@ sema drift contratos/ranking_showroom.sema --json
 
 ## Case oficial
 
-O case oficial da Sema agora e [showcases/ranking-showroom](./showcases/ranking-showroom/).
+O case oficial da Sema agora é [showcases/ranking-showroom](./showcases/ranking-showroom/).
 
 Ele mostra, num backend Flask pequeno e real:
 
-- contrato semantico curado
-- `impl` apontando para simbolos vivos
+- contrato semântico curado
+- `impl` apontando para símbolos vivos
 - `drift` sem falso positivo idiota
 - `contexto-ia` com `drift.json`
-- adocao incremental sem reescrever a stack
+- adoção incremental sem reescrever a stack
 
-Se voce quer entender por que isso e mais util do que `OpenAPI + DTO + comentario espalhado`, esse showcase foi feito exatamente para isso.
+Se você quer entender por que isso é mais útil do que `OpenAPI + DTO + comentário espalhado`, esse showcase foi feito exatamente para isso.
 
 ## Compatibilidade atual honesta
 
@@ -122,20 +122,20 @@ Se voce quer entender por que isso e mais util do que `OpenAPI + DTO + comentari
 - `C++ bridge/service`: importacao generica + `drift` de simbolo via `cpp:`
 - `TypeScript`, `Python`, `Dart`: resolucao de simbolo e importacao generica
 
-Observacao importante: `flask`, `nextjs`, `firebase`, `dotnet`, `java`, `go`, `rust` e `cpp` entram como **fontes legado** para `importar` e `drift`; eles nao viram frameworks novos de geracao. A geracao continua `base`, `nestjs` e `fastapi`, enquanto as outras familias entram via starter e adocao incremental.
+Observação importante: `flask`, `nextjs`, `firebase`, `dotnet`, `java`, `go`, `rust` e `cpp` entram como **fontes legado** para `importar` e `drift`; eles não viram frameworks novos de geração. A geração continua `base`, `nestjs` e `fastapi`, enquanto as outras famílias entram via starter e adoção incremental.
 
-Outra observacao importante: a compatibilidade publica agora explicita tambem o **nivel de genericidade** de cada familia. Em bom portugues:
+Outra observação importante: a compatibilidade pública agora explicita também o **nível de genericidade** de cada família. Em bom português:
 
 - `framework slice oficial`: cobrimos um recorte concreto do framework, com promessa clara e `drift` da borda principal
 - `generic backend`: cobrimos simbolo, bridge, service ou recurso vivo, sem vender a mentira de que todo framework daquela linguagem ja esta coberto
 - `consumer bridge oficial`: cobrimos o lado consumidor com bridge formal e contexto de IA acionavel
 - `inventariado`: a familia esta mapeada, mas ainda nao virou compromisso first-class
 
-Para a regua oficial por familia de stack, benchmarks reais e criterio de nota `9/10`, veja [docs/scorecard-compatibilidade.md](./docs/scorecard-compatibilidade.md).
+Para a régua oficial por família de stack, benchmarks reais e critério de nota `9/10`, veja [docs/scorecard-compatibilidade.md](./docs/scorecard-compatibilidade.md).
 
 ## Backend-first em 30 segundos
 
-Hoje a Sema ja faz bem estas coisas:
+Hoje a Sema já faz bem estas coisas:
 
 - modela dominio, contrato, borda publica, erro, garantia, efeito e fluxo
 - gera scaffold base para TypeScript, Python e Dart
@@ -162,9 +162,9 @@ Se quiser instalar sem decorar a novela toda:
 - Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
 - Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 | iex`
 
-## Distribuicao publica
+## Distribuição pública
 
-Hoje a distribuicao publica da Sema fica assim:
+Hoje a distribuição pública da Sema fica assim:
 
 - npm como canal oficial de instalacao via `@semacode/cli`
 - GitHub Release como canal alternativo com tarball estavel
@@ -173,7 +173,7 @@ Hoje a distribuicao publica da Sema fica assim:
 
 Para a trilha de distribuicao e publicacao, veja [docs/distribuicao-da-cli.md](./docs/distribuicao-da-cli.md).
 
-Para texto de anuncio, release note curta, pitch e checklist de lancamento, veja [docs/kit-lancamento-publico.md](./docs/kit-lancamento-publico.md).
+Para texto de anúncio, release note curta, pitch e checklist de lançamento, veja [docs/kit-lancamento-publico.md](./docs/kit-lancamento-publico.md).
 
 ## Exemplo rapido
 
@@ -257,9 +257,9 @@ Na pratica:
 - [docs/AGENT_STARTER.md](./docs/AGENT_STARTER.md)
 - [docs/prompt-base-ia-sema.md](./docs/prompt-base-ia-sema.md)
 
-## Extensao VS Code
+## Extensão VS Code
 
-A extensao da Sema para VS Code ja tem:
+A extensão da Sema para VS Code já tem:
 
 - associacao automatica de `.sema`
 - highlight de sintaxe
@@ -307,9 +307,9 @@ Ou manualmente:
 code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.4.vsix --force
 ```
 
-## Observacao honesta
+## Observação honesta
 
-A Sema ja deixou de ser so "documentacao premium", mas ainda seria papo furado vender como "backend inteiro pronto sem tocar em nada". O valor real dela hoje esta em:
+A Sema já deixou de ser só "documentação premium", mas ainda seria papo furado vender como "backend inteiro pronto sem tocar em nada". O valor real dela hoje está em:
 
 - protocolo semantico
 - scaffold util

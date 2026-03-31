@@ -1,26 +1,26 @@
 # Sema Language Tools
 
-Suporte de editor para o protocolo **Sema**, a camada semantica que governa contrato, fluxo, erro, efeito e garantia acima da stack real.
+Suporte de editor para o protocolo **Sema**, a camada semântica que governa contrato, fluxo, erro, efeito e garantia acima da stack real.
 
-Na implementacao, a Sema continua sendo uma linguagem de intencao. No editor, a extensao existe para fazer essa camada semantica ficar util de verdade, sem transformar o VS Code num circo pesado.
+Na implementação, a Sema continua sendo uma linguagem de intenção. No editor, a extensão existe para fazer essa camada semântica ficar útil de verdade, sem transformar o VS Code num circo pesado.
 
 ## Recursos
 
-- associacao automatica de arquivos `.sema`
+- associação automática de arquivos `.sema`
 - destaque de sintaxe para os blocos centrais da linguagem
 - snippets para `module`, `task`, `flow`, `route` e `state`
 - comando `Sema: Formatar Documento`
 - servidor de linguagem inicial com:
-  - diagnosticos semanticos
-  - hover basico
-  - formatacao de documento
+  - diagnósticos semânticos
+  - hover básico
+  - formatação de documento
 - integracao com a CLI da Sema
 
 ## O que a extensao ja resolve
 
 - editar `.sema` com legibilidade
-- detectar diagnosticos semanticos no editor
-- formatar com o estilo canonico da linguagem
+- detectar diagnósticos semânticos no editor
+- formatar com o estilo canônico da linguagem
 - trabalhar com a CLI local ou instalada no sistema
 
 ## Como a extensao encontra a CLI
@@ -50,7 +50,7 @@ Invoke-WebRequest -Uri https://github.com/gerlanss/Sema/releases/latest/download
 code --install-extension .\sema-language-tools.vsix --force
 ```
 
-Esse e o caminho oficial publico hoje. Se a extensao for publicada na loja depois, otimo; por enquanto a release do GitHub e a rota honesta e reproduzivel.
+Esse é o caminho oficial público hoje. Se a extensão for publicada na loja depois, ótimo; por enquanto a release do GitHub é a rota honesta e reproduzível.
 
 ### Via VSIX local
 
