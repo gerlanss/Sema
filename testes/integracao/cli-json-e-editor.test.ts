@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
   DIRETORIOS_CODIGO_FUTEBOT_FIXTURE,
@@ -19,6 +21,8 @@ import {
 } from "./futebot-fixture.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
+const require = createRequire(import.meta.url);
+const { carregarProjetoParaDocumento } = require(path.resolve("pacotes/editor-vscode/project-loader.js"));
 
 test("cli validar suporta saida json estavel", () => {
   const execucao = spawnSync(
@@ -99,6 +103,7 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   const snippets = JSON.parse(await readFile(path.resolve("pacotes/editor-vscode/snippets/sema.code-snippets"), "utf8"));
   const extension = await readFile(path.resolve("pacotes/editor-vscode/extension.js"), "utf8");
   const servidor = await readFile(path.resolve("pacotes/editor-vscode/server.js"), "utf8");
+  const loaderProjeto = await readFile(path.resolve("pacotes/editor-vscode/project-loader.js"), "utf8");
 
   assert.equal(pacote.contributes.languages[0].id, "sema");
   assert.deepEqual(pacote.contributes.languages[0].extensions, [".sema"]);
@@ -119,6 +124,90 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   assert.match(extension, /sema\.cliPath/);
   assert.match(servidor, /createConnection/);
   assert.match(servidor, /documentFormattingProvider/);
+  assert.match(servidor, /carregarProjetoParaDocumento/);
+  assert.match(loaderProjeto, /resolverOrigensProjeto/);
+});
+
+test("extensao resolve use cross-module com contexto de projeto completo", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-editor-contexto-"));
+
+  try {
+    await writeFile(
+      path.join(baseTemporaria, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+      }, null, 2),
+      "utf8",
+    );
+    await mkdir(path.join(baseTemporaria, "contratos"), { recursive: true });
+
+    await writeFile(
+      path.join(baseTemporaria, "contratos", "user_stories.sema"),
+      `module barbearia.user_stories {
+  task agendar_via_whatsapp {
+    input {
+      cliente_id: Id required
+    }
+    output {
+      agendamento_id: Id
+    }
+    guarantees {
+      agendamento_id existe
+    }
+    error {
+      horario_indisponivel: "Horario nao disponivel."
+      servico_inexistente: "Servico nao encontrado."
+      barbeiro_indisponivel: "Barbeiro nao esta disponivel."
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const caminhoRotas = path.join(baseTemporaria, "contratos", "rotas.sema");
+    const codigoRotas = `module barbearia.rotas {
+  use barbearia.user_stories
+
+  route agendar_whatsapp {
+    metodo: POST
+    caminho: /whatsapp/agendar
+    task: agendar_via_whatsapp
+    input {
+      cliente_id: Id required
+    }
+    output {
+      agendamento_id: Id required
+    }
+    error {
+      horario_indisponivel: "Horario nao disponivel."
+      servico_inexistente: "Servico nao encontrado."
+      barbeiro_indisponivel: "Barbeiro nao esta disponivel."
+    }
+  }
+}
+`;
+    await writeFile(caminhoRotas, codigoRotas, "utf8");
+
+    const nucleo = await import(pathToFileURL(path.resolve("pacotes/nucleo/dist/index.js")).href);
+    const carregado = await carregarProjetoParaDocumento({
+      caminhoDocumento: caminhoRotas,
+      textoAtual: codigoRotas,
+      workspaceFolders: [baseTemporaria],
+      documentosAbertos: new Map([[caminhoRotas, codigoRotas]]),
+      nucleo,
+    });
+
+    assert.equal(carregado.baseProjeto, baseTemporaria);
+    assert.deepEqual(carregado.origensProjeto, [path.join(baseTemporaria, "contratos")]);
+    assert.equal(carregado.resultadoModulo?.modulo.nome, "barbearia.rotas");
+    assert.deepEqual(
+      carregado.resultadoModulo?.diagnosticos.filter((item: { codigo: string }) => item.codigo === "SEM018" || item.codigo === "SEM051"),
+      [],
+    );
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
 });
 
 test("cli expoe starter e prompt de ia", () => {

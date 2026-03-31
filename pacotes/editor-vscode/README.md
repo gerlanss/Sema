@@ -11,7 +11,7 @@ Na implementacao, a Sema continua sendo uma linguagem de intencao. No editor, a 
 - snippets para `module`, `task`, `flow`, `route` e `state`
 - comando `Sema: Formatar Documento`
 - servidor de linguagem inicial com:
-  - diagnosticos semanticos
+  - diagnosticos semanticos com contexto de projeto
   - hover basico
   - formatacao de documento
 - integracao com a CLI da Sema
@@ -20,6 +20,7 @@ Na implementacao, a Sema continua sendo uma linguagem de intencao. No editor, a 
 
 - editar `.sema` com legibilidade
 - detectar diagnosticos semanticos no editor
+- resolver `use` cross-module usando o mesmo contexto de projeto da CLI
 - formatar com o estilo canonico da linguagem
 - trabalhar com a CLI local ou instalada no sistema
 
@@ -62,7 +63,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-1.0.0.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-1.0.1.vsix --force
 ```
 
 ## Fluxo recomendado

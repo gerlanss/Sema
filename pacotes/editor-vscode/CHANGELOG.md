@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- troca a validacao isolada por compilacao com contexto de projeto no servidor do VS Code
+- resolve `use` cross-module na extensao com a mesma ideia de projeto compartilhado da CLI
+- respeita buffers abertos durante o diagnostico e empacota a extensao com o novo loader de projeto
+
 ## 1.0.0
 
 - fecha a primeira linha publica estavel da Sema com camada compacta para IA pequena, media e grande

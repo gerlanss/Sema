@@ -32,6 +32,7 @@ async function copiarEstruturaBase() {
   const itens = [
     "extension.js",
     "server.js",
+    "project-loader.js",
     "language-configuration.json",
     "logo.png",
     "README.md",

@@ -1,6 +1,6 @@
-const fs = require("node:fs/promises");
 const path = require("node:path");
 const { fileURLToPath, pathToFileURL } = require("node:url");
+const { carregarProjetoParaDocumento } = require("./project-loader");
 const {
   createConnection,
   ProposedFeatures,
@@ -46,6 +46,7 @@ const descricoesHover = {
 let configuracao = {
   diagnosticosAoDigitar: true,
 };
+let workspaceFolders = [];
 
 let nucleoCarregado;
 
@@ -95,27 +96,21 @@ async function compilarDocumento(documento) {
   }
 
   const nucleo = await obterNucleo();
-  const pastaProjeto = path.dirname(caminhoDocumento);
-  const arquivosProjeto = await nucleo.listarArquivosSema(pastaProjeto);
-  const fontes = [];
-  let encontrouAtual = false;
+  const documentosAbertos = new Map(
+    documents
+      .all()
+      .map((item) => [uriParaCaminho(item.uri), item.getText()])
+      .filter(([caminho]) => Boolean(caminho)),
+  );
+  const resultado = await carregarProjetoParaDocumento({
+    caminhoDocumento,
+    textoAtual: documento.getText(),
+    workspaceFolders,
+    documentosAbertos,
+    nucleo,
+  });
 
-  for (const arquivo of arquivosProjeto) {
-    if (path.resolve(arquivo) === path.resolve(caminhoDocumento)) {
-      fontes.push({ caminho: arquivo, codigo: documento.getText() });
-      encontrouAtual = true;
-      continue;
-    }
-
-    fontes.push({ caminho: arquivo, codigo: await fs.readFile(arquivo, "utf8") });
-  }
-
-  if (!encontrouAtual) {
-    fontes.push({ caminho: caminhoDocumento, codigo: documento.getText() });
-  }
-
-  const resultadoProjeto = nucleo.compilarProjeto(fontes);
-  return resultadoProjeto.modulos.find((item) => path.resolve(item.caminho) === path.resolve(caminhoDocumento)) ?? null;
+  return resultado.resultadoModulo;
 }
 
 async function validarDocumento(documento) {
@@ -159,6 +154,13 @@ connection.onInitialize((params) => {
   configuracao = {
     diagnosticosAoDigitar: true,
   };
+  workspaceFolders = (
+    params.initializationOptions?.workspaceFolders
+    ?? params.workspaceFolders?.map((item) => uriParaCaminho(item.uri))
+    ?? []
+  )
+    .filter(Boolean)
+    .map((item) => path.resolve(item));
 
   return {
     capabilities: {
