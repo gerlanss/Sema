@@ -10,7 +10,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Estagio atual: marco publico `0.9.x intervencao segura para IA` em consolidacao, com foco oficial em vinculos, execucao, contexto acionavel e superficies modernas em backend vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `0.9.0`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `0.9.1`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript

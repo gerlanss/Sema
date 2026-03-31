@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+- consolida a instalacao publica da CLI e da extensao na linha `0.9.1`
+- alinha a documentacao para fluxo IA-first sem depender do monorepo da Sema
+- acompanha o pacote publico com exemplos e docs empacotados para agente
+
 ## 0.9.0
 
 - alinha a extensao com a linha publica `0.9.x` da Sema

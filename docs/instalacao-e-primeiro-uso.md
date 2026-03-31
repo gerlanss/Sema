@@ -37,8 +37,8 @@ npx sema --help
 
 Instaladores auxiliares para a linha publica atual:
 
-- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v0.9.0/install-sema.sh | bash`
-- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v0.9.0/install-sema.ps1 | iex`
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v0.9.1/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v0.9.1/install-sema.ps1 | iex`
 
 Se voce quiser reproducao estrita, prefira o npm registry ou o tarball da GitHub Release.
 
@@ -134,7 +134,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.9.0.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.9.1.vsix --force
 ```
 
 ## Caminho de contribuinte

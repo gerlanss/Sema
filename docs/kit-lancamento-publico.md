@@ -61,32 +61,31 @@ sema --help
 
 ## Texto para GitHub Release
 
-Sema 0.9.0 leva a ferramenta para um salto bem mais adulto como linguagem de intervencao segura para IA. Essa rodada adiciona `vinculos`, `execucao`, superficies modernas de primeira classe como `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy`, alem de `drift` com score, confianca, risco e lacunas.
+Sema 0.9.1 fecha a linha publica 0.9 com um ajuste importante: a experiencia de instalacao e onboarding para IA agora fica coerente com a CLI publica, sem depender de monorepo nem de caminho interno da propria Sema.
 
-Na pratica, a Sema fica mais honesta e mais util ao mesmo tempo: nao so descreve intencao, mas ajuda agente e humano a mapear o que tocar, o que validar e o que ainda esta frouxo antes de editar backend vivo. O pacote `contexto-ia` agora entrega tambem `briefing.json`, fechando a trilha `inspecionar -> drift -> contexto-ia`.
+Na pratica, esta patch:
 
-Tambem entram nessa rodada:
+- limpa docs e prompts que ainda ensinavam `node pacotes/cli/dist/index.js` ou `project:check` como fluxo normal
+- reforca `sema` como interface publica principal para agente e usuario
+- leva docs e exemplos uteis junto com o pacote publico da CLI
+- consolida a trilha IA-first para `starter-ia`, `ajuda-ia`, `contexto-ia` e instalacao
 
-- README publico refeito
-- docs de sintaxe e integracao com IA atualizadas
-- onboarding de `starter-ia` e `ajuda-ia` alinhado ao 0.9
-- linha publica 0.9.0 alinhada entre CLI, pacotes internos e extensao VS Code
+O resultado e simples: menos ruído, menos contexto acidental de repo e menos chance da IA operar como se estivesse dentro do monorepo quando o alvo real e um projeto qualquer.
 
 ## Texto para LinkedIn
 
-Publiquei a linha 0.9.0 da Sema.
+Publiquei a linha 0.9.1 da Sema.
 
 Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
 
 Ela nao tenta substituir a stack. Ela governa a camada semantica acima da stack: contrato, erro, efeito, garantia, fluxo, `impl`, `vinculos`, `execucao`, `drift` e contexto para IA.
 
-Nessa rodada, o foco foi sair de "DSL util" para "linguagem de intervencao segura para IA":
+Nessa patch, o foco foi consolidar a superficie publica para IA:
 
-- `vinculos` para arquivo, simbolo, recurso e superficie real
-- `execucao` para timeout, retry, compensacao e criticidade
-- superficies modernas como `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy`
-- `drift` com score, confianca, risco e lacunas
-- `contexto-ia` com `briefing.json`
+- docs e prompts sem vazamento de monorepo
+- `sema` como interface publica principal
+- pacote npm com docs e exemplos uteis para agente
+- onboarding mais coerente para instalacao real
 
 Instalacao:
 
@@ -104,13 +103,15 @@ Showcase oficial:
 
 Versao curta:
 
-Sema 0.9.0.
+Sema 0.9.1.
 
 Protocolo de Governanca de Intencao para IA e backend vivo.
 
-Agora com `vinculos`, `execucao`, superficies modernas e `drift` com score, confianca, risco e lacunas.
+Patch focada em deixar a experiencia publica realmente IA-first:
 
-Tambem entra `briefing.json` no `contexto-ia` para a IA saber o que tocar antes de sair quebrando backend.
+- menos vazamento de monorepo
+- docs e prompts mais coerentes
+- pacote publico com exemplos e docs uteis
 
 Instalacao:
 `npm install -g @semacode/cli`
@@ -124,7 +125,7 @@ Thread curta:
 
 2. Sema entra para governar a camada semantica acima da stack: contrato, fluxo, erro, efeito, garantia, `impl`, `vinculos`, `execucao`, `drift` e contexto para IA.
 
-3. A linha 0.9.0 fortalece a parte operacional: score, confianca, lacunas e `briefing.json`.
+3. A linha 0.9.1 limpa a camada publica para agente: menos ruído, menos suposicao errada e menos caminho interno vazando.
 
 4. Instalacao hoje:
 `npm install -g @semacode/cli`
