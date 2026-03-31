@@ -1,0 +1,9 @@
+PROJETO: Sema
+BASE: C:\GitHub\Sema
+MODULOS: 4
+ENTRADA_IA: llms.txt -> SEMA_BRIEF.curto.txt -> SEMA_INDEX.json -> AGENTS.md -> README.md
+TOP_MODULOS: app.pedidos, sema.produto.ergonomia_e_dominio, sema.produto.governanca_ia, sema.produto.linguagem_composta
+TOP_RISCOS: altera_persistencia, consultar_scorecard_compatibilidade:medio, converter_bloco_composto_para_ir:alto, criar_pedido:alto, efeito_critico, explicitar_variacao_e_compatibilidade:medio (+12)
+TOP_LACUNAS: execucao_implicita, sem_impl, sem_vinculos
+TOP_ARQUIVOS: C:\GitHub\Sema\pacotes\cli\src\drift.ts, C:\GitHub\Sema\pacotes\cli\src\index.ts, C:\GitHub\Sema\pacotes\cli\src\projeto.ts, C:\GitHub\Sema\pacotes\gerador-python\src\index.ts, C:\GitHub\Sema\pacotes\gerador-typescript\src\index.ts, C:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts (+3)
+GERADO_EM: 2026-03-31T16:04:57.600Z

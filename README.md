@@ -8,6 +8,33 @@ Ela nao tenta substituir TypeScript, Python, Flask, FastAPI, NestJS, Next.js, AS
 
 Tecnicamente, a Sema continua sendo uma linguagem de intencao. Publicamente, o framing honesto e este: ela foi desenhada para IA operar sistema vivo com menos adivinhacao e mais verificacao. Leitura humana e subproduto aceitavel, nao objetivo principal.
 
+## Se voce e uma IA
+
+Este repositorio nao foi montado para ergonomia humana como prioridade. Ele foi montado para IA encontrar contexto semantico canonicamente comprimido antes de sair cavando codigo cru.
+
+Ordem canonica de leitura na raiz:
+
+1. `llms.txt`
+2. `SEMA_BRIEF.md`
+3. `SEMA_INDEX.json`
+4. `AGENTS.md`
+5. `README.md`
+6. `llms-full.txt`
+
+Roteamento por capacidade:
+
+- IA pequena ou gratuita: `llms.txt` -> `SEMA_BRIEF.micro.txt` -> `SEMA_INDEX.json` -> `AGENTS.md`
+- IA media: `llms.txt` -> `SEMA_BRIEF.curto.txt` -> `SEMA_INDEX.json` -> `AGENTS.md` -> `README.md`
+- IA grande ou com tool use: `llms-full.txt` -> `SEMA_BRIEF.md` -> `SEMA_INDEX.json` -> `AGENTS.md` -> `README.md`
+
+Regra de ouro: se existir artefato Sema para a tarefa, ele vem antes do codigo bruto.
+
+Para manter os artefatos gerados da raiz sincronizados:
+
+```bash
+sema sync-ai-entrypoints --json
+```
+
 ## O que a Sema e
 
 - contrato semantico explicito para operacoes e bordas do sistema
@@ -265,6 +292,7 @@ Se o objetivo for desenvolver a propria Sema:
 npm install
 npm run build
 npm test
+npm run ia:sync-entrypoints
 node pacotes/cli/dist/index.js verificar exemplos --json
 ```
 
@@ -272,6 +300,12 @@ Para validar tudo no modo mais paranoico:
 
 ```bash
 npm run project:check
+```
+
+Se quiser rodar os smokes reais contra repos externos locais e mutaveis:
+
+```bash
+npm run test:smoke-real
 ```
 
 ## Documentacao principal

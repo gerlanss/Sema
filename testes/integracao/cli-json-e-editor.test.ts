@@ -159,6 +159,7 @@ test("cli expoe ajuda de ia com mapa de comandos", () => {
   assert.equal(ajuda.status, 0, ajuda.stderr || ajuda.stdout);
   assert.match(ajuda.stdout, /Ajuda de IA da Sema/);
   assert.match(ajuda.stdout, /sema starter-ia/);
+  assert.match(ajuda.stdout, /sema sync-ai-entrypoints/);
   assert.match(ajuda.stdout, /sema resumo <arquivo> --micro --para onboarding/);
   assert.match(ajuda.stdout, /sema prompt-curto <arquivo> --curto --para mudanca/);
   assert.match(ajuda.stdout, /sema prompt-ia-react/);
@@ -334,10 +335,79 @@ test("cli gera resumo de projeto na raiz com arquivos SEMA_BRIEF", async () => {
     assert.equal(json.comando, "resumo");
     assert.equal(json.artefatos.includes("SEMA_BRIEF.md"), true);
     assert.equal(await readFile(path.join(baseTemporaria, "SEMA_BRIEF.md"), "utf8").then((conteudo) => /Sema e IA-first/.test(conteudo)), true);
-    assert.equal(await readFile(path.join(baseTemporaria, "SEMA_INDEX.json"), "utf8").then((conteudo) => /"comando": "resumo-projeto"/.test(conteudo)), true);
+    const index = JSON.parse(await readFile(path.join(baseTemporaria, "SEMA_INDEX.json"), "utf8"));
+    assert.equal(index.comando, "resumo-projeto");
+    assert.deepEqual(index.entradaCanonica.porCapacidade.pequena, ["llms.txt", "SEMA_BRIEF.micro.txt", "SEMA_INDEX.json", "AGENTS.md"]);
+    assert.equal(await readFile(path.join(baseTemporaria, "SEMA_BRIEF.micro.txt"), "utf8").then((conteudo) => /ENTRADA_IA: llms\.txt -> SEMA_BRIEF\.micro\.txt -> SEMA_INDEX\.json -> AGENTS\.md/.test(conteudo)), true);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
   }
+});
+
+test("cli sincroniza entrypoints IA-first na raiz do projeto", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-sync-ia-"));
+
+  try {
+    await writeFile(
+      path.join(baseTemporaria, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["./src"],
+      }, null, 2),
+      "utf8",
+    );
+    await mkdir(path.join(baseTemporaria, "contratos"), { recursive: true });
+    await mkdir(path.join(baseTemporaria, "src"), { recursive: true });
+    await writeFile(
+      path.join(baseTemporaria, "contratos", "health.sema"),
+      `module app.health {
+  task ping {
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "sync-ai-entrypoints", "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.comando, "sync-ai-entrypoints");
+    assert.equal(json.sucesso, true);
+    assert.deepEqual(json.entradaCanonica.porCapacidade.media, ["llms.txt", "SEMA_BRIEF.curto.txt", "SEMA_INDEX.json", "AGENTS.md", "README.md"]);
+    assert.equal(await readFile(path.join(baseTemporaria, "SEMA_BRIEF.md"), "utf8").then((conteudo) => /Entrada canonica para IA/.test(conteudo)), true);
+    assert.equal(await readFile(path.join(baseTemporaria, "SEMA_INDEX.json"), "utf8").then((conteudo) => /"entradaCanonica"/.test(conteudo)), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("repo expoe entrada canonica para IA na raiz", async () => {
+  const agents = await readFile(path.resolve("AGENTS.md"), "utf8");
+  const llms = await readFile(path.resolve("llms.txt"), "utf8");
+  const llmsFull = await readFile(path.resolve("llms-full.txt"), "utf8");
+  const semaBrief = await readFile(path.resolve("SEMA_BRIEF.md"), "utf8");
+  const semaIndex = JSON.parse(await readFile(path.resolve("SEMA_INDEX.json"), "utf8"));
+  const readme = await readFile(path.resolve("README.md"), "utf8");
+
+  assert.match(agents, /llms\.txt/);
+  assert.match(agents, /SEMA_BRIEF\.md/);
+  assert.match(agents, /SEMA_INDEX\.json/);
+  assert.match(llms, /not human-first|not optimized for human-first/i);
+  assert.match(llmsFull, /Canonical entrypoints in the repository root/);
+  assert.match(semaBrief, /Entrada canonica para IA/);
+  assert.deepEqual(semaIndex.entradaCanonica.ordemLeitura, ["llms.txt", "SEMA_BRIEF.md", "SEMA_INDEX.json", "AGENTS.md", "README.md", "llms-full.txt"]);
+  assert.match(readme, /## Se voce e uma IA/);
 });
 
 test("cli inspeciona projeto Python sem config com mesma base a partir de raiz, sema e arquivo", async () => {

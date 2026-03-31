@@ -1,0 +1,34 @@
+Sema is an AI-first semantic language and tooling stack for explicit software intent, drift analysis, and safer intervention in live backend systems.
+
+This repository is not optimized for human-first reading. It is optimized for AI agents that need compressed, canonical semantic context.
+
+Canonical entrypoints in the repository root:
+1. `llms.txt`
+2. `SEMA_BRIEF.md`
+3. `SEMA_INDEX.json`
+4. `AGENTS.md`
+5. `README.md`
+6. `docs/AGENT_STARTER.md`
+
+Capacity routing:
+- small/free AI: `llms.txt` -> `SEMA_BRIEF.micro.txt` -> `SEMA_INDEX.json` -> `AGENTS.md`
+- medium AI: `llms.txt` -> `SEMA_BRIEF.curto.txt` -> `SEMA_INDEX.json` -> `AGENTS.md` -> `README.md`
+- large/tool-using AI: `llms-full.txt` -> `SEMA_BRIEF.md` -> `SEMA_INDEX.json` -> `AGENTS.md` -> `README.md`
+
+Source-of-truth order:
+1. root Sema artifacts
+2. CLI JSON outputs
+3. official docs
+4. official examples
+5. raw implementation code
+
+Useful commands:
+- `sema resumo <arquivo-ou-pasta> --micro --para mudanca`
+- `sema prompt-curto <arquivo-ou-pasta> --curto --para review`
+- `sema drift <arquivo-ou-pasta> --json`
+- `sema contexto-ia <arquivo.sema> --saida ./.tmp/contexto --json`
+- `sema validar <arquivo-ou-pasta> --json`
+- `sema verificar <arquivo-ou-pasta> --json`
+
+Do not ask the model to infer semantics that are already available in Sema artifacts.
+Do not start from raw source code if `SEMA_BRIEF`, `SEMA_INDEX`, `drift`, or `briefing` are available.

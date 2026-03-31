@@ -84,6 +84,21 @@ async function main() {
     }
     executar("npx", ["sema", "validar", path.join(raiz, "exemplos", "calculadora.sema"), "--json"], sandbox);
 
+    const basePacote = path.join(sandbox, "node_modules", "@semacode", "cli");
+    for (const arquivoIa of [
+      "AGENTS.md",
+      "llms.txt",
+      "llms-full.txt",
+      "SEMA_BRIEF.md",
+      "SEMA_BRIEF.micro.txt",
+      "SEMA_BRIEF.curto.txt",
+      "SEMA_INDEX.json",
+    ]) {
+      if (!(await existe(path.join(basePacote, arquivoIa)))) {
+        throw new Error(`O pacote publico nao incluiu o artefato IA-first ${arquivoIa}.`);
+      }
+    }
+
     const pacotesInternosAninhados = path.join(sandbox, "node_modules", "@semacode", "cli", "node_modules", "@sema");
     const pacotesInternosHoistados = path.join(sandbox, "node_modules", "@sema");
     if (!(await existe(pacotesInternosAninhados)) && !(await existe(pacotesInternosHoistados))) {

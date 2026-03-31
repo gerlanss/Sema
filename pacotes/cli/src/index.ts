@@ -47,6 +47,7 @@ type Comando =
   | "formatar"
   | "ajuda-ia"
   | "starter-ia"
+  | "sync-ai-entrypoints"
   | "resumo"
   | "prompt-curto"
   | "prompt-ia"
@@ -511,6 +512,22 @@ Comandos uteis da CLI para esse fluxo:
 
 const DIRETORIO_CLI_ATUAL = path.dirname(fileURLToPath(import.meta.url));
 const VERSAO_CLI = pacoteCli.version;
+const ARQUIVOS_CANONICOS_IA_RAIZ = [
+  "llms.txt",
+  "SEMA_BRIEF.md",
+  "SEMA_INDEX.json",
+  "AGENTS.md",
+  "README.md",
+  "llms-full.txt",
+] as const;
+const DOCUMENTOS_SUPORTE_IA = [
+  "docs/AGENT_STARTER.md",
+  "docs/integracao-com-ia.md",
+  "docs/fluxo-pratico-ia-sema.md",
+  "docs/como-ensinar-a-sema-para-ia.md",
+  "docs/sintaxe.md",
+  "docs/cli.md",
+] as const;
 
 function obterArgumentos(): { comando?: Comando; resto: string[] } {
   const [, , comando, ...resto] = process.argv;
@@ -540,6 +557,7 @@ Comandos:
   sema formatar <arquivo-ou-pasta> [--check] [--json]
   sema ajuda-ia
   sema starter-ia
+  sema sync-ai-entrypoints [--json]
   sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--saida <diretorio>] [--raiz] [--json]
   sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--json]
   sema prompt-ia
@@ -1286,6 +1304,7 @@ function renderizarResumoProjetoMarkdown(
   modulos: ResumoSemanticoModuloIa[],
   guiaPorCapacidade: Record<CapacidadeIa, GuiaCapacidadeIa>,
 ): string {
+  const entradaCanonica = criarEntradaCanonicaProjeto(guiaPorCapacidade);
   const linhas = [
     "# SEMA_BRIEF",
     "",
@@ -1293,6 +1312,13 @@ function renderizarResumoProjetoMarkdown(
     "",
     `- Gerado em: \`${geradoEm}\``,
     `- Modulos: \`${modulos.length}\``,
+    "",
+    "## Entrada canonica para IA",
+    "",
+    `- Ordem minima: ${entradaCanonica.ordemLeitura.join(" -> ")}`,
+    `- IA pequena: ${entradaCanonica.porCapacidade.pequena.join(" -> ")}`,
+    `- IA media: ${entradaCanonica.porCapacidade.media.join(" -> ")}`,
+    `- IA grande: ${entradaCanonica.porCapacidade.grande.join(" -> ")}`,
     "",
     "## Guia por capacidade",
     "",
@@ -1318,6 +1344,20 @@ function renderizarResumoProjetoMarkdown(
   }
 
   return `${linhas.join("\n").trim()}\n`;
+}
+
+function criarEntradaCanonicaProjeto(guiaPorCapacidade: Record<CapacidadeIa, GuiaCapacidadeIa>) {
+  return {
+    descricao: "Entrada canonica do repositorio para IA. O repo nao e human-first; a IA deve começar por esses artefatos antes de abrir codigo cru.",
+    ordemLeitura: [...ARQUIVOS_CANONICOS_IA_RAIZ],
+    porCapacidade: {
+      pequena: ["llms.txt", "SEMA_BRIEF.micro.txt", "SEMA_INDEX.json", "AGENTS.md"],
+      media: ["llms.txt", "SEMA_BRIEF.curto.txt", "SEMA_INDEX.json", "AGENTS.md", "README.md"],
+      grande: ["llms-full.txt", "SEMA_BRIEF.md", "SEMA_INDEX.json", "AGENTS.md", "README.md"],
+    },
+    docsSuporte: [...DOCUMENTOS_SUPORTE_IA],
+    guiaPorCapacidade,
+  };
 }
 
 function falharContextoIa(mensagem: string): never {
@@ -1574,6 +1614,7 @@ async function gerarResumoProjetoIa(
   const contextoProjeto = await carregarProjeto(entrada, process.cwd());
   const geradoEm = new Date().toISOString();
   const guiaPorCapacidade = criarGuiaCapacidadeIa();
+  const entradaCanonica = criarEntradaCanonicaProjeto(guiaPorCapacidade);
   const resultadoDrift = await analisarDriftLegado(contextoProjeto);
   const modulos = contextoProjeto.modulosSelecionados.map((item) => {
     const modulo = item.resultado.modulo?.nome ?? path.basename(item.caminho, ".sema");
@@ -1612,12 +1653,14 @@ async function gerarResumoProjetoIa(
     cliVersao: VERSAO_CLI,
     baseProjeto,
     totalModulos: modulos.length,
+    entradaCanonica,
     guiaPorCapacidade,
     modulos,
   };
   const micro = [
     `PROJETO: ${path.basename(baseProjeto)}`,
     `MODULOS: ${modulos.length}`,
+    `ENTRADA_IA: ${entradaCanonica.porCapacidade.pequena.join(" -> ")}`,
     `TOP_MODULOS: ${resumirListaTexto(modulos.map((modulo) => modulo.modulo), 3)}`,
     `TOP_RISCOS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.riscosPrincipais)), 3)}`,
     `TOP_LACUNAS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.lacunas)), 3)}`,
@@ -1628,6 +1671,7 @@ async function gerarResumoProjetoIa(
     `PROJETO: ${path.basename(baseProjeto)}`,
     `BASE: ${baseProjeto}`,
     `MODULOS: ${modulos.length}`,
+    `ENTRADA_IA: ${entradaCanonica.porCapacidade.media.join(" -> ")}`,
     `TOP_MODULOS: ${resumirListaTexto(modulos.map((modulo) => modulo.modulo), 6)}`,
     `TOP_RISCOS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.riscosPrincipais)), 6)}`,
     `TOP_LACUNAS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.lacunas)), 6)}`,
@@ -2856,6 +2900,36 @@ async function comandoStarterIa(): Promise<number> {
   return 0;
 }
 
+async function comandoSyncAiEntrypoints(emJson: boolean): Promise<number> {
+  const resumoProjeto = await gerarResumoProjetoIa(process.cwd(), undefined, true);
+  const indexJson = JSON.parse(await readFile(path.join(resumoProjeto.pastaSaida, "SEMA_INDEX.json"), "utf8"));
+  const artefatos = [...new Set([
+    ...ARQUIVOS_CANONICOS_IA_RAIZ,
+    ...resumoProjeto.artefatos,
+  ])];
+
+  if (emJson) {
+    console.log(JSON.stringify({
+      comando: "sync-ai-entrypoints",
+      sucesso: true,
+      baseProjeto: resumoProjeto.baseProjeto,
+      pastaSaida: resumoProjeto.pastaSaida,
+      artefatos,
+      entradaCanonica: indexJson.entradaCanonica,
+    }, null, 2));
+    return 0;
+  }
+
+  console.log("Entrypoints IA-first sincronizados");
+  console.log("");
+  console.log(`Base do projeto: ${resumoProjeto.baseProjeto}`);
+  console.log(`Ordem canonica: ${indexJson.entradaCanonica.ordemLeitura.join(" -> ")}`);
+  console.log(`IA pequena: ${indexJson.entradaCanonica.porCapacidade.pequena.join(" -> ")}`);
+  console.log(`IA media: ${indexJson.entradaCanonica.porCapacidade.media.join(" -> ")}`);
+  console.log(`IA grande: ${indexJson.entradaCanonica.porCapacidade.grande.join(" -> ")}`);
+  return 0;
+}
+
 async function comandoAjudaIa(): Promise<number> {
   const descoberta = await descobrirDocsIa();
   console.log("Ajuda de IA da Sema");
@@ -2880,6 +2954,7 @@ async function comandoAjudaIa(): Promise<number> {
   console.log("");
   console.log("Fluxo recomendado");
   console.log("- Use `sema starter-ia` para um texto curto de onboarding.");
+  console.log("- Use `sema sync-ai-entrypoints` para regenerar `SEMA_BRIEF.*` e `SEMA_INDEX.json` na raiz.");
   console.log("- Use `sema resumo <arquivo> --micro --para onboarding` para IA pequena.");
   console.log("- Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.");
   console.log("- Use `sema prompt-ia` para o prompt-base geral.");
@@ -3419,6 +3494,9 @@ async function principal(): Promise<void> {
       break;
     case "starter-ia":
       codigoSaida = await comandoStarterIa();
+      break;
+    case "sync-ai-entrypoints":
+      codigoSaida = await comandoSyncAiEntrypoints(possuiFlag(resto, "--json"));
       break;
     case "resumo":
       codigoSaida = await comandoResumo(

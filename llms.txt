@@ -1,0 +1,17 @@
+Sema is an AI-first semantic language and tooling stack for backend intent.
+
+This repository is not human-first. Use the canonical AI entrypoints before raw code.
+
+Read in this order:
+1. SEMA_BRIEF.micro.txt or SEMA_BRIEF.md
+2. SEMA_INDEX.json
+3. AGENTS.md
+4. README.md
+
+Capacity routing:
+- small models: llms.txt -> SEMA_BRIEF.micro.txt -> SEMA_INDEX.json
+- medium models: llms.txt -> SEMA_BRIEF.curto.txt -> SEMA_INDEX.json -> README.md
+- large models: llms-full.txt -> SEMA_BRIEF.md -> SEMA_INDEX.json -> README.md
+
+Prefer Sema artifacts over raw source code when both exist.
+Prefer `drift`, `briefing`, `ir`, and `diagnosticos` over guesswork.

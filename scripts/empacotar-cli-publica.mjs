@@ -16,6 +16,15 @@ const DOCS_IA_PUBLICOS = [
   "instalacao-e-primeiro-uso.md",
   "pagamento-ponta-a-ponta.md",
 ];
+const ARQUIVOS_RAIZ_IA_PUBLICOS = [
+  "AGENTS.md",
+  "llms.txt",
+  "llms-full.txt",
+  "SEMA_BRIEF.md",
+  "SEMA_BRIEF.micro.txt",
+  "SEMA_BRIEF.curto.txt",
+  "SEMA_INDEX.json",
+];
 
 const PACOTES_RUNTIME = [
   "nucleo",
@@ -50,6 +59,9 @@ async function prepararStageBase() {
   await cp(path.join(origemCli, "dist"), path.join(stageDir, "dist"), { recursive: true });
   await cp(path.join(raiz, "logo.png"), path.join(stageDir, "logo.png"));
   await cp(path.join(raiz, "LICENSE"), path.join(stageDir, "LICENSE"));
+  for (const nomeArquivo of ARQUIVOS_RAIZ_IA_PUBLICOS) {
+    await cp(path.join(raiz, nomeArquivo), path.join(stageDir, nomeArquivo));
+  }
   for (const nomeDoc of DOCS_IA_PUBLICOS) {
     await cp(path.join(raiz, "docs", nomeDoc), path.join(stageDir, "docs", nomeDoc));
   }
@@ -130,6 +142,13 @@ async function prepararManifestPublico() {
       "dist",
       "docs",
       "exemplos",
+      "AGENTS.md",
+      "llms.txt",
+      "llms-full.txt",
+      "SEMA_BRIEF.md",
+      "SEMA_BRIEF.micro.txt",
+      "SEMA_BRIEF.curto.txt",
+      "SEMA_INDEX.json",
       "logo.png",
       "README.md",
       "LICENSE",

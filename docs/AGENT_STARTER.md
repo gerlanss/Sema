@@ -2,6 +2,24 @@
 
 Use este texto como starter curto para qualquer IA antes de editar `.sema`.
 
+Ordem canonica de entrada no repo:
+
+1. `llms.txt`
+2. `SEMA_BRIEF.md`
+3. `SEMA_INDEX.json`
+4. `AGENTS.md`
+5. `README.md`
+
+Roteamento por capacidade:
+
+- IA pequena ou gratuita: `llms.txt` -> `SEMA_BRIEF.micro.txt` -> `SEMA_INDEX.json`
+- IA media: `llms.txt` -> `SEMA_BRIEF.curto.txt` -> `SEMA_INDEX.json` -> `README.md`
+- IA grande ou com tool use: `llms-full.txt` -> `SEMA_BRIEF.md` -> `SEMA_INDEX.json` -> `AGENTS.md` -> `README.md`
+
+Para manter os artefatos gerados da raiz sincronizados:
+
+- `sema sync-ai-entrypoints --json`
+
 ```text
 Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
 

@@ -27,9 +27,11 @@
     "dev:cli": "node scripts/dev-cli.mjs",
     "format:check": "node pacotes/cli/dist/index.js formatar exemplos --check",
     "ia:preparar-contexto": "node scripts/preparar-contexto-ia.mjs",
+    "ia:sync-entrypoints": "npm run build && node pacotes/cli/dist/index.js sync-ai-entrypoints --json",
     "status:sync": "node scripts/sync-status.mjs",
     "status:check": "node scripts/check-status.mjs",
     "docs:prepare": "npm run status:sync && npm run status:check",
+    "test:smoke-real": "node scripts/rodar-smoke-real.mjs",
     "project:check": "npm run status:check && npm test && npm run format:check && npm run cli:testar-pacote-publico && node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check"
   },
   "devDependencies": {

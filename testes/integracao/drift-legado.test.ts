@@ -20,6 +20,7 @@ import {
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
 const GESTECH_BASE = "C:\\GitHub\\Gestech";
+const SEMA_SMOKE_REAL = process.env.SEMA_SMOKE_REAL === "1";
 
 function executar(args: string[], cwd?: string) {
   return spawnSync("node", [CLI, ...args], {
@@ -37,6 +38,19 @@ function localizarPrimeiroContrato(base: string, candidatos: string[]): string |
     }
   }
   return undefined;
+}
+
+function registrarSmokeReal(condicao: boolean, nome: string, corpo: () => Promise<void> | void) {
+  if (!condicao) {
+    return;
+  }
+
+  if (!SEMA_SMOKE_REAL) {
+    test(nome, { skip: "Defina SEMA_SMOKE_REAL=1 para rodar smoke real externo e instavel." }, () => {});
+    return;
+  }
+
+  test(nome, corpo);
 }
 
 test("cli drift detecta impl valido, impl quebrado, task sem impl e rota divergente", async () => {
@@ -472,8 +486,7 @@ test("cli drift resolve impls C++ bridge sem prometer rota HTTP", async () => {
   }
 });
 
-if (existsSync("C:\\GitHub\\FuteBot")) {
-  test("smoke real: drift resolve impls Python no FuteBot real sem contratos quebrados", () => {
+registrarSmokeReal(existsSync("C:\\GitHub\\FuteBot"), "smoke real: drift resolve impls Python no FuteBot real sem contratos quebrados", () => {
     const execucao = executar(["drift", "C:\\GitHub\\FuteBot\\sema", "--json"], path.resolve("."));
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
@@ -503,8 +516,7 @@ if (existsSync("C:\\GitHub\\FuteBot")) {
 
     const implsQuebrados = new Set(json.impls_quebrados.map((impl: { caminho: string }) => impl.caminho));
     assert.equal(implsQuebrados.size, 0);
-  });
-}
+});
 
 if (existsSync(GESTECH_BASE)) {
   const contratoFlaskGestech = localizarPrimeiroContrato(GESTECH_BASE, [
@@ -529,7 +541,7 @@ if (existsSync(GESTECH_BASE)) {
   ]);
 
   if (contratoFlaskGestech) {
-    test("smoke real: drift resolve rotas e impls Flask no Gestech real", () => {
+    registrarSmokeReal(true, "smoke real: drift resolve rotas e impls Flask no Gestech real", () => {
       const execucao = executar(["drift", contratoFlaskGestech, "--json"], GESTECH_BASE);
       assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
@@ -543,7 +555,7 @@ if (existsSync(GESTECH_BASE)) {
   }
 
   if (contratosNextNodeGestech.length > 0) {
-    test("smoke real: drift fecha route drift do lado Next/Node no Gestech real", () => {
+    registrarSmokeReal(true, "smoke real: drift fecha route drift do lado Next/Node no Gestech real", () => {
       for (const contrato of contratosNextNodeGestech) {
         const execucao = executar(["drift", contrato, "--json"], GESTECH_BASE);
         assert.equal(execucao.status, 0, `${contrato}\n${execucao.stderr || execucao.stdout}`);
@@ -558,7 +570,7 @@ if (existsSync(GESTECH_BASE)) {
   }
 
   if (contratoFirebaseGestech) {
-    test("smoke real: drift valida recursos Firebase do worker no Gestech real", () => {
+    registrarSmokeReal(true, "smoke real: drift valida recursos Firebase do worker no Gestech real", () => {
       const execucao = executar(["drift", contratoFirebaseGestech, "--json"], GESTECH_BASE);
       assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 

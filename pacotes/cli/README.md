@@ -13,6 +13,19 @@ Este pacote entrega a CLI oficial para:
 - gerar resumo compacto por capacidade de IA
 - preparar contexto para IA
 
+Quando a CLI roda em projeto, a trilha IA-first recomendada fica assim:
+
+- raiz do repo: `llms.txt`, `SEMA_BRIEF.*`, `SEMA_INDEX.json`, `AGENTS.md`, `README.md`
+- modulo alvo: `resumo.micro.txt`, `briefing.min.json`, `prompt-curto.txt`, `drift.json`, `briefing.json`
+
+Isto nao existe para agradar humano. Existe para a IA achar o contexto certo sem entupir a janela com lixo.
+
+Para regenerar os entrypoints IA-first da raiz:
+
+```bash
+sema sync-ai-entrypoints --json
+```
+
 ## Instalacao pelo npm registry
 
 ```bash

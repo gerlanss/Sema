@@ -18,6 +18,7 @@ import {
 } from "./futebot-fixture.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
+const SEMA_SMOKE_REAL = process.env.SEMA_SMOKE_REAL === "1";
 
 function executarImportacao(args: string[], cwd?: string) {
   return spawnSync("node", [CLI, ...args], {
@@ -25,6 +26,19 @@ function executarImportacao(args: string[], cwd?: string) {
     encoding: "utf8",
     cwd,
   });
+}
+
+function registrarSmokeReal(condicao: boolean, nome: string, corpo: () => Promise<void> | void) {
+  if (!condicao) {
+    return;
+  }
+
+  if (!SEMA_SMOKE_REAL) {
+    test(nome, { skip: "Defina SEMA_SMOKE_REAL=1 para rodar smoke real externo e instavel." }, () => {});
+    return;
+  }
+
+  test(nome, corpo);
 }
 
 test("cli importa projeto NestJS legado e gera rascunho Sema valido", async () => {
@@ -570,8 +584,7 @@ test("cli importa projeto C++ bridge legado e gera task com impl cpp", async () 
   }
 });
 
-if (existsSync("C:\\GitHub\\Teste2\\backend")) {
-  test("smoke real: importa backend NestJS do Teste2 com sucesso", async () => {
+registrarSmokeReal(existsSync("C:\\GitHub\\Teste2\\backend"), "smoke real: importa backend NestJS do Teste2 com sucesso", async () => {
     const baseSaida = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-nest-"));
 
     try {
@@ -586,11 +599,9 @@ if (existsSync("C:\\GitHub\\Teste2\\backend")) {
     } finally {
       await rm(baseSaida, { recursive: true, force: true });
     }
-  });
-}
+});
 
-if (existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")) {
-  test("smoke real: importa Next.js do Gestech pela raiz, pelo api root e por subpasta concreta", async () => {
+registrarSmokeReal(existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard"), "smoke real: importa Next.js do Gestech pela raiz, pelo api root e por subpasta concreta", async () => {
     const baseRaiz = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-next-root-"));
     const baseApi = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-next-api-"));
     const baseSubpasta = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-next-sub-"));
@@ -641,12 +652,10 @@ if (existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")) {
       await rm(baseApi, { recursive: true, force: true });
       await rm(baseSubpasta, { recursive: true, force: true });
     }
-  });
-}
+});
 
 for (const projetoPython of ["C:\\GitHub\\BotSauro", "C:\\GitHub\\FuteBot"]) {
-  if (existsSync(projetoPython)) {
-    test(`smoke real: importa projeto Python legado ${path.basename(projetoPython)} com sucesso`, async () => {
+  registrarSmokeReal(existsSync(projetoPython), `smoke real: importa projeto Python legado ${path.basename(projetoPython)} com sucesso`, async () => {
       const baseSaida = await mkdtemp(path.join(os.tmpdir(), "sema-import-real-python-"));
 
       try {
@@ -661,5 +670,4 @@ for (const projetoPython of ["C:\\GitHub\\BotSauro", "C:\\GitHub\\FuteBot"]) {
         await rm(baseSaida, { recursive: true, force: true });
       }
     });
-  }
 }

@@ -408,6 +408,20 @@ O texto assume postura IA-first e deixa claro que a linguagem nao foi desenhada 
 
 Imprime um guia curto e direto explicando qual comando de IA usar em cada situacao.
 
+### `sema sync-ai-entrypoints [--json]`
+
+Regenera os entrypoints IA-first da raiz do projeto:
+
+- `SEMA_BRIEF.md`
+- `SEMA_BRIEF.micro.txt`
+- `SEMA_BRIEF.curto.txt`
+- `SEMA_INDEX.json`
+
+Use isso depois de mudanca semantica relevante no repo para manter o ponto de entrada da IA sincronizado.
+
+- sem `--json`, imprime a ordem canonica de leitura por capacidade
+- com `--json`, devolve base do projeto, artefatos e `entradaCanonica`
+
 ### `sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--saida <diretorio>] [--raiz] [--json]`
 
 Gera o menor resumo semantico util para a capacidade atual da IA.
@@ -686,6 +700,7 @@ sema importar dart ./lib --saida ./sema/importado
 ```bash
 sema starter-ia
 sema ajuda-ia
+sema sync-ai-entrypoints --json
 sema resumo contratos/pedidos.sema --micro --para onboarding
 sema prompt-curto contratos/pedidos.sema --curto --para mudanca
 sema prompt-ia
@@ -720,6 +735,7 @@ Fluxo operacional recomendado:
 ```bash
 npm run status:check
 npm test
+npm run ia:sync-entrypoints
 npm run format:check
 node pacotes/cli/dist/index.js verificar exemplos --saida ./.tmp/verificacao-project-check
 ```
@@ -728,4 +744,10 @@ Na pratica, isso ja esta consolidado em:
 
 ```bash
 npm run project:check
+```
+
+Smokes reais contra repos externos locais ficam fora do fluxo padrao e agora sao opt-in:
+
+```bash
+npm run test:smoke-real
 ```

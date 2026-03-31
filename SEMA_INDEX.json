@@ -1,0 +1,501 @@
+{
+  "comando": "resumo-projeto",
+  "geradoEm": "2026-03-31T16:04:57.600Z",
+  "cliVersao": "1.0.0",
+  "baseProjeto": "C:\\GitHub\\Sema",
+  "totalModulos": 4,
+  "entradaCanonica": {
+    "descricao": "Entrada canonica do repositorio para IA. O repo nao e human-first; a IA deve começar por esses artefatos antes de abrir codigo cru.",
+    "ordemLeitura": [
+      "llms.txt",
+      "SEMA_BRIEF.md",
+      "SEMA_INDEX.json",
+      "AGENTS.md",
+      "README.md",
+      "llms-full.txt"
+    ],
+    "porCapacidade": {
+      "pequena": [
+        "llms.txt",
+        "SEMA_BRIEF.micro.txt",
+        "SEMA_INDEX.json",
+        "AGENTS.md"
+      ],
+      "media": [
+        "llms.txt",
+        "SEMA_BRIEF.curto.txt",
+        "SEMA_INDEX.json",
+        "AGENTS.md",
+        "README.md"
+      ],
+      "grande": [
+        "llms-full.txt",
+        "SEMA_BRIEF.md",
+        "SEMA_INDEX.json",
+        "AGENTS.md",
+        "README.md"
+      ]
+    },
+    "docsSuporte": [
+      "docs/AGENT_STARTER.md",
+      "docs/integracao-com-ia.md",
+      "docs/fluxo-pratico-ia-sema.md",
+      "docs/como-ensinar-a-sema-para-ia.md",
+      "docs/sintaxe.md",
+      "docs/cli.md"
+    ],
+    "guiaPorCapacidade": {
+      "pequena": {
+        "descricao": "IA gratuita ou com contexto curto. Leia so o cartao semantico e o briefing minimo.",
+        "artefatos": [
+          "resumo.micro.txt",
+          "briefing.min.json",
+          "prompt-curto.txt"
+        ],
+        "ordemLeitura": [
+          "resumo.micro.txt",
+          "briefing.min.json",
+          "resumo.curto.txt"
+        ],
+        "evitar": [
+          "ast.json",
+          "ir.json",
+          "diagnosticos.json"
+        ]
+      },
+      "media": {
+        "descricao": "IA com contexto medio. Aguenta resumo expandido, briefing minimo e drift.",
+        "artefatos": [
+          "resumo.curto.txt",
+          "briefing.min.json",
+          "drift.json",
+          "prompt-curto.txt"
+        ],
+        "ordemLeitura": [
+          "resumo.curto.txt",
+          "briefing.min.json",
+          "drift.json",
+          "resumo.md"
+        ],
+        "evitar": [
+          "ast.json"
+        ]
+      },
+      "grande": {
+        "descricao": "IA com contexto grande ou tool use. Pode consumir o pacote completo.",
+        "artefatos": [
+          "README.md",
+          "resumo.md",
+          "briefing.json",
+          "drift.json",
+          "ir.json",
+          "ast.json"
+        ],
+        "ordemLeitura": [
+          "README.md",
+          "resumo.md",
+          "briefing.json",
+          "drift.json",
+          "ir.json",
+          "ast.json"
+        ],
+        "evitar": []
+      }
+    }
+  },
+  "guiaPorCapacidade": {
+    "pequena": {
+      "descricao": "IA gratuita ou com contexto curto. Leia so o cartao semantico e o briefing minimo.",
+      "artefatos": [
+        "resumo.micro.txt",
+        "briefing.min.json",
+        "prompt-curto.txt"
+      ],
+      "ordemLeitura": [
+        "resumo.micro.txt",
+        "briefing.min.json",
+        "resumo.curto.txt"
+      ],
+      "evitar": [
+        "ast.json",
+        "ir.json",
+        "diagnosticos.json"
+      ]
+    },
+    "media": {
+      "descricao": "IA com contexto medio. Aguenta resumo expandido, briefing minimo e drift.",
+      "artefatos": [
+        "resumo.curto.txt",
+        "briefing.min.json",
+        "drift.json",
+        "prompt-curto.txt"
+      ],
+      "ordemLeitura": [
+        "resumo.curto.txt",
+        "briefing.min.json",
+        "drift.json",
+        "resumo.md"
+      ],
+      "evitar": [
+        "ast.json"
+      ]
+    },
+    "grande": {
+      "descricao": "IA com contexto grande ou tool use. Pode consumir o pacote completo.",
+      "artefatos": [
+        "README.md",
+        "resumo.md",
+        "briefing.json",
+        "drift.json",
+        "ir.json",
+        "ast.json"
+      ],
+      "ordemLeitura": [
+        "README.md",
+        "resumo.md",
+        "briefing.json",
+        "drift.json",
+        "ir.json",
+        "ast.json"
+      ],
+      "evitar": []
+    }
+  },
+  "modulos": [
+    {
+      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "arquivo": "C:\\GitHub\\Sema\\contratos\\pedidos.sema",
+      "modulo": "app.pedidos",
+      "perfilCompatibilidade": "publico",
+      "scoreSemantico": 50,
+      "confiancaGeral": "baixa",
+      "riscoOperacional": "alto",
+      "faz": "governa 1 rota(s), 1 task(s) com foco em criar pedido publico",
+      "tarefasPrincipais": [
+        "criar_pedido"
+      ],
+      "entradasChave": [
+        "criar_pedido(cliente_id, total)"
+      ],
+      "saidasChave": [
+        "criar_pedido(pedido_id, status)"
+      ],
+      "superficiesPublicas": [
+        "POST /pedidos"
+      ],
+      "regrasCriticas": [
+        "pedido_id existe",
+        "status existe",
+        "total > 0"
+      ],
+      "efeitos": [
+        "auditoria pedidos",
+        "persistencia Pedido criticidade = alta"
+      ],
+      "erros": [],
+      "entidadesAfetadas": [
+        "Pedido",
+        "pedidos"
+      ],
+      "arquivosProvaveis": [],
+      "simbolosRelacionados": [],
+      "riscosPrincipais": [
+        "altera_persistencia",
+        "criar_pedido:alto",
+        "efeito_critico",
+        "vinculo_fraco"
+      ],
+      "lacunas": [
+        "execucao_implicita",
+        "sem_impl",
+        "sem_vinculos"
+      ],
+      "inferido": [],
+      "checksSugeridos": [
+        "revisar efeitos operacionais",
+        "rodar sema drift --json",
+        "rodar sema validar --json",
+        "verificar guarantees"
+      ],
+      "testesMinimos": [
+        "sema drift <arquivo> --json",
+        "sema validar <arquivo> --json",
+        "sema verificar <arquivo-ou-pasta> --json"
+      ]
+    },
+    {
+      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\ergonomia_e_dominio.sema",
+      "modulo": "sema.produto.ergonomia_e_dominio",
+      "perfilCompatibilidade": "interno",
+      "scoreSemantico": 90,
+      "confiancaGeral": "alta",
+      "riscoOperacional": "alto",
+      "faz": "governa 2 superficie(s), 5 task(s) com foco em scorecard atualizado",
+      "tarefasPrincipais": [
+        "reduzir_atrito_sintatico_em_contrato_rico",
+        "modelar_payload_com_mais_precisao",
+        "explicitar_variacao_e_compatibilidade",
+        "separar_validacao_regra_e_poscondicao",
+        "consultar_scorecard_compatibilidade"
+      ],
+      "entradasChave": [
+        "reduzir_atrito_sintatico_em_contrato_rico(contrato_atual, repeticao_detectada)",
+        "modelar_payload_com_mais_precisao(contrato_atual, payload_json_generico, exemplos_payload)",
+        "explicitar_variacao_e_compatibilidade(contrato_atual, perfil_atual)",
+        "separar_validacao_regra_e_poscondicao(contrato_atual, garantias_confusas)"
+      ],
+      "saidasChave": [
+        "reduzir_atrito_sintatico_em_contrato_rico(leitura_mais_limpa, ambiguidade_controlada, perfil)",
+        "modelar_payload_com_mais_precisao(tipo_composto_explicito, cardinalidade_explicita, shape_rico)",
+        "explicitar_variacao_e_compatibilidade(versao_explicita, fallback_claro, contrato_publico_distinto)",
+        "separar_validacao_regra_e_poscondicao(validacao_de_input_clara, regra_de_negocio_clara, pos_condicao_clara)"
+      ],
+      "superficiesPublicas": [
+        "evento:scorecard_atualizado",
+        "policy:compatibilidade_publica"
+      ],
+      "regrasCriticas": [
+        "ambiguidade_controlada existe",
+        "cardinalidade_explicita existe",
+        "contrato_publico_distinto existe",
+        "fallback_claro existe",
+        "leitura_mais_limpa existe",
+        "nota existe",
+        "perfil em [ PUBLICO , INTERNO , EXPERIMENTAL , LEGADO , DEPRECADO ]",
+        "pos_condicao_clara existe"
+      ],
+      "efeitos": [],
+      "erros": [],
+      "entidadesAfetadas": [
+        "PerfilCompatibilidade"
+      ],
+      "arquivosProvaveis": [
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\semantico\\analisador.ts"
+      ],
+      "simbolosRelacionados": [
+        "analisarSemantica",
+        "converterParaIr",
+        "formatarCodigo",
+        "resolverAlvosVerificacao"
+      ],
+      "riscosPrincipais": [
+        "consultar_scorecard_compatibilidade:medio",
+        "explicitar_variacao_e_compatibilidade:medio",
+        "modelar_payload_com_mais_precisao:alto",
+        "reduzir_atrito_sintatico_em_contrato_rico:medio",
+        "separar_validacao_regra_e_poscondicao:medio"
+      ],
+      "lacunas": [
+        "execucao_implicita",
+        "sem_impl",
+        "sem_vinculos"
+      ],
+      "inferido": [
+        "consultar_scorecard_compatibilidade:pacotes/cli/src/projeto.ts",
+        "evento:scorecard_atualizado:scorecard_compatibilidade",
+        "explicitar_variacao_e_compatibilidade:pacotes/nucleo/src/ir/conversor.ts",
+        "modelar_payload_com_mais_precisao:pacotes/nucleo/src/semantico/analisador.ts",
+        "policy:compatibilidade_publica:compatibilidade_publica",
+        "reduzir_atrito_sintatico_em_contrato_rico:pacotes/nucleo/src/formatador/index.ts"
+      ],
+      "checksSugeridos": [
+        "revisar efeitos operacionais",
+        "rodar sema drift --json",
+        "rodar sema validar --json",
+        "verificar guarantees"
+      ],
+      "testesMinimos": [
+        "sema drift <arquivo> --json",
+        "sema validar <arquivo> --json",
+        "sema verificar <arquivo-ou-pasta> --json"
+      ]
+    },
+    {
+      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\governanca_ia.sema",
+      "modulo": "sema.produto.governanca_ia",
+      "perfilCompatibilidade": "publico",
+      "scoreSemantico": 90,
+      "confiancaGeral": "alta",
+      "riscoOperacional": "alto",
+      "faz": "governa 2 superficie(s), 4 task(s) com foco em preparar briefing contextual",
+      "tarefasPrincipais": [
+        "mapear_projeto_sem_adivinhacao",
+        "normalizar_saida_sem_ruido",
+        "medir_drift_contra_codigo_vivo",
+        "padronizar_nomes_para_leitura_de_ia"
+      ],
+      "entradasChave": [
+        "mapear_projeto_sem_adivinhacao(entrada, explicito)",
+        "normalizar_saida_sem_ruido(estrutura_desejada)",
+        "medir_drift_contra_codigo_vivo(contrato_alvo, codigo_vivo)",
+        "padronizar_nomes_para_leitura_de_ia(contrato_atual, sinonimos_em_excesso)"
+      ],
+      "saidasChave": [
+        "mapear_projeto_sem_adivinhacao(base_resolvida, origens_coerentes, codigo_vivo_detectado)",
+        "normalizar_saida_sem_ruido(estrutura_canonica, alias_confuso)",
+        "medir_drift_contra_codigo_vivo(impls_resolvidas, rotas_resolvidas, ambiguidades_explicitas)",
+        "padronizar_nomes_para_leitura_de_ia(nomes_consistentes, leitura_rapida, casos_especiais_reduzidos)"
+      ],
+      "superficiesPublicas": [
+        "webhook:confirmar_contexto_publico",
+        "worker:preparar_briefing_contextual"
+      ],
+      "regrasCriticas": [
+        "alias_confuso existe",
+        "ambiguidades_explicitas existe",
+        "base_resolvida existe",
+        "casos_especiais_reduzidos existe",
+        "codigo_vivo_detectado existe",
+        "estrutura_canonica existe",
+        "impls_resolvidas existe",
+        "leitura_rapida existe"
+      ],
+      "efeitos": [],
+      "erros": [
+        "simbolo_ambiguo"
+      ],
+      "entidadesAfetadas": [],
+      "arquivosProvaveis": [
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\drift.ts",
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts"
+      ],
+      "simbolosRelacionados": [
+        "analisarDriftLegado",
+        "carregarProjeto",
+        "comandoContextoIa",
+        "formatarCodigo",
+        "normalizarEstruturaSaida"
+      ],
+      "riscosPrincipais": [
+        "mapear_projeto_sem_adivinhacao:medio",
+        "medir_drift_contra_codigo_vivo:alto",
+        "normalizar_saida_sem_ruido:medio",
+        "padronizar_nomes_para_leitura_de_ia:medio"
+      ],
+      "lacunas": [
+        "execucao_implicita",
+        "sem_impl",
+        "sem_vinculos"
+      ],
+      "inferido": [
+        "mapear_projeto_sem_adivinhacao:pacotes/cli/src/projeto.ts",
+        "medir_drift_contra_codigo_vivo:pacotes/cli/src/drift.ts",
+        "normalizar_saida_sem_ruido:pacotes/cli/src/projeto.ts",
+        "padronizar_nomes_para_leitura_de_ia:pacotes/nucleo/src/formatador/index.ts",
+        "sema.produto.governanca_ia:pacotes/cli/src/index.ts",
+        "webhook:confirmar_contexto_publico:/ interno / contexto-ia"
+      ],
+      "checksSugeridos": [
+        "revisar efeitos operacionais",
+        "rodar sema drift --json",
+        "rodar sema validar --json",
+        "verificar guarantees"
+      ],
+      "testesMinimos": [
+        "sema drift <arquivo> --json",
+        "sema validar <arquivo> --json",
+        "sema verificar <arquivo-ou-pasta> --json"
+      ]
+    },
+    {
+      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\linguagem_composta.sema",
+      "modulo": "sema.produto.linguagem_composta",
+      "perfilCompatibilidade": "interno",
+      "scoreSemantico": 90,
+      "confiancaGeral": "alta",
+      "riscoOperacional": "alto",
+      "faz": "governa 1 superficie(s), 5 task(s) com foco em regressao composta",
+      "tarefasPrincipais": [
+        "interpretar_bloco_nomeado",
+        "converter_bloco_composto_para_ir",
+        "formatar_bloco_composto",
+        "gerar_teste_python_composto",
+        "gerar_teste_typescript_composto"
+      ],
+      "entradasChave": [
+        "interpretar_bloco_nomeado(arquivo_semantico, sinais)",
+        "converter_bloco_composto_para_ir(arquivo_semantico)",
+        "formatar_bloco_composto(arquivo_semantico)",
+        "gerar_teste_python_composto(contrato)"
+      ],
+      "saidasChave": [
+        "interpretar_bloco_nomeado(ast_valida, blocos_preservados, status)",
+        "converter_bloco_composto_para_ir(ir_coerente, contexto_preservado, status)",
+        "formatar_bloco_composto(formato_canonico, bloco_legivel)",
+        "gerar_teste_python_composto(dataclass_aninhada, comparacao_tipada)"
+      ],
+      "superficiesPublicas": [
+        "storage:regressao_composta"
+      ],
+      "regrasCriticas": [
+        "asserts_coerentes existe",
+        "ast_valida existe",
+        "bloco_legivel existe",
+        "blocos_preservados existe",
+        "comparacao_tipada existe",
+        "contexto_preservado existe",
+        "dataclass_aninhada existe",
+        "formato_canonico existe"
+      ],
+      "efeitos": [],
+      "erros": [],
+      "entidadesAfetadas": [
+        "SinalTesteComposto",
+        "StatusEvolucao"
+      ],
+      "arquivosProvaveis": [
+        "C:\\GitHub\\Sema\\pacotes\\gerador-python\\src\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\gerador-typescript\\src\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\parser\\parser.ts"
+      ],
+      "simbolosRelacionados": [
+        "converterParaIr",
+        "formatarCodigo",
+        "gerarPython",
+        "gerarTypeScript",
+        "parsear"
+      ],
+      "riscosPrincipais": [
+        "converter_bloco_composto_para_ir:alto",
+        "formatar_bloco_composto:medio",
+        "gerar_teste_python_composto:medio",
+        "gerar_teste_typescript_composto:medio",
+        "interpretar_bloco_nomeado:alto"
+      ],
+      "lacunas": [
+        "execucao_implicita",
+        "sem_impl",
+        "sem_vinculos"
+      ],
+      "inferido": [
+        "converter_bloco_composto_para_ir:pacotes/nucleo/src/ir/conversor.ts",
+        "formatar_bloco_composto:pacotes/nucleo/src/formatador/index.ts",
+        "gerar_teste_python_composto:pacotes/gerador-python/src/index.ts",
+        "gerar_teste_typescript_composto:pacotes/gerador-typescript/src/index.ts",
+        "interpretar_bloco_nomeado:pacotes/nucleo/src/parser/parser.ts",
+        "sema.produto.linguagem_composta:pacotes/nucleo/src/parser/parser.ts"
+      ],
+      "checksSugeridos": [
+        "revisar efeitos operacionais",
+        "rodar sema drift --json",
+        "rodar sema validar --json",
+        "verificar guarantees"
+      ],
+      "testesMinimos": [
+        "sema drift <arquivo> --json",
+        "sema validar <arquivo> --json",
+        "sema verificar <arquivo-ou-pasta> --json"
+      ]
+    }
+  ]
+}
