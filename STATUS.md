@@ -11,6 +11,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
 - Linha publica de release: `0.8.2`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
   - lexer, parser, AST, diagnosticos, analise semantica e IR
@@ -35,6 +36,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - importador `Next.js App Router` com bootstrap semantico mais forte para `params`, `query`, `body`, `status` e `response`
   - importador `Next.js App Router` com inferencia melhor de body via `request.json()` tipado/cast inline e resposta HTTP retornada por variavel local
   - fluxo pronto para `npm publish` da CLI com dry-run verificavel e metadados publicos mais completos
+  - pacote npm publico alinhado ao scope `@semacode/cli` para distribuicao sem depender de namespace alheio
   - kit oficial de lancamento publico com pitch, release note curta, posts e checklist de anuncio
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante

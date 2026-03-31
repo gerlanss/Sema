@@ -22,6 +22,14 @@ sema --help
 sema doctor
 ```
 
+Instalacao via npm registry:
+
+```bash
+npm install -g @semacode/cli
+sema --help
+sema doctor
+```
+
 Instaladores auxiliares:
 
 - Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
@@ -59,10 +67,10 @@ npm run cli:publicar-npm
 
 Notas importantes:
 
-- o pacote preparado para npm continua sendo `@sema/cli`
+- o pacote preparado para npm continua sendo `@semacode/cli`
 - o script publica o tarball gerado em `.tmp/pacotes-publicos`
 - a conta desta maquina precisa estar autenticada com `npm adduser` ou `npm login`
-- o package name `@sema/cli` hoje nao aparece publicado no registry, entao a trilha esta pronta sem colisao obvia de nome
+- o package name publico passa a ser `@semacode/cli`, publicado no scope da organizacao `semacode`
 
 ## O que esse pacote resolve
 

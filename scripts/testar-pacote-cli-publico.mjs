@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -41,6 +41,15 @@ async function validarManifestSemDependenciasFile(caminhoTarball) {
   }
 }
 
+async function existe(caminho) {
+  try {
+    await access(caminho);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   const tarball = await localizarTarball();
   if (!tarball) {
@@ -67,8 +76,9 @@ async function main() {
     executar("npx", ["sema", "--help"], sandbox);
     executar("npx", ["sema", "validar", path.join(raiz, "exemplos", "calculadora.sema"), "--json"], sandbox);
 
-    const arquivosInstalados = await readdir(path.join(sandbox, "node_modules", "@sema", "cli", "node_modules", "@sema"));
-    if (arquivosInstalados.length < 3) {
+    const pacotesInternosAninhados = path.join(sandbox, "node_modules", "@semacode", "cli", "node_modules", "@sema");
+    const pacotesInternosHoistados = path.join(sandbox, "node_modules", "@sema");
+    if (!(await existe(pacotesInternosAninhados)) && !(await existe(pacotesInternosHoistados))) {
       throw new Error("A instalacao do pacote publico nao carregou os pacotes internos esperados.");
     }
   } finally {

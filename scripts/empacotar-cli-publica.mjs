@@ -141,7 +141,7 @@ Este pacote entrega a CLI oficial para:
 ## Instalacao pelo npm registry
 
 \`\`\`bash
-npm install -g @sema/cli
+npm install -g @semacode/cli
 sema --help
 \`\`\`
 
@@ -160,7 +160,7 @@ npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cl
 ## Instalacao local ao projeto
 
 \`\`\`bash
-npm install @sema/cli
+npm install @semacode/cli
 npx sema --help
 \`\`\`
 

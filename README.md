@@ -62,7 +62,12 @@ npm install https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-l
 npx sema --help
 ```
 
-Se voce quer empacotamento pronto para npm registry, o fluxo tambem ja esta preparado. Falta so autenticar a conta do npm e rodar a publicacao.
+Se voce quer instalacao via npm registry, o pacote publico da CLI passa a ser `@semacode/cli`.
+
+```bash
+npm install -g @semacode/cli
+sema --help
+```
 
 Se depois voce quiser ver a Sema em backend vivo, ai sim entre no repo e rode o case oficial:
 

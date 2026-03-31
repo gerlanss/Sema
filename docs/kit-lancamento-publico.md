@@ -51,10 +51,10 @@ sema --help
 sema doctor
 ```
 
-Quando `@sema/cli` estiver publicado no npm, o CTA curto pode virar:
+Agora que o pacote publico usa o scope da organizacao `semacode`, o CTA curto pode virar:
 
 ```bash
-npm install -g @sema/cli
+npm install -g @semacode/cli
 sema --help
 ```
 
