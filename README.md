@@ -293,7 +293,7 @@ npm run extensao:empacotar
 
 Pacote gerado:
 
-- `.tmp/editor-vscode/sema-language-tools-0.8.4.vsix`
+- `.tmp/editor-vscode/sema-language-tools-0.8.6.vsix`
 
 Para instalar localmente:
 
@@ -304,7 +304,7 @@ npm run extensao:instalar-local
 Ou manualmente:
 
 ```bash
-code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.4.vsix --force
+code --install-extension .tmp/editor-vscode/sema-language-tools-0.8.6.vsix --force
 ```
 
 ## Observação honesta

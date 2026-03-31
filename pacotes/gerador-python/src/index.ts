@@ -161,24 +161,46 @@ function gerarMapaLiteralPython(campos: Array<{ nome: string; valor: string }>):
   return `{${campos.map((campo) => `${JSON.stringify(campo.nome)}: ${campo.valor}`).join(", ")}}`;
 }
 
+function coletarTiposCompostos(modulo: IrModulo): Map<string, Map<string, string>> {
+  const tipos = new Map<string, Map<string, string>>();
+
+  for (const type of modulo.types) {
+    tipos.set(type.nome, new Map(type.definicao.campos.map((campo) => [campo.nome, campo.tipo])));
+  }
+
+  for (const entity of modulo.entities) {
+    tipos.set(entity.nome, new Map(entity.campos.map((campo) => [campo.nome, campo.tipo])));
+  }
+
+  return tipos;
+}
+
 function gerarLiteralBlocoTestePython(
   bloco: IrBlocoDeclarativo,
+  tiposCompostos?: Map<string, Map<string, string>>,
   tiposDeclarados?: Map<string, string>,
+  tipoAtual?: string,
 ): string {
   const entradas: Array<{ nome: string; valor: string }> = [];
+  const tiposAtuais = tipoAtual ? tiposCompostos?.get(tipoAtual) : undefined;
 
   for (const campo of bloco.campos) {
     entradas.push({
       nome: campo.nome,
-      valor: formatarLiteralTestePython(campo.tipo, tiposDeclarados?.get(campo.nome)),
+      valor: formatarLiteralTestePython(campo.tipo, tiposDeclarados?.get(campo.nome) ?? tiposAtuais?.get(campo.nome)),
     });
   }
 
   for (const subbloco of bloco.blocos) {
+    const tipoSubbloco = tiposDeclarados?.get(subbloco.nome) ?? tiposAtuais?.get(subbloco.nome);
     entradas.push({
       nome: subbloco.nome,
-      valor: gerarLiteralBlocoTestePython(subbloco.conteudo),
+      valor: gerarLiteralBlocoTestePython(subbloco.conteudo, tiposCompostos, undefined, tipoSubbloco),
     });
+  }
+
+  if (tipoAtual && tiposCompostos?.has(tipoAtual)) {
+    return `${tipoAtual}(${entradas.map((campo) => `${campo.nome}=${campo.valor}`).join(", ")})`;
   }
 
   return gerarMapaLiteralPython(entradas);
@@ -336,7 +358,7 @@ ${blocosErro || "    except Exception:\n        raise"}
   }).join("\n");
 }
 
-function gerarTask(task: IrTask): string {
+function gerarTask(task: IrTask, tiposCompostos: Map<string, Map<string, string>>): string {
   const nome = normalizarNomeParaSimbolo(task.nome);
   const camposEntrada = new Set(task.input.map((campo) => campo.nome));
   const camposSaida = new Set(task.output.map((campo) => campo.nome));
@@ -352,7 +374,10 @@ function gerarTask(task: IrTask): string {
   const cenariosErro = task.tests
     .filter((caso) => caso.error && caso.error.campos.length > 0)
     .map((caso) => ({
-      entrada: gerarLiteralBlocoTestePython(caso.given, tiposEntrada),
+      entrada: `${task.nome}Entrada(${[
+        ...caso.given.campos.map((campo) => `${campo.nome}=${formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome))}`),
+        ...caso.given.blocos.map((subbloco) => `${subbloco.nome}=${gerarLiteralBlocoTestePython(subbloco.conteudo, tiposCompostos, undefined, tiposEntrada.get(subbloco.nome))}`),
+      ].join(", ")})`,
       tipoErro: caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo,
     }))
     .filter((caso) => caso.tipoErro);
@@ -397,7 +422,7 @@ ${gerarFuncaoGarantias(task)}
 
 def executar_${nome}(entrada: ${task.nome}Entrada) -> ${task.nome}Saida:
     validar_${nome}(entrada)
-${cenariosErro.map((caso) => `    if vars(entrada) == ${caso.entrada}:\n        raise ${task.nome}_${caso.tipoErro}Erro()`).join("\n")}
+${cenariosErro.map((caso) => `    if entrada == ${caso.entrada}:\n        raise ${task.nome}_${caso.tipoErro}Erro()`).join("\n")}
 ${task.stateContract ? `    # Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n    # Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
 ${implementacoes}
 ${efeitos}
@@ -408,13 +433,14 @@ ${garantias}
 
 function gerarTestes(modulo: IrModulo): string {
   const linhas = ["import pytest", `from ${normalizarNomeModulo(modulo.nome).replace(/\./g, "_")} import *`, ""];
+  const tiposCompostos = coletarTiposCompostos(modulo);
   for (const task of modulo.tasks) {
     const nomeFuncao = `executar_${normalizarNomeParaSimbolo(task.nome)}`;
     const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
     for (const caso of task.tests) {
       const argumentos = [
         ...caso.given.campos.map((campo) => `${campo.nome}=${formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome))}`),
-        ...caso.given.blocos.map((subbloco) => `${subbloco.nome}=${gerarLiteralBlocoTestePython(subbloco.conteudo)}`),
+        ...caso.given.blocos.map((subbloco) => `${subbloco.nome}=${gerarLiteralBlocoTestePython(subbloco.conteudo, tiposCompostos, undefined, tiposEntrada.get(subbloco.nome))}`),
       ].join(", ");
       const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
       if (tipoErro) {
@@ -441,7 +467,8 @@ function gerarPythonBase(modulo: IrModulo): ArquivoGerado[] {
   const states = modulo.states.map((state) => `# State${state.nome ? ` ${state.nome}` : ""}: campos=${state.campos.length} invariantes=${state.invariantes.length} transicoes=${state.transicoes.length}`).join("\n");
   const flows = modulo.flows.map((flow) => `# Flow ${flow.nome}: etapas=${flow.linhas.length} tasks=${flow.tasksReferenciadas.join(", ") || "nenhuma"} ramificacoes=${flow.etapasEstruturadas.filter((etapa) => etapa.emSucesso || etapa.emErro).length} mapeamentos=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.mapeamentos.length, 0)} rotas_erro=${flow.etapasEstruturadas.reduce((total, etapa) => total + etapa.porErro.length, 0)} efeitos=${flow.efeitosEstruturados.map((efeito) => `${efeito.categoria}:${efeito.alvo}`).join(", ") || "nenhum"}`).join("\n");
   const routes = modulo.routes.map((route) => `# Route ${route.nome}: metodo=${route.metodo ?? "nao_definido"} caminho=${route.caminho ?? "nao_definido"} task=${route.task ?? "nao_definida"} input_publico=${route.inputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} output_publico=${route.outputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} erros_publicos=${route.errosPublicos.map((erro) => erro.nome).join(", ") || "padrao_task"} effects_publicos=${route.efeitosPublicos.map((efeito) => `${efeito.categoria}:${efeito.alvo}`).join(", ") || "nenhum"} garantias_publicas=${route.garantiasPublicasMinimas.length}`).join("\n");
-  const tasks = modulo.tasks.map(gerarTask).join("\n");
+  const tiposCompostos = coletarTiposCompostos(modulo);
+  const tasks = modulo.tasks.map((task) => gerarTask(task, tiposCompostos)).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
   const codigo = `# Arquivo gerado automaticamente pela Sema.\n# Modulo de origem: ${modulo.nome}\nfrom __future__ import annotations\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${tipos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;

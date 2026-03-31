@@ -10,7 +10,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - Estagio atual: marco publico `0.8.x backend generico` em consolidacao, com foco oficial em familias backend first-class e adocao incremental de projeto vivo
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `0.8.4`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `0.8.6`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
@@ -147,7 +147,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Enriquecer `sema inspecionar` com diretorios de codigo, fontes de legado e modo de adocao
 - `[x]` Expandir `sema.config.json` com `diretoriosCodigo`, `fontesLegado` e `modoAdocao`
 - `[x]` Registrar feedback externo do FuteBot como validacao de valor e ajuste de prioridade para a ultima milha entre contrato e implementacao viva
-- `[x]` Alinhar release publica `0.8.4` entre CLI, pacotes e extensao
+- `[x]` Alinhar release publica `0.8.6` entre CLI, pacotes e extensao
 - `[x]` Fortalecer o bootstrap semantico de `importar nextjs` sem degradar o fallback honesto
 - `[x]` Revisar o `README` como landing page publica mais clara para instalacao, showcase e compatibilidade
 - `[x]` Deixar a CLI pronta para `npm publish` com script oficial de dry-run

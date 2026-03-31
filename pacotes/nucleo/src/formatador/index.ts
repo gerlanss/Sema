@@ -235,7 +235,10 @@ function ordenarSubblocos(bloco: BlocoGenericoAst): BlocoAst[] {
 }
 
 function renderizarBlocoGenerico(bloco: BlocoGenericoAst, nivel: number): string {
-  const cabecalho = `${indentacao(nivel)}${bloco.palavraChave}${bloco.nome ? ` ${bloco.nome}` : ""} {`;
+  const identificadorBloco = bloco.palavraChave === "desconhecido" && bloco.nome
+    ? bloco.nome
+    : `${bloco.palavraChave}${bloco.nome ? ` ${bloco.nome}` : ""}`;
+  const cabecalho = `${indentacao(nivel)}${identificadorBloco} {`;
   const linhasCampos = bloco.campos.map((campo) => renderizarCampo(campo, nivel + 1, bloco.palavraChave));
   const linhasDeclarativas = bloco.linhas.map((linha) => renderizarLinha(linha.conteudo, nivel + 1));
   const blocosInternos = ordenarSubblocos(bloco).map((subbloco) => renderizarBlocoAst(subbloco, nivel + 1));

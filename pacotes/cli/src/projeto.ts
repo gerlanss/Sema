@@ -385,11 +385,29 @@ async function resolverOrigensProjeto(
   configCarregada?: ConfiguracaoProjetoCarregada,
 ): Promise<string[]> {
   if (configCarregada) {
+    const infoEntrada = await stat(entradaResolvida);
+    if (infoEntrada.isFile()) {
+      return [path.resolve(path.dirname(entradaResolvida))];
+    }
+
+    if (path.resolve(entradaResolvida) !== path.resolve(configCarregada.baseDiretorio)) {
+      return [path.resolve(entradaResolvida)];
+    }
+
     const declaradas = configCarregada.config.origens ?? (configCarregada.config.origem ? [configCarregada.config.origem] : []);
     if (declaradas.length > 0) {
       return declaradas.map((origem) => path.resolve(configCarregada.baseDiretorio, origem));
     }
     return [configCarregada.baseDiretorio];
+  }
+
+  const infoEntrada = await stat(entradaResolvida);
+  if (infoEntrada.isFile()) {
+    return [path.resolve(path.dirname(entradaResolvida))];
+  }
+
+  if (path.resolve(entradaResolvida) !== path.resolve(baseProjeto)) {
+    return [path.resolve(entradaResolvida)];
   }
 
   return [await descobrirOrigemPadrao(baseProjeto, entradaResolvida)];

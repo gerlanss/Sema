@@ -206,3 +206,41 @@ module exemplo.impl.formatado {
   assert.equal(temErros(resultado.diagnosticos), false);
   assert.match(resultado.codigoFormatado ?? "", /effects \{\n\s+consulta gateway_pagamento\n\s+\}\n\s+impl \{/);
 });
+
+test("formatador preserva bloco nomeado livre dentro de given", () => {
+  const codigo = `
+module exemplo.formatado.aninhado {
+  task extrair {
+    input {
+      documento: Json required
+    }
+    output {
+      itens: Json
+    }
+    guarantees {
+      itens existe
+    }
+    tests {
+      caso "prazo ausente" {
+        given {
+          documento {
+            texto_extraido: "sem prazo"
+          }
+        }
+        expect {
+          itens: "parciais"
+        }
+        error {
+          tipo: "prazo_ausente"
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = formatarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.match(resultado.codigoFormatado ?? "", /given \{\n\s+documento \{/);
+  assert.doesNotMatch(resultado.codigoFormatado ?? "", /desconhecido documento \{/);
+});

@@ -323,9 +323,17 @@ module exemplo.geracao.negacao {
 test("geradores sintetizam given aninhado para tipos compostos", () => {
   const codigo = `
 module exemplo.geracao.aninhado {
+  type DocumentoEntrada {
+    fields {
+      texto_extraido: Texto required
+      paginas: Inteiro required
+      metadata: Json required
+    }
+  }
+
   task processar_checkout {
     input {
-      pedido: Json required
+      documento: DocumentoEntrada required
       origem: Texto
     }
     output {
@@ -337,18 +345,21 @@ module exemplo.geracao.aninhado {
     tests {
       caso "checkout composto" {
         given {
-          pedido {
-            cliente {
-              nome: "Ana"
-              vip: verdadeiro
+          documento {
+            texto_extraido: "trecho principal"
+            paginas: 3
+            metadata {
+              cliente {
+                nome: "Ana"
+                vip: verdadeiro
+              }
+              total: 19.9
             }
-            itens {
-              sku: "abc-1"
-              quantidade: 2
-            }
-            total: 19.9
           }
           origem: "web"
+        }
+        error {
+          tipo: "checkout_invalido"
         }
         expect {
           sucesso: verdadeiro
@@ -362,19 +373,21 @@ module exemplo.geracao.aninhado {
   const resultado = compilarCodigo(codigo, "aninhado.sema");
   assert.equal(temErros(resultado.diagnosticos), false);
   assert.ok(resultado.ir);
-  assert.equal(resultado.ir.tasks[0]?.tests[0]?.given.blocos[0]?.nome, "pedido");
-  assert.equal(resultado.ir.tasks[0]?.tests[0]?.given.blocos[0]?.conteudo.blocos[0]?.nome, "cliente");
+  assert.equal(resultado.ir.tasks[0]?.tests[0]?.given.blocos[0]?.nome, "documento");
+  assert.equal(resultado.ir.tasks[0]?.tests[0]?.given.blocos[0]?.conteudo.blocos[0]?.nome, "metadata");
 
   const arquivosTs = gerarTypeScript(resultado.ir!);
   const testesTs = arquivosTs.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_aninhado.test.ts")?.conteudo ?? "";
-  assert.match(testesTs, /"pedido": \{/);
+  assert.match(testesTs, /"documento": \{/);
   assert.match(testesTs, /"cliente": \{/);
   assert.match(testesTs, /"vip": true/);
   assert.match(testesTs, /"total": 19\.9/);
 
   const arquivosPy = gerarPython(resultado.ir!);
+  const codigoPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_aninhado.py")?.conteudo ?? "";
   const testesPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "test_exemplo_geracao_aninhado.py")?.conteudo ?? "";
-  assert.match(testesPy, /pedido=\{/);
+  assert.match(codigoPy, /if entrada == processar_checkoutEntrada\([^)]*documento=DocumentoEntrada\(/);
+  assert.match(testesPy, /documento=DocumentoEntrada\(/);
   assert.match(testesPy, /"cliente": \{/);
   assert.match(testesPy, /"vip": True/);
   assert.match(testesPy, /"total": 19\.9/);

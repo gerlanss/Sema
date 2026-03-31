@@ -46,7 +46,8 @@ test("cli verificar suporta resumo json estavel", () => {
   assert.equal(json.comando, "verificar");
   assert.equal(json.sucesso, true);
   assert.equal(json.totais.modulos, 1);
-  assert.equal(json.modulos[0].alvos.length, 2);
+  assert.equal(json.modulos[0].alvos.length, 3);
+  assert.deepEqual(json.modulos[0].alvos.map((alvo: { alvo: string }) => alvo.alvo), ["typescript", "python", "dart"]);
 });
 
 test("cli formatar em modo check falha quando arquivo esta fora do formato", async () => {
