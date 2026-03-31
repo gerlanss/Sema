@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- consolida a pagina publica da extensao com instalacao oficial, links diretos e fluxo real com a CLI
+- mantem a validacao por contexto de projeto e a linha publica pronta para uma nova publicacao da VSIX
+
 ## 1.0.1
 
 - troca a validacao isolada por compilacao com contexto de projeto no servidor do VS Code
