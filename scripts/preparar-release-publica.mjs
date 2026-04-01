@@ -53,7 +53,7 @@ async function main() {
 
   const notas = `# Sema ${versao}
 
-Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
+Sema e um Protocolo de Governanca de Intencao para IA sobre software vivo em backend e front consumer.
 
 ## Destaques
 

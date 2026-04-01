@@ -215,7 +215,7 @@ interface ResumoSemanticoModuloIa {
   arquivosProvaveisEditar: string[];
 }
 
-const STARTER_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
+const STARTER_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA sobre software vivo em backend e front consumer.
 
 Importante:
 - a Sema se apresenta publicamente como protocolo e funciona tecnicamente como linguagem de intencao
@@ -1399,7 +1399,7 @@ Regras:
 - preserve a intencao do contrato
 - use este resumo como fonte compacta inicial
 - se a tarefa pedir mais contexto, suba para \`briefing.min.json\`, \`drift.json\` e depois \`ir.json\`
-- nao saia editando backend vivo sem olhar risco, lacuna e checks sugeridos
+- nao saia editando software vivo sem olhar risco, lacuna e checks sugeridos
 ${resumo.consumerFramework ? "- se for tarefa visual consumer, priorize `appRoutes`, `consumerSurfaces` e `consumerBridges` antes de abrir arquivos aleatorios" : ""}
 
 Contexto compacto:
@@ -3713,7 +3713,7 @@ async function comandoAjudaIa(): Promise<number> {
     "Peca `.sema` + arquitetura + React + TypeScript, ou use o modo `Sema primeiro`.",
     "Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.",
     "IA pequena comeca no menor artefato que resolve a tarefa; nao enfie `ast.json` inteiro nela de bobeira.",
-    "Antes de editar backend vivo, leia `briefing.min.json` ou `briefing.json` em vez de sair cavando arquivo na fe.",
+    "Antes de editar software vivo, leia `briefing.min.json` ou `briefing.json` em vez de sair cavando arquivo na fe.",
     "Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.",
   ]));
   return 0;

@@ -2,7 +2,7 @@
 
 ![Logo da Sema](./logo.png)
 
-Sema e um **Protocolo de Governanca de Intencao para IA e backend vivo**.
+Sema e um **Protocolo de Governanca de Intencao para IA sobre software vivo em backend e front consumer**.
 
 Ela nao tenta substituir TypeScript, Python, Flask, FastAPI, NestJS, Next.js, ASP.NET Core ou qualquer stack real. O papel da Sema e outro: governar a camada de significado acima do runtime, com contrato explicito, vinculo rastreavel, fluxo, erro, efeito, garantia, execucao e contexto operacional para IA.
 
@@ -430,4 +430,4 @@ npm run test:smoke-real
 
 Se voce quer uma linguagem para escrever tese sobre pureza sintatica, a Sema nao esta tentando ganhar esse concurso.
 
-Se voce quer contrato, vinculo, drift e contexto operacional para IA mexer em backend vivo sem confiar na sorte, ai sim ela comeca a ficar interessante.
+Se voce quer contrato, vinculo, drift e contexto operacional para IA mexer em software vivo sem confiar na sorte, ai sim ela comeca a ficar interessante.

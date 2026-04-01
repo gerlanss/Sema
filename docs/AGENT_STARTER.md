@@ -27,7 +27,7 @@ Para manter os artefatos gerados da raiz sincronizados:
 - `sema sync-ai-entrypoints --json`
 
 ```text
-Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
+Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA sobre software vivo em backend e front consumer.
 
 Importante:
 - a Sema e protocolo de governanca semantica desenhado para IA, nao para ergonomia humana
