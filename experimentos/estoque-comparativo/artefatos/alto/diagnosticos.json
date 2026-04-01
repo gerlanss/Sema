@@ -1,0 +1,6 @@
+{
+  "comando": "diagnosticos",
+  "caminho": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+  "modulo": "experimentos.estoque.controle",
+  "diagnosticos": []
+}

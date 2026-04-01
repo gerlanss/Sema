@@ -1,0 +1,41 @@
+Voce esta operando Sema em modo IA-first.
+
+Esta linguagem nao foi desenhada para agradar humano; ela existe para reduzir ambiguidade para IA.
+
+Capacidade alvo: pequena
+Modo da tarefa: mudanca
+
+Regras:
+- nao invente sintaxe nem bloco fora da gramatica oficial
+- preserve a intencao do contrato
+- use este resumo como fonte compacta inicial
+- se a tarefa pedir mais contexto, suba para `briefing.min.json`, `drift.json` e depois `ir.json`
+- nao saia editando software vivo sem olhar risco, lacuna e checks sugeridos
+- se for tarefa visual consumer, priorize `appRoutes`, `consumerSurfaces` e `consumerBridges` antes de abrir arquivos aleatorios
+
+Contexto compacto:
+MODO: mudanca
+MODULO: experimentos.estoque.controle
+FAZ: governa 6 rota(s), 6 task(s) com foco em criar produto publico
+PERFIL: publico
+CONSUMER_FRAMEWORK: nextjs-consumer
+APP_ROUTES: nenhum
+CONSUMER_SURFACES: nenhum
+CONSUMER_BRIDGES: nenhum
+PUBLICO: DELETE /produtos/{id}, GET /produtos, GET /produtos/{id}, GET /produtos/inventario/valor-total (+2)
+TAREFAS: criar_produto, listar_produtos, obter_produto, atualizar_produto (+2)
+ENTRADAS: criar_produto(nome, preco, quantidade, estoque_minimo), listar_produtos(categoria, apenas_estoque_baixo), obter_produto(id), atualizar_produto(id, nome, preco, quantidade)
+SAIDAS: criar_produto(produto), listar_produtos(resultado), obter_produto(produto), atualizar_produto(produto)
+REGRAS: categoria em [ ELETRONICOS , ALIMENTOS , LIMPEZA , ESCRITORIO , OUTROS ], estoque_minimo >= 0, id existe, nome existe (+4)
+EFEITOS: auditoria produto_atualizado criticidade = media, auditoria produto_criado criticidade = media, auditoria produto_removido criticidade = media, auditoria valor_inventario_consultado criticidade = baixa (+2)
+ERROS: nenhum
+TOCAR: C:\GitHub\Sema\experimentos\estoque-comparativo\implementacoes\sem-sema.ts, C:\GitHub\Sema\experimentos\estoque-comparativo\implementacoes\sema-baixo.ts, C:\GitHub\Sema\experimentos\estoque-comparativo\implementacoes\sema-medio.ts
+VALIDAR: revisar efeitos operacionais, rodar sema validar --json, verificar guarantees
+TESTES: sema drift <arquivo> --json, sema validar <arquivo> --json, sema verificar <arquivo-ou-pasta> --json
+RISCOS: altera_persistencia, atualizar_produto:alto, calcular_valor_total_inventario:medio, criar_produto:alto (+2)
+LACUNAS: execucao_implicita, sem_impl, sem_vinculos
+INFERIDO: nenhum
+CONFIANCA: baixa
+RISCO_OPERACIONAL: alto
+SCORE: 50
+GERADO_EM: 2026-04-01T03:20:12.945Z

@@ -1,0 +1,2022 @@
+{
+  "comando": "ir",
+  "caminho": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+  "modulo": "experimentos.estoque.controle",
+  "sucesso": true,
+  "diagnosticos": [],
+  "ir": {
+    "nome": "experimentos.estoque.controle",
+    "uses": [],
+    "imports": [],
+    "interoperabilidades": [],
+    "vinculos": [],
+    "perfilCompatibilidade": "publico",
+    "types": [
+      {
+        "nome": "ListaProdutos",
+        "definicao": {
+          "campos": [
+            {
+              "nome": "items",
+              "tipo": "Lista<Produto>",
+              "modificadores": [],
+              "tipoOriginal": "Lista<Produto>",
+              "tipoBase": "Produto",
+              "cardinalidade": "lista",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "tipoItem": "Produto",
+              "refinamentos": []
+            },
+            {
+              "nome": "total",
+              "tipo": "Inteiro",
+              "modificadores": [],
+              "tipoOriginal": "Inteiro",
+              "tipoBase": "Inteiro",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "linhas": [],
+          "blocos": []
+        },
+        "invariantes": []
+      },
+      {
+        "nome": "ValorInventario",
+        "definicao": {
+          "campos": [
+            {
+              "nome": "total_geral",
+              "tipo": "Decimal",
+              "modificadores": [],
+              "tipoOriginal": "Decimal",
+              "tipoBase": "Decimal",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "valor_por_categoria",
+              "tipo": "Mapa<Texto,Decimal>",
+              "modificadores": [],
+              "tipoOriginal": "Mapa<Texto,Decimal>",
+              "tipoBase": "Decimal",
+              "cardinalidade": "mapa",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "chaveMapa": "Texto",
+              "valorMapa": "Decimal",
+              "refinamentos": []
+            }
+          ],
+          "linhas": [],
+          "blocos": []
+        },
+        "invariantes": []
+      }
+    ],
+    "entities": [
+      {
+        "nome": "Produto",
+        "campos": [
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "nome",
+            "tipo": "Texto",
+            "modificadores": [],
+            "tipoOriginal": "Texto",
+            "tipoBase": "Texto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "preco",
+            "tipo": "Decimal",
+            "modificadores": [],
+            "tipoOriginal": "Decimal",
+            "tipoBase": "Decimal",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "quantidade",
+            "tipo": "Inteiro",
+            "modificadores": [],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "estoque_minimo",
+            "tipo": "Inteiro",
+            "modificadores": [],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "categoria",
+            "tipo": "CategoriaProduto",
+            "modificadores": [],
+            "tipoOriginal": "CategoriaProduto",
+            "tipoBase": "CategoriaProduto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "invariantes": []
+      }
+    ],
+    "enums": [
+      {
+        "nome": "CategoriaProduto",
+        "valores": [
+          "ELETRONICOS",
+          "ALIMENTOS",
+          "LIMPEZA",
+          "ESCRITORIO",
+          "OUTROS"
+        ]
+      }
+    ],
+    "tasks": [
+      {
+        "nome": "criar_produto",
+        "input": [
+          {
+            "nome": "nome",
+            "tipo": "Texto",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Texto",
+            "tipoBase": "Texto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "preco",
+            "tipo": "Decimal",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Decimal",
+            "tipoBase": "Decimal",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "quantidade",
+            "tipo": "Inteiro",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "estoque_minimo",
+            "tipo": "Inteiro",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "categoria",
+            "tipo": "CategoriaProduto",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "CategoriaProduto",
+            "tipoBase": "CategoriaProduto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "output": [
+          {
+            "nome": "produto",
+            "tipo": "Produto",
+            "modificadores": [],
+            "tipoOriginal": "Produto",
+            "tipoBase": "Produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "rules": [
+          "nome existe",
+          "preco > 0",
+          "quantidade >= 0",
+          "estoque_minimo >= 0",
+          "categoria em [ ELETRONICOS , ALIMENTOS , LIMPEZA , ESCRITORIO , OUTROS ]"
+        ],
+        "regrasEstruturadas": [
+          {
+            "tipo": "existe",
+            "textoOriginal": "nome existe",
+            "alvo": "nome"
+          },
+          {
+            "tipo": "comparacao",
+            "textoOriginal": "preco > 0",
+            "alvo": "preco",
+            "operador": ">",
+            "valor": "0",
+            "valorLiteral": true
+          },
+          {
+            "tipo": "comparacao",
+            "textoOriginal": "quantidade >= 0",
+            "alvo": "quantidade",
+            "operador": ">=",
+            "valor": "0",
+            "valorLiteral": true
+          },
+          {
+            "tipo": "comparacao",
+            "textoOriginal": "estoque_minimo >= 0",
+            "alvo": "estoque_minimo",
+            "operador": ">=",
+            "valor": "0",
+            "valorLiteral": true
+          },
+          {
+            "tipo": "pertencimento",
+            "textoOriginal": "categoria em [ ELETRONICOS , ALIMENTOS , LIMPEZA , ESCRITORIO , OUTROS ]",
+            "alvo": "categoria",
+            "valores": [
+              "ELETRONICOS",
+              "ALIMENTOS",
+              "LIMPEZA",
+              "ESCRITORIO",
+              "OUTROS"
+            ]
+          }
+        ],
+        "effects": [
+          "persistencia estoque criticidade = alta",
+          "auditoria produto_criado criticidade = media"
+        ],
+        "efeitosEstruturados": [
+          {
+            "textoOriginal": "persistencia estoque criticidade = alta",
+            "categoria": "persistencia",
+            "alvo": "estoque",
+            "criticidade": "alta",
+            "criticidadeTexto": "alta"
+          },
+          {
+            "textoOriginal": "auditoria produto_criado criticidade = media",
+            "categoria": "auditoria",
+            "alvo": "produto_criado",
+            "criticidade": "media",
+            "criticidadeTexto": "media"
+          }
+        ],
+        "implementacoesExternas": [],
+        "vinculos": [],
+        "execucao": {
+          "idempotencia": false,
+          "timeout": "padrao",
+          "retry": "nenhum",
+          "compensacao": "nenhuma",
+          "criticidadeOperacional": "media",
+          "explicita": false
+        },
+        "guarantees": [
+          "produto existe"
+        ],
+        "garantiasEstruturadas": [
+          {
+            "tipo": "existe",
+            "textoOriginal": "produto existe",
+            "alvo": "produto"
+          }
+        ],
+        "errors": {},
+        "errosDetalhados": [],
+        "perfilCompatibilidade": "interno",
+        "resumoAgente": {
+          "riscos": [
+            "altera_persistencia",
+            "efeito_critico",
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees"
+          ],
+          "entidadesAfetadas": [
+            "CategoriaProduto",
+            "estoque",
+            "Produto",
+            "produto_criado"
+          ],
+          "superficiesPublicas": [],
+          "mutacoesPrevistas": [
+            "auditoria:produto_criado",
+            "persistencia:estoque"
+          ]
+        },
+        "tests": []
+      },
+      {
+        "nome": "listar_produtos",
+        "input": [
+          {
+            "nome": "categoria",
+            "tipo": "CategoriaProduto",
+            "modificadores": [
+              "optional"
+            ],
+            "tipoOriginal": "CategoriaProduto",
+            "tipoBase": "CategoriaProduto",
+            "cardinalidade": "unitario",
+            "opcional": true,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "apenas_estoque_baixo",
+            "tipo": "Booleano",
+            "modificadores": [
+              "optional"
+            ],
+            "tipoOriginal": "Booleano",
+            "tipoBase": "Booleano",
+            "cardinalidade": "unitario",
+            "opcional": true,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "output": [
+          {
+            "nome": "resultado",
+            "tipo": "ListaProdutos",
+            "modificadores": [],
+            "tipoOriginal": "ListaProdutos",
+            "tipoBase": "ListaProdutos",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "rules": [],
+        "regrasEstruturadas": [],
+        "effects": [
+          "consulta estoque criticidade = baixa"
+        ],
+        "efeitosEstruturados": [
+          {
+            "textoOriginal": "consulta estoque criticidade = baixa",
+            "categoria": "consulta",
+            "alvo": "estoque",
+            "criticidade": "baixa",
+            "criticidadeTexto": "baixa"
+          }
+        ],
+        "implementacoesExternas": [],
+        "vinculos": [],
+        "execucao": {
+          "idempotencia": false,
+          "timeout": "padrao",
+          "retry": "nenhum",
+          "compensacao": "nenhuma",
+          "criticidadeOperacional": "media",
+          "explicita": false
+        },
+        "guarantees": [
+          "resultado existe"
+        ],
+        "garantiasEstruturadas": [
+          {
+            "tipo": "existe",
+            "textoOriginal": "resultado existe",
+            "alvo": "resultado"
+          }
+        ],
+        "errors": {},
+        "errosDetalhados": [],
+        "perfilCompatibilidade": "interno",
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees"
+          ],
+          "entidadesAfetadas": [
+            "CategoriaProduto",
+            "estoque",
+            "ListaProdutos"
+          ],
+          "superficiesPublicas": [],
+          "mutacoesPrevistas": [
+            "consulta:estoque"
+          ]
+        },
+        "tests": []
+      },
+      {
+        "nome": "obter_produto",
+        "input": [
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "output": [
+          {
+            "nome": "produto",
+            "tipo": "Produto",
+            "modificadores": [],
+            "tipoOriginal": "Produto",
+            "tipoBase": "Produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "rules": [],
+        "regrasEstruturadas": [],
+        "effects": [],
+        "efeitosEstruturados": [],
+        "implementacoesExternas": [],
+        "vinculos": [],
+        "execucao": {
+          "idempotencia": false,
+          "timeout": "padrao",
+          "retry": "nenhum",
+          "compensacao": "nenhuma",
+          "criticidadeOperacional": "media",
+          "explicita": false
+        },
+        "guarantees": [
+          "produto existe"
+        ],
+        "garantiasEstruturadas": [
+          {
+            "tipo": "existe",
+            "textoOriginal": "produto existe",
+            "alvo": "produto"
+          }
+        ],
+        "errors": {},
+        "errosDetalhados": [],
+        "perfilCompatibilidade": "interno",
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees"
+          ],
+          "entidadesAfetadas": [
+            "Produto"
+          ],
+          "superficiesPublicas": [],
+          "mutacoesPrevistas": []
+        },
+        "tests": []
+      },
+      {
+        "nome": "atualizar_produto",
+        "input": [
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "nome",
+            "tipo": "Texto",
+            "modificadores": [],
+            "tipoOriginal": "Texto",
+            "tipoBase": "Texto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "preco",
+            "tipo": "Decimal",
+            "modificadores": [],
+            "tipoOriginal": "Decimal",
+            "tipoBase": "Decimal",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "quantidade",
+            "tipo": "Inteiro",
+            "modificadores": [],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "estoque_minimo",
+            "tipo": "Inteiro",
+            "modificadores": [],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "categoria",
+            "tipo": "CategoriaProduto",
+            "modificadores": [],
+            "tipoOriginal": "CategoriaProduto",
+            "tipoBase": "CategoriaProduto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "output": [
+          {
+            "nome": "produto",
+            "tipo": "Produto",
+            "modificadores": [],
+            "tipoOriginal": "Produto",
+            "tipoBase": "Produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "rules": [
+          "id existe"
+        ],
+        "regrasEstruturadas": [
+          {
+            "tipo": "existe",
+            "textoOriginal": "id existe",
+            "alvo": "id"
+          }
+        ],
+        "effects": [
+          "persistencia estoque criticidade = alta",
+          "auditoria produto_atualizado criticidade = media"
+        ],
+        "efeitosEstruturados": [
+          {
+            "textoOriginal": "persistencia estoque criticidade = alta",
+            "categoria": "persistencia",
+            "alvo": "estoque",
+            "criticidade": "alta",
+            "criticidadeTexto": "alta"
+          },
+          {
+            "textoOriginal": "auditoria produto_atualizado criticidade = media",
+            "categoria": "auditoria",
+            "alvo": "produto_atualizado",
+            "criticidade": "media",
+            "criticidadeTexto": "media"
+          }
+        ],
+        "implementacoesExternas": [],
+        "vinculos": [],
+        "execucao": {
+          "idempotencia": false,
+          "timeout": "padrao",
+          "retry": "nenhum",
+          "compensacao": "nenhuma",
+          "criticidadeOperacional": "media",
+          "explicita": false
+        },
+        "guarantees": [
+          "produto existe"
+        ],
+        "garantiasEstruturadas": [
+          {
+            "tipo": "existe",
+            "textoOriginal": "produto existe",
+            "alvo": "produto"
+          }
+        ],
+        "errors": {},
+        "errosDetalhados": [],
+        "perfilCompatibilidade": "interno",
+        "resumoAgente": {
+          "riscos": [
+            "altera_persistencia",
+            "efeito_critico",
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees"
+          ],
+          "entidadesAfetadas": [
+            "CategoriaProduto",
+            "estoque",
+            "Produto",
+            "produto_atualizado"
+          ],
+          "superficiesPublicas": [],
+          "mutacoesPrevistas": [
+            "auditoria:produto_atualizado",
+            "persistencia:estoque"
+          ]
+        },
+        "tests": []
+      },
+      {
+        "nome": "remover_produto",
+        "input": [
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "output": [
+          {
+            "nome": "removido",
+            "tipo": "Booleano",
+            "modificadores": [],
+            "tipoOriginal": "Booleano",
+            "tipoBase": "Booleano",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "rules": [],
+        "regrasEstruturadas": [],
+        "effects": [
+          "persistencia estoque criticidade = alta",
+          "auditoria produto_removido criticidade = media"
+        ],
+        "efeitosEstruturados": [
+          {
+            "textoOriginal": "persistencia estoque criticidade = alta",
+            "categoria": "persistencia",
+            "alvo": "estoque",
+            "criticidade": "alta",
+            "criticidadeTexto": "alta"
+          },
+          {
+            "textoOriginal": "auditoria produto_removido criticidade = media",
+            "categoria": "auditoria",
+            "alvo": "produto_removido",
+            "criticidade": "media",
+            "criticidadeTexto": "media"
+          }
+        ],
+        "implementacoesExternas": [],
+        "vinculos": [],
+        "execucao": {
+          "idempotencia": false,
+          "timeout": "padrao",
+          "retry": "nenhum",
+          "compensacao": "nenhuma",
+          "criticidadeOperacional": "media",
+          "explicita": false
+        },
+        "guarantees": [
+          "removido == verdadeiro",
+          "id existe"
+        ],
+        "garantiasEstruturadas": [
+          {
+            "tipo": "comparacao",
+            "textoOriginal": "removido == verdadeiro",
+            "alvo": "removido",
+            "operador": "==",
+            "valor": "verdadeiro",
+            "valorLiteral": true
+          },
+          {
+            "tipo": "existe",
+            "textoOriginal": "id existe",
+            "alvo": "id"
+          }
+        ],
+        "errors": {},
+        "errosDetalhados": [],
+        "perfilCompatibilidade": "interno",
+        "resumoAgente": {
+          "riscos": [
+            "altera_persistencia",
+            "efeito_critico",
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees"
+          ],
+          "entidadesAfetadas": [
+            "estoque",
+            "produto_removido"
+          ],
+          "superficiesPublicas": [],
+          "mutacoesPrevistas": [
+            "auditoria:produto_removido",
+            "persistencia:estoque"
+          ]
+        },
+        "tests": []
+      },
+      {
+        "nome": "calcular_valor_total_inventario",
+        "input": [],
+        "output": [
+          {
+            "nome": "resultado",
+            "tipo": "ValorInventario",
+            "modificadores": [],
+            "tipoOriginal": "ValorInventario",
+            "tipoBase": "ValorInventario",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "rules": [],
+        "regrasEstruturadas": [],
+        "effects": [
+          "consulta estoque criticidade = baixa",
+          "auditoria valor_inventario_consultado criticidade = baixa"
+        ],
+        "efeitosEstruturados": [
+          {
+            "textoOriginal": "consulta estoque criticidade = baixa",
+            "categoria": "consulta",
+            "alvo": "estoque",
+            "criticidade": "baixa",
+            "criticidadeTexto": "baixa"
+          },
+          {
+            "textoOriginal": "auditoria valor_inventario_consultado criticidade = baixa",
+            "categoria": "auditoria",
+            "alvo": "valor_inventario_consultado",
+            "criticidade": "baixa",
+            "criticidadeTexto": "baixa"
+          }
+        ],
+        "implementacoesExternas": [],
+        "vinculos": [],
+        "execucao": {
+          "idempotencia": false,
+          "timeout": "padrao",
+          "retry": "nenhum",
+          "compensacao": "nenhuma",
+          "criticidadeOperacional": "media",
+          "explicita": false
+        },
+        "guarantees": [
+          "resultado existe",
+          "resultado.total_geral >= 0"
+        ],
+        "garantiasEstruturadas": [
+          {
+            "tipo": "existe",
+            "textoOriginal": "resultado existe",
+            "alvo": "resultado"
+          },
+          {
+            "tipo": "comparacao",
+            "textoOriginal": "resultado.total_geral >= 0",
+            "alvo": "resultado.total_geral",
+            "operador": ">=",
+            "valor": "0",
+            "valorLiteral": true
+          }
+        ],
+        "errors": {},
+        "errosDetalhados": [],
+        "perfilCompatibilidade": "interno",
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees"
+          ],
+          "entidadesAfetadas": [
+            "estoque",
+            "valor_inventario_consultado",
+            "ValorInventario"
+          ],
+          "superficiesPublicas": [],
+          "mutacoesPrevistas": [
+            "auditoria:valor_inventario_consultado",
+            "consulta:estoque"
+          ]
+        },
+        "tests": []
+      }
+    ],
+    "flows": [],
+    "routes": [
+      {
+        "nome": "criar_produto_publico",
+        "campos": [
+          {
+            "nome": "metodo",
+            "tipo": "POST",
+            "modificadores": [],
+            "tipoOriginal": "POST",
+            "tipoBase": "POST",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "caminho",
+            "tipo": "/",
+            "modificadores": [
+              "produtos"
+            ],
+            "tipoOriginal": "/",
+            "tipoBase": "/",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": [
+              "produtos"
+            ]
+          },
+          {
+            "nome": "task",
+            "tipo": "criar_produto",
+            "modificadores": [],
+            "tipoOriginal": "criar_produto",
+            "tipoBase": "criar_produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "linhas": [],
+        "metodo": "POST",
+        "caminho": "/produtos",
+        "task": "criar_produto",
+        "inputPublico": [
+          {
+            "nome": "nome",
+            "tipo": "Texto",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Texto",
+            "tipoBase": "Texto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "preco",
+            "tipo": "Decimal",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Decimal",
+            "tipoBase": "Decimal",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "quantidade",
+            "tipo": "Inteiro",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "estoque_minimo",
+            "tipo": "Inteiro",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "categoria",
+            "tipo": "CategoriaProduto",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "CategoriaProduto",
+            "tipoBase": "CategoriaProduto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "outputPublico": [
+          {
+            "nome": "produto",
+            "tipo": "Produto",
+            "modificadores": [],
+            "tipoOriginal": "Produto",
+            "tipoBase": "Produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "errosPublicos": [],
+        "efeitosPublicos": [],
+        "vinculos": [],
+        "perfilCompatibilidade": "publico",
+        "garantiasPublicasMinimas": [
+          "produto existe"
+        ],
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees",
+            "validar superficie publica impactada"
+          ],
+          "entidadesAfetadas": [
+            "CategoriaProduto",
+            "Produto"
+          ],
+          "superficiesPublicas": [
+            "POST /produtos"
+          ],
+          "mutacoesPrevistas": []
+        },
+        "publico": {
+          "metodo": "POST",
+          "caminho": "/produtos",
+          "task": "criar_produto",
+          "input": [
+            {
+              "nome": "nome",
+              "tipo": "Texto",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "Texto",
+              "tipoBase": "Texto",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "preco",
+              "tipo": "Decimal",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "Decimal",
+              "tipoBase": "Decimal",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "quantidade",
+              "tipo": "Inteiro",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "Inteiro",
+              "tipoBase": "Inteiro",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "estoque_minimo",
+              "tipo": "Inteiro",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "Inteiro",
+              "tipoBase": "Inteiro",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "categoria",
+              "tipo": "CategoriaProduto",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "CategoriaProduto",
+              "tipoBase": "CategoriaProduto",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "output": [
+            {
+              "nome": "produto",
+              "tipo": "Produto",
+              "modificadores": [],
+              "tipoOriginal": "Produto",
+              "tipoBase": "Produto",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "errors": [],
+          "effects": [],
+          "garantiasMinimas": [
+            "produto existe"
+          ],
+          "confiancaContrato": "media",
+          "riscoRegressao": "baixo",
+          "divergenciasPublicas": []
+        }
+      },
+      {
+        "nome": "listar_produtos_publico",
+        "campos": [
+          {
+            "nome": "metodo",
+            "tipo": "GET",
+            "modificadores": [],
+            "tipoOriginal": "GET",
+            "tipoBase": "GET",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "caminho",
+            "tipo": "/",
+            "modificadores": [
+              "produtos"
+            ],
+            "tipoOriginal": "/",
+            "tipoBase": "/",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": [
+              "produtos"
+            ]
+          },
+          {
+            "nome": "task",
+            "tipo": "listar_produtos",
+            "modificadores": [],
+            "tipoOriginal": "listar_produtos",
+            "tipoBase": "listar_produtos",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "linhas": [],
+        "metodo": "GET",
+        "caminho": "/produtos",
+        "task": "listar_produtos",
+        "inputPublico": [
+          {
+            "nome": "categoria",
+            "tipo": "CategoriaProduto",
+            "modificadores": [
+              "optional"
+            ],
+            "tipoOriginal": "CategoriaProduto",
+            "tipoBase": "CategoriaProduto",
+            "cardinalidade": "unitario",
+            "opcional": true,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "apenas_estoque_baixo",
+            "tipo": "Booleano",
+            "modificadores": [
+              "optional"
+            ],
+            "tipoOriginal": "Booleano",
+            "tipoBase": "Booleano",
+            "cardinalidade": "unitario",
+            "opcional": true,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "outputPublico": [
+          {
+            "nome": "resultado",
+            "tipo": "ListaProdutos",
+            "modificadores": [],
+            "tipoOriginal": "ListaProdutos",
+            "tipoBase": "ListaProdutos",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "errosPublicos": [],
+        "efeitosPublicos": [],
+        "vinculos": [],
+        "perfilCompatibilidade": "publico",
+        "garantiasPublicasMinimas": [
+          "resultado existe"
+        ],
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees",
+            "validar superficie publica impactada"
+          ],
+          "entidadesAfetadas": [
+            "CategoriaProduto",
+            "ListaProdutos"
+          ],
+          "superficiesPublicas": [
+            "GET /produtos"
+          ],
+          "mutacoesPrevistas": []
+        },
+        "publico": {
+          "metodo": "GET",
+          "caminho": "/produtos",
+          "task": "listar_produtos",
+          "input": [
+            {
+              "nome": "categoria",
+              "tipo": "CategoriaProduto",
+              "modificadores": [
+                "optional"
+              ],
+              "tipoOriginal": "CategoriaProduto",
+              "tipoBase": "CategoriaProduto",
+              "cardinalidade": "unitario",
+              "opcional": true,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "apenas_estoque_baixo",
+              "tipo": "Booleano",
+              "modificadores": [
+                "optional"
+              ],
+              "tipoOriginal": "Booleano",
+              "tipoBase": "Booleano",
+              "cardinalidade": "unitario",
+              "opcional": true,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "output": [
+            {
+              "nome": "resultado",
+              "tipo": "ListaProdutos",
+              "modificadores": [],
+              "tipoOriginal": "ListaProdutos",
+              "tipoBase": "ListaProdutos",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "errors": [],
+          "effects": [],
+          "garantiasMinimas": [
+            "resultado existe"
+          ],
+          "confiancaContrato": "media",
+          "riscoRegressao": "baixo",
+          "divergenciasPublicas": []
+        }
+      },
+      {
+        "nome": "obter_produto_publico",
+        "campos": [
+          {
+            "nome": "metodo",
+            "tipo": "GET",
+            "modificadores": [],
+            "tipoOriginal": "GET",
+            "tipoBase": "GET",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "caminho",
+            "tipo": "/produtos/{id}",
+            "modificadores": [],
+            "tipoOriginal": "/produtos/{id}",
+            "tipoBase": "/produtos/{id}",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "task",
+            "tipo": "obter_produto",
+            "modificadores": [],
+            "tipoOriginal": "obter_produto",
+            "tipoBase": "obter_produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "linhas": [],
+        "metodo": "GET",
+        "caminho": "/produtos/{id}",
+        "task": "obter_produto",
+        "inputPublico": [
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "outputPublico": [
+          {
+            "nome": "produto",
+            "tipo": "Produto",
+            "modificadores": [],
+            "tipoOriginal": "Produto",
+            "tipoBase": "Produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "errosPublicos": [],
+        "efeitosPublicos": [],
+        "vinculos": [],
+        "perfilCompatibilidade": "publico",
+        "garantiasPublicasMinimas": [
+          "produto existe"
+        ],
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees",
+            "validar superficie publica impactada"
+          ],
+          "entidadesAfetadas": [
+            "Produto"
+          ],
+          "superficiesPublicas": [
+            "GET /produtos/{id}"
+          ],
+          "mutacoesPrevistas": []
+        },
+        "publico": {
+          "metodo": "GET",
+          "caminho": "/produtos/{id}",
+          "task": "obter_produto",
+          "input": [
+            {
+              "nome": "id",
+              "tipo": "Id",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "Id",
+              "tipoBase": "Id",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "output": [
+            {
+              "nome": "produto",
+              "tipo": "Produto",
+              "modificadores": [],
+              "tipoOriginal": "Produto",
+              "tipoBase": "Produto",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "errors": [],
+          "effects": [],
+          "garantiasMinimas": [
+            "produto existe"
+          ],
+          "confiancaContrato": "media",
+          "riscoRegressao": "baixo",
+          "divergenciasPublicas": []
+        }
+      },
+      {
+        "nome": "atualizar_produto_publico",
+        "campos": [
+          {
+            "nome": "metodo",
+            "tipo": "PUT",
+            "modificadores": [],
+            "tipoOriginal": "PUT",
+            "tipoBase": "PUT",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "caminho",
+            "tipo": "/produtos/{id}",
+            "modificadores": [],
+            "tipoOriginal": "/produtos/{id}",
+            "tipoBase": "/produtos/{id}",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "task",
+            "tipo": "atualizar_produto",
+            "modificadores": [],
+            "tipoOriginal": "atualizar_produto",
+            "tipoBase": "atualizar_produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "linhas": [],
+        "metodo": "PUT",
+        "caminho": "/produtos/{id}",
+        "task": "atualizar_produto",
+        "inputPublico": [
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "nome",
+            "tipo": "Texto",
+            "modificadores": [],
+            "tipoOriginal": "Texto",
+            "tipoBase": "Texto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "preco",
+            "tipo": "Decimal",
+            "modificadores": [],
+            "tipoOriginal": "Decimal",
+            "tipoBase": "Decimal",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "quantidade",
+            "tipo": "Inteiro",
+            "modificadores": [],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "estoque_minimo",
+            "tipo": "Inteiro",
+            "modificadores": [],
+            "tipoOriginal": "Inteiro",
+            "tipoBase": "Inteiro",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "categoria",
+            "tipo": "CategoriaProduto",
+            "modificadores": [],
+            "tipoOriginal": "CategoriaProduto",
+            "tipoBase": "CategoriaProduto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "outputPublico": [
+          {
+            "nome": "produto",
+            "tipo": "Produto",
+            "modificadores": [],
+            "tipoOriginal": "Produto",
+            "tipoBase": "Produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "errosPublicos": [],
+        "efeitosPublicos": [],
+        "vinculos": [],
+        "perfilCompatibilidade": "publico",
+        "garantiasPublicasMinimas": [
+          "produto existe"
+        ],
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees",
+            "validar superficie publica impactada"
+          ],
+          "entidadesAfetadas": [
+            "CategoriaProduto",
+            "Produto"
+          ],
+          "superficiesPublicas": [
+            "PUT /produtos/{id}"
+          ],
+          "mutacoesPrevistas": []
+        },
+        "publico": {
+          "metodo": "PUT",
+          "caminho": "/produtos/{id}",
+          "task": "atualizar_produto",
+          "input": [
+            {
+              "nome": "id",
+              "tipo": "Id",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "Id",
+              "tipoBase": "Id",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "nome",
+              "tipo": "Texto",
+              "modificadores": [],
+              "tipoOriginal": "Texto",
+              "tipoBase": "Texto",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "preco",
+              "tipo": "Decimal",
+              "modificadores": [],
+              "tipoOriginal": "Decimal",
+              "tipoBase": "Decimal",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "quantidade",
+              "tipo": "Inteiro",
+              "modificadores": [],
+              "tipoOriginal": "Inteiro",
+              "tipoBase": "Inteiro",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "estoque_minimo",
+              "tipo": "Inteiro",
+              "modificadores": [],
+              "tipoOriginal": "Inteiro",
+              "tipoBase": "Inteiro",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "categoria",
+              "tipo": "CategoriaProduto",
+              "modificadores": [],
+              "tipoOriginal": "CategoriaProduto",
+              "tipoBase": "CategoriaProduto",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "output": [
+            {
+              "nome": "produto",
+              "tipo": "Produto",
+              "modificadores": [],
+              "tipoOriginal": "Produto",
+              "tipoBase": "Produto",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "errors": [],
+          "effects": [],
+          "garantiasMinimas": [
+            "produto existe"
+          ],
+          "confiancaContrato": "media",
+          "riscoRegressao": "baixo",
+          "divergenciasPublicas": []
+        }
+      },
+      {
+        "nome": "remover_produto_publico",
+        "campos": [
+          {
+            "nome": "metodo",
+            "tipo": "DELETE",
+            "modificadores": [],
+            "tipoOriginal": "DELETE",
+            "tipoBase": "DELETE",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "caminho",
+            "tipo": "/produtos/{id}",
+            "modificadores": [],
+            "tipoOriginal": "/produtos/{id}",
+            "tipoBase": "/produtos/{id}",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "task",
+            "tipo": "remover_produto",
+            "modificadores": [],
+            "tipoOriginal": "remover_produto",
+            "tipoBase": "remover_produto",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "linhas": [],
+        "metodo": "DELETE",
+        "caminho": "/produtos/{id}",
+        "task": "remover_produto",
+        "inputPublico": [
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [
+              "required"
+            ],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "outputPublico": [
+          {
+            "nome": "removido",
+            "tipo": "Booleano",
+            "modificadores": [],
+            "tipoOriginal": "Booleano",
+            "tipoBase": "Booleano",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "id",
+            "tipo": "Id",
+            "modificadores": [],
+            "tipoOriginal": "Id",
+            "tipoBase": "Id",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "errosPublicos": [],
+        "efeitosPublicos": [],
+        "vinculos": [],
+        "perfilCompatibilidade": "publico",
+        "garantiasPublicasMinimas": [
+          "removido == verdadeiro",
+          "id existe"
+        ],
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees",
+            "validar superficie publica impactada"
+          ],
+          "entidadesAfetadas": [],
+          "superficiesPublicas": [
+            "DELETE /produtos/{id}"
+          ],
+          "mutacoesPrevistas": []
+        },
+        "publico": {
+          "metodo": "DELETE",
+          "caminho": "/produtos/{id}",
+          "task": "remover_produto",
+          "input": [
+            {
+              "nome": "id",
+              "tipo": "Id",
+              "modificadores": [
+                "required"
+              ],
+              "tipoOriginal": "Id",
+              "tipoBase": "Id",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "output": [
+            {
+              "nome": "removido",
+              "tipo": "Booleano",
+              "modificadores": [],
+              "tipoOriginal": "Booleano",
+              "tipoBase": "Booleano",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            },
+            {
+              "nome": "id",
+              "tipo": "Id",
+              "modificadores": [],
+              "tipoOriginal": "Id",
+              "tipoBase": "Id",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "errors": [],
+          "effects": [],
+          "garantiasMinimas": [
+            "removido == verdadeiro",
+            "id existe"
+          ],
+          "confiancaContrato": "media",
+          "riscoRegressao": "baixo",
+          "divergenciasPublicas": []
+        }
+      },
+      {
+        "nome": "calcular_valor_total_inventario_publico",
+        "campos": [
+          {
+            "nome": "metodo",
+            "tipo": "GET",
+            "modificadores": [],
+            "tipoOriginal": "GET",
+            "tipoBase": "GET",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          },
+          {
+            "nome": "caminho",
+            "tipo": "/",
+            "modificadores": [
+              "produtos",
+              "/",
+              "inventario",
+              "/",
+              "valor-total"
+            ],
+            "tipoOriginal": "/",
+            "tipoBase": "/",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": [
+              "produtos",
+              "/",
+              "inventario",
+              "/",
+              "valor-total"
+            ]
+          },
+          {
+            "nome": "task",
+            "tipo": "calcular_valor_total_inventario",
+            "modificadores": [],
+            "tipoOriginal": "calcular_valor_total_inventario",
+            "tipoBase": "calcular_valor_total_inventario",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "linhas": [],
+        "metodo": "GET",
+        "caminho": "/produtos/inventario/valor-total",
+        "task": "calcular_valor_total_inventario",
+        "inputPublico": [],
+        "outputPublico": [
+          {
+            "nome": "resultado",
+            "tipo": "ValorInventario",
+            "modificadores": [],
+            "tipoOriginal": "ValorInventario",
+            "tipoBase": "ValorInventario",
+            "cardinalidade": "unitario",
+            "opcional": false,
+            "tiposAlternativos": [],
+            "refinamentos": []
+          }
+        ],
+        "errosPublicos": [],
+        "efeitosPublicos": [],
+        "vinculos": [],
+        "perfilCompatibilidade": "publico",
+        "garantiasPublicasMinimas": [
+          "resultado existe",
+          "resultado.total_geral >= 0"
+        ],
+        "resumoAgente": {
+          "riscos": [
+            "vinculo_fraco"
+          ],
+          "checks": [
+            "rodar sema validar --json",
+            "verificar guarantees",
+            "validar superficie publica impactada"
+          ],
+          "entidadesAfetadas": [
+            "ValorInventario"
+          ],
+          "superficiesPublicas": [
+            "GET /produtos/inventario/valor-total"
+          ],
+          "mutacoesPrevistas": []
+        },
+        "publico": {
+          "metodo": "GET",
+          "caminho": "/produtos/inventario/valor-total",
+          "task": "calcular_valor_total_inventario",
+          "input": [],
+          "output": [
+            {
+              "nome": "resultado",
+              "tipo": "ValorInventario",
+              "modificadores": [],
+              "tipoOriginal": "ValorInventario",
+              "tipoBase": "ValorInventario",
+              "cardinalidade": "unitario",
+              "opcional": false,
+              "tiposAlternativos": [],
+              "refinamentos": []
+            }
+          ],
+          "errors": [],
+          "effects": [],
+          "garantiasMinimas": [
+            "resultado existe",
+            "resultado.total_geral >= 0"
+          ],
+          "confiancaContrato": "media",
+          "riscoRegressao": "baixo",
+          "divergenciasPublicas": []
+        }
+      }
+    ],
+    "superficies": [],
+    "states": [],
+    "resumoAgente": {
+      "riscos": [
+        "altera_persistencia",
+        "efeito_critico",
+        "vinculo_fraco"
+      ],
+      "checks": [
+        "rodar sema validar --json"
+      ],
+      "entidadesAfetadas": [
+        "estoque",
+        "produto_atualizado",
+        "produto_criado",
+        "produto_removido",
+        "valor_inventario_consultado"
+      ],
+      "superficiesPublicas": [
+        "DELETE /produtos/{id}",
+        "GET /produtos",
+        "GET /produtos/{id}",
+        "GET /produtos/inventario/valor-total",
+        "POST /produtos",
+        "PUT /produtos/{id}"
+      ],
+      "mutacoesPrevistas": [
+        "auditoria:produto_atualizado",
+        "auditoria:produto_criado",
+        "auditoria:produto_removido",
+        "auditoria:valor_inventario_consultado",
+        "consulta:estoque",
+        "persistencia:estoque"
+      ]
+    },
+    "diagnosticos": []
+  }
+}

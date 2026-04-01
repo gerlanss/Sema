@@ -1,0 +1,3922 @@
+{
+  "comando": "ast",
+  "caminho": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+  "modulo": "experimentos.estoque.controle",
+  "sucesso": true,
+  "diagnosticos": [],
+  "ast": {
+    "tipo": "module",
+    "nome": "experimentos.estoque.controle",
+    "uses": [],
+    "types": [
+      {
+        "tipo": "type",
+        "nome": "ListaProdutos",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "type",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "fields",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "items",
+                  "valor": "Lista<Produto>",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 369,
+                      "linha": 23,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 391,
+                      "linha": 24,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "total",
+                  "valor": "Inteiro",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 397,
+                      "linha": 24,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 412,
+                      "linha": 25,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 354,
+                  "linha": 22,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 417,
+                  "linha": 25,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 348,
+              "linha": 21,
+              "coluna": 22
+            },
+            "fim": {
+              "indice": 421,
+              "linha": 26,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 329,
+            "linha": 21,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 421,
+            "linha": 26,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "type",
+        "nome": "ValorInventario",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "type",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "fields",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "total_geral",
+                  "valor": "Decimal",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 467,
+                      "linha": 30,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 488,
+                      "linha": 31,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "valor_por_categoria",
+                  "valor": "Mapa<Texto,Decimal>",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 494,
+                      "linha": 31,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 536,
+                      "linha": 32,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 452,
+                  "linha": 29,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 541,
+                  "linha": 32,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 446,
+              "linha": 28,
+              "coluna": 24
+            },
+            "fim": {
+              "indice": 545,
+              "linha": 33,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 425,
+            "linha": 28,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 545,
+            "linha": 33,
+            "coluna": 4
+          }
+        }
+      }
+    ],
+    "entities": [
+      {
+        "tipo": "entity",
+        "nome": "Produto",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "entity",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "fields",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "id",
+                  "valor": "Id",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 180,
+                      "linha": 12,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 187,
+                      "linha": 13,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "nome",
+                  "valor": "Texto",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 193,
+                      "linha": 13,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 205,
+                      "linha": 14,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "preco",
+                  "valor": "Decimal",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 211,
+                      "linha": 14,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 226,
+                      "linha": 15,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "quantidade",
+                  "valor": "Inteiro",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 232,
+                      "linha": 15,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 252,
+                      "linha": 16,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "estoque_minimo",
+                  "valor": "Inteiro",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 258,
+                      "linha": 16,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 282,
+                      "linha": 17,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "categoria",
+                  "valor": "CategoriaProduto",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 288,
+                      "linha": 17,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 316,
+                      "linha": 18,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 165,
+                  "linha": 11,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 321,
+                  "linha": 18,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 159,
+              "linha": 10,
+              "coluna": 18
+            },
+            "fim": {
+              "indice": 325,
+              "linha": 19,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 144,
+            "linha": 10,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 325,
+            "linha": 19,
+            "coluna": 4
+          }
+        }
+      }
+    ],
+    "enums": [
+      {
+        "tipo": "enum",
+        "nome": "CategoriaProduto",
+        "valores": [
+          "ELETRONICOS",
+          "ALIMENTOS",
+          "LIMPEZA",
+          "ESCRITORIO",
+          "OUTROS"
+        ],
+        "intervalo": {
+          "inicio": {
+            "indice": 41,
+            "linha": 2,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 140,
+            "linha": 8,
+            "coluna": 4
+          }
+        }
+      }
+    ],
+    "tasks": [
+      {
+        "tipo": "task",
+        "nome": "criar_produto",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "task",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "input",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "nome",
+                  "valor": "Texto",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 588,
+                      "linha": 37,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 609,
+                      "linha": 38,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "preco",
+                  "valor": "Decimal",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 615,
+                      "linha": 38,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 639,
+                      "linha": 39,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "quantidade",
+                  "valor": "Inteiro",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 645,
+                      "linha": 39,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 674,
+                      "linha": 40,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "estoque_minimo",
+                  "valor": "Inteiro",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 680,
+                      "linha": 40,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 713,
+                      "linha": 41,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "categoria",
+                  "valor": "CategoriaProduto",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 719,
+                      "linha": 41,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 756,
+                      "linha": 42,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 574,
+                  "linha": 36,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 761,
+                  "linha": 42,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "output",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "produto",
+                  "valor": "Produto",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 781,
+                      "linha": 44,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 798,
+                      "linha": 45,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 766,
+                  "linha": 43,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 803,
+                  "linha": 45,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "rules",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "nome existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 822,
+                      "linha": 47,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 834,
+                      "linha": 48,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "preco > 0",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 840,
+                      "linha": 48,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 850,
+                      "linha": 49,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "quantidade >= 0",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 856,
+                      "linha": 49,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 872,
+                      "linha": 50,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "estoque_minimo >= 0",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 878,
+                      "linha": 50,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 898,
+                      "linha": 51,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "categoria em [ ELETRONICOS , ALIMENTOS , LIMPEZA , ESCRITORIO , OUTROS ]",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 904,
+                      "linha": 51,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 971,
+                      "linha": 52,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 808,
+                  "linha": 46,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 976,
+                  "linha": 52,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "effects",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "persistencia estoque criticidade = alta",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 997,
+                      "linha": 54,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1037,
+                      "linha": 55,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "auditoria produto_criado criticidade = media",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1043,
+                      "linha": 55,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1088,
+                      "linha": 56,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 981,
+                  "linha": 53,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1093,
+                  "linha": 56,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "desconhecido",
+              "nome": "errors",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "entrada_invalida",
+                  "valor": "Os dados informados nao atendem as regras do produto.",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1113,
+                      "linha": 58,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1187,
+                      "linha": 59,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1098,
+                  "linha": 57,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1192,
+                  "linha": 59,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "guarantees",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "produto existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1216,
+                      "linha": 61,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1231,
+                      "linha": 62,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1197,
+                  "linha": 60,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1236,
+                  "linha": 62,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 568,
+              "linha": 35,
+              "coluna": 22
+            },
+            "fim": {
+              "indice": 1240,
+              "linha": 63,
+              "coluna": 4
+            }
+          }
+        },
+        "input": {
+          "tipo": "bloco_generico",
+          "palavraChave": "input",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "nome",
+              "valor": "Texto",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 588,
+                  "linha": 37,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 609,
+                  "linha": 38,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "preco",
+              "valor": "Decimal",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 615,
+                  "linha": 38,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 639,
+                  "linha": 39,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "quantidade",
+              "valor": "Inteiro",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 645,
+                  "linha": 39,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 674,
+                  "linha": 40,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "estoque_minimo",
+              "valor": "Inteiro",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 680,
+                  "linha": 40,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 713,
+                  "linha": 41,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "categoria",
+              "valor": "CategoriaProduto",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 719,
+                  "linha": 41,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 756,
+                  "linha": 42,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 574,
+              "linha": 36,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 761,
+              "linha": 42,
+              "coluna": 6
+            }
+          }
+        },
+        "output": {
+          "tipo": "bloco_generico",
+          "palavraChave": "output",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "produto",
+              "valor": "Produto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 781,
+                  "linha": 44,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 798,
+                  "linha": 45,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 766,
+              "linha": 43,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 803,
+              "linha": 45,
+              "coluna": 6
+            }
+          }
+        },
+        "rules": {
+          "tipo": "bloco_generico",
+          "palavraChave": "rules",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "nome existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 822,
+                  "linha": 47,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 834,
+                  "linha": 48,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "preco > 0",
+              "intervalo": {
+                "inicio": {
+                  "indice": 840,
+                  "linha": 48,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 850,
+                  "linha": 49,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "quantidade >= 0",
+              "intervalo": {
+                "inicio": {
+                  "indice": 856,
+                  "linha": 49,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 872,
+                  "linha": 50,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "estoque_minimo >= 0",
+              "intervalo": {
+                "inicio": {
+                  "indice": 878,
+                  "linha": 50,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 898,
+                  "linha": 51,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "categoria em [ ELETRONICOS , ALIMENTOS , LIMPEZA , ESCRITORIO , OUTROS ]",
+              "intervalo": {
+                "inicio": {
+                  "indice": 904,
+                  "linha": 51,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 971,
+                  "linha": 52,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 808,
+              "linha": 46,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 976,
+              "linha": 52,
+              "coluna": 6
+            }
+          }
+        },
+        "effects": {
+          "tipo": "bloco_generico",
+          "palavraChave": "effects",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "persistencia estoque criticidade = alta",
+              "intervalo": {
+                "inicio": {
+                  "indice": 997,
+                  "linha": 54,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1037,
+                  "linha": 55,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "auditoria produto_criado criticidade = media",
+              "intervalo": {
+                "inicio": {
+                  "indice": 1043,
+                  "linha": 55,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1088,
+                  "linha": 56,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 981,
+              "linha": 53,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1093,
+              "linha": 56,
+              "coluna": 6
+            }
+          }
+        },
+        "guarantees": {
+          "tipo": "bloco_generico",
+          "palavraChave": "guarantees",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "produto existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 1216,
+                  "linha": 61,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1231,
+                  "linha": 62,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1197,
+              "linha": 60,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1236,
+              "linha": 62,
+              "coluna": 6
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 549,
+            "linha": 35,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 1240,
+            "linha": 63,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "task",
+        "nome": "listar_produtos",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "task",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "input",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "categoria",
+                  "valor": "CategoriaProduto",
+                  "modificadores": [
+                    "optional"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1285,
+                      "linha": 67,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1322,
+                      "linha": 68,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "apenas_estoque_baixo",
+                  "valor": "Booleano",
+                  "modificadores": [
+                    "optional"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1328,
+                      "linha": 68,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1368,
+                      "linha": 69,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1271,
+                  "linha": 66,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1373,
+                  "linha": 69,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "output",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "resultado",
+                  "valor": "ListaProdutos",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1393,
+                      "linha": 71,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1418,
+                      "linha": 72,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1378,
+                  "linha": 70,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1423,
+                  "linha": 72,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "effects",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "consulta estoque criticidade = baixa",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1444,
+                      "linha": 74,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1481,
+                      "linha": 75,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1428,
+                  "linha": 73,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1486,
+                  "linha": 75,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "guarantees",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "resultado existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1510,
+                      "linha": 77,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1527,
+                      "linha": 78,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1491,
+                  "linha": 76,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1532,
+                  "linha": 78,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 1265,
+              "linha": 65,
+              "coluna": 24
+            },
+            "fim": {
+              "indice": 1536,
+              "linha": 79,
+              "coluna": 4
+            }
+          }
+        },
+        "input": {
+          "tipo": "bloco_generico",
+          "palavraChave": "input",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "categoria",
+              "valor": "CategoriaProduto",
+              "modificadores": [
+                "optional"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1285,
+                  "linha": 67,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1322,
+                  "linha": 68,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "apenas_estoque_baixo",
+              "valor": "Booleano",
+              "modificadores": [
+                "optional"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1328,
+                  "linha": 68,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1368,
+                  "linha": 69,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1271,
+              "linha": 66,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1373,
+              "linha": 69,
+              "coluna": 6
+            }
+          }
+        },
+        "output": {
+          "tipo": "bloco_generico",
+          "palavraChave": "output",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "resultado",
+              "valor": "ListaProdutos",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1393,
+                  "linha": 71,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1418,
+                  "linha": 72,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1378,
+              "linha": 70,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1423,
+              "linha": 72,
+              "coluna": 6
+            }
+          }
+        },
+        "effects": {
+          "tipo": "bloco_generico",
+          "palavraChave": "effects",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "consulta estoque criticidade = baixa",
+              "intervalo": {
+                "inicio": {
+                  "indice": 1444,
+                  "linha": 74,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1481,
+                  "linha": 75,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1428,
+              "linha": 73,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1486,
+              "linha": 75,
+              "coluna": 6
+            }
+          }
+        },
+        "guarantees": {
+          "tipo": "bloco_generico",
+          "palavraChave": "guarantees",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "resultado existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 1510,
+                  "linha": 77,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1527,
+                  "linha": 78,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1491,
+              "linha": 76,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1532,
+              "linha": 78,
+              "coluna": 6
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 1244,
+            "linha": 65,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 1536,
+            "linha": 79,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "task",
+        "nome": "obter_produto",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "task",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "input",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "id",
+                  "valor": "Id",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1579,
+                      "linha": 83,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1595,
+                      "linha": 84,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1565,
+                  "linha": 82,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1600,
+                  "linha": 84,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "output",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "produto",
+                  "valor": "Produto",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1620,
+                      "linha": 86,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1637,
+                      "linha": 87,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1605,
+                  "linha": 85,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1642,
+                  "linha": 87,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "desconhecido",
+              "nome": "errors",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "produto_nao_encontrado",
+                  "valor": "Produto nao encontrado.",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1662,
+                      "linha": 89,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1712,
+                      "linha": 90,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1647,
+                  "linha": 88,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1717,
+                  "linha": 90,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "guarantees",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "produto existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1741,
+                      "linha": 92,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1756,
+                      "linha": 93,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1722,
+                  "linha": 91,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1761,
+                  "linha": 93,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 1559,
+              "linha": 81,
+              "coluna": 22
+            },
+            "fim": {
+              "indice": 1765,
+              "linha": 94,
+              "coluna": 4
+            }
+          }
+        },
+        "input": {
+          "tipo": "bloco_generico",
+          "palavraChave": "input",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "id",
+              "valor": "Id",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1579,
+                  "linha": 83,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1595,
+                  "linha": 84,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1565,
+              "linha": 82,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1600,
+              "linha": 84,
+              "coluna": 6
+            }
+          }
+        },
+        "output": {
+          "tipo": "bloco_generico",
+          "palavraChave": "output",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "produto",
+              "valor": "Produto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1620,
+                  "linha": 86,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1637,
+                  "linha": 87,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1605,
+              "linha": 85,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1642,
+              "linha": 87,
+              "coluna": 6
+            }
+          }
+        },
+        "guarantees": {
+          "tipo": "bloco_generico",
+          "palavraChave": "guarantees",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "produto existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 1741,
+                  "linha": 92,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1756,
+                  "linha": 93,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1722,
+              "linha": 91,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1761,
+              "linha": 93,
+              "coluna": 6
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 1540,
+            "linha": 81,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 1765,
+            "linha": 94,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "task",
+        "nome": "atualizar_produto",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "task",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "input",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "id",
+                  "valor": "Id",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1812,
+                      "linha": 98,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1828,
+                      "linha": 99,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "nome",
+                  "valor": "Texto",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1834,
+                      "linha": 99,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1846,
+                      "linha": 100,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "preco",
+                  "valor": "Decimal",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1852,
+                      "linha": 100,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1867,
+                      "linha": 101,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "quantidade",
+                  "valor": "Inteiro",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1873,
+                      "linha": 101,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1893,
+                      "linha": 102,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "estoque_minimo",
+                  "valor": "Inteiro",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1899,
+                      "linha": 102,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1923,
+                      "linha": 103,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "categoria",
+                  "valor": "CategoriaProduto",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1929,
+                      "linha": 103,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1957,
+                      "linha": 104,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1798,
+                  "linha": 97,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 1962,
+                  "linha": 104,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "output",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "produto",
+                  "valor": "Produto",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 1982,
+                      "linha": 106,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 1999,
+                      "linha": 107,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1967,
+                  "linha": 105,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2004,
+                  "linha": 107,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "rules",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "id existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2023,
+                      "linha": 109,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2033,
+                      "linha": 110,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2009,
+                  "linha": 108,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2038,
+                  "linha": 110,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "effects",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "persistencia estoque criticidade = alta",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2059,
+                      "linha": 112,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2099,
+                      "linha": 113,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "auditoria produto_atualizado criticidade = media",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2105,
+                      "linha": 113,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2154,
+                      "linha": 114,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2043,
+                  "linha": 111,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2159,
+                  "linha": 114,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "desconhecido",
+              "nome": "errors",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "entrada_invalida",
+                  "valor": "Os dados informados nao atendem as regras do produto.",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2179,
+                      "linha": 116,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2253,
+                      "linha": 117,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "produto_nao_encontrado",
+                  "valor": "Produto nao encontrado.",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2259,
+                      "linha": 117,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2309,
+                      "linha": 118,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2164,
+                  "linha": 115,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2314,
+                  "linha": 118,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "guarantees",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "produto existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2338,
+                      "linha": 120,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2353,
+                      "linha": 121,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2319,
+                  "linha": 119,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2358,
+                  "linha": 121,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 1792,
+              "linha": 96,
+              "coluna": 26
+            },
+            "fim": {
+              "indice": 2362,
+              "linha": 122,
+              "coluna": 4
+            }
+          }
+        },
+        "input": {
+          "tipo": "bloco_generico",
+          "palavraChave": "input",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "id",
+              "valor": "Id",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1812,
+                  "linha": 98,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1828,
+                  "linha": 99,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "nome",
+              "valor": "Texto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1834,
+                  "linha": 99,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1846,
+                  "linha": 100,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "preco",
+              "valor": "Decimal",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1852,
+                  "linha": 100,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1867,
+                  "linha": 101,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "quantidade",
+              "valor": "Inteiro",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1873,
+                  "linha": 101,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1893,
+                  "linha": 102,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "estoque_minimo",
+              "valor": "Inteiro",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1899,
+                  "linha": 102,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1923,
+                  "linha": 103,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "categoria",
+              "valor": "CategoriaProduto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1929,
+                  "linha": 103,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1957,
+                  "linha": 104,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1798,
+              "linha": 97,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 1962,
+              "linha": 104,
+              "coluna": 6
+            }
+          }
+        },
+        "output": {
+          "tipo": "bloco_generico",
+          "palavraChave": "output",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "produto",
+              "valor": "Produto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 1982,
+                  "linha": 106,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 1999,
+                  "linha": 107,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 1967,
+              "linha": 105,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2004,
+              "linha": 107,
+              "coluna": 6
+            }
+          }
+        },
+        "rules": {
+          "tipo": "bloco_generico",
+          "palavraChave": "rules",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "id existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2023,
+                  "linha": 109,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2033,
+                  "linha": 110,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2009,
+              "linha": 108,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2038,
+              "linha": 110,
+              "coluna": 6
+            }
+          }
+        },
+        "effects": {
+          "tipo": "bloco_generico",
+          "palavraChave": "effects",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "persistencia estoque criticidade = alta",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2059,
+                  "linha": 112,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2099,
+                  "linha": 113,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "auditoria produto_atualizado criticidade = media",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2105,
+                  "linha": 113,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2154,
+                  "linha": 114,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2043,
+              "linha": 111,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2159,
+              "linha": 114,
+              "coluna": 6
+            }
+          }
+        },
+        "guarantees": {
+          "tipo": "bloco_generico",
+          "palavraChave": "guarantees",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "produto existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2338,
+                  "linha": 120,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2353,
+                  "linha": 121,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2319,
+              "linha": 119,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2358,
+              "linha": 121,
+              "coluna": 6
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 1769,
+            "linha": 96,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 2362,
+            "linha": 122,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "task",
+        "nome": "remover_produto",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "task",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "input",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "id",
+                  "valor": "Id",
+                  "modificadores": [
+                    "required"
+                  ],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2407,
+                      "linha": 126,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2423,
+                      "linha": 127,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2393,
+                  "linha": 125,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2428,
+                  "linha": 127,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "output",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "removido",
+                  "valor": "Booleano",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2448,
+                      "linha": 129,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2467,
+                      "linha": 130,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "campo",
+                  "nome": "id",
+                  "valor": "Id",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2473,
+                      "linha": 130,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2480,
+                      "linha": 131,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2433,
+                  "linha": 128,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2485,
+                  "linha": 131,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "effects",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "persistencia estoque criticidade = alta",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2506,
+                      "linha": 133,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2546,
+                      "linha": 134,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "auditoria produto_removido criticidade = media",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2552,
+                      "linha": 134,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2599,
+                      "linha": 135,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2490,
+                  "linha": 132,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2604,
+                  "linha": 135,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "desconhecido",
+              "nome": "errors",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "produto_nao_encontrado",
+                  "valor": "Produto nao encontrado.",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2624,
+                      "linha": 137,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2674,
+                      "linha": 138,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2609,
+                  "linha": 136,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2679,
+                  "linha": 138,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "guarantees",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "removido == verdadeiro",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2703,
+                      "linha": 140,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2726,
+                      "linha": 141,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "id existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2732,
+                      "linha": 141,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2742,
+                      "linha": 142,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2684,
+                  "linha": 139,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2747,
+                  "linha": 142,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 2387,
+              "linha": 124,
+              "coluna": 24
+            },
+            "fim": {
+              "indice": 2751,
+              "linha": 143,
+              "coluna": 4
+            }
+          }
+        },
+        "input": {
+          "tipo": "bloco_generico",
+          "palavraChave": "input",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "id",
+              "valor": "Id",
+              "modificadores": [
+                "required"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2407,
+                  "linha": 126,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2423,
+                  "linha": 127,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2393,
+              "linha": 125,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2428,
+              "linha": 127,
+              "coluna": 6
+            }
+          }
+        },
+        "output": {
+          "tipo": "bloco_generico",
+          "palavraChave": "output",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "removido",
+              "valor": "Booleano",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2448,
+                  "linha": 129,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2467,
+                  "linha": 130,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "id",
+              "valor": "Id",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2473,
+                  "linha": 130,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2480,
+                  "linha": 131,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2433,
+              "linha": 128,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2485,
+              "linha": 131,
+              "coluna": 6
+            }
+          }
+        },
+        "effects": {
+          "tipo": "bloco_generico",
+          "palavraChave": "effects",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "persistencia estoque criticidade = alta",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2506,
+                  "linha": 133,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2546,
+                  "linha": 134,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "auditoria produto_removido criticidade = media",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2552,
+                  "linha": 134,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2599,
+                  "linha": 135,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2490,
+              "linha": 132,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2604,
+              "linha": 135,
+              "coluna": 6
+            }
+          }
+        },
+        "guarantees": {
+          "tipo": "bloco_generico",
+          "palavraChave": "guarantees",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "removido == verdadeiro",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2703,
+                  "linha": 140,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2726,
+                  "linha": 141,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "id existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2732,
+                  "linha": 141,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2742,
+                  "linha": 142,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2684,
+              "linha": 139,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2747,
+              "linha": 142,
+              "coluna": 6
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 2366,
+            "linha": 124,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 2751,
+            "linha": 143,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "task",
+        "nome": "calcular_valor_total_inventario",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "task",
+          "campos": [],
+          "linhas": [],
+          "blocos": [
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "input",
+              "campos": [],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2798,
+                  "linha": 146,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2806,
+                  "linha": 146,
+                  "coluna": 13
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "output",
+              "campos": [
+                {
+                  "tipo": "campo",
+                  "nome": "resultado",
+                  "valor": "ValorInventario",
+                  "modificadores": [],
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2826,
+                      "linha": 148,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2853,
+                      "linha": 149,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "linhas": [],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2811,
+                  "linha": 147,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2858,
+                  "linha": 149,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "effects",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "consulta estoque criticidade = baixa",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2879,
+                      "linha": 151,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2916,
+                      "linha": 152,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "auditoria valor_inventario_consultado criticidade = baixa",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 2922,
+                      "linha": 152,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 2980,
+                      "linha": 153,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2863,
+                  "linha": 150,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 2985,
+                  "linha": 153,
+                  "coluna": 6
+                }
+              }
+            },
+            {
+              "tipo": "bloco_generico",
+              "palavraChave": "guarantees",
+              "campos": [],
+              "linhas": [
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "resultado existe",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 3009,
+                      "linha": 155,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 3026,
+                      "linha": 156,
+                      "coluna": 1
+                    }
+                  }
+                },
+                {
+                  "tipo": "linha_declarativa",
+                  "conteudo": "resultado.total_geral >= 0",
+                  "intervalo": {
+                    "inicio": {
+                      "indice": 3032,
+                      "linha": 156,
+                      "coluna": 7
+                    },
+                    "fim": {
+                      "indice": 3059,
+                      "linha": 157,
+                      "coluna": 1
+                    }
+                  }
+                }
+              ],
+              "blocos": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2990,
+                  "linha": 154,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3064,
+                  "linha": 157,
+                  "coluna": 6
+                }
+              }
+            }
+          ],
+          "intervalo": {
+            "inicio": {
+              "indice": 2792,
+              "linha": 145,
+              "coluna": 40
+            },
+            "fim": {
+              "indice": 3068,
+              "linha": 158,
+              "coluna": 4
+            }
+          }
+        },
+        "input": {
+          "tipo": "bloco_generico",
+          "palavraChave": "input",
+          "campos": [],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2798,
+              "linha": 146,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2806,
+              "linha": 146,
+              "coluna": 13
+            }
+          }
+        },
+        "output": {
+          "tipo": "bloco_generico",
+          "palavraChave": "output",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "resultado",
+              "valor": "ValorInventario",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 2826,
+                  "linha": 148,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2853,
+                  "linha": 149,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2811,
+              "linha": 147,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2858,
+              "linha": 149,
+              "coluna": 6
+            }
+          }
+        },
+        "effects": {
+          "tipo": "bloco_generico",
+          "palavraChave": "effects",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "consulta estoque criticidade = baixa",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2879,
+                  "linha": 151,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2916,
+                  "linha": 152,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "auditoria valor_inventario_consultado criticidade = baixa",
+              "intervalo": {
+                "inicio": {
+                  "indice": 2922,
+                  "linha": 152,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 2980,
+                  "linha": 153,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2863,
+              "linha": 150,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 2985,
+              "linha": 153,
+              "coluna": 6
+            }
+          }
+        },
+        "guarantees": {
+          "tipo": "bloco_generico",
+          "palavraChave": "guarantees",
+          "campos": [],
+          "linhas": [
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "resultado existe",
+              "intervalo": {
+                "inicio": {
+                  "indice": 3009,
+                  "linha": 155,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 3026,
+                  "linha": 156,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "linha_declarativa",
+              "conteudo": "resultado.total_geral >= 0",
+              "intervalo": {
+                "inicio": {
+                  "indice": 3032,
+                  "linha": 156,
+                  "coluna": 7
+                },
+                "fim": {
+                  "indice": 3059,
+                  "linha": 157,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 2990,
+              "linha": 154,
+              "coluna": 5
+            },
+            "fim": {
+              "indice": 3064,
+              "linha": 157,
+              "coluna": 6
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 2755,
+            "linha": 145,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 3068,
+            "linha": 158,
+            "coluna": 4
+          }
+        }
+      }
+    ],
+    "flows": [],
+    "routes": [
+      {
+        "tipo": "route",
+        "nome": "criar_produto_publico",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "route",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "metodo",
+              "valor": "POST",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3106,
+                  "linha": 161,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3119,
+                  "linha": 162,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "caminho",
+              "valor": "/",
+              "modificadores": [
+                "produtos"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3123,
+                  "linha": 162,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3142,
+                  "linha": 163,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "task",
+              "valor": "criar_produto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3146,
+                  "linha": 163,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3166,
+                  "linha": 164,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 3100,
+              "linha": 160,
+              "coluna": 31
+            },
+            "fim": {
+              "indice": 3169,
+              "linha": 164,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 3072,
+            "linha": 160,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 3169,
+            "linha": 164,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "route",
+        "nome": "listar_produtos_publico",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "route",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "metodo",
+              "valor": "GET",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3209,
+                  "linha": 167,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3221,
+                  "linha": 168,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "caminho",
+              "valor": "/",
+              "modificadores": [
+                "produtos"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3225,
+                  "linha": 168,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3244,
+                  "linha": 169,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "task",
+              "valor": "listar_produtos",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3248,
+                  "linha": 169,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3270,
+                  "linha": 170,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 3203,
+              "linha": 166,
+              "coluna": 33
+            },
+            "fim": {
+              "indice": 3273,
+              "linha": 170,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 3173,
+            "linha": 166,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 3273,
+            "linha": 170,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "route",
+        "nome": "obter_produto_publico",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "route",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "metodo",
+              "valor": "GET",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3311,
+                  "linha": 173,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3323,
+                  "linha": 174,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "caminho",
+              "valor": "/produtos/{id}",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3327,
+                  "linha": 174,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3353,
+                  "linha": 175,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "task",
+              "valor": "obter_produto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3357,
+                  "linha": 175,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3377,
+                  "linha": 176,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 3305,
+              "linha": 172,
+              "coluna": 31
+            },
+            "fim": {
+              "indice": 3380,
+              "linha": 176,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 3277,
+            "linha": 172,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 3380,
+            "linha": 176,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "route",
+        "nome": "atualizar_produto_publico",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "route",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "metodo",
+              "valor": "PUT",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3422,
+                  "linha": 179,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3434,
+                  "linha": 180,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "caminho",
+              "valor": "/produtos/{id}",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3438,
+                  "linha": 180,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3464,
+                  "linha": 181,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "task",
+              "valor": "atualizar_produto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3468,
+                  "linha": 181,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3492,
+                  "linha": 182,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 3416,
+              "linha": 178,
+              "coluna": 35
+            },
+            "fim": {
+              "indice": 3495,
+              "linha": 182,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 3384,
+            "linha": 178,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 3495,
+            "linha": 182,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "route",
+        "nome": "remover_produto_publico",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "route",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "metodo",
+              "valor": "DELETE",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3535,
+                  "linha": 185,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3550,
+                  "linha": 186,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "caminho",
+              "valor": "/produtos/{id}",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3554,
+                  "linha": 186,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3580,
+                  "linha": 187,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "task",
+              "valor": "remover_produto",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3584,
+                  "linha": 187,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3606,
+                  "linha": 188,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 3529,
+              "linha": 184,
+              "coluna": 33
+            },
+            "fim": {
+              "indice": 3609,
+              "linha": 188,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 3499,
+            "linha": 184,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 3609,
+            "linha": 188,
+            "coluna": 4
+          }
+        }
+      },
+      {
+        "tipo": "route",
+        "nome": "calcular_valor_total_inventario_publico",
+        "corpo": {
+          "tipo": "bloco_generico",
+          "palavraChave": "route",
+          "campos": [
+            {
+              "tipo": "campo",
+              "nome": "metodo",
+              "valor": "GET",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3665,
+                  "linha": 191,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3677,
+                  "linha": 192,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "caminho",
+              "valor": "/",
+              "modificadores": [
+                "produtos",
+                "/",
+                "inventario",
+                "/",
+                "valor-total"
+              ],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3681,
+                  "linha": 192,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3723,
+                  "linha": 193,
+                  "coluna": 1
+                }
+              }
+            },
+            {
+              "tipo": "campo",
+              "nome": "task",
+              "valor": "calcular_valor_total_inventario",
+              "modificadores": [],
+              "intervalo": {
+                "inicio": {
+                  "indice": 3727,
+                  "linha": 193,
+                  "coluna": 5
+                },
+                "fim": {
+                  "indice": 3765,
+                  "linha": 194,
+                  "coluna": 1
+                }
+              }
+            }
+          ],
+          "linhas": [],
+          "blocos": [],
+          "intervalo": {
+            "inicio": {
+              "indice": 3659,
+              "linha": 190,
+              "coluna": 49
+            },
+            "fim": {
+              "indice": 3768,
+              "linha": 194,
+              "coluna": 4
+            }
+          }
+        },
+        "intervalo": {
+          "inicio": {
+            "indice": 3613,
+            "linha": 190,
+            "coluna": 3
+          },
+          "fim": {
+            "indice": 3768,
+            "linha": 194,
+            "coluna": 4
+          }
+        }
+      }
+    ],
+    "workers": [],
+    "eventos": [],
+    "filas": [],
+    "crons": [],
+    "webhooks": [],
+    "caches": [],
+    "storages": [],
+    "policies": [],
+    "states": [],
+    "extras": [],
+    "intervalo": {
+      "inicio": {
+        "indice": 0,
+        "linha": 1,
+        "coluna": 1
+      },
+      "fim": {
+        "indice": 3770,
+        "linha": 195,
+        "coluna": 2
+      }
+    }
+  }
+}

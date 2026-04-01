@@ -1,0 +1,12 @@
+MODO: resumo
+MODULO: experimentos.estoque.controle
+FAZ: governa 6 rota(s), 6 task(s) com foco em criar produto publico
+PERFIL: publico
+CONSUMER_FRAMEWORK: nextjs-consumer
+APP_ROUTES: nenhum
+CONSUMER_SURFACES: nenhum
+CONSUMER_BRIDGES: nenhum
+PUBLICO: DELETE /produtos/{id}, GET /produtos (+4)
+TAREFAS: criar_produto, listar_produtos (+4)
+ENTRADAS: criar_produto(nome, preco, quantidade, estoque_minimo), listar_produtos(categoria, apenas_estoque_baixo) (+2)
+SAIDAS: criar_produto(produto), listar_produtos(resultado) (+2)

@@ -1,0 +1,195 @@
+module experimentos.estoque.controle {
+  enum CategoriaProduto {
+    ELETRONICOS,
+    ALIMENTOS,
+    LIMPEZA,
+    ESCRITORIO,
+    OUTROS
+  }
+
+  entity Produto {
+    fields {
+      id: Id
+      nome: Texto
+      preco: Decimal
+      quantidade: Inteiro
+      estoque_minimo: Inteiro
+      categoria: CategoriaProduto
+    }
+  }
+
+  type ListaProdutos {
+    fields {
+      items: Lista<Produto>
+      total: Inteiro
+    }
+  }
+
+  type ValorInventario {
+    fields {
+      total_geral: Decimal
+      valor_por_categoria: Mapa<Texto, Decimal>
+    }
+  }
+
+  task criar_produto {
+    input {
+      nome: Texto required
+      preco: Decimal required
+      quantidade: Inteiro required
+      estoque_minimo: Inteiro required
+      categoria: CategoriaProduto required
+    }
+    output {
+      produto: Produto
+    }
+    rules {
+      nome existe
+      preco > 0
+      quantidade >= 0
+      estoque_minimo >= 0
+      categoria em [ELETRONICOS, ALIMENTOS, LIMPEZA, ESCRITORIO, OUTROS]
+    }
+    effects {
+      persistencia estoque criticidade = alta
+      auditoria produto_criado criticidade = media
+    }
+    errors {
+      entrada_invalida: "Os dados informados nao atendem as regras do produto."
+    }
+    guarantees {
+      produto existe
+    }
+  }
+
+  task listar_produtos {
+    input {
+      categoria: CategoriaProduto optional
+      apenas_estoque_baixo: Booleano optional
+    }
+    output {
+      resultado: ListaProdutos
+    }
+    effects {
+      consulta estoque criticidade = baixa
+    }
+    guarantees {
+      resultado existe
+    }
+  }
+
+  task obter_produto {
+    input {
+      id: Id required
+    }
+    output {
+      produto: Produto
+    }
+    errors {
+      produto_nao_encontrado: "Produto nao encontrado."
+    }
+    guarantees {
+      produto existe
+    }
+  }
+
+  task atualizar_produto {
+    input {
+      id: Id required
+      nome: Texto
+      preco: Decimal
+      quantidade: Inteiro
+      estoque_minimo: Inteiro
+      categoria: CategoriaProduto
+    }
+    output {
+      produto: Produto
+    }
+    rules {
+      id existe
+    }
+    effects {
+      persistencia estoque criticidade = alta
+      auditoria produto_atualizado criticidade = media
+    }
+    errors {
+      entrada_invalida: "Os dados informados nao atendem as regras do produto."
+      produto_nao_encontrado: "Produto nao encontrado."
+    }
+    guarantees {
+      produto existe
+    }
+  }
+
+  task remover_produto {
+    input {
+      id: Id required
+    }
+    output {
+      removido: Booleano
+      id: Id
+    }
+    effects {
+      persistencia estoque criticidade = alta
+      auditoria produto_removido criticidade = media
+    }
+    errors {
+      produto_nao_encontrado: "Produto nao encontrado."
+    }
+    guarantees {
+      removido == verdadeiro
+      id existe
+    }
+  }
+
+  task calcular_valor_total_inventario {
+    input {}
+    output {
+      resultado: ValorInventario
+    }
+    effects {
+      consulta estoque criticidade = baixa
+      auditoria valor_inventario_consultado criticidade = baixa
+    }
+    guarantees {
+      resultado existe
+      resultado.total_geral >= 0
+    }
+  }
+
+  route criar_produto_publico {
+    metodo: POST
+    caminho: /produtos
+    task: criar_produto
+  }
+
+  route listar_produtos_publico {
+    metodo: GET
+    caminho: /produtos
+    task: listar_produtos
+  }
+
+  route obter_produto_publico {
+    metodo: GET
+    caminho: "/produtos/{id}"
+    task: obter_produto
+  }
+
+  route atualizar_produto_publico {
+    metodo: PUT
+    caminho: "/produtos/{id}"
+    task: atualizar_produto
+  }
+
+  route remover_produto_publico {
+    metodo: DELETE
+    caminho: "/produtos/{id}"
+    task: remover_produto
+  }
+
+  route calcular_valor_total_inventario_publico {
+    metodo: GET
+    caminho: /produtos/inventario/valor-total
+    task: calcular_valor_total_inventario
+  }
+}

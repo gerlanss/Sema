@@ -1,0 +1,1248 @@
+{
+  "comando": "drift",
+  "caminho": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+  "modulo": "experimentos.estoque.controle",
+  "sucesso": false,
+  "resumo": {
+    "caminho": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+    "modulo": "experimentos.estoque.controle",
+    "implsValidos": 0,
+    "implsQuebrados": 0,
+    "vinculosValidos": 0,
+    "vinculosQuebrados": 0,
+    "recursosValidos": 0,
+    "recursosDivergentesCount": 0,
+    "tasksSemImplementacao": 6,
+    "scoreMedio": 50,
+    "confiancaGeral": "baixa",
+    "arquivosRelacionados": [
+      "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+      "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+      "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+    ],
+    "arquivosProvaveisEditar": [
+      "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+      "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+      "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+    ],
+    "consumerFramework": null,
+    "appRoutes": [],
+    "consumerSurfaces": [],
+    "consumerBridges": [],
+    "checksSugeridos": [
+      "rodar sema validar --json",
+      "verificar guarantees",
+      "revisar efeitos operacionais"
+    ],
+    "lacunas": [
+      "sem_impl",
+      "sem_vinculos",
+      "execucao_implicita"
+    ],
+    "tasks": [
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "criar_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "alto",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "listar_produtos",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "medio",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.EstoqueSemaMedio.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "EstoqueSemaMedio.listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "obter_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "baixo",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.EstoqueSemaMedio.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "EstoqueSemaMedio.obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "atualizar_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "alto",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "remover_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "alto",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.EstoqueSemaMedio.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "EstoqueSemaMedio.removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "calcular_valor_total_inventario",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "medio",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      }
+    ],
+    "rotasDivergentes": [
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "criar_produto_publico",
+        "metodo": "POST",
+        "caminho": "/produtos",
+        "motivo": "Nenhuma rota publica POST /produtos foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "listar_produtos_publico",
+        "metodo": "GET",
+        "caminho": "/produtos",
+        "motivo": "Nenhuma rota publica GET /produtos foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "obter_produto_publico",
+        "metodo": "GET",
+        "caminho": "/produtos/{id}",
+        "motivo": "Nenhuma rota publica GET /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "atualizar_produto_publico",
+        "metodo": "PUT",
+        "caminho": "/produtos/{id}",
+        "motivo": "Nenhuma rota publica PUT /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "remover_produto_publico",
+        "metodo": "DELETE",
+        "caminho": "/produtos/{id}",
+        "motivo": "Nenhuma rota publica DELETE /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "calcular_valor_total_inventario_publico",
+        "metodo": "GET",
+        "caminho": "/produtos/inventario/valor-total",
+        "motivo": "Nenhuma rota publica GET /produtos/inventario/valor-total foi encontrada no codigo legado para o framework esperado."
+      }
+    ],
+    "recursosDivergentes": [],
+    "vinculosQuebradosDetalhes": []
+  },
+  "drift": {
+    "comando": "drift",
+    "sucesso": false,
+    "consumerFramework": "nextjs-consumer",
+    "appRoutes": [
+      "/",
+      "/ranking"
+    ],
+    "consumerSurfaces": [
+      {
+        "rota": "/",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\main.dart",
+        "tipoArquivo": "app"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-angular-consumer\\src\\app\\features\\ranking\\ranking-page.component.ts",
+        "tipoArquivo": "component"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-consumer\\src\\app\\ranking\\error.tsx",
+        "tipoArquivo": "error"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-consumer\\src\\app\\ranking\\loading.tsx",
+        "tipoArquivo": "loading"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\pacotes\\cli\\src\\pages\\ranking.ts",
+        "tipoArquivo": "page"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-consumer\\src\\app\\ranking\\page.tsx",
+        "tipoArquivo": "page"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-react-vite-consumer\\src\\pages\\ranking.ts",
+        "tipoArquivo": "page"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\testes\\integracao\\pages\\ranking.ts",
+        "tipoArquivo": "page"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts",
+        "tipoArquivo": "router"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\router.dart",
+        "tipoArquivo": "router"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-react-vite-consumer\\src\\router.tsx",
+        "tipoArquivo": "router"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\testes\\integracao\\futebot-fixture.ts",
+        "tipoArquivo": "router"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-angular-consumer\\src\\app\\app.routes.ts",
+        "tipoArquivo": "routes"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-angular-consumer\\src\\app\\features\\ranking\\ranking.routes.ts",
+        "tipoArquivo": "routes"
+      },
+      {
+        "rota": "/ranking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\screens\\ranking_screen.dart",
+        "tipoArquivo": "screen"
+      }
+    ],
+    "consumerBridges": [
+      {
+        "caminho": "ranking_showroom_angular_consumer.src.app.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-angular-consumer\\src\\app\\sema_consumer_bridge.ts",
+        "simbolo": "semaFetchShowroomRanking"
+      },
+      {
+        "caminho": "ranking_showroom_consumer.src.lib.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-consumer\\src\\lib\\sema_consumer_bridge.ts",
+        "simbolo": "semaFetchShowroomRanking"
+      },
+      {
+        "caminho": "ranking_showroom_flutter_consumer.lib.main.main",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\main.dart",
+        "simbolo": "main"
+      },
+      {
+        "caminho": "ranking_showroom_flutter_consumer.lib.screens.ranking_screen.initState",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\screens\\ranking_screen.dart",
+        "simbolo": "initState"
+      },
+      {
+        "caminho": "ranking_showroom_flutter_consumer.lib.screens.ranking_screen.setState",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\screens\\ranking_screen.dart",
+        "simbolo": "setState"
+      },
+      {
+        "caminho": "ranking_showroom_flutter_consumer.lib.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\sema_consumer_bridge.dart",
+        "simbolo": "semaFetchShowroomRanking"
+      },
+      {
+        "caminho": "ranking_showroom_react_vite_consumer.src.lib.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-react-vite-consumer\\src\\lib\\sema_consumer_bridge.ts",
+        "simbolo": "semaFetchShowroomRanking"
+      },
+      {
+        "caminho": "showcases.ranking_showroom_angular_consumer.src.app.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-angular-consumer\\src\\app\\sema_consumer_bridge.ts",
+        "simbolo": "semaFetchShowroomRanking"
+      },
+      {
+        "caminho": "showcases.ranking_showroom_consumer.src.lib.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-consumer\\src\\lib\\sema_consumer_bridge.ts",
+        "simbolo": "semaFetchShowroomRanking"
+      },
+      {
+        "caminho": "showcases.ranking_showroom_flutter_consumer.lib.main.main",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\main.dart",
+        "simbolo": "main"
+      },
+      {
+        "caminho": "showcases.ranking_showroom_flutter_consumer.lib.screens.ranking_screen.initState",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\screens\\ranking_screen.dart",
+        "simbolo": "initState"
+      },
+      {
+        "caminho": "showcases.ranking_showroom_flutter_consumer.lib.screens.ranking_screen.setState",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\screens\\ranking_screen.dart",
+        "simbolo": "setState"
+      },
+      {
+        "caminho": "showcases.ranking_showroom_flutter_consumer.lib.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-flutter-consumer\\lib\\sema_consumer_bridge.dart",
+        "simbolo": "semaFetchShowroomRanking"
+      },
+      {
+        "caminho": "showcases.ranking_showroom_react_vite_consumer.src.lib.sema_consumer_bridge.semaFetchShowroomRanking",
+        "arquivo": "C:\\GitHub\\Sema\\showcases\\ranking-showroom-react-vite-consumer\\src\\lib\\sema_consumer_bridge.ts",
+        "simbolo": "semaFetchShowroomRanking"
+      }
+    ],
+    "modulos": [
+      {
+        "caminho": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+        "modulo": "experimentos.estoque.controle",
+        "tasks": 6,
+        "routes": 6
+      }
+    ],
+    "tasks": [
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "criar_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "alto",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.criarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "criarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "listar_produtos",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "medio",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.EstoqueSemaMedio.listarProdutos",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "EstoqueSemaMedio.listarProdutos",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "obter_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "baixo",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.EstoqueSemaMedio.obterProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "EstoqueSemaMedio.obterProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "atualizar_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "alto",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.atualizarProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "atualizarProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "remover_produto",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "alto",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.EstoqueSemaMedio.removerProduto",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "EstoqueSemaMedio.removerProduto",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "task": "calcular_valor_total_inventario",
+        "impls": 0,
+        "implsValidos": 0,
+        "implsQuebrados": 0,
+        "semImplementacao": true,
+        "scoreSemantico": 50,
+        "confiancaVinculo": "baixa",
+        "riscoOperacional": "medio",
+        "lacunas": [
+          "sem_impl",
+          "sem_vinculos",
+          "execucao_implicita"
+        ],
+        "arquivosReferenciados": [],
+        "arquivosProvaveisEditar": [
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+          "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+        ],
+        "simbolosReferenciados": [],
+        "candidatosImpl": [
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sem_sema.EstoqueSemSema.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+            "simbolo": "EstoqueSemSema.calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_baixo.EstoqueSemaBaixo.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+            "simbolo": "EstoqueSemaBaixo.calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          },
+          {
+            "origem": "ts",
+            "caminho": "estoque_comparativo.implementacoes.sema_medio.calcularValorTotalInventario",
+            "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts",
+            "simbolo": "calcularValorTotalInventario",
+            "confianca": "alta",
+            "motivo": "Nome da task bate com o simbolo encontrado no codigo vivo."
+          }
+        ],
+        "checksSugeridos": [
+          "rodar sema validar --json",
+          "verificar guarantees",
+          "revisar efeitos operacionais"
+        ]
+      }
+    ],
+    "impls_validos": [],
+    "impls_quebrados": [],
+    "vinculos_validos": [],
+    "vinculos_quebrados": [],
+    "rotas_divergentes": [
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "criar_produto_publico",
+        "metodo": "POST",
+        "caminho": "/produtos",
+        "motivo": "Nenhuma rota publica POST /produtos foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "listar_produtos_publico",
+        "metodo": "GET",
+        "caminho": "/produtos",
+        "motivo": "Nenhuma rota publica GET /produtos foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "obter_produto_publico",
+        "metodo": "GET",
+        "caminho": "/produtos/{id}",
+        "motivo": "Nenhuma rota publica GET /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "atualizar_produto_publico",
+        "metodo": "PUT",
+        "caminho": "/produtos/{id}",
+        "motivo": "Nenhuma rota publica PUT /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "remover_produto_publico",
+        "metodo": "DELETE",
+        "caminho": "/produtos/{id}",
+        "motivo": "Nenhuma rota publica DELETE /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "modulo": "experimentos.estoque.controle",
+        "route": "calcular_valor_total_inventario_publico",
+        "metodo": "GET",
+        "caminho": "/produtos/inventario/valor-total",
+        "motivo": "Nenhuma rota publica GET /produtos/inventario/valor-total foi encontrada no codigo legado para o framework esperado."
+      }
+    ],
+    "recursos_validos": [],
+    "recursos_divergentes": [],
+    "diagnosticos": [
+      {
+        "tipo": "task_sem_impl",
+        "modulo": "experimentos.estoque.controle",
+        "task": "criar_produto",
+        "mensagem": "Task \"criar_produto\" ainda nao foi ligada a nenhuma implementacao externa."
+      },
+      {
+        "tipo": "task_sem_impl",
+        "modulo": "experimentos.estoque.controle",
+        "task": "listar_produtos",
+        "mensagem": "Task \"listar_produtos\" ainda nao foi ligada a nenhuma implementacao externa."
+      },
+      {
+        "tipo": "task_sem_impl",
+        "modulo": "experimentos.estoque.controle",
+        "task": "obter_produto",
+        "mensagem": "Task \"obter_produto\" ainda nao foi ligada a nenhuma implementacao externa."
+      },
+      {
+        "tipo": "task_sem_impl",
+        "modulo": "experimentos.estoque.controle",
+        "task": "atualizar_produto",
+        "mensagem": "Task \"atualizar_produto\" ainda nao foi ligada a nenhuma implementacao externa."
+      },
+      {
+        "tipo": "task_sem_impl",
+        "modulo": "experimentos.estoque.controle",
+        "task": "remover_produto",
+        "mensagem": "Task \"remover_produto\" ainda nao foi ligada a nenhuma implementacao externa."
+      },
+      {
+        "tipo": "task_sem_impl",
+        "modulo": "experimentos.estoque.controle",
+        "task": "calcular_valor_total_inventario",
+        "mensagem": "Task \"calcular_valor_total_inventario\" ainda nao foi ligada a nenhuma implementacao externa."
+      },
+      {
+        "tipo": "rota_divergente",
+        "modulo": "experimentos.estoque.controle",
+        "route": "criar_produto_publico",
+        "mensagem": "Nenhuma rota publica POST /produtos foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "tipo": "rota_divergente",
+        "modulo": "experimentos.estoque.controle",
+        "route": "listar_produtos_publico",
+        "mensagem": "Nenhuma rota publica GET /produtos foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "tipo": "rota_divergente",
+        "modulo": "experimentos.estoque.controle",
+        "route": "obter_produto_publico",
+        "mensagem": "Nenhuma rota publica GET /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "tipo": "rota_divergente",
+        "modulo": "experimentos.estoque.controle",
+        "route": "atualizar_produto_publico",
+        "mensagem": "Nenhuma rota publica PUT /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "tipo": "rota_divergente",
+        "modulo": "experimentos.estoque.controle",
+        "route": "remover_produto_publico",
+        "mensagem": "Nenhuma rota publica DELETE /produtos/{id} foi encontrada no codigo legado para o framework esperado."
+      },
+      {
+        "tipo": "rota_divergente",
+        "modulo": "experimentos.estoque.controle",
+        "route": "calcular_valor_total_inventario_publico",
+        "mensagem": "Nenhuma rota publica GET /produtos/inventario/valor-total foi encontrada no codigo legado para o framework esperado."
+      }
+    ],
+    "resumo_operacional": {
+      "scoreMedio": 50,
+      "confiancaGeral": "baixa",
+      "riscosPrincipais": [
+        "criar_produto:alto",
+        "listar_produtos:medio",
+        "atualizar_produto:alto",
+        "remover_produto:alto",
+        "calcular_valor_total_inventario:medio"
+      ],
+      "oQueTocar": [
+        "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+        "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+        "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+      ],
+      "oQueValidar": [
+        "rodar sema validar --json",
+        "verificar guarantees",
+        "revisar efeitos operacionais"
+      ],
+      "oQueEstaFrouxo": [
+        "sem_impl",
+        "sem_vinculos",
+        "execucao_implicita"
+      ],
+      "oQueFoiInferido": []
+    }
+  }
+}

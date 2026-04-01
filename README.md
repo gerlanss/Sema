@@ -6,7 +6,19 @@ Sema e um **Protocolo de Governanca de Intencao para IA sobre software vivo em b
 
 Ela nao tenta substituir TypeScript, Python, Flask, FastAPI, NestJS, Next.js, ASP.NET Core ou qualquer stack real. O papel da Sema e outro: governar a camada de significado acima do runtime, com contrato explicito, vinculo rastreavel, fluxo, erro, efeito, garantia, execucao e contexto operacional para IA.
 
+Em termos praticos, a Sema esta menos para "ferramenta legal de geracao" e mais para **camada seria de navegacao operacional para agentes**. Ela ajuda a IA a entrar em sistema vivo sem sair inventando regra, estado, erro, default ou comportamento de producao na base do chute.
+
+Ela nao pretende substituir persistencia real, runtime, smoke test, observabilidade ou engenharia operacional. Ela governa como um agente entende, navega, altera e verifica software vivo com menos improviso e mais aderencia ao contrato.
+
 Tecnicamente, a Sema continua sendo uma linguagem de intencao. Publicamente, o framing honesto e este: ela foi desenhada para IA operar sistema vivo com menos adivinhacao e mais verificacao. Leitura humana e subproduto aceitavel, nao objetivo principal.
+
+## Tese do produto
+
+- Sema nao existe para "fazer backend" ou "fazer frontend"
+- Sema existe para governar a operacao semantica da IA sobre backend e front consumer
+- na criacao ela ja ajuda bastante
+- em edicao grande, continua e governada ela vira diferenca estrutural
+- seu valor real aparece quando o trabalho deixa de ser "gerar alguma coisa" e passa a ser "mexer em software vivo sem fazer merda"
 
 ## Comece aqui
 
@@ -76,12 +88,14 @@ sema sync-ai-entrypoints --json
 - auditoria de coerencia contra codigo real via `drift`
 - cartoes semanticos compactos via `resumo` e `prompt-curto`
 - pacote de contexto para agente via `contexto-ia`
+- camada de navegacao operacional para agente sobre software vivo
 - camada semantica acima da stack, nao no lugar dela
 
 ## O que ela nao e
 
 - gerador messianico de sistema completo
 - substituta de decisao arquitetural
+- substituta de runtime, persistencia, smoke test ou observabilidade
 - telepatia de regra de negocio
 - licenca para a IA sair editando backend no escuro
 
@@ -416,6 +430,7 @@ npm run test:smoke-real
 ## Documentacao principal
 
 - [STATUS.md](./STATUS.md)
+- [docs/posicionamento.md](./docs/posicionamento.md)
 - [docs/sintaxe.md](./docs/sintaxe.md)
 - [docs/integracao-com-ia.md](./docs/integracao-com-ia.md)
 - [docs/instalacao-e-primeiro-uso.md](./docs/instalacao-e-primeiro-uso.md)

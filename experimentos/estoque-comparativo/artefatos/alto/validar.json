@@ -1,0 +1,12 @@
+{
+  "comando": "validar",
+  "sucesso": true,
+  "resultados": [
+    {
+      "caminho": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+      "modulo": "experimentos.estoque.controle",
+      "sucesso": true,
+      "diagnosticos": []
+    }
+  ]
+}

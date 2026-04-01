@@ -31,6 +31,7 @@ Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA s
 
 Importante:
 - a Sema e protocolo de governanca semantica desenhado para IA, nao para ergonomia humana
+- a Sema funciona como camada de navegacao operacional para agente, nao como runtime magico
 - leitura humana e bonus toleravel, nao centro do produto
 - a Sema modela contratos, estados, fluxos, erros, efeitos, garantias, vinculos e execucao
 - a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
@@ -43,6 +44,7 @@ Importante:
 - esses slices oficiais cobrem `consumer bridge + superficies rastreaveis`, nao geracao completa de UI
 - a proxima camada semantica de front (`screen`, `action`, `query`, `form`, `navigation`) esta documentada como roadmap, nao como sintaxe oficial ja suportada
 - trate a Sema como cerebro semantico da aplicacao, nao como gerador magico de front-end pronto
+- nao cobre da Sema persistencia real, runtime ou smoke test automatico; isso continua sendo engenharia viva
 - se a tarefa envolver UI, priorize `appRoutes`, `consumerSurfaces` e `consumerBridges` antes de abrir arquivo aleatorio
 - evite pedir HTML unico solto quando a intencao for testar a Sema de verdade
 

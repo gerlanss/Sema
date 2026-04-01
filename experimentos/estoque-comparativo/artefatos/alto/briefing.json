@@ -1,0 +1,56 @@
+{
+  "arquivo": "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\contratos\\controle_estoque.sema",
+  "modulo": "experimentos.estoque.controle",
+  "perfilCompatibilidade": "publico",
+  "scoreSemantico": 50,
+  "confiancaGeral": "baixa",
+  "riscosPrincipais": [
+    "criar_produto:alto",
+    "listar_produtos:medio",
+    "atualizar_produto:alto",
+    "remover_produto:alto",
+    "calcular_valor_total_inventario:medio",
+    "altera_persistencia",
+    "efeito_critico",
+    "vinculo_fraco"
+  ],
+  "oQueTocar": [
+    "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+    "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+    "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+  ],
+  "arquivosProvaveisEditar": [
+    "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sem-sema.ts",
+    "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-baixo.ts",
+    "C:\\GitHub\\Sema\\experimentos\\estoque-comparativo\\implementacoes\\sema-medio.ts"
+  ],
+  "oQueValidar": [
+    "rodar sema validar --json",
+    "verificar guarantees",
+    "revisar efeitos operacionais"
+  ],
+  "oQueEstaFrouxo": [
+    "sem_impl",
+    "sem_vinculos",
+    "execucao_implicita"
+  ],
+  "oQueFoiInferido": [],
+  "simbolosRelacionados": [],
+  "superficiesImpactadas": [
+    "POST /produtos",
+    "GET /produtos",
+    "GET /produtos/{id}",
+    "PUT /produtos/{id}",
+    "DELETE /produtos/{id}",
+    "GET /produtos/inventario/valor-total"
+  ],
+  "consumerFramework": null,
+  "appRoutes": [],
+  "consumerSurfaces": [],
+  "consumerBridges": [],
+  "testesMinimos": [
+    "sema validar <arquivo> --json",
+    "sema drift <arquivo> --json",
+    "sema verificar <arquivo-ou-pasta> --json"
+  ]
+}
