@@ -6,14 +6,18 @@ import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import {
+  criarProjetoAngularConsumer,
   criarProjetoCppBridge,
   criarProjetoBridgeDart,
   criarProjetoDotnetAspNet,
   criarProjetoFirebaseWorker,
   criarProjetoFlaskEstiloGestech,
+  criarProjetoFlutterConsumer,
   criarProjetoGoHttp,
   criarProjetoNextJsAppRouter,
+  criarProjetoNextJsConsumer,
   criarProjetoPythonEstiloFuteBot,
+  criarProjetoReactViteConsumer,
   criarProjetoRustAxum,
   criarProjetoSpringBoot,
 } from "./futebot-fixture.ts";
@@ -343,6 +347,99 @@ test("cli drift resolve impls e rotas Next.js App Router sem falsos positivos de
     ]) {
       assert.equal(caminhosValidos.has(caminhoEsperado), true, `impl nextjs nao resolvido: ${caminhoEsperado}`);
     }
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve Next.js consumer com bridge e superficies App Router", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-nextjs-consumer-"));
+
+  try {
+    await criarProjetoNextJsConsumer(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.vinculos_quebrados.length, 0);
+    assert.equal(json.consumerFramework, "nextjs-consumer");
+    assert.equal(json.appRoutes.includes("/ranking"), true);
+    assert.equal(json.consumerSurfaces.some((surface: { arquivo: string }) =>
+      surface.arquivo.endsWith("src\\app\\ranking\\page.tsx")
+      || surface.arquivo.endsWith("src/app/ranking/page.tsx")), true);
+    assert.equal(json.consumerBridges.some((bridge: { caminho: string }) =>
+      bridge.caminho === "src.lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve React Vite consumer com bridge e page surfaces", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-react-vite-consumer-"));
+
+  try {
+    await criarProjetoReactViteConsumer(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.vinculos_quebrados.length, 0);
+    assert.equal(json.consumerFramework, "react-vite-consumer");
+    assert.equal(json.appRoutes.includes("/ranking"), true);
+    assert.equal(json.consumerBridges.some((bridge: { caminho: string }) =>
+      bridge.caminho === "src.lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve Angular consumer com bridge, route config e component", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-angular-consumer-"));
+
+  try {
+    await criarProjetoAngularConsumer(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.vinculos_quebrados.length, 0);
+    assert.equal(json.consumerFramework, "angular-consumer");
+    assert.equal(json.appRoutes.includes("/ranking"), true);
+    assert.equal(json.consumerSurfaces.some((surface: { arquivo: string }) =>
+      surface.arquivo.endsWith("src\\app\\app.routes.ts")
+      || surface.arquivo.endsWith("src/app/app.routes.ts")), true);
+    assert.equal(json.consumerBridges.some((bridge: { caminho: string }) =>
+      bridge.caminho === "src.app.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve Flutter consumer com bridge, router e screen", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-flutter-consumer-"));
+
+  try {
+    await criarProjetoFlutterConsumer(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.vinculos_quebrados.length, 0);
+    assert.equal(json.consumerFramework, "flutter-consumer");
+    assert.equal(json.appRoutes.includes("/ranking"), true);
+    assert.equal(json.consumerSurfaces.some((surface: { arquivo: string }) =>
+      surface.arquivo.endsWith("lib\\router.dart")
+      || surface.arquivo.endsWith("lib/router.dart")), true);
+    assert.equal(json.consumerBridges.some((bridge: { caminho: string }) =>
+      bridge.caminho === "lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

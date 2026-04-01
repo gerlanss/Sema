@@ -19,9 +19,23 @@ interface SimboloResolvido {
   simbolo: string;
 }
 
+type ConsumerFramework = "nextjs-consumer" | "react-vite-consumer" | "angular-consumer" | "flutter-consumer";
+
 interface RotaResolvida {
-  origem: "nestjs" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust";
+  origem: "nestjs" | "fastapi" | "flask" | "nextjs" | ConsumerFramework | "firebase" | "dotnet" | "java" | "go" | "rust";
   metodo: string;
+  caminho: string;
+  arquivo: string;
+  simbolo: string;
+}
+
+interface RegistroConsumerSurfaceDrift {
+  rota: string;
+  arquivo: string;
+  tipoArquivo: string;
+}
+
+interface RegistroConsumerBridgeDrift {
   caminho: string;
   arquivo: string;
   simbolo: string;
@@ -116,6 +130,10 @@ interface RegistroVinculoDrift {
 export interface ResultadoDrift {
   comando: "drift";
   sucesso: boolean;
+  consumerFramework: ConsumerFramework | null;
+  appRoutes: string[];
+  consumerSurfaces: RegistroConsumerSurfaceDrift[];
+  consumerBridges: RegistroConsumerBridgeDrift[];
   modulos: Array<{
     caminho: string;
     modulo: string | null;
@@ -503,6 +521,411 @@ function registrarSimboloTypeScript(
   }
 }
 
+function normalizarRelacaoConsumer(relacaoArquivo: string): string {
+  return relacaoArquivo.replace(/\\/g, "/");
+}
+
+function normalizarSegmentoRotaConsumer(segmento: string): string {
+  const opcionalCatchAll = segmento.match(/^\[\[\.\.\.([A-Za-z_]\w*)\]\]$/);
+  if (opcionalCatchAll) {
+    return `{${opcionalCatchAll[1]}}`;
+  }
+  const catchAll = segmento.match(/^\[\.\.\.([A-Za-z_]\w*)\]$/);
+  if (catchAll) {
+    return `{${catchAll[1]}}`;
+  }
+  const dinamico = segmento.match(/^\[([A-Za-z_]\w*)\]$/);
+  if (dinamico) {
+    return `{${dinamico[1]}}`;
+  }
+  return segmento;
+}
+
+function montarRotaConsumer(partes: string[]): string {
+  const filtradas = partes
+    .filter((segmento) => segmento && segmento !== "index" && !/^\(.*\)$/.test(segmento) && !segmento.startsWith("@"))
+    .map(normalizarSegmentoRotaConsumer);
+  return filtradas.length > 0 ? `/${filtradas.join("/")}`.replace(/\/+/g, "/") : "/";
+}
+
+function arquivoEhBridgeNextJsConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?lib\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhBridgeReactViteConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?lib\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhBridgeAngularConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|js)$/i.test(relacao);
+}
+
+function arquivoEhSuperficieNextJsConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app\/(?:(?!api\/).)*?(?:page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhSuperficieReactViteConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /^(?:src\/)?pages\/.+\.(?:ts|tsx|js|jsx)$/i.test(relacao)
+    || /^(?:src\/)?App\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhRotasReactViteConsumer(relacaoArquivo: string, codigo?: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?(?:app\/)?(?:router|routes)\.(?:ts|tsx|js|jsx)$/i.test(relacao)
+    || /from\s+["']react-router-dom["']|createBrowserRouter|RouterProvider|useRoutes\s*\(|<Routes\b|<Route\b/.test(codigo ?? "");
+}
+
+function arquivoEhRotasAngularConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app(?:\/.+)?\/[^/]+\.routes\.(?:ts|js)$/i.test(relacao);
+}
+
+function arquivoEhRotasAngularConsumerRaiz(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app\/[^/]+\.routes\.(?:ts|js)$/i.test(relacao);
+}
+
+function arquivoEhBridgeFlutterConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:lib\/)?(?:sema_consumer_bridge|api\/sema_contract_bridge|sema\/.+)\.dart$/i.test(relacao);
+}
+
+function arquivoEhSuperficieFlutterConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:lib\/)?(?:screens|pages)\/.+\.dart$/i.test(relacao)
+    || /(?:^|\/)(?:lib\/)?main\.dart$/i.test(relacao);
+}
+
+function arquivoEhRotasFlutterConsumer(relacaoArquivo: string, codigo?: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:lib\/)?(?:router|app_router|routes)\.dart$/i.test(relacao)
+    || /MaterialApp(?:\.router)?\s*\(|CupertinoApp(?:\.router)?\s*\(|GoRouter\s*\(/.test(codigo ?? "");
+}
+
+function inferirRotaNextJsConsumer(relacaoArquivo: string): RegistroConsumerSurfaceDrift | undefined {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  const segmentos = relacao.split("/");
+  const indiceSrcApp = segmentos.findIndex((segmento, indice) => segmento === "src" && segmentos[indice + 1] === "app");
+  const indiceApp = segmentos.findIndex((segmento) => segmento === "app");
+  const inicioApp = indiceSrcApp >= 0 ? indiceSrcApp + 2 : indiceApp >= 0 ? indiceApp + 1 : -1;
+  if (inicioApp < 0) {
+    return undefined;
+  }
+
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  const tipoArquivo = arquivoFinal.match(/^(page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/)?.[1] as RegistroConsumerSurfaceDrift["tipoArquivo"] | undefined;
+  if (!tipoArquivo) {
+    return undefined;
+  }
+
+  const caminhoAteArquivo = segmentos.slice(inicioApp, -1);
+  if (caminhoAteArquivo[0] === "api") {
+    return undefined;
+  }
+
+  return {
+    rota: montarRotaConsumer(caminhoAteArquivo),
+    arquivo: relacaoArquivo,
+    tipoArquivo,
+  };
+}
+
+function inferirRotaReactViteConsumer(relacaoArquivo: string): RegistroConsumerSurfaceDrift | undefined {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  if (/(?:^|\/)(?:src\/)?App\.(?:ts|tsx|js|jsx)$/i.test(relacao)) {
+    return {
+      rota: "/",
+      arquivo: relacaoArquivo,
+      tipoArquivo: "app",
+    };
+  }
+
+  const segmentos = relacao.split("/");
+  const indiceSrcPages = segmentos.findIndex((segmento, indice) => segmento === "src" && segmentos[indice + 1] === "pages");
+  const indicePages = segmentos.findIndex((segmento) => segmento === "pages");
+  const inicioPages = indiceSrcPages >= 0 ? indiceSrcPages + 2 : indicePages >= 0 ? indicePages + 1 : -1;
+  if (inicioPages < 0) {
+    return undefined;
+  }
+
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  const nomeBase = arquivoFinal.replace(/\.(?:ts|tsx|js|jsx)$/i, "");
+  return {
+    rota: montarRotaConsumer([...segmentos.slice(inicioPages, -1), nomeBase]),
+    arquivo: relacaoArquivo,
+    tipoArquivo: "page",
+  };
+}
+
+function inferirRotaFlutterConsumer(relacaoArquivo: string): RegistroConsumerSurfaceDrift | undefined {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  if (!arquivoEhSuperficieFlutterConsumer(relacao)) {
+    return undefined;
+  }
+  if (/(?:^|\/)(?:lib\/)?main\.dart$/i.test(relacao)) {
+    return {
+      rota: "/",
+      arquivo: relacaoArquivo,
+      tipoArquivo: "app",
+    };
+  }
+
+  const segmentos = relacao.split("/");
+  const indiceLibScreens = segmentos.findIndex((segmento, indice) => segmento === "lib" && ["screens", "pages"].includes(segmentos[indice + 1] ?? ""));
+  const indiceScreens = segmentos.findIndex((segmento) => segmento === "screens" || segmento === "pages");
+  const inicio = indiceLibScreens >= 0 ? indiceLibScreens + 2 : indiceScreens >= 0 ? indiceScreens + 1 : -1;
+  if (inicio < 0) {
+    return undefined;
+  }
+
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  const nomeBase = arquivoFinal
+    .replace(/\.(?:dart)$/i, "")
+    .replace(/_(screen|page)$/i, "");
+  return {
+    rota: montarRotaConsumer([...segmentos.slice(inicio, -1), nomeBase]),
+    arquivo: relacaoArquivo,
+    tipoArquivo: "screen",
+  };
+}
+
+interface RotaReactViteConsumerDrift {
+  rota: string;
+  arquivoRotas: string;
+  arquivoComponente?: string;
+}
+
+interface RotaFlutterConsumerDrift {
+  rota: string;
+  arquivoRotas: string;
+}
+
+interface RotaAngularConsumerDrift {
+  rota: string;
+  arquivoRotas: string;
+  componente?: string;
+  arquivoComponente?: string;
+  arquivoRotasFilhas?: string;
+}
+
+function normalizarRotaDeclaradaConsumer(caminhoCru: string, prefixo = "/"): string {
+  const partesPrefixo = prefixo.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  const partesCaminho = (caminhoCru ?? "").trim().replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  return montarRotaConsumer([...partesPrefixo, ...partesCaminho]);
+}
+
+function resolverImportRelativoConsumer(relacaoArquivoBase: string, especificador: string): string | undefined {
+  if (!especificador.startsWith(".")) {
+    return undefined;
+  }
+  const baseDir = path.posix.dirname(normalizarRelacaoConsumer(relacaoArquivoBase));
+  for (const sufixo of ["", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.js"]) {
+    const candidato = path.posix.normalize(path.posix.join(baseDir, `${especificador}${sufixo}`));
+    if (/\.(?:ts|tsx|js|jsx)$/i.test(candidato)) {
+      return candidato;
+    }
+  }
+  return undefined;
+}
+
+function extrairImportsTypeScriptConsumer(relacaoArquivo: string, codigo: string): Map<string, string> {
+  const imports = new Map<string, string>();
+  for (const match of codigo.matchAll(/import\s*\{\s*([^}]+)\s*\}\s*from\s*["']([^"']+)["']/g)) {
+    const arquivoImportado = resolverImportRelativoConsumer(relacaoArquivo, match[2]);
+    if (!arquivoImportado) {
+      continue;
+    }
+    for (const bruto of match[1].split(",")) {
+      const local = bruto.trim().split(/\s+as\s+/i).at(-1)?.trim();
+      if (local) {
+        imports.set(local, arquivoImportado);
+      }
+    }
+  }
+  for (const match of codigo.matchAll(/import\s+([A-Za-z_]\w*)\s+from\s*["']([^"']+)["']/g)) {
+    const arquivoImportado = resolverImportRelativoConsumer(relacaoArquivo, match[2]);
+    const local = match[1]?.trim();
+    if (arquivoImportado && local) {
+      imports.set(local, arquivoImportado);
+    }
+  }
+  return imports;
+}
+
+function extrairRotasReactViteConsumer(relacaoArquivo: string, codigo: string): RotaReactViteConsumerDrift[] {
+  const imports = extrairImportsTypeScriptConsumer(relacaoArquivo, codigo);
+  const rotas = new Map<string, RotaReactViteConsumerDrift>();
+  const registrar = (caminhoCru: string, componente?: string) => {
+    const rota = normalizarRotaDeclaradaConsumer(caminhoCru);
+    const chave = `${rota}:${normalizarRelacaoConsumer(relacaoArquivo)}:${componente ?? "router"}`;
+    rotas.set(chave, {
+      rota,
+      arquivoRotas: normalizarRelacaoConsumer(relacaoArquivo),
+      arquivoComponente: componente ? imports.get(componente) : undefined,
+    });
+  };
+
+  for (const match of codigo.matchAll(/(?:path\s*:\s*["'`]([^"'`]*)["'`]|index\s*:\s*true)[\s\S]{0,260}?(?:element\s*:\s*<\s*([A-Za-z_]\w*)|Component\s*:\s*([A-Za-z_]\w*))/g)) {
+    const caminhoCru = match[1] ?? "";
+    const componente = match[2] ?? match[3];
+    registrar(caminhoCru, componente);
+  }
+
+  for (const match of codigo.matchAll(/<Route\b[^>]*?(?:path=["'`]([^"'`]*)["'`][^>]*?)?(index\b)?[^>]*?(?:element=\{\s*<\s*([A-Za-z_]\w*)|Component=\{\s*([A-Za-z_]\w*))/g)) {
+    const caminhoCru = match[2] ? "" : (match[1] ?? "");
+    const componente = match[3] ?? match[4];
+    registrar(caminhoCru, componente);
+  }
+
+  return [...rotas.values()];
+}
+
+function normalizarRotaDeclaradaFlutter(caminhoCru: string): string {
+  return montarRotaConsumer((caminhoCru ?? "").trim().replace(/^\/+|\/+$/g, "").split("/").filter(Boolean));
+}
+
+function extrairRotasFlutterConsumer(relacaoArquivo: string, codigo: string): RotaFlutterConsumerDrift[] {
+  const rotas = new Map<string, RotaFlutterConsumerDrift>();
+  const registrar = (caminhoCru: string) => {
+    const rota = normalizarRotaDeclaradaFlutter(caminhoCru);
+    rotas.set(`${rota}:${normalizarRelacaoConsumer(relacaoArquivo)}`, {
+      rota,
+      arquivoRotas: normalizarRelacaoConsumer(relacaoArquivo),
+    });
+  };
+
+  for (const match of codigo.matchAll(/GoRoute\s*\([\s\S]{0,220}?path\s*:\s*["'`]([^"'`]+)["'`]/g)) {
+    registrar(match[1] ?? "");
+  }
+
+  for (const match of codigo.matchAll(/["'`]([^"'`]+)["'`]\s*:\s*\([^)]*\)\s*=>/g)) {
+    registrar(match[1] ?? "");
+  }
+
+  if (/home\s*:\s*(?:const\s+)?[A-Za-z_]\w*\(/.test(codigo)) {
+    registrar("/");
+  }
+
+  return [...rotas.values()];
+}
+
+function extrairRotasAngularConsumerDiretas(relacaoArquivo: string, codigo: string, prefixo = "/"): RotaAngularConsumerDrift[] {
+  const imports = extrairImportsTypeScriptConsumer(relacaoArquivo, codigo);
+
+  const rotas: RotaAngularConsumerDrift[] = [];
+  for (const match of codigo.matchAll(/path\s*:\s*["'`]([^"'`]*)["'`][\s\S]{0,320}?component\s*:\s*([A-Za-z_]\w*)/g)) {
+    const caminhoCru = (match[1] ?? "").trim();
+    const componente = match[2];
+    rotas.push({
+      rota: normalizarRotaDeclaradaConsumer(caminhoCru, prefixo),
+      arquivoRotas: normalizarRelacaoConsumer(relacaoArquivo),
+      componente,
+      arquivoComponente: imports.get(componente),
+    });
+  }
+
+  for (const match of codigo.matchAll(/path\s*:\s*["'`]([^"'`]*)["'`][\s\S]{0,320}?loadComponent\s*:\s*\(\s*\)\s*=>\s*import\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g)) {
+    const caminhoCru = (match[1] ?? "").trim();
+    const arquivoComponente = resolverImportRelativoConsumer(relacaoArquivo, match[2] ?? "");
+    rotas.push({
+      rota: normalizarRotaDeclaradaConsumer(caminhoCru, prefixo),
+      arquivoRotas: normalizarRelacaoConsumer(relacaoArquivo),
+      arquivoComponente,
+    });
+  }
+
+  for (const match of codigo.matchAll(/path\s*:\s*["'`]([^"'`]*)["'`][\s\S]{0,360}?loadChildren\s*:\s*\(\s*\)\s*=>\s*import\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g)) {
+    const caminhoCru = (match[1] ?? "").trim();
+    const arquivoRotasFilhas = resolverImportRelativoConsumer(relacaoArquivo, match[2] ?? "");
+    rotas.push({
+      rota: normalizarRotaDeclaradaConsumer(caminhoCru, prefixo),
+      arquivoRotas: normalizarRelacaoConsumer(relacaoArquivo),
+      arquivoRotasFilhas,
+    });
+  }
+
+  return rotas;
+}
+
+async function extrairRotasAngularConsumer(
+  diretorioBase: string,
+  relacaoArquivo: string,
+  prefixo = "/",
+  visitados = new Set<string>(),
+): Promise<RotaAngularConsumerDrift[]> {
+  const relacaoNormalizada = normalizarRelacaoConsumer(relacaoArquivo);
+  if (visitados.has(relacaoNormalizada)) {
+    return [];
+  }
+  visitados.add(relacaoNormalizada);
+
+  let codigo = "";
+  try {
+    codigo = await readFile(path.join(diretorioBase, relacaoNormalizada), "utf8");
+  } catch {
+    return [];
+  }
+
+  const rotas = extrairRotasAngularConsumerDiretas(relacaoNormalizada, codigo, prefixo);
+  const filhas: RotaAngularConsumerDrift[] = [];
+  for (const rota of rotas) {
+    if (!rota.arquivoRotasFilhas) {
+      continue;
+    }
+    filhas.push(...await extrairRotasAngularConsumer(diretorioBase, rota.arquivoRotasFilhas, rota.rota, visitados));
+  }
+  return [...rotas, ...filhas];
+}
+
+function simboloEhBridgeConsumer(caminho: string, arquivo: string): boolean {
+  return arquivoEhBridgeNextJsConsumer(arquivo)
+    || arquivoEhBridgeReactViteConsumer(arquivo)
+    || arquivoEhBridgeAngularConsumer(arquivo)
+    || arquivoEhBridgeFlutterConsumer(arquivo)
+    || /(?:^|\.)(?:src\.)?lib\.(?:sema_consumer_bridge|sema\.)/i.test(caminho)
+    || /(?:^|\.)(?:src\.)?app\.(?:sema_consumer_bridge|sema\.)/i.test(caminho)
+    || /(?:^|\.)(?:lib\.)?(?:sema_consumer_bridge|api\.sema_contract_bridge|sema\.)/i.test(caminho);
+}
+
+function inferirConsumerFrameworkPrincipal(
+  fontesLegado: FonteLegado[],
+  consumerSurfaces: RegistroConsumerSurfaceDrift[],
+  consumerBridges: RegistroConsumerBridgeDrift[],
+): ConsumerFramework | null {
+  const arquivos = [
+    ...consumerSurfaces.map((item) => item.arquivo),
+    ...consumerBridges.map((item) => item.arquivo),
+  ].map(normalizarRelacaoConsumer);
+  if (arquivos.some((arquivo) => /(?:^|\/)(?:src\/)?app\/(?:(?!api\/).)*?(?:page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/i.test(arquivo))) {
+    return "nextjs-consumer";
+  }
+  if (arquivos.some((arquivo) =>
+    /^(?:src\/)?pages\/.+\.(?:ts|tsx|js|jsx)$/i.test(arquivo)
+    || /^(?:src\/)?App\.(?:ts|tsx|js|jsx)$/i.test(arquivo)
+    || /(?:^|\/)(?:src\/)?(?:app\/)?(?:router|routes)\.(?:ts|tsx|js|jsx)$/i.test(arquivo))) {
+    return "react-vite-consumer";
+  }
+  if (arquivos.some((arquivo) => /(?:^|\/)(?:src\/)?app\/.+\.component\.(?:ts|js)$/i.test(arquivo) || arquivoEhRotasAngularConsumer(arquivo))) {
+    return "angular-consumer";
+  }
+  if (arquivos.some((arquivo) =>
+    /(?:^|\/)(?:lib\/)?(?:screens|pages)\/.+\.dart$/i.test(arquivo)
+    || /(?:^|\/)(?:lib\/)?(?:router|app_router|routes|main)\.dart$/i.test(arquivo))) {
+    return "flutter-consumer";
+  }
+  for (const framework of ["nextjs-consumer", "react-vite-consumer", "angular-consumer", "flutter-consumer"] as const) {
+    if (fontesLegado.includes(framework)) {
+      return framework;
+    }
+  }
+  return null;
+}
+
 function extrairColecoesFirebase(arquivo: string, codigo: string): RecursoResolvido[] {
   const recursos = new Map<string, RecursoResolvido>();
   const registrar = (nome: string) => {
@@ -535,10 +958,16 @@ function extrairColecoesFirebase(arquivo: string, codigo: string): RecursoResolv
   return [...recursos.values()];
 }
 
-async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+async function indexarTypeScript(diretorios: string[]): Promise<{
+  simbolos: SimboloResolvido[];
+  rotas: RotaResolvida[];
+  recursos: RecursoResolvido[];
+  consumerSurfaces: RegistroConsumerSurfaceDrift[];
+}> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
+  const consumerSurfaces = new Map<string, RegistroConsumerSurfaceDrift>();
 
   for (const diretorio of diretorios) {
     const arquivos = (await listarArquivosRecursivos(diretorio, [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]))
@@ -547,6 +976,13 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
         && !arquivo.endsWith(".spec.ts")
         && !arquivo.endsWith(".test.ts"),
       );
+    const arquivosRotasAngular = arquivos.filter((arquivo) => arquivoEhRotasAngularConsumer(path.relative(diretorio, arquivo)));
+    const arquivosRotasAngularRaiz = new Set(
+      arquivosRotasAngular
+        .filter((arquivo) => arquivoEhRotasAngularConsumerRaiz(path.relative(diretorio, arquivo)))
+        .map((arquivo) => path.resolve(arquivo)),
+    );
+    const usarApenasRotasAngularRaiz = arquivosRotasAngularRaiz.size > 0;
 
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
@@ -567,6 +1003,93 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
           arquivo,
           simbolo: rota.simbolo,
         });
+      }
+
+      const superficieNextJs = arquivoEhSuperficieNextJsConsumer(relacao)
+        ? inferirRotaNextJsConsumer(relacao)
+        : undefined;
+      if (superficieNextJs) {
+        consumerSurfaces.set(`${superficieNextJs.rota}:${arquivo}:${superficieNextJs.tipoArquivo}`, {
+          rota: superficieNextJs.rota,
+          arquivo,
+          tipoArquivo: superficieNextJs.tipoArquivo,
+        });
+        rotas.push({
+          origem: "nextjs-consumer",
+          metodo: "VIEW",
+          caminho: superficieNextJs.rota,
+          arquivo,
+          simbolo: superficieNextJs.tipoArquivo,
+        });
+      }
+
+      const superficieReact = arquivoEhSuperficieReactViteConsumer(relacao)
+        ? inferirRotaReactViteConsumer(relacao)
+        : undefined;
+      if (superficieReact) {
+        consumerSurfaces.set(`${superficieReact.rota}:${arquivo}:${superficieReact.tipoArquivo}`, {
+          rota: superficieReact.rota,
+          arquivo,
+          tipoArquivo: superficieReact.tipoArquivo,
+        });
+        rotas.push({
+          origem: "react-vite-consumer",
+          metodo: "VIEW",
+          caminho: superficieReact.rota,
+          arquivo,
+          simbolo: superficieReact.tipoArquivo,
+        });
+      }
+
+      if (arquivoEhRotasReactViteConsumer(relacao, codigo)) {
+        for (const rotaReact of extrairRotasReactViteConsumer(relacao, codigo)) {
+          consumerSurfaces.set(`${rotaReact.rota}:${arquivo}:router`, {
+            rota: rotaReact.rota,
+            arquivo,
+            tipoArquivo: "router",
+          });
+          rotas.push({
+            origem: "react-vite-consumer",
+            metodo: "VIEW",
+            caminho: rotaReact.rota,
+            arquivo,
+            simbolo: "router",
+          });
+          if (rotaReact.arquivoComponente) {
+            const arquivoComponente = path.join(diretorio, rotaReact.arquivoComponente);
+            consumerSurfaces.set(`${rotaReact.rota}:${arquivoComponente}:page`, {
+              rota: rotaReact.rota,
+              arquivo: arquivoComponente,
+              tipoArquivo: "page",
+            });
+          }
+        }
+      }
+
+      if (arquivoEhRotasAngularConsumer(relacao) && (!usarApenasRotasAngularRaiz || arquivosRotasAngularRaiz.has(path.resolve(arquivo)))) {
+        for (const rotaAngular of await extrairRotasAngularConsumer(diretorio, relacao)) {
+          const arquivoRotasAngular = path.join(diretorio, rotaAngular.arquivoRotas);
+          consumerSurfaces.set(`${rotaAngular.rota}:${arquivoRotasAngular}:routes`, {
+            rota: rotaAngular.rota,
+            arquivo: arquivoRotasAngular,
+            tipoArquivo: "routes",
+          });
+          rotas.push({
+            origem: "angular-consumer",
+            metodo: "VIEW",
+            caminho: rotaAngular.rota,
+            arquivo: arquivoRotasAngular,
+            simbolo: rotaAngular.componente ?? "routes",
+          });
+          if (rotaAngular.arquivoComponente) {
+            const arquivoComponente = path.join(diretorio, rotaAngular.arquivoComponente);
+            consumerSurfaces.set(`${rotaAngular.rota}:${arquivoComponente}:component`, {
+              rota: rotaAngular.rota,
+              arquivo: arquivoComponente,
+              tipoArquivo: "component",
+            });
+          }
+        }
       }
 
       for (const node of sourceFile.statements) {
@@ -628,7 +1151,15 @@ async function indexarTypeScript(diretorios: string[]): Promise<{ simbolos: Simb
     }
   }
 
-  return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
+  return {
+    simbolos: [...simbolos.values()],
+    rotas,
+    recursos: [...recursos.values()],
+    consumerSurfaces: [...consumerSurfaces.values()].sort((a, b) =>
+      a.rota.localeCompare(b.rota, "pt-BR")
+      || a.tipoArquivo.localeCompare(b.tipoArquivo, "pt-BR")
+      || a.arquivo.localeCompare(b.arquivo, "pt-BR")),
+  };
 }
 
 interface BlocoPython {
@@ -755,8 +1286,14 @@ async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloR
   return { simbolos: [...simbolos.values()], rotas };
 }
 
-async function indexarDart(diretorios: string[]): Promise<SimboloResolvido[]> {
+async function indexarDart(diretorios: string[]): Promise<{
+  simbolos: SimboloResolvido[];
+  rotas: RotaResolvida[];
+  consumerSurfaces: RegistroConsumerSurfaceDrift[];
+}> {
   const simbolos = new Map<string, SimboloResolvido>();
+  const rotas: RotaResolvida[] = [];
+  const consumerSurfaces = new Map<string, RegistroConsumerSurfaceDrift>();
 
   for (const diretorio of diretorios) {
     const arquivos = (await listarArquivosRecursivos(diretorio, [".dart"]))
@@ -765,6 +1302,7 @@ async function indexarDart(diretorios: string[]): Promise<SimboloResolvido[]> {
     for (const arquivo of arquivos) {
       const texto = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      const relacao = path.relative(diretorio, arquivo);
 
       for (const match of texto.matchAll(/(?:Future<[^\n]+>|[\w?<>.,\s]+)\s+(\w+)\(([^)]*)\)\s*(?:async\s*)?\{/g)) {
         const nome = match[1]!;
@@ -776,10 +1314,50 @@ async function indexarDart(diretorios: string[]): Promise<SimboloResolvido[]> {
           simbolos.set(caminho, { origem: "dart", caminho, arquivo, simbolo: nome });
         }
       }
+
+      const superficieFlutter = inferirRotaFlutterConsumer(relacao);
+      if (superficieFlutter) {
+        consumerSurfaces.set(`${superficieFlutter.rota}:${arquivo}:${superficieFlutter.tipoArquivo}`, {
+          rota: superficieFlutter.rota,
+          arquivo,
+          tipoArquivo: superficieFlutter.tipoArquivo,
+        });
+        rotas.push({
+          origem: "flutter-consumer",
+          metodo: "VIEW",
+          caminho: superficieFlutter.rota,
+          arquivo,
+          simbolo: superficieFlutter.tipoArquivo,
+        });
+      }
+
+      if (arquivoEhRotasFlutterConsumer(relacao, texto)) {
+        for (const rotaFlutter of extrairRotasFlutterConsumer(relacao, texto)) {
+          consumerSurfaces.set(`${rotaFlutter.rota}:${arquivo}:router`, {
+            rota: rotaFlutter.rota,
+            arquivo,
+            tipoArquivo: "router",
+          });
+          rotas.push({
+            origem: "flutter-consumer",
+            metodo: "VIEW",
+            caminho: rotaFlutter.rota,
+            arquivo,
+            simbolo: "router",
+          });
+        }
+      }
     }
   }
 
-  return [...simbolos.values()];
+  return {
+    simbolos: [...simbolos.values()],
+    rotas,
+    consumerSurfaces: [...consumerSurfaces.values()].sort((a, b) =>
+      a.rota.localeCompare(b.rota, "pt-BR")
+      || a.tipoArquivo.localeCompare(b.tipoArquivo, "pt-BR")
+      || a.arquivo.localeCompare(b.arquivo, "pt-BR")),
+  };
 }
 
 function registrarSimboloGenerico(
@@ -1204,7 +1782,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const todosSimbolos = [
     ...indexTs.simbolos,
     ...indexPy.simbolos,
-    ...indexDart,
+    ...indexDart.simbolos,
     ...indexDotnet.simbolos,
     ...indexJava.simbolos,
     ...indexGo.simbolos,
@@ -1214,7 +1792,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const mapaImpl = new Map<string, SimboloResolvido>([
     ...indexTs.simbolos.map((item) => [item.caminho, item] as const),
     ...indexPy.simbolos.map((item) => [item.caminho, item] as const),
-    ...indexDart.map((item) => [item.caminho, item] as const),
+    ...indexDart.simbolos.map((item) => [item.caminho, item] as const),
     ...indexDotnet.simbolos.map((item) => [item.caminho, item] as const),
     ...indexJava.simbolos.map((item) => [item.caminho, item] as const),
     ...indexGo.simbolos.map((item) => [item.caminho, item] as const),
@@ -1227,6 +1805,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const todasRotasIndexadas = [
     ...indexTs.rotas,
     ...indexPy.rotas,
+    ...indexDart.rotas,
     ...indexDotnet.rotas,
     ...indexJava.rotas,
     ...indexGo.rotas,
@@ -1398,7 +1977,12 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         continue;
       }
 
-      const encontradas = todasRotasIndexadas.filter((rotaResolvida) => esperadas.includes(rotaResolvida.origem));
+      const encontradas = todasRotasIndexadas.filter((rotaResolvida) =>
+        rotaResolvida.origem !== "nextjs-consumer"
+        && rotaResolvida.origem !== "react-vite-consumer"
+        && rotaResolvida.origem !== "angular-consumer"
+        && rotaResolvida.origem !== "flutter-consumer"
+        && esperadas.includes(rotaResolvida.origem));
       const combina = encontradas.some((rotaResolvida) =>
         rotaResolvida.metodo === route.metodo
         && normalizarCaminhoRota(rotaResolvida.caminho) === normalizarCaminhoRota(route.caminho));
@@ -1549,9 +2133,35 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     ].filter(Boolean))];
   }
 
+  const consumerSurfaces = [...indexTs.consumerSurfaces, ...indexDart.consumerSurfaces].sort((a, b) =>
+    a.rota.localeCompare(b.rota, "pt-BR")
+    || a.tipoArquivo.localeCompare(b.tipoArquivo, "pt-BR")
+    || a.arquivo.localeCompare(b.arquivo, "pt-BR"));
+  const consumerBridges = [...new Map(
+    [...indexTs.simbolos, ...indexDart.simbolos]
+      .filter((simbolo) => simboloEhBridgeConsumer(simbolo.caminho, simbolo.arquivo))
+      .map((simbolo) => [
+        `${simbolo.caminho}:${simbolo.arquivo}:${simbolo.simbolo}`,
+        {
+          caminho: simbolo.caminho,
+          arquivo: simbolo.arquivo,
+          simbolo: simbolo.simbolo,
+        },
+      ] as const),
+  ).values()].sort((a, b) =>
+    a.caminho.localeCompare(b.caminho, "pt-BR")
+    || a.arquivo.localeCompare(b.arquivo, "pt-BR"));
+  const appRoutes = [...new Set(consumerSurfaces.map((surface) => surface.rota))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const consumerFramework = inferirConsumerFrameworkPrincipal(contexto.fontesLegado, consumerSurfaces, consumerBridges);
+
   const payloadBase: ResultadoDrift = {
     comando: "drift",
     sucesso: implsQuebrados.length === 0 && rotasDivergentes.length === 0 && recursosDivergentes.length === 0 && vinculosQuebrados.length === 0,
+    consumerFramework,
+    appRoutes,
+    consumerSurfaces,
+    consumerBridges,
     modulos: contexto.modulosSelecionados.map((item) => ({
       caminho: item.caminho,
       modulo: item.resultado.ir?.nome ?? item.resultado.modulo?.nome ?? null,

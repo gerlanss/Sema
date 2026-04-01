@@ -320,6 +320,73 @@ module exemplo.geracao.negacao {
   assert.ok(arquivosPy[0]?.conteudo.includes("not ("));
 });
 
+test("gerador Python emite tipos compostos validos para lista, mapa, opcional e uniao", async () => {
+  const codigo = `
+module exemplo.geracao.python_composto {
+  entity Usuario {
+    fields {
+      id: Id
+      nome: Texto
+    }
+  }
+
+  task montar_payload {
+    input {
+      exemplos: Lista<Texto> optional
+      metadata: Mapa<Texto, Decimal> optional
+      dono: Opcional<Usuario>
+      variacao: Texto | Inteiro
+    }
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          variacao: "a"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "python_composto.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosPy = gerarPython(resultado.ir!);
+  const arquivoPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_python_composto.py");
+  assert.ok(arquivoPy);
+  assert.match(arquivoPy.conteudo, /exemplos: list\[str\] \| None = None/);
+  assert.match(arquivoPy.conteudo, /metadata: dict\[str, float\] \| None = None/);
+  assert.match(arquivoPy.conteudo, /dono: Usuario \| None = None/);
+  assert.match(arquivoPy.conteudo, /variacao: str \| int \| None = None/);
+  assert.doesNotMatch(arquivoPy.conteudo, /class Lista<Texto>/);
+  assert.doesNotMatch(arquivoPy.conteudo, /class Mapa<Texto, Decimal>/);
+
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-gerador-python-composto-"));
+  try {
+    const caminhoArquivo = path.join(baseTemporaria, arquivoPy.caminhoRelativo);
+    await mkdir(path.dirname(caminhoArquivo), { recursive: true });
+    await writeFile(caminhoArquivo, arquivoPy.conteudo, "utf8");
+
+    const compilacao = spawnSync("python", ["-m", "py_compile", caminhoArquivo], {
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+    assert.equal(compilacao.status, 0, compilacao.stderr || compilacao.stdout);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
 test("geradores sintetizam given aninhado para tipos compostos", () => {
   const codigo = `
 module exemplo.geracao.aninhado {

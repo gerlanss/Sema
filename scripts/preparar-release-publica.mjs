@@ -63,6 +63,15 @@ Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
 - \`SEMA_BRIEF.*\` e \`SEMA_INDEX.json\` como entrada semantica de projeto
 - docs e onboarding explicitamente IA-first
 
+## Antes de instalar a CLI
+
+Instale Node.js LTS primeiro. O \`npm\` vem junto no instalador oficial:
+
+- [nodejs.org](https://nodejs.org/)
+- Windows com \`winget\`: \`winget install OpenJS.NodeJS.LTS\`
+- macOS com Homebrew: \`brew install node\`
+- checagem rapida: \`node -v\` e \`npm -v\`
+
 ## Instalar a CLI
 
 Linux, Windows PowerShell e macOS:

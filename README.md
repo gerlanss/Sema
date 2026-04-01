@@ -8,6 +8,39 @@ Ela nao tenta substituir TypeScript, Python, Flask, FastAPI, NestJS, Next.js, AS
 
 Tecnicamente, a Sema continua sendo uma linguagem de intencao. Publicamente, o framing honesto e este: ela foi desenhada para IA operar sistema vivo com menos adivinhacao e mais verificacao. Leitura humana e subproduto aceitavel, nao objetivo principal.
 
+## Comece aqui
+
+Se voce quer colocar a ferramenta para rodar sem perder tempo com setup escondido:
+
+1. instale Node.js LTS, porque o `npm` vem junto
+2. instale a CLI da Sema
+3. rode `sema doctor`, `sema iniciar` e `sema ajuda-ia`
+
+Instalar Node.js + npm:
+
+- via instalador oficial: [nodejs.org](https://nodejs.org/)
+- Windows com `winget`: `winget install OpenJS.NodeJS.LTS`
+- macOS com Homebrew: `brew install node`
+- checagem rapida: `node -v` e `npm -v`
+
+Instalar a CLI da Sema:
+
+```bash
+npm install -g @semacode/cli
+sema --help
+sema doctor
+```
+
+Primeiro teste:
+
+```bash
+mkdir sema-demo
+cd sema-demo
+sema iniciar
+sema validar contratos/pedidos.sema --json
+sema ajuda-ia
+```
+
 ## Se voce e uma IA
 
 Este repositorio nao foi montado para ergonomia humana como prioridade. Ele foi montado para IA encontrar contexto semantico canonicamente comprimido antes de sair cavando codigo cru.
@@ -67,6 +100,16 @@ sema sync-ai-entrypoints --json
 - scaffold e geracao para TypeScript, Python e Dart
 - scaffold backend para NestJS e FastAPI
 - importacao incremental de legado
+
+## Tres modos de uso
+
+A Sema foi desenhada para entrar em tres cenarios sem forcar teatro conceitual:
+
+- producao inicial ou projeto novo: voce modela contrato, valida, compila e verifica antes de deixar codigo derivado correr solto
+- edicao em projeto que ja usa Sema: voce comeca por `inspecionar`, `resumo`, `drift` e `contexto-ia`, e so depois mexe no codigo vivo
+- adocao incremental em projeto que ainda nao tem Sema: voce usa `importar` como rascunho revisavel, lapida o contrato e deixa `drift` arbitrar o acoplamento com o runtime real
+
+Se alguem tentar vender a ferramenta como "serve so pra greenfield" ou "serve so pra legado", esta falando merda com conviccao. O valor da Sema e justamente atravessar os tres momentos sem trocar de cerebro no meio do caminho.
 
 ## Quickstart
 
@@ -188,12 +231,25 @@ Use o menor artefato que resolva a tarefa:
 
 O erro classico e entupir modelo pequeno com JSON gigante e depois reclamar que ele virou um animal confuso. O protocolo agora deixa explicito o que cada faixa aguenta.
 
+Para descobrir isso sem decorar comando no grito:
+
+```bash
+sema --help
+sema ajuda-ia
+```
+
+Essas duas saidas agora separam fluxo de projeto novo, edicao guiada e adocao em legado, alem de mostrar o que cabe em IA pequena, media e grande sem ficar naquela bagunca de help que parece manifesto de seita.
+
 ## Compatibilidade atual
 
 - `NestJS`: importacao de rotas e `drift` de rota publica
 - `FastAPI`: importacao de rotas e `drift` de rota publica
 - `Flask`: importacao de rotas e `drift` com `Blueprint`, `url_prefix` e decoradores
 - `Next.js App Router`: importacao e `drift` por `route.ts`, incluindo segmentos dinamicos
+- `Next.js consumer`: bridge canonico + superficies `page.tsx`, `layout.tsx`, `loading.tsx` e `error.tsx`
+- `React/Vite consumer`: bridge canonico + `react-router` explicito em `src/router.tsx|routes.tsx` + `src/pages/**`
+- `Angular consumer`: bridge canonico + `app.routes.ts`, `**/*.routes.ts`, lazy routes e feature folders vinculados
+- `Flutter consumer`: bridge canonico + `lib/router.dart`, `lib/screens/**` e superfícies consumer rastreaveis
 - `ASP.NET Core`: importacao de controllers e Minimal API com `drift` via `cs:`
 - `Spring Boot`: importacao de controllers com `drift` via `java:`
 - `Go net/http + Gin`: importacao de handlers com `drift` via `go:`
@@ -202,19 +258,37 @@ O erro classico e entupir modelo pequeno com JSON gigante e depois reclamar que 
 - `C++ bridge/service`: importacao generica e `drift` de simbolo via `cpp:`
 - `TypeScript`, `Python`, `Dart`: resolucao de simbolo e importacao generica
 
-Observacao importante: essas familias entram como fontes de legado para `importar` e `drift`. A geracao continua oficial para `base`, `nestjs` e `fastapi`.
+Observacao importante: essas familias entram como fontes de legado para `importar` e `drift`. A criacao oficial agora cobre `base`, `nestjs`, `fastapi`, `nextjs-api`, `nextjs-consumer`, `react-vite-consumer`, `angular-consumer` e `flutter-consumer`.
 
-## Showcase oficial
+## Showcases oficiais
 
-O showcase oficial esta em [showcases/ranking-showroom](./showcases/ranking-showroom/).
+Os showcases oficiais desta fase estao em:
 
-Ele mostra:
+- [showcases/ranking-showroom](./showcases/ranking-showroom/): backend Flask com contrato, `impl`, `vinculos`, `drift` e contexto de IA
+- [showcases/ranking-showroom-consumer](./showcases/ranking-showroom-consumer/): consumer Next.js App Router com `consumer bridge + App Router surfaces`
+- [showcases/ranking-showroom-react-vite-consumer](./showcases/ranking-showroom-react-vite-consumer/): consumer React/Vite com `consumer bridge + react-router surfaces`
+- [showcases/ranking-showroom-angular-consumer](./showcases/ranking-showroom-angular-consumer/): consumer Angular com `consumer bridge + lazy route config surfaces`
+- [showcases/ranking-showroom-flutter-consumer](./showcases/ranking-showroom-flutter-consumer/): consumer Flutter com `consumer bridge + router/screens`
+- [showcases/ranking-showroom-stack-nextjs](./showcases/ranking-showroom-stack-nextjs/): backend Flask + `Next.js consumer` na mesma raiz operacional
+- [showcases/ranking-showroom-stack-react-vite](./showcases/ranking-showroom-stack-react-vite/): backend Flask + `React/Vite consumer` na mesma raiz operacional
+- [showcases/ranking-showroom-stack-angular](./showcases/ranking-showroom-stack-angular/): backend Flask + `Angular consumer` na mesma raiz operacional
+- [showcases/ranking-showroom-stack-flutter](./showcases/ranking-showroom-stack-flutter/): backend Flask + `flutter-consumer` na mesma raiz operacional
+
+O showcase backend mostra:
 
 - contrato semantico curado
 - `impl` e `vinculos` apontando para codigo vivo
 - `drift` sem falso positivo idiota
 - `contexto-ia` com `drift.json` e `briefing.json`
 - adocao incremental em backend Flask real
+
+O showcase consumer mostra:
+
+- `impl` apontando apenas para o bridge canonico
+- `vinculos` rastreando bridge, arquivos e superficie `/ranking`
+- `drift` leve de consumer sem fingir visual drift
+- `contexto-ia` com `consumerFramework`, `appRoutes`, `consumerSurfaces` e `consumerBridges`
+- o mesmo contrato operacional funcionando em `Next.js`, `React/Vite`, `Angular` e `Flutter`, cada um no seu slice oficial
 
 Fluxo:
 
@@ -223,7 +297,31 @@ cd showcases/ranking-showroom
 sema inspecionar . --json
 sema drift contratos/ranking_showroom.sema --json
 sema contexto-ia contratos/ranking_showroom.sema --saida ./.tmp/contexto-ranking --json
+
+cd ../ranking-showroom-consumer
+sema inspecionar . --json
+sema drift contratos/showroom_consumer.sema --json
+sema contexto-ia contratos/showroom_consumer.sema --saida ./.tmp/contexto-ranking-consumer --json
+
+cd ../ranking-showroom-react-vite-consumer
+sema inspecionar . --json
+sema drift contratos/showroom_consumer.sema --json
+sema contexto-ia contratos/showroom_consumer.sema --saida ./.tmp/contexto-ranking-react-vite --json
+
+cd ../ranking-showroom-angular-consumer
+sema inspecionar . --json
+sema drift contratos/showroom_consumer.sema --json
+sema contexto-ia contratos/showroom_consumer.sema --saida ./.tmp/contexto-ranking-angular --json
+
+cd ../ranking-showroom-flutter-consumer
+sema inspecionar . --json
+sema drift contratos/showroom_consumer.sema --json
+sema contexto-ia contratos/showroom_consumer.sema --saida ./.tmp/contexto-ranking-flutter --json
 ```
+
+## Proxima camada de front
+
+As familias consumer oficiais agora estao abertas. A proxima onda semantica de front esta documentada em [docs/front-semantic-roadmap.md](./docs/front-semantic-roadmap.md), cobrindo `screen`, `action`, `query`, `form` e `navigation` como trilha oficial futura, sem fingir que essa sintaxe ja existe hoje.
 
 ## A Sema governa a propria Sema
 

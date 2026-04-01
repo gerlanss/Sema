@@ -1019,6 +1019,444 @@ export async function POST() {
   );
 }
 
+export async function criarProjetoNextJsConsumer(base: string): Promise<void> {
+  await Promise.all([
+    mkdir(path.join(base, "contratos"), { recursive: true }),
+    mkdir(path.join(base, "src", "lib"), { recursive: true }),
+    mkdir(path.join(base, "src", "app", "ranking"), { recursive: true }),
+  ]);
+
+  await escrever(
+    base,
+    "sema.config.json",
+    JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./src"],
+      fontesLegado: ["nextjs-consumer", "typescript"],
+      modoAdocao: "incremental",
+      modoEstrito: true,
+    }, null, 2),
+  );
+
+  await escrever(
+    base,
+    "package.json",
+    JSON.stringify({
+      name: "fixture-nextjs-consumer-sema",
+      private: true,
+      dependencies: {
+        next: "15.0.0",
+      },
+    }, null, 2),
+  );
+
+  await escrever(
+    base,
+    "src/lib/sema_consumer_bridge.ts",
+    `export async function semaFetchShowroomRanking() {
+  return {
+    ranking: [
+      { clube: "Tigres do Norte", pontos: 33 },
+      { clube: "Porto Azul", pontos: 31 },
+      { clube: "Galo de Ouro", pontos: 28 },
+    ],
+  };
+}
+
+export async function semaLoadRankingSummary() {
+  return {
+    totalClubes: 3,
+    atualizadoEm: "2026-03-31T12:00:00.000Z",
+  };
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/ranking/page.tsx",
+    `import { semaFetchShowroomRanking } from "../../lib/sema_consumer_bridge";
+
+export default async function RankingPage() {
+  const { ranking } = await semaFetchShowroomRanking();
+
+  return (
+    <main>
+      <h1>Ranking showroom</h1>
+      <ul>
+        {ranking.map((item) => (
+          <li key={item.clube}>
+            {item.clube} - {item.pontos} pts
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/ranking/loading.tsx",
+    `export default function Loading() {
+  return <p>Carregando ranking...</p>;
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/ranking/error.tsx",
+    `"use client";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
+  return (
+    <main>
+      <h1>Falha ao carregar ranking</h1>
+      <p>{error.message}</p>
+      <button type="button" onClick={reset}>Tentar novamente</button>
+    </main>
+  );
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "contratos/showroom_consumer.sema",
+    `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      ranking: Json
+    }
+    impl {
+      ts: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "src/lib/sema_consumer_bridge.ts"
+      simbolo: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "src/app/ranking/page.tsx"
+      arquivo: "src/app/ranking/loading.tsx"
+      arquivo: "src/app/ranking/error.tsx"
+    }
+    guarantees {
+      ranking existe
+    }
+  }
+}
+`,
+  );
+}
+
+export async function criarProjetoReactViteConsumer(base: string): Promise<void> {
+  await Promise.all([
+    mkdir(path.join(base, "contratos"), { recursive: true }),
+    mkdir(path.join(base, "src", "lib"), { recursive: true }),
+    mkdir(path.join(base, "src", "pages"), { recursive: true }),
+  ]);
+
+  await escrever(
+    base,
+    "sema.config.json",
+    JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./src"],
+      fontesLegado: ["react-vite-consumer", "typescript"],
+      modoAdocao: "incremental",
+      modoEstrito: true,
+    }, null, 2),
+  );
+
+  await escrever(
+    base,
+    "package.json",
+    JSON.stringify({
+      name: "fixture-react-vite-consumer-sema",
+      private: true,
+      dependencies: {
+        react: "19.0.0",
+        "react-router-dom": "7.0.0",
+        vite: "6.0.0",
+      },
+    }, null, 2),
+  );
+
+  await escrever(
+    base,
+    "src/lib/sema_consumer_bridge.ts",
+    `export async function semaFetchShowroomRanking() {
+  return {
+    ranking: [
+      { clube: "Tigres do Norte", pontos: 33 },
+      { clube: "Porto Azul", pontos: 31 },
+      { clube: "Galo de Ouro", pontos: 28 },
+    ],
+  };
+}
+
+export async function semaLoadRankingSummary() {
+  return {
+    totalClubes: 3,
+    atualizadoEm: "2026-03-31T12:00:00.000Z",
+  };
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/pages/ranking.tsx",
+    `import { useEffect, useState } from "react";
+import { semaFetchShowroomRanking } from "../lib/sema_consumer_bridge";
+
+export function RankingPage() {
+  const [ranking, setRanking] = useState<Array<{ clube: string; pontos: number }>>([]);
+
+  useEffect(() => {
+    void semaFetchShowroomRanking().then((payload) => setRanking(payload.ranking ?? []));
+  }, []);
+
+  return (
+    <main>
+      <h1>Ranking showroom</h1>
+      <ul>
+        {ranking.map((item) => (
+          <li key={item.clube}>
+            {item.clube} - {item.pontos} pts
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/router.tsx",
+    `import { createBrowserRouter } from "react-router-dom";
+import { RankingPage } from "./pages/ranking";
+
+export const appRouter = createBrowserRouter([
+  {
+    path: "/ranking",
+    Component: RankingPage,
+  },
+]);
+`,
+  );
+
+  await escrever(
+    base,
+    "src/App.tsx",
+    `import { RouterProvider } from "react-router-dom";
+import { appRouter } from "./router";
+
+export default function App() {
+  return <RouterProvider router={appRouter} />;
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/main.tsx",
+    `import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+`,
+  );
+
+  await escrever(
+    base,
+    "contratos/showroom_consumer.sema",
+    `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      ranking: Json
+    }
+    impl {
+      ts: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "src/lib/sema_consumer_bridge.ts"
+      simbolo: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "src/router.tsx"
+      arquivo: "src/pages/ranking.tsx"
+    }
+    guarantees {
+      ranking existe
+    }
+  }
+}
+`,
+  );
+}
+
+export async function criarProjetoAngularConsumer(base: string): Promise<void> {
+  await Promise.all([
+    mkdir(path.join(base, "contratos"), { recursive: true }),
+    mkdir(path.join(base, "src", "app", "features", "ranking"), { recursive: true }),
+  ]);
+
+  await escrever(
+    base,
+    "sema.config.json",
+    JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./src"],
+      fontesLegado: ["angular-consumer", "typescript"],
+      modoAdocao: "incremental",
+      modoEstrito: true,
+    }, null, 2),
+  );
+
+  await escrever(
+    base,
+    "package.json",
+    JSON.stringify({
+      name: "fixture-angular-consumer-sema",
+      private: true,
+      dependencies: {
+        "@angular/core": "19.0.0",
+        "@angular/router": "19.0.0",
+      },
+    }, null, 2),
+  );
+
+  await escrever(
+    base,
+    "src/app/sema_consumer_bridge.ts",
+    `export async function semaFetchShowroomRanking() {
+  return {
+    ranking: [
+      { clube: "Tigres do Norte", pontos: 33 },
+      { clube: "Porto Azul", pontos: 31 },
+      { clube: "Galo de Ouro", pontos: 28 },
+    ],
+  };
+}
+
+export async function semaLoadRankingSummary() {
+  return {
+    totalClubes: 3,
+    atualizadoEm: "2026-03-31T12:00:00.000Z",
+  };
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/app.routes.ts",
+    `import { Routes } from "@angular/router";
+
+export const routes: Routes = [
+  {
+    path: "ranking",
+    loadChildren: () => import("./features/ranking/ranking.routes").then((m) => m.RANKING_ROUTES),
+  },
+];
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/features/ranking/ranking.routes.ts",
+    `import { Routes } from "@angular/router";
+
+export const RANKING_ROUTES: Routes = [
+  {
+    path: "",
+    loadComponent: () => import("./ranking-page.component").then((m) => m.RankingPageComponent),
+  },
+];
+`,
+  );
+
+  await escrever(
+    base,
+    "src/app/features/ranking/ranking-page.component.ts",
+    `import { Component, OnInit } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { semaFetchShowroomRanking } from "../../sema_consumer_bridge";
+
+@Component({
+  selector: "app-ranking-page",
+  standalone: true,
+  imports: [CommonModule],
+  template: \`
+    <main>
+      <h1>Ranking showroom</h1>
+      <ul>
+        <li *ngFor="let item of ranking">
+          {{ item.clube }} - {{ item.pontos }} pts
+        </li>
+      </ul>
+    </main>
+  \`,
+})
+export class RankingPageComponent implements OnInit {
+  ranking: Array<{ clube: string; pontos: number }> = [];
+
+  async ngOnInit() {
+    const payload = await semaFetchShowroomRanking();
+    this.ranking = payload.ranking ?? [];
+  }
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "contratos/showroom_consumer.sema",
+    `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      ranking: Json
+    }
+    impl {
+      ts: src.app.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "src/app/sema_consumer_bridge.ts"
+      simbolo: src.app.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "src/app/app.routes.ts"
+      arquivo: "src/app/features/ranking/ranking.routes.ts"
+      arquivo: "src/app/features/ranking/ranking-page.component.ts"
+    }
+    guarantees {
+      ranking existe
+    }
+  }
+}
+`,
+  );
+}
+
 export async function criarProjetoNextJsAppRouterSemantico(base: string): Promise<void> {
   await Promise.all([
     mkdir(path.join(base, "src", "app", "api", "auth", "session"), { recursive: true }),
@@ -1391,6 +1829,174 @@ export function semaCollectionNames() {
     metodo: GET
     caminho: /health
     task: publicar_payload_health
+  }
+}
+`,
+  );
+}
+
+export async function criarProjetoFlutterConsumer(base: string): Promise<void> {
+  await Promise.all([
+    mkdir(path.join(base, "contratos"), { recursive: true }),
+    mkdir(path.join(base, "lib", "screens"), { recursive: true }),
+  ]);
+
+  await escrever(
+    base,
+    "sema.config.json",
+    JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./lib"],
+      fontesLegado: ["flutter-consumer", "dart"],
+      modoAdocao: "incremental",
+      modoEstrito: true,
+    }, null, 2),
+  );
+
+  await escrever(
+    base,
+    "pubspec.yaml",
+    `name: fixture_flutter_consumer_sema
+publish_to: "none"
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  go_router: ^14.0.0
+`,
+  );
+
+  await escrever(
+    base,
+    "lib/sema_consumer_bridge.dart",
+    `Future<Map<String, dynamic>> semaFetchShowroomRanking() async {
+  return {
+    "ranking": [
+      {"clube": "Tigres do Norte", "pontos": 33},
+      {"clube": "Porto Azul", "pontos": 31},
+      {"clube": "Galo de Ouro", "pontos": 28},
+    ],
+  };
+}
+
+Future<Map<String, dynamic>> semaLoadRankingSummary() async {
+  return {
+    "totalClubes": 3,
+    "atualizadoEm": "2026-03-31T12:00:00.000Z",
+  };
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "lib/router.dart",
+    `import "package:go_router/go_router.dart";
+import "package:flutter/widgets.dart";
+import "screens/ranking_screen.dart";
+
+final appRouter = GoRouter(
+  routes: [
+    GoRoute(
+      path: "/ranking",
+      builder: (BuildContext context, GoRouterState state) => const RankingScreen(),
+    ),
+  ],
+);
+`,
+  );
+
+  await escrever(
+    base,
+    "lib/screens/ranking_screen.dart",
+    `import "package:flutter/widgets.dart";
+import "../sema_consumer_bridge.dart";
+
+class RankingScreen extends StatefulWidget {
+  const RankingScreen({super.key});
+
+  @override
+  State<RankingScreen> createState() => _RankingScreenState();
+}
+
+class _RankingScreenState extends State<RankingScreen> {
+  List<Map<String, dynamic>> ranking = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    semaFetchShowroomRanking().then((payload) {
+      final itens = (payload["ranking"] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        ranking = itens;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: ranking
+          .map((item) => Text("\${item["clube"]} - \${item["pontos"]} pts"))
+          .toList(),
+    );
+  }
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "lib/main.dart",
+    `import "package:flutter/material.dart";
+import "router.dart";
+
+void main() {
+  runApp(const ShowroomApp());
+}
+
+class ShowroomApp extends StatelessWidget {
+  const ShowroomApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerConfig: appRouter,
+    );
+  }
+}
+`,
+  );
+
+  await escrever(
+    base,
+    "contratos/showroom_consumer.sema",
+    `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      resultado: Json
+    }
+    impl {
+      dart: lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "lib/sema_consumer_bridge.dart"
+      simbolo: lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "lib/router.dart"
+      arquivo: "lib/screens/ranking_screen.dart"
+    }
+    guarantees {
+      resultado existe
+    }
   }
 }
 `,

@@ -5,12 +5,12 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 ## Quadro-resumo
 
 - Ultima atualizacao: 2026-03-31
-- Ultimo commit de referencia: `8572311`
+- Ultimo commit de referencia: `15ff067`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: linha publica `1.0.0` fechada como primeira release estavel, com foco oficial em vinculos, execucao, contexto acionavel, compressao semantica por capacidade de IA e superficies modernas em backend vivo
+- Estagio atual: linha publica `1.1.0` fechada como release estavel com backend-first consolidado, primeira onda consumer oficial, compressao por capacidade de IA e onboarding de instalacao/release mais claro
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `1.0.0`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `1.1.0`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
@@ -41,6 +41,11 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - kit oficial de lancamento publico com pitch, release note curta, posts e checklist de anuncio
   - framing de IA e onboarding documental deixando explicito que a Sema e protocolo de governanca semantica, nao gerador automatico de contrato final
   - compressao semantica por capacidade de IA com `sema resumo`, `prompt-curto`, `briefing.min.json`, `resumo.*` e `SEMA_BRIEF.*`
+  - primeira onda consumer oficial com `nextjs-consumer`, `react-vite-consumer`, `angular-consumer` e `flutter-consumer`
+  - showcases combinados de backend Flask + consumers oficiais na mesma raiz operacional
+  - `sema --help` e `sema ajuda-ia` reorganizados por fluxo de uso e capacidade de IA
+  - gerador Python corrigido para tipos compostos validos em `Lista<T>`, `Mapa<K,V>`, `Opcional<T>` e uniao
+  - README e instaladores publicos reforcando prerequisito de Node.js/npm e instalacao inicial mais direta
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
@@ -93,7 +98,8 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - subir o nivel de invariantes para modulos operacionais que hoje estao bons de fluxo, mas ainda frouxos de garantia
   - mapear melhor `modulo Sema -> arquivos reais` para reduzir adivinhacao de IA em Python, TypeScript e frameworks
   - estudar contratos mais estaveis para estrategia, gate, slice e versao ativa em dominios operacionais
-  - fechar a segunda onda de compatibilidade para `Angular`, `.NET desktop`, `Flutter consumidor` e outras bordas consumer/desktop na linha `0.9.x`
+  - abrir a proxima camada semantica de front para `screen`, `action`, `query`, `form` e `navigation`
+  - empurrar consumers oficiais para uma regua mais profunda de rotas, estado e adocao guiada em projeto vivo
 
 ## Criterios de Fechamento do Marco 0.5
 
@@ -167,6 +173,11 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Tratar `C++ bridge/service` como fonte `generic bridge/symbol first-class`
 - `[x]` Entregar `sema doctor`
 - `[x]` Entregar instaladores oficiais para Linux/macOS e Windows
+- `[x]` Fechar a primeira onda consumer oficial com `nextjs-consumer`, `react-vite-consumer`, `angular-consumer` e `flutter-consumer`
+- `[x]` Publicar showcases stack combinando backend Flask + consumers oficiais
+- `[x]` Reorganizar `sema --help` e `sema ajuda-ia` por projeto novo, edicao guiada e legado sem contrato inicial
+- `[x]` Corrigir o gerador Python para tipos compostos validos em codigo gerado
+- `[x]` Alinhar release publica `1.1.0` entre CLI, pacotes, extensao, README e instaladores
 
 ## Fundacao do Projeto
 

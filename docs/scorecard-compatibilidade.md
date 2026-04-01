@@ -56,7 +56,9 @@ Regra de honestidade:
 - `Go net/http + Gin`: fixture sintetico oficial + smoke local opcional
 - `Rust Axum`: fixture sintetico oficial + smoke local opcional
 - `C++ bridge/service`: fixture sintetico oficial + smoke local opcional
-- `Flutter / Dart consumidor`: `Gestech/Ranking_App`
+- `Flutter / Dart consumidor`: showcase oficial `ranking-showroom-flutter-consumer` + `Gestech/Ranking_App`
+- `React/Vite consumidor`: showcase oficial `ranking-showroom-react-vite-consumer`
+- `Angular consumidor`: showcase oficial `ranking-showroom-angular-consumer`
 
 ## Matriz oficial
 
@@ -66,6 +68,9 @@ Regra de honestidade:
 | FastAPI | HTTP first-class | framework slice oficial | route/handler FastAPI | scaffold oficial | sim | rota publica | forte | 9.2 |
 | Flask | HTTP first-class | framework slice oficial | `Blueprint`, `url_prefix`, `@route` | starter/adocao incremental | sim | rota publica | forte | 9.5 |
 | Next.js App Router | HTTP first-class | framework slice oficial | `app/api/**/route.ts` | `nextjs-api` | sim | rota publica + bootstrap semantico forte | forte | 9.1 |
+| Next.js consumidor | generic bridge/symbol first-class | consumer bridge oficial | `src/lib/sema_consumer_bridge.ts` + `src/app/**/(page|layout|loading|error).tsx` | `nextjs-consumer` | sim | bridge/consumer + superficie App Router | forte | 9.0 |
+| React/Vite consumidor | generic bridge/symbol first-class | consumer bridge oficial | `src/lib/sema_consumer_bridge.ts` + `src/router.tsx|routes.tsx` + `src/pages/**` | `react-vite-consumer` | sim | bridge/consumer + react-router surfaces | forte | 9.0 |
+| Angular consumidor | generic bridge/symbol first-class | consumer bridge oficial | `src/app/sema_consumer_bridge.ts` + `app.routes.ts` + `**/*.routes.ts` + feature folders | `angular-consumer` | sim | bridge/consumer + lazy route config surfaces | forte | 9.0 |
 | ASP.NET Core | HTTP first-class | framework slice oficial | controller + Minimal API | `aspnet-api` | sim | rota publica | forte | 9.0 |
 | Spring Boot | HTTP first-class | framework slice oficial | `@RestController` + `@*Mapping` | `springboot-api` | sim | rota publica | forte | 9.0 |
 | Go net/http + Gin | HTTP first-class | framework slice oficial | `HandleFunc`, `ServeMux`, `Gin` | `go-http-api` | sim | rota publica | forte | 9.0 |
@@ -75,8 +80,7 @@ Regra de honestidade:
 | Python generico | generic bridge/symbol first-class | generic backend | simbolo, classe, metodo e bridge | base | sim | simbolo/bridge | forte | 9.0 |
 | Dart generico | generic bridge/symbol first-class | generic backend | simbolo, classe e consumer bridge | base | sim | simbolo/bridge | forte | 9.0 |
 | C++ bridge/service | generic bridge/symbol first-class | generic backend | namespace, classe, metodo e service bridge | `cpp-service-bridge` | sim | simbolo/bridge | forte | 9.0 |
-| Flutter / Dart consumidor | generic bridge/symbol first-class | consumer bridge oficial | bridge/consumer formal do app | base + bridge | parcial forte | bridge/consumer | forte | 9.0 |
-| Angular consumidor | inventariado/backlog | inventariado | consumer TypeScript com bridge parcial | nao | parcial por TypeScript | bridge parcial | medio | 7.5 |
+| Flutter / Dart consumidor | generic bridge/symbol first-class | consumer bridge oficial | `lib/sema_consumer_bridge.dart` + `lib/router.dart` + `lib/screens/**` | `flutter-consumer` | sim | bridge/consumer + router/screens | forte | 9.0 |
 | .NET desktop/MAUI/WPF | inventariado/backlog | inventariado | `cs:` generico fora do slice HTTP | nao | parcial por `cs:` | bridge parcial | medio | 7.5 |
 
 ## Limites honestos por familia
@@ -88,6 +92,38 @@ Regra de honestidade:
 - `importar nextjs` aceita raiz do repo, `app/`, `src/app/`, `app/api/`, `src/app/api/` e subpastas de rota
 - o bootstrap puxa melhor `params`, `query`, `body`, `status` e `response` quando houver sinal forte, inclusive com `request.json()` tipado/cast inline e `NextResponse.json(...)` retornado via variavel local
 - `Pages API`, `Express`, `Hono` e derivados continuam fora desta fatia oficial
+
+### Next.js consumidor
+
+- cobre `src/lib/sema_consumer_bridge.ts` e `src/lib/sema/**/*.ts`
+- inventaria `src/app/**/page.tsx`, `layout.tsx`, `loading.tsx` e `error.tsx`
+- `impl` aponta para bridge exportado; superficies entram por `vinculos`, nao por `impl`
+- o `drift` desta fatia valida bridge, arquivo e superficie rastreavel
+- nao promete visual drift, diff de DOM, CSS ou geracao completa de interface
+
+### React/Vite consumidor
+
+- cobre `src/lib/sema_consumer_bridge.ts` e `src/lib/sema/**/*.ts`
+- inventaria `src/router.tsx|routes.tsx`, `src/pages/**` e `src/App.tsx` como superficies consumer rastreaveis
+- `impl` aponta para bridge exportado; paginas entram por `vinculos`, nao por `impl`
+- o `drift` desta fatia valida bridge, arquivo, rota consumer e page surface
+- nao promete router framework-agnostic magico, DOM diff nem geracao completa de interface
+
+### Angular consumidor
+
+- cobre `src/app/sema_consumer_bridge.ts` e bridges equivalentes dentro de `src/app/**`
+- inventaria `src/app/app.routes.ts`, `**/*.routes.ts` e componentes de pagina ligados pela configuracao de rota
+- `impl` aponta para bridge exportado; arquivos de rota e componentes entram por `vinculos`, nao por `impl`
+- o `drift` desta fatia valida bridge, arquivo, rota consumer e superficie vinculada
+- nao promete template diff, CSS diff nem leitura telepatica de qualquer arquitetura Angular do planeta
+
+### Flutter / Dart consumidor
+
+- cobre `lib/sema_consumer_bridge.dart` e bridges equivalentes em `lib/sema/**`
+- inventaria `lib/router.dart`, `lib/app_router.dart`, `lib/routes.dart`, `lib/main.dart` e `lib/screens/**`
+- `impl` aponta para bridge exportado; router e screens entram por `vinculos`, nao por `impl`
+- o `drift` desta fatia valida bridge, arquivo, rota consumer e superficie rastreavel
+- nao promete widget diff, layout diff nem leitura magica de qualquer arvore Flutter do multiverso
 
 ### Node / Firebase worker
 
@@ -103,7 +139,8 @@ Regra de honestidade:
 ### Consumer/desktop/mobile
 
 - a linha `0.9.x` fecha backend com vinculo, execucao e contexto para IA
-- a linha `1.0.x` fecha consumidor e desktop onde ainda faltar trilha mais redonda
+- a linha `1.0.x` ja abriu trilha consumer oficial para `Next.js`, `React/Vite`, `Angular` e `Flutter`
+- desktop e mobile seguem na fila para fechar onde ainda faltar trilha mais redonda
 
 ## O que significa `9/10` na pratica
 

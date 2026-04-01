@@ -1,0 +1,9 @@
+{
+  "origens": ["./contratos"],
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["angular-consumer", "typescript"],
+  "modoAdocao": "incremental",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos"
+}

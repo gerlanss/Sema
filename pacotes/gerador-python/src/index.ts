@@ -15,15 +15,90 @@ export interface OpcoesGeracaoPython {
 
 const TIPOS_PRIMITIVOS_SEMA = new Set(["Texto", "Numero", "Inteiro", "Decimal", "Booleano", "Data", "DataHora", "Id", "Email", "Url", "Json", "Vazio"]);
 
+function dividirTipoNoNivelRaiz(valor: string, separador: "|" | ","): string[] {
+  const partes: string[] = [];
+  let atual = "";
+  let profundidade = 0;
+
+  for (const caractere of valor) {
+    if (caractere === "<") {
+      profundidade += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === ">") {
+      profundidade = Math.max(0, profundidade - 1);
+      atual += caractere;
+      continue;
+    }
+    if (caractere === separador && profundidade === 0) {
+      if (atual.trim()) {
+        partes.push(atual.trim());
+      }
+      atual = "";
+      continue;
+    }
+    atual += caractere;
+  }
+
+  if (atual.trim()) {
+    partes.push(atual.trim());
+  }
+
+  return partes;
+}
+
+function coletarFolhasTipoPython(tipo: string): string[] {
+  const limpo = tipo.trim();
+  if (!limpo) {
+    return [];
+  }
+  if (/^Opcional<.+>$/.test(limpo)) {
+    return coletarFolhasTipoPython(limpo.slice("Opcional<".length, -1));
+  }
+  const uniao = dividirTipoNoNivelRaiz(limpo, "|");
+  if (uniao.length > 1) {
+    return uniao.flatMap((item) => coletarFolhasTipoPython(item));
+  }
+  if (/^Lista<.+>$/.test(limpo)) {
+    return coletarFolhasTipoPython(limpo.slice("Lista<".length, -1));
+  }
+  if (/^Mapa<.+>$/.test(limpo)) {
+    return dividirTipoNoNivelRaiz(limpo.slice("Mapa<".length, -1), ",")
+      .flatMap((item) => coletarFolhasTipoPython(item));
+  }
+  return [limpo];
+}
+
+function mapearCampoParaPython(campo: IrCampo): string {
+  let anotacao: string;
+
+  if (campo.cardinalidade === "lista") {
+    anotacao = `list[${mapearTipoParaPython(campo.tipoItem ?? campo.tipoBase)}]`;
+  } else if (campo.cardinalidade === "mapa") {
+    anotacao = `dict[${mapearTipoParaPython(campo.chaveMapa ?? "Texto")}, ${mapearTipoParaPython(campo.valorMapa ?? "Json")}]`;
+  } else if (campo.cardinalidade === "uniao") {
+    anotacao = campo.tiposAlternativos.map((tipo) => mapearTipoParaPython(tipo)).join(" | ");
+  } else {
+    anotacao = mapearTipoParaPython(campo.tipoBase);
+  }
+
+  if (campo.opcional && !/\bNone\b/.test(anotacao)) {
+    return `${anotacao} | None`;
+  }
+
+  return anotacao;
+}
+
 function gerarDataclass(nome: string, campos: IrCampo[]): string {
   const linhas = campos.length === 0
     ? "    pass"
     : campos.map((campo) => {
-      const tipoBase = mapearTipoParaPython(campo.tipo);
+      const tipoBase = mapearCampoParaPython(campo);
       if (campo.modificadores.includes("required")) {
         return `    ${campo.nome}: ${tipoBase}`;
       }
-      return `    ${campo.nome}: ${tipoBase} | None = None`;
+      return `    ${campo.nome}: ${/\bNone\b/.test(tipoBase) ? tipoBase : `${tipoBase} | None`} = None`;
     }).join("\n");
   return `@dataclass\nclass ${nome}:\n${linhas}\n`;
 }
@@ -57,8 +132,10 @@ function coletarTiposExternos(modulo: IrModulo): string[] {
   ];
 
   for (const campo of campos) {
-    if (!TIPOS_PRIMITIVOS_SEMA.has(campo.tipo) && !locais.has(campo.tipo)) {
-      referenciados.add(campo.tipo);
+    for (const tipo of coletarFolhasTipoPython(campo.tipo)) {
+      if (!TIPOS_PRIMITIVOS_SEMA.has(tipo) && !locais.has(tipo)) {
+        referenciados.add(tipo);
+      }
     }
   }
 
@@ -110,7 +187,18 @@ function resolverExpressaoPython(expressao: ExpressaoSemantica, camposConhecidos
   }
 }
 
-function valorPadraoPython(tipo: string, nomeCampo: string): string {
+function valorPadraoPython(campo: IrCampo): string {
+  const tipo = campo.tipoBase;
+  const nomeCampo = campo.nome;
+  if (campo.cardinalidade === "lista") {
+    return "[]";
+  }
+  if (campo.cardinalidade === "mapa") {
+    return "{}";
+  }
+  if (campo.opcional) {
+    return "None";
+  }
   switch (tipo) {
     case "Texto":
     case "Id":
@@ -216,7 +304,7 @@ function paraPascalCase(valor: string): string {
 
 function gerarPreparacaoSaida(task: IrTask): string {
   const camposSaida = new Set(task.output.map((campo) => campo.nome));
-  const argumentos = task.output.map((campo) => `${campo.nome}=${valorPadraoPython(campo.tipo, campo.nome)}`).join(", ");
+  const argumentos = task.output.map((campo) => `${campo.nome}=${valorPadraoPython(campo)}`).join(", ");
   const ajustes: string[] = [];
 
   for (const garantia of task.garantiasEstruturadas) {
@@ -489,19 +577,19 @@ function gerarFastApiSchemas(modulo: IrModulo, caminhoContrato: string): string 
 
   for (const task of modulo.tasks) {
     linhas.push(`class ${task.nome}EntradaSchema(BaseModel):
-${task.input.length === 0 ? "    pass" : task.input.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+${task.input.length === 0 ? "    pass" : task.input.map((campo) => `    ${campo.nome}: ${mapearCampoParaPython(campo)}`).join("\n")}
 `);
     linhas.push(`class ${task.nome}SaidaSchema(BaseModel):
-${task.output.length === 0 ? "    pass" : task.output.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+${task.output.length === 0 ? "    pass" : task.output.map((campo) => `    ${campo.nome}: ${mapearCampoParaPython(campo)}`).join("\n")}
 `);
   }
 
   for (const route of modulo.routes) {
     linhas.push(`class ${route.nome}EntradaPublicaSchema(BaseModel):
-${route.inputPublico.length === 0 ? "    pass" : route.inputPublico.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+${route.inputPublico.length === 0 ? "    pass" : route.inputPublico.map((campo) => `    ${campo.nome}: ${mapearCampoParaPython(campo)}`).join("\n")}
 `);
     linhas.push(`class ${route.nome}SaidaPublicaSchema(BaseModel):
-${route.outputPublico.length === 0 ? "    pass" : route.outputPublico.map((campo) => `    ${campo.nome}: ${mapearTipoParaPython(campo.tipo)}`).join("\n")}
+${route.outputPublico.length === 0 ? "    pass" : route.outputPublico.map((campo) => `    ${campo.nome}: ${mapearCampoParaPython(campo)}`).join("\n")}
 `);
   }
 

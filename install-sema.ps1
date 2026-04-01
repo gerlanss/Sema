@@ -9,7 +9,7 @@ $repo = if ($env:SEMA_REPO) { $env:SEMA_REPO } else { "gerlanss/Sema" }
 $packageName = if ($env:SEMA_NPM_PACKAGE) { $env:SEMA_NPM_PACKAGE } else { "@semacode/cli" }
 
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-  throw "npm nao encontrado. Instale Node.js antes de continuar."
+  throw "npm nao encontrado. Instale Node.js LTS antes de continuar. O npm vem junto no instalador oficial: https://nodejs.org/"
 }
 
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("sema-install-" + [System.Guid]::NewGuid().ToString("N"))

@@ -1,0 +1,13 @@
+{
+  "origens": [
+    "../ranking-showroom/contratos",
+    "../ranking-showroom-angular-consumer/contratos"
+  ],
+  "diretoriosCodigo": [
+    "../ranking-showroom/backend-flask",
+    "../ranking-showroom-angular-consumer/src"
+  ],
+  "fontesLegado": ["flask", "angular-consumer", "typescript"],
+  "modoAdocao": "incremental",
+  "modoEstrito": true
+}

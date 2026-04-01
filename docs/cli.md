@@ -28,12 +28,36 @@ Matriz curta de compatibilidade legado:
 - `fastapi`: importar + `drift` de rota publica
 - `flask`: importar + `drift` de rota publica
 - `nextjs`: importar + `drift` de rota publica via `App Router`
+- `nextjs-consumer`: importar + `drift` leve de `consumer bridge + App Router surfaces`
+- `react-vite-consumer`: importar + `drift` leve de `consumer bridge + react-router surfaces`
+- `angular-consumer`: importar + `drift` leve de `consumer bridge + lazy route config surfaces`
+- `flutter-consumer`: importar + `drift` leve de `consumer bridge + router/screens`
 - `dotnet`: importar + `drift` de rota publica via ASP.NET Core
 - `java`: importar + `drift` de rota publica via Spring Boot
 - `go`: importar + `drift` de rota publica via `net/http` e Gin
 - `rust`: importar + `drift` de rota publica via Axum
 - `firebase`: importar + `drift` de rota worker e recurso vivo
 - `typescript`, `python`, `dart`, `cpp`: importacao generica e resolucao de simbolo
+
+## Tres modos de operacao
+
+A CLI da Sema nao serve so para um tipo de projeto. O fluxo oficial hoje cobre:
+
+- producao inicial: `iniciar` -> `validar` -> `compilar` -> `verificar`
+- edicao em projeto que ja usa Sema: `inspecionar` -> `resumo` -> `drift` -> `contexto-ia`
+- adocao incremental em legado: `importar` -> `formatar` -> `validar` -> `drift`
+
+Essa divisao tambem aparece no `sema --help`, com a intencao de reduzir adivinhacao operacional e parar de deixar usuario caindo no limbo entre “tool de greenfield” e “importador de legado”.
+
+## IA por capacidade
+
+A CLI organiza os artefatos de contexto pensando no tamanho da janela do modelo:
+
+- IA pequena ou gratuita: `sema resumo --micro`, `briefing.min.json`, `prompt-curto.txt`
+- IA media: `sema resumo --curto`, `drift.json`, `briefing.min.json`
+- IA grande ou com tool use: `sema contexto-ia`, `briefing.json`, `ir.json`, `ast.json`
+
+Use `sema ajuda-ia` quando quiser a versao guiada disso. A regra continua simples: nao empurre JSON gigante em modelo curto e depois reclame que ele ficou biruta.
 
 ## Distribuicao publica
 
@@ -150,7 +174,7 @@ Motivo: a mesma origem nao pode ser repetida dentro da mesma `task`.
 
 Imprime a versao atual da CLI instalada.
 
-### `sema iniciar [--template <base|nestjs|fastapi|nextjs-api|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge>]`
+### `sema iniciar [--template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge>]`
 
 Cria uma estrutura inicial de projeto.
 
@@ -160,6 +184,10 @@ Templates:
 - `nestjs`: projeto voltado a scaffold backend TypeScript/NestJS
 - `fastapi`: projeto voltado a scaffold backend Python/FastAPI
 - `nextjs-api`: starter de adocao para `Next.js App Router`
+- `nextjs-consumer`: starter oficial de `Next.js App Router consumer` com bridge canonico e superficies inventariadas
+- `react-vite-consumer`: starter oficial de `React/Vite consumer` com bridge canonico, `src/router.tsx` e paginas rastreaveis
+- `angular-consumer`: starter oficial de `Angular consumer` com bridge canonico, `app.routes.ts`, `**/*.routes.ts` e feature folders
+- `flutter-consumer`: starter oficial de `flutter-consumer` com bridge canonico, `lib/router.dart` e `lib/screens/**`
 - `node-firebase-worker`: starter de worker/bridge Firebase
 - `aspnet-api`: starter de ASP.NET Core
 - `springboot-api`: starter de Spring Boot
@@ -367,11 +395,11 @@ Com `--json`, a saida inclui:
 - `diagnosticos`
 - `sucesso`
 
-### `sema importar <nestjs|fastapi|flask|nextjs|firebase|typescript|python|dart|dotnet|java|go|rust|cpp> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]`
+### `sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|typescript|python|dart|dotnet|java|go|rust|cpp> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]`
 
 Importa um projeto legado e gera um **rascunho Sema revisavel**.
 
-Leitura importante: `flask`, `nextjs`, `firebase`, `dotnet`, `java`, `go`, `rust` e `cpp` aqui sao **fontes legado de importacao/drift**, nao novos `frameworks` de geracao. A geracao continua `base`, `nestjs` e `fastapi`.
+Leitura importante: `flask`, `nextjs`, `nextjs-consumer`, `react-vite-consumer`, `angular-consumer`, `flutter-consumer`, `firebase`, `dotnet`, `java`, `go`, `rust` e `cpp` aqui sao **fontes legado de importacao/drift**, nao novos `frameworks` de geracao. A geracao continua `base`, `nestjs`, `fastapi` e os starters oficiais de adocao (`nextjs-api`, `nextjs-consumer`, `react-vite-consumer`, `angular-consumer`, `flutter-consumer`, `node-firebase-worker` etc.).
 
 O comando:
 
@@ -389,6 +417,10 @@ Leitura correta:
 Casos praticos:
 
 - `nestjs`: controller, service e DTO para rascunho backend TypeScript
+- `nextjs-consumer`: bridge exportado e superficies App Router para rascunho consumer revisavel
+- `react-vite-consumer`: bridge exportado, `src/router.tsx|routes.tsx` e `src/pages/**` para rascunho consumer revisavel
+- `angular-consumer`: bridge exportado, `app.routes.ts`, `**/*.routes.ts` e componentes vinculados para rascunho consumer revisavel
+- `flutter-consumer`: bridge exportado, `lib/router.dart` e `lib/screens/**` para rascunho consumer revisavel
 - `fastapi`: router, service e schema para rascunho backend Python
 - `flask`: `Blueprint`, `url_prefix`, `@app.route` e `@blueprint.route` para rascunho backend Python
 - `nextjs`: `App Router` com `route.ts`, metodos HTTP e segmentos dinamicos
@@ -625,12 +657,16 @@ Campos tipicos:
 
 ## Exemplos de uso
 
-### Iniciar um projeto backend
+### Iniciar um projeto backend ou consumer
 
 ```bash
 sema iniciar --template nestjs
 sema iniciar --template fastapi
 sema iniciar --template nextjs-api
+sema iniciar --template nextjs-consumer
+sema iniciar --template react-vite-consumer
+sema iniciar --template angular-consumer
+sema iniciar --template flutter-consumer
 sema iniciar --template node-firebase-worker
 sema iniciar --template aspnet-api
 sema iniciar --template springboot-api
@@ -679,6 +715,26 @@ sema importar fastapi ./app --saida ./sema/importado --json
 
 ```bash
 sema importar nextjs ./frontend --saida ./sema/importado --json
+```
+
+### Importar um consumer Next.js App Router legado
+
+```bash
+sema importar nextjs-consumer ./frontend --saida ./sema/importado --json
+```
+
+### Importar um consumer React/Vite legado
+
+```bash
+sema importar react-vite-consumer ./frontend --saida ./sema/importado --json
+```
+
+### Importar um consumer Angular legado
+
+```bash
+sema importar angular-consumer ./frontend --saida ./sema/importado --json
+
+sema importar flutter-consumer ./frontend --saida ./sema/importado --json
 ```
 
 ### Importar um worker Node/Firebase legado

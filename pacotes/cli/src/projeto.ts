@@ -146,6 +146,10 @@ function normalizarFonteLegado(valor: string): FonteLegado | undefined {
     || valor === "fastapi"
     || valor === "flask"
     || valor === "nextjs"
+    || valor === "nextjs-consumer"
+    || valor === "react-vite-consumer"
+    || valor === "angular-consumer"
+    || valor === "flutter-consumer"
     || valor === "firebase"
     || valor === "typescript"
     || valor === "python"
@@ -539,6 +543,8 @@ async function inferirFontesLegado(
 
       const packageJsons = await procurarArquivosPorNome(diretorio, ["package.json"], 3);
       const nextConfigs = await procurarArquivosPorNome(diretorio, ["next.config.js", "next.config.ts", "next.config.mjs"], 3);
+      const viteConfigs = await procurarArquivosPorNome(diretorio, ["vite.config.ts", "vite.config.js", "vite.config.mjs"], 3);
+      const angularConfigs = await procurarArquivosPorNome(diretorio, ["angular.json"], 3);
       const firebaseLocais = await procurarArquivosPorNome(diretorio, ["firebase.json", "firestore.rules"], 3);
       const textosPackage = await Promise.all(packageJsons.slice(0, 8).map((arquivo) => lerConteudoSeExistir(arquivo)));
       const amostrasTs = await Promise.all(arquivosTs.slice(0, 10).map((arquivo) => lerConteudoSeExistir(arquivo)));
@@ -549,6 +555,20 @@ async function inferirFontesLegado(
       const temNext = textosPackage.some((texto) => /"next"\s*:/.test(texto ?? ""))
         || nextConfigs.length > 0
         || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/api\/.+\/route\.(?:ts|tsx|js|jsx)$/.test(relacao));
+      const temNextConsumer = textosPackage.some((texto) => /"next"\s*:/.test(texto ?? ""))
+        || nextConfigs.length > 0
+        || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/(?:(?!api\/).)*?(?:page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/.test(relacao));
+      const temSuperficieReactViteConsumer = relacoesTs.some((relacao) => /^(?:src\/)?pages\/.+\.(?:ts|tsx|js|jsx)$/.test(relacao))
+        || relacoesTs.some((relacao) => /^(?:src\/)?App\.(?:ts|tsx|js|jsx)$/.test(relacao))
+        || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?(?:app\/)?(?:router|routes)\.(?:ts|tsx|js|jsx)$/.test(relacao));
+      const temBridgeReactViteConsumer = relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?lib\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|tsx|js|jsx)$/.test(relacao));
+      const temReactViteConsumer = temSuperficieReactViteConsumer
+        || ((textosPackage.some((texto) => /"react"\s*:|"vite"\s*:|react-router-dom/.test(texto ?? "")) || viteConfigs.length > 0) && temBridgeReactViteConsumer);
+      const temSuperficieAngularConsumer = relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/.+\.component\.(?:ts|js)$/.test(relacao))
+        || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app(?:\/.+)?\/[^/]+\.routes\.(?:ts|js)$/.test(relacao));
+      const temBridgeAngularConsumer = relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|js)$/.test(relacao));
+      const temAngularConsumer = temSuperficieAngularConsumer
+        || ((textosPackage.some((texto) => /@angular\/core|@angular\/router/.test(texto ?? "")) || angularConfigs.length > 0) && temBridgeAngularConsumer);
       const temFirebase = marcadoresFirebaseProjeto.length > 0
         || firebaseLocais.length > 0
         || textosPackage.some((texto) => /firebase-admin|firebase-functions/.test(texto ?? ""))
@@ -559,6 +579,15 @@ async function inferirFontesLegado(
       }
       if (temNext) {
         encontrados.add("nextjs");
+      }
+      if (temNextConsumer) {
+        encontrados.add("nextjs-consumer");
+      }
+      if (temReactViteConsumer) {
+        encontrados.add("react-vite-consumer");
+      }
+      if (temAngularConsumer) {
+        encontrados.add("angular-consumer");
       }
       if (temFirebase) {
         encontrados.add("firebase");
@@ -581,6 +610,27 @@ async function inferirFontesLegado(
       }
       if (temFlask) {
         encontrados.add("flask");
+      }
+    }
+
+    if (arquivosDart.length > 0) {
+      encontrados.add("dart");
+      const pubspecs = await procurarArquivosPorNome(diretorio, ["pubspec.yaml"], 3);
+      const textosPubspec = await Promise.all(pubspecs.slice(0, 4).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      const amostrasDart = await Promise.all(arquivosDart.slice(0, 10).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      const relacoesDart = arquivosDart.map((arquivo) => path.relative(diretorio, arquivo).replace(/\\/g, "/"));
+      const temBridgeFlutterConsumer = relacoesDart.some((relacao) =>
+        /(?:^|\/)(?:lib\/)?(?:sema_consumer_bridge|api\/sema_contract_bridge|sema\/.+)\.dart$/i.test(relacao));
+      const temSuperficieFlutterConsumer = relacoesDart.some((relacao) =>
+        /(?:^|\/)(?:lib\/)?(?:screens|pages)\/.+\.dart$/i.test(relacao)
+        || /(?:^|\/)(?:lib\/)?(?:router|app_router|routes|main)\.dart$/i.test(relacao));
+      const temFlutterRuntime = textosPubspec.some((texto) => /\nflutter:\s*$|sdk:\s*flutter|dependencies:\s*[\s\S]*\bflutter:\s*$/m.test(texto ?? ""))
+        || amostrasDart.some((texto) => /MaterialApp(?:\.router)?\s*\(|CupertinoApp(?:\.router)?\s*\(|GoRouter\s*\(/.test(texto ?? ""));
+      const temFlutterConsumer = temSuperficieFlutterConsumer
+        || (temFlutterRuntime && temBridgeFlutterConsumer);
+
+      if (temFlutterConsumer) {
+        encontrados.add("flutter-consumer");
       }
     }
     if (arquivosDart.length > 0) {
@@ -660,7 +710,11 @@ export async function carregarProjeto(
 
   const arquivosSelecionados = infoEntrada.isFile()
     ? new Set([path.resolve(entradaResolvida)])
-    : new Set((await listarArquivosSema(entradaResolvida)).map((arquivo) => path.resolve(arquivo)));
+    : new Set((
+      configCarregada && path.resolve(entradaResolvida) === path.resolve(configCarregada.baseDiretorio)
+        ? arquivosProjeto
+        : await listarArquivosSema(entradaResolvida)
+    ).map((arquivo) => path.resolve(arquivo)));
 
   const fontes = [];
   for (const arquivo of arquivosProjeto) {

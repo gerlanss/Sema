@@ -1,0 +1,7 @@
+{
+  "origens": ["./contratos"],
+  "diretoriosCodigo": ["./lib"],
+  "fontesLegado": ["flutter-consumer", "dart"],
+  "modoAdocao": "incremental",
+  "modoEstrito": true
+}

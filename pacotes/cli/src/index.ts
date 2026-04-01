@@ -60,6 +60,10 @@ type Comando =
 type TemplateIniciar =
   | FrameworkGeracao
   | "nextjs-api"
+  | "nextjs-consumer"
+  | "react-vite-consumer"
+  | "angular-consumer"
+  | "flutter-consumer"
   | "node-firebase-worker"
   | "aspnet-api"
   | "springboot-api"
@@ -204,6 +208,11 @@ interface ResumoSemanticoModuloIa {
   inferido: string[];
   checksSugeridos: string[];
   testesMinimos: string[];
+  consumerFramework: string | null;
+  appRoutes: string[];
+  consumerSurfaces: string[];
+  consumerBridges: string[];
+  arquivosProvaveisEditar: string[];
 }
 
 const STARTER_IA = `Voce esta trabalhando com Sema, um Protocolo de Governanca de Intencao para IA e backend vivo.
@@ -250,7 +259,7 @@ Comandos essenciais:
 - validacao: \`sema validar <arquivo.sema> --json\`
 - diagnosticos: \`sema diagnosticos <arquivo.sema> --json\`
 - formatacao: \`sema formatar <arquivo.sema>\`
-- importacao assistida de legado: \`sema importar <nestjs|fastapi|flask|nextjs|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> --saida <diretorio>\`
+- importacao assistida de legado: \`sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> --saida <diretorio>\`
 - geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>\`
 - verificacao final: \`sema verificar <arquivo-ou-pasta> [--json]\`
 
@@ -534,39 +543,88 @@ function obterArgumentos(): { comando?: Comando; resto: string[] } {
   return { comando: comando as Comando | undefined, resto };
 }
 
-function ajuda(): string {
-  return `Sema CLI
+function renderizarCaixaAscii(linhas: string[]): string {
+  const largura = Math.max(...linhas.map((linha) => linha.length), 12);
+  const borda = `+${"-".repeat(largura + 2)}+`;
+  return [
+    borda,
+    ...linhas.map((linha) => `| ${linha.padEnd(largura, " ")} |`),
+    borda,
+  ].join("\n");
+}
 
-Comandos:
-  sema --versao
-  sema --version
-  sema -v
-  sema iniciar
-  sema validar <arquivo-ou-pasta>
-  sema ast <arquivo.sema>
-  sema ir <arquivo.sema>
-  sema compilar <arquivo-ou-pasta> --alvo <python|typescript|dart> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]
-  sema gerar <python|typescript|dart> <arquivo-ou-pasta> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]
-  sema testar <arquivo.sema> --alvo <python|typescript|dart> --saida <diretorio-temporario> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]
-  sema diagnosticos <arquivo.sema> [--json]
-  sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]
-  sema inspecionar [arquivo-ou-pasta] [--json]
-  sema drift <arquivo-ou-pasta> [--json]
-  sema importar <nestjs|fastapi|flask|nextjs|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]
-  sema doctor
-  sema formatar <arquivo-ou-pasta> [--check] [--json]
-  sema ajuda-ia
-  sema starter-ia
-  sema sync-ai-entrypoints [--json]
-  sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--saida <diretorio>] [--raiz] [--json]
-  sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--json]
-  sema prompt-ia
-  sema prompt-ia-ui
-  sema prompt-ia-react
-  sema prompt-ia-sema-primeiro
-  sema exemplos-prompt-ia
-  sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--json]
-`;
+function renderizarSecaoAscii(titulo: string, linhas: string[]): string {
+  return [
+    titulo,
+    ...linhas.map((linha) => `  ${linha}`),
+  ].join("\n");
+}
+
+function ajuda(): string {
+  return [
+    renderizarCaixaAscii([
+      `Sema CLI v${VERSAO_CLI}`,
+      "IA-first para contrato, geracao e adocao incremental",
+      "novo projeto, edicao guiada e legado sem contrato inicial",
+    ]),
+    "",
+    renderizarSecaoAscii("Fluxos rapidos", [
+      "[1] Projeto novo / producao inicial",
+      "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer>",
+      "sema validar contratos/<modulo>.sema --json",
+      "sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>",
+      "sema verificar <arquivo-ou-pasta> --json",
+      "",
+      "[2] Editar projeto que ja usa Sema",
+      "sema inspecionar . --json",
+      "sema resumo <arquivo-ou-pasta> --micro --para mudanca",
+      "sema drift <arquivo-ou-pasta> --json",
+      "sema contexto-ia <arquivo.sema> --saida ./.tmp/contexto --json",
+      "",
+      "[3] Adotar Sema em projeto que ainda nao usa",
+      "sema importar <fonte> <diretorio> --saida <diretorio> --json",
+      "sema formatar <arquivo-ou-pasta>",
+      "sema validar <arquivo-ou-pasta> --json",
+      "sema drift <arquivo-ou-pasta> --json",
+    ]),
+    "",
+    renderizarSecaoAscii("IA por capacidade", [
+      "pequena: sema resumo --micro + briefing.min.json + prompt-curto.txt",
+      "media: sema resumo --curto + drift.json + briefing.min.json",
+      "grande: sema contexto-ia + briefing.json + ir.json + ast.json",
+    ]),
+    "",
+    renderizarSecaoAscii("Comandos principais", [
+      "descoberta: sema inspecionar [arquivo-ou-pasta] [--json]",
+      "auditoria: sema drift <arquivo-ou-pasta> [--json]",
+      "importacao: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]",
+      "validacao: sema validar <arquivo-ou-pasta> [--json]",
+      "diagnostico: sema diagnosticos <arquivo.sema> [--json]",
+      "geracao: sema compilar <arquivo-ou-pasta> --alvo <python|typescript|dart> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]",
+      "teste local: sema testar <arquivo.sema> --alvo <python|typescript|dart> --saida <diretorio-temporario> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]",
+      "verificacao final: sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]",
+      "formatacao: sema formatar <arquivo-ou-pasta> [--check] [--json]",
+    ]),
+    "",
+    renderizarSecaoAscii("Ajuda IA-first", [
+      "sema ajuda-ia",
+      "sema starter-ia",
+      "sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--saida <diretorio>] [--raiz] [--json]",
+      "sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--json]",
+      "sema prompt-ia",
+      "sema prompt-ia-ui",
+      "sema prompt-ia-react",
+      "sema prompt-ia-sema-primeiro",
+      "sema exemplos-prompt-ia",
+      "sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--json]",
+      "sema sync-ai-entrypoints [--json]",
+    ]),
+    "",
+    renderizarSecaoAscii("Operacional", [
+      "sema doctor",
+      "sema --versao | --version | -v",
+    ]),
+  ].join("\n");
 }
 
 async function carregarModulos(entrada: string | undefined, cwd = process.cwd()): Promise<ContextoProjetoCarregado["modulosSelecionados"]> {
@@ -664,7 +722,10 @@ async function comandoDoctor(): Promise<number> {
     { nome: "code", ok: comandoDisponivel("code", ["--version"]) },
   ];
 
-  console.log("Sema doctor");
+  console.log(renderizarCaixaAscii([
+    "Sema doctor",
+    "checa a toolchain minima para validar, gerar e operar a CLI",
+  ]));
   for (const check of checks) {
     console.log(`- ${check.nome}: ${check.ok ? "ok" : "ausente"}`);
   }
@@ -708,6 +769,18 @@ function normalizarFonteImportacao(valor: string | undefined): FonteImportacao |
   if (valor === "next") {
     return "nextjs";
   }
+  if (valor === "next-consumer" || valor === "nextjs-consumer") {
+    return "nextjs-consumer";
+  }
+  if (valor === "react-vite" || valor === "react-vite-consumer" || valor === "react-consumer") {
+    return "react-vite-consumer";
+  }
+  if (valor === "angular" || valor === "angular-consumer") {
+    return "angular-consumer";
+  }
+  if (valor === "flutter" || valor === "flutter-consumer") {
+    return "flutter-consumer";
+  }
   if (valor === "fb") {
     return "firebase";
   }
@@ -731,6 +804,10 @@ function normalizarFonteImportacao(valor: string | undefined): FonteImportacao |
     || valor === "fastapi"
     || valor === "flask"
     || valor === "nextjs"
+    || valor === "nextjs-consumer"
+    || valor === "react-vite-consumer"
+    || valor === "angular-consumer"
+    || valor === "flutter-consumer"
     || valor === "firebase"
     || valor === "dotnet"
     || valor === "java"
@@ -751,6 +828,10 @@ function normalizarTemplateIniciar(valor?: string): TemplateIniciar {
     valor === "nestjs"
     || valor === "fastapi"
     || valor === "nextjs-api"
+    || valor === "nextjs-consumer"
+    || valor === "react-vite-consumer"
+    || valor === "angular-consumer"
+    || valor === "flutter-consumer"
     || valor === "node-firebase-worker"
     || valor === "aspnet-api"
     || valor === "springboot-api"
@@ -961,6 +1042,7 @@ function renderizarCabecalhoDocsIa(descoberta: DescobertaDocsIa): string {
   const linhas = [
     "Modo IA-first da instalacao atual",
     "- Use `sema` como interface publica principal.",
+    "- A Sema entra em projeto novo, projeto ja semantizado e adocao incremental em legado sem contrato inicial.",
     "- Nao assuma monorepo, `node pacotes/cli/dist/index.js`, `npm run project:check` ou uma pasta `exemplos` externa ao projeto atual.",
     "- Se a IA tiver contexto curto, comece por `sema resumo` e `sema prompt-curto`.",
     "- Se a IA aguentar mais contexto, suba para `sema drift --json` e `sema contexto-ia`.",
@@ -1139,6 +1221,11 @@ function coletarResumoSemanticoModulo(
     inferido: limitarLista(unicosOrdenados(briefing.oQueFoiInferido), 6),
     checksSugeridos: limitarLista(unicosOrdenados(briefing.oQueValidar), 6),
     testesMinimos: limitarLista(unicosOrdenados(briefing.testesMinimos), 6),
+    consumerFramework: briefing.consumerFramework ?? drift.drift.consumerFramework ?? null,
+    appRoutes: limitarLista(unicosOrdenados(briefing.appRoutes ?? drift.drift.appRoutes ?? []), 8),
+    consumerSurfaces: limitarLista(unicosOrdenados(briefing.consumerSurfaces ?? []), 8),
+    consumerBridges: limitarLista(unicosOrdenados(briefing.consumerBridges ?? []), 8),
+    arquivosProvaveisEditar: limitarLista(unicosOrdenados(briefing.arquivosProvaveisEditar ?? briefing.oQueTocar), 8),
   };
 }
 
@@ -1153,6 +1240,10 @@ function renderizarResumoModuloTexto(
     `MODULO: ${resumo.modulo}`,
     `FAZ: ${resumo.faz}`,
     `PERFIL: ${resumo.perfilCompatibilidade}`,
+    `CONSUMER_FRAMEWORK: ${resumo.consumerFramework ?? "nenhum"}`,
+    `APP_ROUTES: ${resumirListaTexto(resumo.appRoutes, limite)}`,
+    `CONSUMER_SURFACES: ${resumirListaTexto(resumo.consumerSurfaces, limite)}`,
+    `CONSUMER_BRIDGES: ${resumirListaTexto(resumo.consumerBridges, limite)}`,
     `PUBLICO: ${resumirListaTexto(resumo.superficiesPublicas, limite)}`,
     `TAREFAS: ${resumirListaTexto(resumo.tarefasPrincipais, limite)}`,
     `ENTRADAS: ${resumirListaTexto(resumo.entradasChave, limite)}`,
@@ -1210,6 +1301,17 @@ function renderizarResumoModuloMarkdown(
     `- Erros: ${resumirListaTexto(resumo.erros, 6)}`,
     `- Entidades afetadas: ${resumirListaTexto(resumo.entidadesAfetadas, 6)}`,
     "",
+    ...(resumo.consumerFramework
+      ? [
+        "## Consumer IA-first",
+        "",
+        `- Framework consumer: ${resumo.consumerFramework}`,
+        `- Rotas de app: ${resumirListaTexto(resumo.appRoutes, 6)}`,
+        `- Superficies consumer: ${resumirListaTexto(resumo.consumerSurfaces, 6)}`,
+        `- Bridges consumer: ${resumirListaTexto(resumo.consumerBridges, 6)}`,
+        "",
+      ]
+      : []),
     "## Intervencao segura",
     "",
     `- Arquivos provaveis: ${resumirListaTexto(resumo.arquivosProvaveis, 6)}`,
@@ -1264,12 +1366,17 @@ function criarBriefingMinimo(
     efeitos: resumo.efeitos,
     erros: resumo.erros,
     arquivosProvaveis: resumo.arquivosProvaveis,
+    arquivosProvaveisEditar: resumo.arquivosProvaveisEditar,
     simbolosRelacionados: resumo.simbolosRelacionados,
     riscosPrincipais: resumo.riscosPrincipais,
     lacunas: resumo.lacunas,
     inferido: resumo.inferido,
     checksSugeridos: resumo.checksSugeridos,
     testesMinimos: resumo.testesMinimos,
+    consumerFramework: resumo.consumerFramework,
+    appRoutes: resumo.appRoutes,
+    consumerSurfaces: resumo.consumerSurfaces,
+    consumerBridges: resumo.consumerBridges,
   };
 }
 
@@ -1293,6 +1400,7 @@ Regras:
 - use este resumo como fonte compacta inicial
 - se a tarefa pedir mais contexto, suba para \`briefing.min.json\`, \`drift.json\` e depois \`ir.json\`
 - nao saia editando backend vivo sem olhar risco, lacuna e checks sugeridos
+${resumo.consumerFramework ? "- se for tarefa visual consumer, priorize `appRoutes`, `consumerSurfaces` e `consumerBridges` antes de abrir arquivos aleatorios" : ""}
 
 Contexto compacto:
 ${resumoTexto}
@@ -1399,6 +1507,45 @@ function resumirDriftPorModulo(
   const recursosDivergentes = modulo
     ? resultadoDrift.recursos_divergentes.filter((recurso) => recurso.modulo === modulo)
     : [];
+  const vinculosModulo = modulo
+    ? [
+      ...resultadoDrift.vinculos_validos.filter((vinculo) => vinculo.modulo === modulo),
+      ...resultadoDrift.vinculos_quebrados.filter((vinculo) => vinculo.modulo === modulo),
+    ]
+    : [];
+  const rotasConsumerModulo = new Set(
+    vinculosModulo
+      .filter((vinculo) => vinculo.tipo === "superficie")
+      .map((vinculo) => vinculo.valor),
+  );
+  const arquivosRelacionados = [...new Set([
+    ...tasks.flatMap((task) => task.arquivosReferenciados),
+    ...tasks.flatMap((task) => task.arquivosProvaveisEditar),
+    ...implsValidos.map((impl) => impl.arquivo).filter((item): item is string => Boolean(item)),
+    ...implsQuebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.arquivo) ?? []),
+    ...vinculosValidos.map((vinculo) => vinculo.arquivo).filter((item): item is string => Boolean(item)),
+    ...recursosValidos.map((recurso) => recurso.arquivo).filter(Boolean),
+    ...recursosDivergentes.map((recurso) => recurso.arquivo).filter(Boolean),
+  ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const consumerSurfaces = resultadoDrift.consumerSurfaces
+    .filter((surface) =>
+      arquivosRelacionados.includes(surface.arquivo)
+      || rotasConsumerModulo.has(surface.rota))
+    .map((surface) => `${surface.tipoArquivo}:${surface.rota} -> ${surface.arquivo}`)
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const consumerBridges = resultadoDrift.consumerBridges
+    .filter((bridge) => arquivosRelacionados.includes(bridge.arquivo))
+    .map((bridge) => bridge.caminho)
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const appRoutes = [...new Set(resultadoDrift.consumerSurfaces
+    .filter((surface) =>
+      arquivosRelacionados.includes(surface.arquivo)
+      || rotasConsumerModulo.has(surface.rota))
+    .map((surface) => surface.rota))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const consumerFramework = appRoutes.length > 0 || consumerBridges.length > 0
+      ? resultadoDrift.consumerFramework
+      : null;
 
   return {
     caminho,
@@ -1416,15 +1563,12 @@ function resumirDriftPorModulo(
       : tasks.some((task) => task.confiancaVinculo === "media")
         ? "media"
         : "baixa",
-    arquivosRelacionados: [...new Set([
-      ...tasks.flatMap((task) => task.arquivosReferenciados),
-      ...tasks.flatMap((task) => task.arquivosProvaveisEditar),
-      ...implsValidos.map((impl) => impl.arquivo).filter((item): item is string => Boolean(item)),
-      ...implsQuebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.arquivo) ?? []),
-      ...vinculosValidos.map((vinculo) => vinculo.arquivo).filter((item): item is string => Boolean(item)),
-      ...recursosValidos.map((recurso) => recurso.arquivo).filter(Boolean),
-      ...recursosDivergentes.map((recurso) => recurso.arquivo).filter(Boolean),
-    ])].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    arquivosRelacionados,
+    arquivosProvaveisEditar: arquivosRelacionados,
+    consumerFramework,
+    appRoutes,
+    consumerSurfaces,
+    consumerBridges,
     checksSugeridos: [...new Set(tasks.flatMap((task) => task.checksSugeridos))],
     lacunas: [...new Set(tasks.flatMap((task) => task.lacunas))],
     tasks,
@@ -1453,6 +1597,7 @@ function criarBriefingAgente(
       ...(ir?.resumoAgente.riscos ?? []),
     ])],
     oQueTocar: resumoDrift.arquivosRelacionados,
+    arquivosProvaveisEditar: resumoDrift.arquivosProvaveisEditar,
     oQueValidar: [...new Set([
       ...resumoDrift.checksSugeridos,
       ...resultadoDrift.resumo_operacional.oQueValidar,
@@ -1480,6 +1625,10 @@ function criarBriefingAgente(
       ...(ir?.routes.map((route) => `${route.metodo ?? "?"} ${route.caminho ?? route.nome}`) ?? []),
       ...(ir?.superficies.map((superficie) => `${superficie.tipo}:${superficie.nome}`) ?? []),
     ],
+    consumerFramework: resumoDrift.consumerFramework,
+    appRoutes: resumoDrift.appRoutes,
+    consumerSurfaces: resumoDrift.consumerSurfaces,
+    consumerBridges: resumoDrift.consumerBridges,
     testesMinimos: [
       "sema validar <arquivo> --json",
       "sema drift <arquivo> --json",
@@ -1961,6 +2110,592 @@ async function comandoIniciar(cwd: string, template: TemplateIniciar): Promise<n
 - Contratos em \`contratos/\`
 - Handlers App Router em \`src/app/api/\`
 - Rota de exemplo validada por \`drift\`
+`,
+      },
+    ];
+  } else if (template === "nextjs-consumer") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["nextjs-consumer", "typescript"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/showroom_consumer.sema",
+        conteudo: `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      ranking: Json
+    }
+    impl {
+      ts: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "src/lib/sema_consumer_bridge.ts"
+      simbolo: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "src/app/ranking/page.tsx"
+      arquivo: "src/app/ranking/loading.tsx"
+      arquivo: "src/app/ranking/error.tsx"
+    }
+    guarantees {
+      ranking existe
+    }
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/lib/sema_consumer_bridge.ts",
+        conteudo: `export async function semaFetchShowroomRanking() {
+  return {
+    ranking: [
+      { clube: "Tigres do Norte", pontos: 33 },
+      { clube: "Porto Azul", pontos: 31 },
+      { clube: "Galo de Ouro", pontos: 28 },
+    ],
+  };
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/app/ranking/page.tsx",
+        conteudo: `import { semaFetchShowroomRanking } from "../../lib/sema_consumer_bridge";
+
+export default async function RankingPage() {
+  const { ranking } = await semaFetchShowroomRanking();
+
+  return (
+    <main>
+      <h1>Ranking showroom</h1>
+      <ul>
+        {ranking.map((item) => (
+          <li key={item.clube}>
+            {item.clube} - {item.pontos} pts
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/app/ranking/loading.tsx",
+        conteudo: `export default function Loading() {
+  return <p>Carregando ranking...</p>;
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/app/ranking/error.tsx",
+        conteudo: `"use client";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
+  return (
+    <main>
+      <h1>Falha ao carregar ranking</h1>
+      <p>{error.message}</p>
+      <button type="button" onClick={reset}>Tentar novamente</button>
+    </main>
+  );
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Next.js Consumer + Sema
+
+- Contratos em \`contratos/\`
+- Bridge consumer canonico em \`src/lib/sema_consumer_bridge.ts\`
+- Superficies App Router em \`src/app/\`
+- O slice oficial desta fase e \`consumer bridge + App Router surfaces\`
+- \`drift\` valida \`impl\`, \`vinculos\`, bridge e superficies, sem prometer visual drift
+`,
+      },
+    ];
+  } else if (template === "react-vite-consumer") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["react-vite-consumer", "typescript"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/showroom_consumer.sema",
+        conteudo: `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      ranking: Json
+    }
+    impl {
+      ts: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "src/lib/sema_consumer_bridge.ts"
+      simbolo: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "src/router.tsx"
+      arquivo: "src/pages/ranking.tsx"
+    }
+    guarantees {
+      ranking existe
+    }
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/lib/sema_consumer_bridge.ts",
+        conteudo: `export async function semaFetchShowroomRanking() {
+  return {
+    ranking: [
+      { clube: "Tigres do Norte", pontos: 33 },
+      { clube: "Porto Azul", pontos: 31 },
+      { clube: "Galo de Ouro", pontos: 28 },
+    ],
+  };
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/pages/ranking.tsx",
+        conteudo: `import { useEffect, useState } from "react";
+import { semaFetchShowroomRanking } from "../lib/sema_consumer_bridge";
+
+export function RankingPage() {
+  const [ranking, setRanking] = useState<Array<{ clube: string; pontos: number }>>([]);
+
+  useEffect(() => {
+    void semaFetchShowroomRanking().then((payload) => setRanking(payload.ranking ?? []));
+  }, []);
+
+  return (
+    <main>
+      <h1>Ranking showroom</h1>
+      <ul>
+        {ranking.map((item) => (
+          <li key={item.clube}>
+            {item.clube} - {item.pontos} pts
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/router.tsx",
+        conteudo: `import { createBrowserRouter } from "react-router-dom";
+import { RankingPage } from "./pages/ranking";
+
+export const appRouter = createBrowserRouter([
+  {
+    path: "/ranking",
+    Component: RankingPage,
+  },
+]);
+`,
+      },
+      {
+        caminhoRelativo: "src/App.tsx",
+        conteudo: `import { RouterProvider } from "react-router-dom";
+import { appRouter } from "./router";
+
+export default function App() {
+  return <RouterProvider router={appRouter} />;
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/main.tsx",
+        conteudo: `import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter React Vite Consumer + Sema
+
+- Contratos em \`contratos/\`
+- Bridge consumer canonico em \`src/lib/sema_consumer_bridge.ts\`
+- Rotas explicitas em \`src/router.tsx\`
+- Superficies consumer em \`src/pages/\`
+- O slice oficial desta fase e \`consumer bridge + react-router surfaces\`
+- \`drift\` valida \`impl\`, \`vinculos\`, bridge e superficies, sem prometer visual drift
+`,
+      },
+    ];
+  } else if (template === "angular-consumer") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["angular-consumer", "typescript"],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/typescript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "contratos/showroom_consumer.sema",
+        conteudo: `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      ranking: Json
+    }
+    impl {
+      ts: src.app.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "src/app/sema_consumer_bridge.ts"
+      simbolo: src.app.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "src/app/app.routes.ts"
+      arquivo: "src/app/features/ranking/ranking.routes.ts"
+      arquivo: "src/app/features/ranking/ranking-page.component.ts"
+    }
+    guarantees {
+      ranking existe
+    }
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/app/sema_consumer_bridge.ts",
+        conteudo: `export async function semaFetchShowroomRanking() {
+  return {
+    ranking: [
+      { clube: "Tigres do Norte", pontos: 33 },
+      { clube: "Porto Azul", pontos: 31 },
+      { clube: "Galo de Ouro", pontos: 28 },
+    ],
+  };
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/app/app.routes.ts",
+        conteudo: `import { Routes } from "@angular/router";
+
+export const routes: Routes = [
+  {
+    path: "ranking",
+    loadChildren: () => import("./features/ranking/ranking.routes").then((m) => m.RANKING_ROUTES),
+  },
+];
+`,
+      },
+      {
+        caminhoRelativo: "src/app/features/ranking/ranking.routes.ts",
+        conteudo: `import { Routes } from "@angular/router";
+
+export const RANKING_ROUTES: Routes = [
+  {
+    path: "",
+    loadComponent: () => import("./ranking-page.component").then((m) => m.RankingPageComponent),
+  },
+];
+`,
+      },
+      {
+        caminhoRelativo: "src/app/features/ranking/ranking-page.component.ts",
+        conteudo: `import { Component, OnInit } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { semaFetchShowroomRanking } from "../../sema_consumer_bridge";
+
+@Component({
+  selector: "app-ranking-page",
+  standalone: true,
+  imports: [CommonModule],
+  template: \`
+    <main>
+      <h1>Ranking showroom</h1>
+      <ul>
+        <li *ngFor="let item of ranking">
+          {{ item.clube }} - {{ item.pontos }} pts
+        </li>
+      </ul>
+    </main>
+  \`,
+})
+export class RankingPageComponent implements OnInit {
+  ranking: Array<{ clube: string; pontos: number }> = [];
+
+  async ngOnInit() {
+    const payload = await semaFetchShowroomRanking();
+    this.ranking = payload.ranking ?? [];
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "src/app/app.component.ts",
+        conteudo: `import { Component } from "@angular/core";
+import { RouterOutlet } from "@angular/router";
+
+@Component({
+  selector: "app-root",
+  standalone: true,
+  imports: [RouterOutlet],
+  template: "<router-outlet />",
+})
+export class AppComponent {}
+`,
+      },
+      {
+        caminhoRelativo: "src/main.ts",
+        conteudo: `import { bootstrapApplication } from "@angular/platform-browser";
+import { provideRouter } from "@angular/router";
+import { AppComponent } from "./app/app.component";
+import { routes } from "./app/app.routes";
+
+void bootstrapApplication(AppComponent, {
+  providers: [provideRouter(routes)],
+});
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Angular Consumer + Sema
+
+- Contratos em \`contratos/\`
+- Bridge consumer canonico em \`src/app/sema_consumer_bridge.ts\`
+- Rotas lazy em \`src/app/app.routes.ts\`
+- Feature folders em \`src/app/features/\`
+- O slice oficial desta fase e \`consumer bridge + route config surfaces\`
+- \`drift\` valida \`impl\`, \`vinculos\`, bridge e superficies, sem prometer visual drift
+`,
+      },
+    ];
+  } else if (template === "flutter-consumer") {
+    arquivos = [
+      {
+        caminhoRelativo: "sema.config.json",
+        conteudo: `{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["dart"],
+  "alvoPadrao": "dart",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "diretoriosCodigo": ["./lib"],
+  "fontesLegado": ["flutter-consumer", "dart"],
+  "diretoriosSaidaPorAlvo": {
+    "dart": "./generated/dart"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}
+`,
+      },
+      {
+        caminhoRelativo: "pubspec.yaml",
+        conteudo: `name: sema_flutter_consumer
+description: Starter Flutter consumer IA-first com Sema
+publish_to: "none"
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  go_router: ^14.0.0
+`,
+      },
+      {
+        caminhoRelativo: "contratos/showroom_consumer.sema",
+        conteudo: `module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      resultado: Json
+    }
+    impl {
+      dart: lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "lib/sema_consumer_bridge.dart"
+      simbolo: lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "lib/router.dart"
+      arquivo: "lib/screens/ranking_screen.dart"
+    }
+    guarantees {
+      resultado existe
+    }
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "lib/sema_consumer_bridge.dart",
+        conteudo: `Future<Map<String, dynamic>> semaFetchShowroomRanking() async {
+  return {
+    "ranking": [
+      {"clube": "Tigres do Norte", "pontos": 33},
+      {"clube": "Porto Azul", "pontos": 31},
+      {"clube": "Galo de Ouro", "pontos": 28},
+    ],
+  };
+}
+`,
+      },
+      {
+        caminhoRelativo: "lib/router.dart",
+        conteudo: `import "package:go_router/go_router.dart";
+import "package:flutter/widgets.dart";
+import "screens/ranking_screen.dart";
+
+final appRouter = GoRouter(
+  routes: [
+    GoRoute(
+      path: "/ranking",
+      builder: (BuildContext context, GoRouterState state) => const RankingScreen(),
+    ),
+  ],
+);
+`,
+      },
+      {
+        caminhoRelativo: "lib/screens/ranking_screen.dart",
+        conteudo: `import "package:flutter/widgets.dart";
+import "../sema_consumer_bridge.dart";
+
+class RankingScreen extends StatefulWidget {
+  const RankingScreen({super.key});
+
+  @override
+  State<RankingScreen> createState() => _RankingScreenState();
+}
+
+class _RankingScreenState extends State<RankingScreen> {
+  List<Map<String, dynamic>> ranking = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    semaFetchShowroomRanking().then((payload) {
+      final itens = (payload["ranking"] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        ranking = itens;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text("Ranking showroom"),
+        ),
+        ...ranking.map((item) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text("\${item["clube"]} - \${item["pontos"]} pts"),
+        )),
+      ],
+    );
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "lib/main.dart",
+        conteudo: `import "package:flutter/material.dart";
+import "router.dart";
+
+void main() {
+  runApp(const ShowroomApp());
+}
+
+class ShowroomApp extends StatelessWidget {
+  const ShowroomApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerConfig: appRouter,
+    );
+  }
+}
+`,
+      },
+      {
+        caminhoRelativo: "README.md",
+        conteudo: `# Starter Flutter Consumer + Sema
+
+- Contratos em \`contratos/\`
+- Bridge consumer canonico em \`lib/sema_consumer_bridge.dart\`
+- Rotas consumer em \`lib/router.dart\`
+- Superficies consumer em \`lib/screens/\`
+- O slice oficial desta fase e \`consumer bridge + router/screen surfaces\`
+- \`drift\` valida \`impl\`, \`vinculos\`, bridge e superficies, sem prometer visual diff
 `,
       },
     ];
@@ -2516,6 +3251,10 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
       modoAdocao: contextoProjeto.modoAdocao,
       scoreDrift: resultadoDrift.resumo_operacional.scoreMedio,
       confiancaGeral: resultadoDrift.resumo_operacional.confiancaGeral,
+      consumerFramework: resultadoDrift.consumerFramework,
+      appRoutes: resultadoDrift.appRoutes,
+      consumerSurfaces: resultadoDrift.consumerSurfaces,
+      consumerBridges: resultadoDrift.consumerBridges,
     },
     projeto: {
       arquivos: contextoProjeto.arquivosProjeto,
@@ -2934,46 +3673,49 @@ async function comandoAjudaIa(): Promise<number> {
   const descoberta = await descobrirDocsIa();
   console.log("Ajuda de IA da Sema");
   console.log("");
+  console.log(renderizarCaixaAscii([
+    "IA-first para greenfield, edicao guiada e legado sem contrato inicial",
+    "use o menor artefato semantico que resolva a tarefa",
+  ]));
+  console.log("");
   console.log(renderizarCabecalhoDocsIa(descoberta));
   console.log("");
-  console.log("O que a Sema faz de verdade");
-  console.log("- Foi feita para IA operar melhor; leitura humana e consequencia, nao centro de produto.");
-  console.log("- Governa contrato, intencao, erro, efeito, garantia, fluxo, vinculos e execucao.");
-  console.log("- Usa `importar` para bootstrap revisavel de legado.");
-  console.log("- Usa `impl` para ligar contrato a simbolos reais.");
-  console.log("- Usa `vinculos` para ligar contrato a arquivo, simbolo, recurso e superficie real.");
-  console.log("- Usa `execucao` para explicitar timeout, retry, compensacao e criticidade.");
-  console.log("- Usa `drift` para medir divergencia entre contrato e codigo vivo com score, confianca e lacunas.");
-  console.log("- Usa `resumo` e `prompt-curto` para IA pequena ou gratuita.");
-  console.log("- Usa `contexto-ia` para preparar AST, IR, diagnosticos, drift, `briefing.json` e artefatos compactos antes da edicao.");
+  console.log(renderizarSecaoAscii("Tres jeitos de usar a Sema", [
+    "[1] Producao inicial: modele, valide, compile e verifique antes de subir codigo derivado.",
+    "[2] Edicao em projeto com Sema: inspecione, leia resumo, rode drift e gere contexto antes de editar codigo vivo.",
+    "[3] Projeto sem Sema ainda: importe, revise o rascunho, formate, valide e use drift como juiz da adocao incremental.",
+  ]));
   console.log("");
-  console.log("O que a Sema nao promete");
-  console.log("- Nao escreve contrato final sozinho.");
-  console.log("- Nao substitui decisao arquitetural.");
-  console.log("- Nao adivinha regra de negocio que o codigo nao explicita.");
+  console.log(renderizarSecaoAscii("Capacidade de IA", [
+    "pequena: `sema resumo --micro`, `briefing.min.json`, `prompt-curto.txt`",
+    "media: `sema resumo --curto`, `drift.json`, `briefing.min.json`",
+    "grande: `sema contexto-ia`, `briefing.json`, `ir.json`, `ast.json`",
+  ]));
   console.log("");
-  console.log("Fluxo recomendado");
-  console.log("- Use `sema starter-ia` para um texto curto de onboarding.");
-  console.log("- Use `sema sync-ai-entrypoints` para regenerar `SEMA_BRIEF.*` e `SEMA_INDEX.json` na raiz.");
-  console.log("- Use `sema resumo <arquivo> --micro --para onboarding` para IA pequena.");
-  console.log("- Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.");
-  console.log("- Use `sema prompt-ia` para o prompt-base geral.");
-  console.log("- Use `sema prompt-ia-ui` para tarefas visuais com Sema + UI.");
-  console.log("- Use `sema prompt-ia-react` para projeto com Sema + React + TypeScript.");
-  console.log("- Use `sema prompt-ia-sema-primeiro` para forcar modelagem semantica antes da implementacao.");
-  console.log("- Use `sema exemplos-prompt-ia` para pegar modelos prontos de prompt.");
-  console.log("- Use `sema inspecionar` para descobrir base, codigo vivo e fontes legado.");
-  console.log("- Use `sema drift` para medir impls, vinculos, rotas, score e lacunas.");
-  console.log("- Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json` do modulo alvo.");
-  console.log("- Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>` quando a tarefa pedir codigo derivado.");
+  console.log(renderizarSecaoAscii("Fluxo recomendado", [
+    "Use `sema starter-ia` para um texto curto de onboarding.",
+    "Use `sema sync-ai-entrypoints` para regenerar `SEMA_BRIEF.*` e `SEMA_INDEX.json` na raiz.",
+    "Use `sema resumo <arquivo> --micro --para onboarding` para IA pequena.",
+    "Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.",
+    "Use `sema prompt-ia`, `sema prompt-ia-ui`, `sema prompt-ia-react` e `sema prompt-ia-sema-primeiro` conforme a tarefa.",
+    "Use `sema exemplos-prompt-ia` para pegar modelos prontos de prompt.",
+    "Use `sema inspecionar` para descobrir base, codigo vivo e fontes legado.",
+    "Use `sema drift` para medir impls, vinculos, rotas, score e lacunas.",
+    "Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json`.",
+    "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
+  ]));
   console.log("");
-  console.log("Regra pratica");
-  console.log("- Se voce quer testar a Sema de verdade, nao peca so HTML solto.");
-  console.log("- Peca `.sema` + arquitetura + React + TypeScript, ou use o modo `Sema primeiro`.");
-  console.log("- Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.");
-  console.log("- IA pequena comeca no menor artefato que resolve a tarefa; nao enfie `ast.json` inteiro nela de bobeira.");
-  console.log("- Antes de editar backend vivo, leia `briefing.min.json` ou `briefing.json` em vez de sair cavando arquivo na fe.");
-  console.log("- Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.");
+  console.log(renderizarSecaoAscii("Regras praticas", [
+    "Foi feita para IA operar melhor; leitura humana e consequencia, nao centro de produto.",
+    "Governa contrato, intencao, erro, efeito, garantia, fluxo, vinculos e execucao.",
+    "Nao escreve contrato final sozinho nem substitui decisao arquitetural.",
+    "Se voce quer testar a Sema de verdade, nao peca so HTML solto.",
+    "Peca `.sema` + arquitetura + React + TypeScript, ou use o modo `Sema primeiro`.",
+    "Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.",
+    "IA pequena comeca no menor artefato que resolve a tarefa; nao enfie `ast.json` inteiro nela de bobeira.",
+    "Antes de editar backend vivo, leia `briefing.min.json` ou `briefing.json` em vez de sair cavando arquivo na fe.",
+    "Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.",
+  ]));
   return 0;
 }
 
@@ -3466,7 +4208,7 @@ async function principal(): Promise<void> {
       {
         const fonte = normalizarFonteImportacao(posicionais[0]);
         if (!fonte || !posicionais[1]) {
-          console.error("Uso: sema importar <nestjs|fastapi|flask|nextjs|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
+          console.error("Uso: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
           codigoSaida = 1;
           break;
         }

@@ -1,0 +1,10 @@
+name: ranking_showroom_flutter_consumer
+publish_to: "none"
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  go_router: ^14.0.0

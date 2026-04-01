@@ -21,6 +21,10 @@ export type FonteImportacao =
   | "fastapi"
   | "flask"
   | "nextjs"
+  | "nextjs-consumer"
+  | "react-vite-consumer"
+  | "angular-consumer"
+  | "flutter-consumer"
   | "firebase"
   | "typescript"
   | "python"
@@ -50,6 +54,11 @@ interface EfeitoImportado {
   criticidade?: "baixa" | "media" | "alta";
 }
 
+interface VinculoImportado {
+  tipo: string;
+  valor: string;
+}
+
 interface EnumImportado {
   nome: string;
   valores: string[];
@@ -68,6 +77,7 @@ interface TarefaImportada {
   errors: ErroImportado[];
   effects: EfeitoImportado[];
   impl?: Partial<Record<OrigemInteropImportada, string>>;
+  vinculos?: VinculoImportado[];
   origemArquivo: string;
   origemSimbolo: string;
 }
@@ -90,6 +100,7 @@ interface ModuloImportado {
   entities: EntidadeImportada[];
   tasks: TarefaImportada[];
   routes: RotaImportada[];
+  vinculos?: VinculoImportado[];
 }
 
 export interface ArquivoImportado {
@@ -348,6 +359,7 @@ function mapearTipoPrimitivo(tipo: string): string {
   const limpo = tipo.trim().replace(/\s+/g, "");
   const base = limpo
     .replace(/^Promise<(.*)>$/, "$1")
+    .replace(/^Future<(.*)>$/, "$1")
     .replace(/\|undefined/g, "")
     .replace(/\|null/g, "")
     .replace(/\bundefined\|/g, "")
@@ -376,10 +388,26 @@ function mapearTipoPrimitivo(tipo: string): string {
   if (minusculo === "id" || minusculo.endsWith("id")) {
     return "Id";
   }
-  if (minusculo.includes("[]") || minusculo.startsWith("array<") || minusculo.startsWith("record<") || minusculo.startsWith("list[") || minusculo.startsWith("dict[")) {
+  if (
+    minusculo.includes("[]")
+    || minusculo.startsWith("array<")
+    || minusculo.startsWith("record<")
+    || minusculo.startsWith("map<")
+    || minusculo.startsWith("list<")
+    || minusculo.startsWith("list[")
+    || minusculo.startsWith("dict[")
+  ) {
     return "Json";
   }
-  if (minusculo === "json" || minusculo === "object" || minusculo === "unknown" || minusculo === "any" || minusculo === "void" || minusculo === "none") {
+  if (
+    minusculo === "json"
+    || minusculo === "object"
+    || minusculo === "unknown"
+    || minusculo === "any"
+    || minusculo === "dynamic"
+    || minusculo === "void"
+    || minusculo === "none"
+  ) {
     return minusculo === "void" || minusculo === "none" ? "Vazio" : "Json";
   }
   return tipo.trim();
@@ -814,6 +842,771 @@ function resolverEscopoImportacaoNextJs(diretorioEntrada: string): { baseProjeto
   };
 }
 
+interface SuperficieConsumerImportada {
+  caminho: string;
+  arquivo: string;
+  tipoArquivo: string;
+}
+
+function normalizarCaminhoImportado(caminhoArquivo: string): string {
+  return caminhoArquivo.replace(/\\/g, "/");
+}
+
+function normalizarSegmentoRotaConsumer(segmento: string): string {
+  const opcionalCatchAll = segmento.match(/^\[\[\.\.\.([A-Za-z_]\w*)\]\]$/);
+  if (opcionalCatchAll) {
+    return `{${opcionalCatchAll[1]}}`;
+  }
+  const catchAll = segmento.match(/^\[\.\.\.([A-Za-z_]\w*)\]$/);
+  if (catchAll) {
+    return `{${catchAll[1]}}`;
+  }
+  const dinamico = segmento.match(/^\[([A-Za-z_]\w*)\]$/);
+  if (dinamico) {
+    return `{${dinamico[1]}}`;
+  }
+  return segmento;
+}
+
+function montarCaminhoRotaConsumer(partes: string[]): string {
+  const filtradas = partes
+    .filter((segmento) => segmento && segmento !== "index" && !/^\(.*\)$/.test(segmento) && !segmento.startsWith("@"))
+    .map(normalizarSegmentoRotaConsumer);
+  return filtradas.length > 0 ? `/${filtradas.join("/")}`.replace(/\/+/g, "/") : "/";
+}
+
+function resolverEscopoImportacaoFrontendConsumer(diretorioEntrada: string): { baseProjeto: string; diretorioEscopo: string } {
+  const resolvido = path.resolve(diretorioEntrada);
+  const partes = path.parse(resolvido);
+  const segmentos = resolvido.slice(partes.root.length).split(path.sep).filter(Boolean);
+  const procurarSequencia = (sequencia: string[]) =>
+    segmentos.findIndex((segmento, indice) => sequencia.every((item, deslocamento) => segmentos[indice + deslocamento]?.toLowerCase() === item));
+  const montarBase = (indice: number) =>
+    indice <= 0
+      ? partes.root
+      : path.join(partes.root, ...segmentos.slice(0, indice));
+
+  for (const sequencia of [
+    ["src", "pages"],
+    ["pages"],
+    ["src", "app", "api"],
+    ["app", "api"],
+    ["src", "app"],
+    ["app"],
+    ["src", "lib"],
+    ["lib"],
+  ]) {
+    const indice = procurarSequencia(sequencia);
+    if (indice >= 0) {
+      return {
+        baseProjeto: montarBase(indice),
+        diretorioEscopo: resolvido,
+      };
+    }
+  }
+
+  return {
+    baseProjeto: resolvido,
+    diretorioEscopo: resolvido,
+  };
+}
+
+function arquivoEhBridgeNextJsConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?lib\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhBridgeReactViteConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?lib\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhBridgeAngularConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|js)$/i.test(relacao);
+}
+
+function arquivoEhSuperficieNextJsConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app\/(?:(?!api\/).)*?(?:page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhSuperficieReactViteConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /^(?:src\/)?pages\/.+\.(?:ts|tsx|js|jsx)$/i.test(relacao)
+    || /^(?:src\/)?App\.(?:ts|tsx|js|jsx)$/i.test(relacao);
+}
+
+function arquivoEhRotasReactViteConsumer(relacaoArquivo: string, codigo?: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?(?:app\/)?(?:router|routes)\.(?:ts|tsx|js|jsx)$/i.test(relacao)
+    || /from\s+["']react-router-dom["']|createBrowserRouter|RouterProvider|useRoutes\s*\(|<Routes\b|<Route\b/.test(codigo ?? "");
+}
+
+function arquivoEhRotasAngularConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app(?:\/.+)?\/[^/]+\.routes\.(?:ts|js)$/i.test(relacao);
+}
+
+function arquivoEhRotasAngularConsumerRaiz(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?app\/[^/]+\.routes\.(?:ts|js)$/i.test(relacao);
+}
+
+function arquivoEhBridgeFlutterConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:lib\/)?(?:sema_consumer_bridge|api\/sema_contract_bridge|sema\/.+)\.dart$/i.test(relacao);
+}
+
+function arquivoEhSuperficieFlutterConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:lib\/)?(?:screens|pages)\/.+\.dart$/i.test(relacao)
+    || /(?:^|\/)(?:lib\/)?main\.dart$/i.test(relacao);
+}
+
+function arquivoEhRotasFlutterConsumer(relacaoArquivo: string, codigo?: string): boolean {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  return /(?:^|\/)(?:lib\/)?(?:router|app_router|routes)\.dart$/i.test(relacao)
+    || /MaterialApp(?:\.router)?\s*\(|CupertinoApp(?:\.router)?\s*\(|GoRouter\s*\(/.test(codigo ?? "");
+}
+
+function inferirCaminhoNextJsConsumer(relacaoArquivo: string): SuperficieConsumerImportada | undefined {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  const segmentos = relacao.split("/");
+  const indiceSrcApp = segmentos.findIndex((segmento, indice) =>
+    segmento === "src" && segmentos[indice + 1] === "app");
+  const indiceApp = segmentos.findIndex((segmento) => segmento === "app");
+  const inicioApp = indiceSrcApp >= 0 ? indiceSrcApp + 2 : indiceApp >= 0 ? indiceApp + 1 : -1;
+  if (inicioApp < 0) {
+    return undefined;
+  }
+
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  const tipoArquivo = arquivoFinal.match(/^(page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/)?.[1];
+  if (!tipoArquivo) {
+    return undefined;
+  }
+
+  const caminhoAteArquivo = segmentos.slice(inicioApp, -1);
+  if (caminhoAteArquivo[0] === "api") {
+    return undefined;
+  }
+
+  const partes = caminhoAteArquivo
+    .filter((segmento) => segmento);
+
+  const caminho = montarCaminhoRotaConsumer(partes);
+  return {
+    caminho,
+    arquivo: relacao,
+    tipoArquivo,
+  };
+}
+
+function inferirCaminhoReactViteConsumer(relacaoArquivo: string): SuperficieConsumerImportada | undefined {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  if (!arquivoEhSuperficieReactViteConsumer(relacao)) {
+    return undefined;
+  }
+
+  if (/(?:^|\/)(?:src\/)?App\.(?:ts|tsx|js|jsx)$/i.test(relacao)) {
+    return {
+      caminho: "/",
+      arquivo: relacao,
+      tipoArquivo: "app",
+    };
+  }
+
+  const segmentos = relacao.split("/");
+  const indiceSrcPages = segmentos.findIndex((segmento, indice) => segmento === "src" && segmentos[indice + 1] === "pages");
+  const indicePages = segmentos.findIndex((segmento) => segmento === "pages");
+  const inicioPages = indiceSrcPages >= 0 ? indiceSrcPages + 2 : indicePages >= 0 ? indicePages + 1 : -1;
+  if (inicioPages < 0) {
+    return undefined;
+  }
+
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  const nomeBase = arquivoFinal.replace(/\.(?:ts|tsx|js|jsx)$/i, "");
+  const caminho = montarCaminhoRotaConsumer([...segmentos.slice(inicioPages, -1), nomeBase]);
+  return {
+    caminho,
+    arquivo: relacao,
+    tipoArquivo: "page",
+  };
+}
+
+function inferirCaminhoFlutterConsumer(relacaoArquivo: string): SuperficieConsumerImportada | undefined {
+  const relacao = normalizarCaminhoImportado(relacaoArquivo);
+  if (!arquivoEhSuperficieFlutterConsumer(relacao)) {
+    return undefined;
+  }
+
+  if (/(?:^|\/)(?:lib\/)?main\.dart$/i.test(relacao)) {
+    return {
+      caminho: "/",
+      arquivo: relacao,
+      tipoArquivo: "app",
+    };
+  }
+
+  const segmentos = relacao.split("/");
+  const indiceLibScreens = segmentos.findIndex((segmento, indice) => segmento === "lib" && ["screens", "pages"].includes(segmentos[indice + 1] ?? ""));
+  const indiceScreens = segmentos.findIndex((segmento) => segmento === "screens" || segmento === "pages");
+  const inicio = indiceLibScreens >= 0 ? indiceLibScreens + 2 : indiceScreens >= 0 ? indiceScreens + 1 : -1;
+  if (inicio < 0) {
+    return undefined;
+  }
+
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  const nomeBase = arquivoFinal
+    .replace(/\.(?:dart)$/i, "")
+    .replace(/_(screen|page)$/i, "");
+  return {
+    caminho: montarCaminhoRotaConsumer([...segmentos.slice(inicio, -1), nomeBase]),
+    arquivo: relacao,
+    tipoArquivo: "screen",
+  };
+}
+
+interface RotaReactViteConsumerImportada {
+  caminho: string;
+  arquivoRotas: string;
+  arquivoComponente?: string;
+}
+
+interface RotaFlutterConsumerImportada {
+  caminho: string;
+  arquivoRotas: string;
+}
+
+interface RotaAngularConsumerImportada {
+  caminho: string;
+  arquivoRotas: string;
+  arquivoComponente?: string;
+  arquivoRotasFilhas?: string;
+}
+
+function normalizarRotaDeclaradaConsumer(caminhoCru: string, prefixo = "/"): string {
+  const partesPrefixo = prefixo.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  const partesCaminho = (caminhoCru ?? "").trim().replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  return montarCaminhoRotaConsumer([...partesPrefixo, ...partesCaminho]);
+}
+
+function resolverImportRelativoTypeScript(relacaoArquivoBase: string, especificador: string): string | undefined {
+  if (!especificador.startsWith(".")) {
+    return undefined;
+  }
+  const baseDir = path.posix.dirname(normalizarCaminhoImportado(relacaoArquivoBase));
+  for (const sufixo of ["", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js", "/index.jsx"]) {
+    const candidato = path.posix.normalize(path.posix.join(baseDir, `${especificador}${sufixo}`));
+    if (!/\.(?:ts|tsx|js|jsx)$/i.test(candidato)) {
+      continue;
+    }
+    return candidato;
+  }
+  return undefined;
+}
+
+function extrairImportsTypeScriptConsumer(relacaoArquivo: string, codigo: string): Map<string, string> {
+  const imports = new Map<string, string>();
+  for (const match of codigo.matchAll(/import\s*\{\s*([^}]+)\s*\}\s*from\s*["']([^"']+)["']/g)) {
+    const moduloImportado = match[2];
+    const relacaoImportada = resolverImportRelativoTypeScript(relacaoArquivo, moduloImportado);
+    if (!relacaoImportada) {
+      continue;
+    }
+    for (const bruto of match[1].split(",")) {
+      const normalizado = bruto.trim();
+      if (!normalizado) {
+        continue;
+      }
+      const local = normalizado.split(/\s+as\s+/i).at(-1)?.trim();
+      if (local) {
+        imports.set(local, relacaoImportada);
+      }
+    }
+  }
+  for (const match of codigo.matchAll(/import\s+([A-Za-z_]\w*)\s+from\s*["']([^"']+)["']/g)) {
+    const relacaoImportada = resolverImportRelativoTypeScript(relacaoArquivo, match[2]);
+    const local = match[1]?.trim();
+    if (relacaoImportada && local) {
+      imports.set(local, relacaoImportada);
+    }
+  }
+  return imports;
+}
+
+function extrairRotasReactViteConsumer(relacaoArquivo: string, codigo: string): RotaReactViteConsumerImportada[] {
+  const imports = extrairImportsTypeScriptConsumer(relacaoArquivo, codigo);
+  const rotas = new Map<string, RotaReactViteConsumerImportada>();
+  const registrar = (caminhoCru: string, componente?: string) => {
+    const caminho = normalizarRotaDeclaradaConsumer(caminhoCru);
+    const chave = `${caminho}:${normalizarCaminhoImportado(relacaoArquivo)}:${componente ?? "router"}`;
+    rotas.set(chave, {
+      caminho,
+      arquivoRotas: normalizarCaminhoImportado(relacaoArquivo),
+      arquivoComponente: componente ? imports.get(componente) : undefined,
+    });
+  };
+
+  for (const match of codigo.matchAll(/(?:path\s*:\s*["'`]([^"'`]*)["'`]|index\s*:\s*true)[\s\S]{0,260}?(?:element\s*:\s*<\s*([A-Za-z_]\w*)|Component\s*:\s*([A-Za-z_]\w*))/g)) {
+    const caminhoCru = match[1] ?? "";
+    const componente = match[2] ?? match[3];
+    registrar(caminhoCru, componente);
+  }
+
+  for (const match of codigo.matchAll(/<Route\b[^>]*?(?:path=["'`]([^"'`]*)["'`][^>]*?)?(index\b)?[^>]*?(?:element=\{\s*<\s*([A-Za-z_]\w*)|Component=\{\s*([A-Za-z_]\w*))/g)) {
+    const caminhoCru = match[2] ? "" : (match[1] ?? "");
+    const componente = match[3] ?? match[4];
+    registrar(caminhoCru, componente);
+  }
+
+  return [...rotas.values()];
+}
+
+function extrairRotasAngularConsumerDiretas(
+  relacaoArquivo: string,
+  codigo: string,
+  prefixo = "/",
+): RotaAngularConsumerImportada[] {
+  const imports = extrairImportsTypeScriptConsumer(relacaoArquivo, codigo);
+  const rotas: RotaAngularConsumerImportada[] = [];
+
+  for (const match of codigo.matchAll(/path\s*:\s*["'`]([^"'`]*)["'`][\s\S]{0,320}?component\s*:\s*([A-Za-z_]\w*)/g)) {
+    const caminhoCru = (match[1] ?? "").trim();
+    const componente = match[2];
+    rotas.push({
+      caminho: normalizarRotaDeclaradaConsumer(caminhoCru, prefixo),
+      arquivoRotas: normalizarCaminhoImportado(relacaoArquivo),
+      arquivoComponente: imports.get(componente),
+    });
+  }
+
+  for (const match of codigo.matchAll(/path\s*:\s*["'`]([^"'`]*)["'`][\s\S]{0,320}?loadComponent\s*:\s*\(\s*\)\s*=>\s*import\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g)) {
+    const caminhoCru = (match[1] ?? "").trim();
+    const relacaoImportada = resolverImportRelativoTypeScript(relacaoArquivo, match[2] ?? "");
+    rotas.push({
+      caminho: normalizarRotaDeclaradaConsumer(caminhoCru, prefixo),
+      arquivoRotas: normalizarCaminhoImportado(relacaoArquivo),
+      arquivoComponente: relacaoImportada,
+    });
+  }
+
+  for (const match of codigo.matchAll(/path\s*:\s*["'`]([^"'`]*)["'`][\s\S]{0,360}?loadChildren\s*:\s*\(\s*\)\s*=>\s*import\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g)) {
+    const caminhoCru = (match[1] ?? "").trim();
+    const relacaoImportada = resolverImportRelativoTypeScript(relacaoArquivo, match[2] ?? "");
+    rotas.push({
+      caminho: normalizarRotaDeclaradaConsumer(caminhoCru, prefixo),
+      arquivoRotas: normalizarCaminhoImportado(relacaoArquivo),
+      arquivoRotasFilhas: relacaoImportada,
+    });
+  }
+
+  return rotas;
+}
+
+async function extrairRotasAngularConsumer(
+  baseProjeto: string,
+  relacaoArquivo: string,
+  prefixo = "/",
+  visitados = new Set<string>(),
+): Promise<RotaAngularConsumerImportada[]> {
+  const relacaoNormalizada = normalizarCaminhoImportado(relacaoArquivo);
+  if (visitados.has(relacaoNormalizada)) {
+    return [];
+  }
+  visitados.add(relacaoNormalizada);
+
+  const caminhoAbsoluto = path.join(baseProjeto, relacaoNormalizada);
+  let codigo = "";
+  try {
+    codigo = await readFile(caminhoAbsoluto, "utf8");
+  } catch {
+    return [];
+  }
+
+  const diretas = extrairRotasAngularConsumerDiretas(relacaoNormalizada, codigo, prefixo);
+  const agregadas = [...diretas];
+  for (const rota of diretas) {
+    if (!rota.arquivoRotasFilhas) {
+      continue;
+    }
+    agregadas.push(...await extrairRotasAngularConsumer(baseProjeto, rota.arquivoRotasFilhas, rota.caminho, visitados));
+  }
+  return agregadas;
+}
+
+function normalizarRotaDeclaradaFlutter(caminhoCru: string): string {
+  return montarCaminhoRotaConsumer((caminhoCru ?? "").trim().replace(/^\/+|\/+$/g, "").split("/").filter(Boolean));
+}
+
+function extrairRotasFlutterConsumer(relacaoArquivo: string, codigo: string): RotaFlutterConsumerImportada[] {
+  const rotas = new Map<string, RotaFlutterConsumerImportada>();
+  const registrar = (caminhoCru: string) => {
+    const caminho = normalizarRotaDeclaradaFlutter(caminhoCru);
+    rotas.set(`${caminho}:${normalizarCaminhoImportado(relacaoArquivo)}`, {
+      caminho,
+      arquivoRotas: normalizarCaminhoImportado(relacaoArquivo),
+    });
+  };
+
+  for (const match of codigo.matchAll(/GoRoute\s*\([\s\S]{0,220}?path\s*:\s*["'`]([^"'`]+)["'`]/g)) {
+    registrar(match[1] ?? "");
+  }
+
+  for (const match of codigo.matchAll(/["'`]([^"'`]+)["'`]\s*:\s*\([^)]*\)\s*=>/g)) {
+    registrar(match[1] ?? "");
+  }
+
+  if (/home\s*:\s*(?:const\s+)?[A-Za-z_]\w*\(/.test(codigo)) {
+    registrar("/");
+  }
+
+  return [...rotas.values()];
+}
+
+async function carregarContextosBridgeConsumer(baseProjeto: string, arquivosBridge: string[]): Promise<ContextoTsArquivo[]> {
+  return Promise.all(arquivosBridge.map(async (arquivo) => {
+    const texto = await readFile(arquivo, "utf8");
+    const scriptKind = arquivo.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+    return {
+      sourceFile: ts.createSourceFile(arquivo, texto, ts.ScriptTarget.Latest, true, scriptKind),
+      texto,
+      relacao: path.relative(baseProjeto, arquivo),
+    };
+  }));
+}
+
+function extrairTasksBridgeConsumer(
+  baseProjeto: string,
+  contextosBridge: ContextoTsArquivo[],
+): { tasks: TarefaImportada[]; entities: EntidadeImportada[]; enums: EnumImportado[] } {
+  const tiposGlobais = consolidarTiposTs(contextosBridge);
+  const entitiesRef = new Set<string>();
+  const enumsRef = new Set<string>();
+  const tasks: TarefaImportada[] = [];
+
+  for (const contexto of contextosBridge) {
+    contexto.sourceFile.forEachChild((node) => {
+      if (ts.isFunctionDeclaration(node) && node.name && node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+        const nome = node.name.text;
+        const input = node.parameters.flatMap((parametro) =>
+          expandirCamposTs(parametro.name.getText(contexto.sourceFile), parametro.type?.getText(contexto.sourceFile), tiposGlobais, entitiesRef, enumsRef, !parametro.questionToken));
+        const output = node.type?.getText(contexto.sourceFile) && mapearTipoPrimitivo(node.type.getText(contexto.sourceFile)) === "Vazio"
+          ? []
+          : deduplicarCampos(expandirCamposTs("resultado", node.type?.getText(contexto.sourceFile), tiposGlobais, entitiesRef, enumsRef, false));
+        tasks.push({
+          nome: nomeTaskBridgeConsumer(nome),
+          resumo: `Task consumer importada automaticamente de ${contexto.relacao}#${nome}.`,
+          input: deduplicarCampos(input),
+          output,
+          errors: node.body ? extrairErrosTs(node.body, contexto.sourceFile) : [],
+          effects: node.body ? descreverEfeitosPorHeuristica(node.body.getText(contexto.sourceFile)) : [],
+          impl: { ts: caminhoImplTs(baseProjeto, path.join(baseProjeto, contexto.relacao), nome) },
+          vinculos: deduplicarVinculos([
+            { tipo: "arquivo", valor: normalizarCaminhoImportado(contexto.relacao) },
+            { tipo: "simbolo", valor: caminhoImplTs(baseProjeto, path.join(baseProjeto, contexto.relacao), nome) },
+          ]),
+          origemArquivo: contexto.relacao,
+          origemSimbolo: nome,
+        });
+      }
+
+      if (ts.isClassDeclaration(node) && node.name && node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+        const nomeClasse = node.name.text;
+        for (const member of node.members) {
+          if (!ts.isMethodDeclaration(member) || !member.name || !member.body) {
+            continue;
+          }
+          if (member.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.PrivateKeyword || modifier.kind === ts.SyntaxKind.ProtectedKeyword)) {
+            continue;
+          }
+          const nomeMetodo = member.name.getText(contexto.sourceFile);
+          if (nomeMetodo === "constructor") {
+            continue;
+          }
+          const input = member.parameters.flatMap((parametro) =>
+            expandirCamposTs(parametro.name.getText(contexto.sourceFile), parametro.type?.getText(contexto.sourceFile), tiposGlobais, entitiesRef, enumsRef, !parametro.questionToken));
+          const output = member.type?.getText(contexto.sourceFile) && mapearTipoPrimitivo(member.type.getText(contexto.sourceFile)) === "Vazio"
+            ? []
+            : deduplicarCampos(expandirCamposTs("resultado", member.type?.getText(contexto.sourceFile), tiposGlobais, entitiesRef, enumsRef, false));
+          const caminhoSimbolo = caminhoImplTs(baseProjeto, path.join(baseProjeto, contexto.relacao), `${nomeClasse}.${nomeMetodo}`);
+          tasks.push({
+            nome: nomeTaskBridgeConsumer(nomeMetodo),
+            resumo: `Task consumer importada automaticamente de ${contexto.relacao}#${nomeClasse}.${nomeMetodo}.`,
+            input: deduplicarCampos(input),
+            output,
+            errors: extrairErrosTs(member.body, contexto.sourceFile),
+            effects: descreverEfeitosPorHeuristica(member.body.getText(contexto.sourceFile)),
+            impl: { ts: caminhoSimbolo },
+            vinculos: deduplicarVinculos([
+              { tipo: "arquivo", valor: normalizarCaminhoImportado(contexto.relacao) },
+              { tipo: "simbolo", valor: caminhoSimbolo },
+            ]),
+            origemArquivo: contexto.relacao,
+            origemSimbolo: `${nomeClasse}.${nomeMetodo}`,
+          });
+        }
+      }
+    });
+  }
+
+  const { entities, enums } = criarEntidadesReferenciadas(tiposGlobais, entitiesRef, enumsRef);
+  return {
+    tasks,
+    entities,
+    enums,
+  };
+}
+
+function montarVinculosSuperficiesConsumer(superficies: SuperficieConsumerImportada[]): VinculoImportado[] {
+  return deduplicarVinculos(superficies.flatMap((superficie) => [
+    { tipo: "superficie", valor: superficie.caminho },
+    { tipo: "arquivo", valor: normalizarCaminhoImportado(superficie.arquivo) },
+  ]));
+}
+
+async function importarConsumerBase(
+  diretorio: string,
+  namespaceBase: string,
+  descricaoFramework: string,
+  ehBridge: (relacaoArquivo: string) => boolean,
+  coletarSuperficies: (baseProjeto: string, arquivos: string[]) => Promise<SuperficieConsumerImportada[]>,
+): Promise<ModuloImportado[]> {
+  const escopo = resolverEscopoImportacaoFrontendConsumer(diretorio);
+  const arquivos = await listarArquivosRecursivos(escopo.baseProjeto, [".ts", ".tsx", ".js", ".jsx"]);
+  const arquivosBridge = arquivos.filter((arquivo) => ehBridge(path.relative(escopo.baseProjeto, arquivo)));
+  const contextosBridge = await carregarContextosBridgeConsumer(escopo.baseProjeto, arquivosBridge);
+  const { tasks, entities, enums } = extrairTasksBridgeConsumer(escopo.baseProjeto, contextosBridge);
+  const superficiesImportadas = await coletarSuperficies(escopo.baseProjeto, arquivos);
+  const superficies = montarVinculosSuperficiesConsumer(superficiesImportadas);
+
+  if (tasks.length === 0 && superficies.length === 0) {
+    return [];
+  }
+
+  const nomeModulo = namespaceBase.endsWith(".consumer")
+    ? namespaceBase
+    : `${namespaceBase}.consumer`;
+
+  return [{
+    nome: nomeModulo,
+    resumo: `Rascunho Sema importado automaticamente do consumer ${descricaoFramework} em ${escopo.baseProjeto}.`,
+    tasks: deduplicarTarefas(tasks),
+    routes: [],
+    entities,
+    enums,
+    vinculos: superficies,
+  }];
+}
+
+async function coletarSuperficiesNextJsConsumer(baseProjeto: string, arquivos: string[]): Promise<SuperficieConsumerImportada[]> {
+  return arquivos
+    .map((arquivo) => inferirCaminhoNextJsConsumer(path.relative(baseProjeto, arquivo)))
+    .filter((item): item is SuperficieConsumerImportada => Boolean(item));
+}
+
+async function coletarSuperficiesReactViteConsumer(baseProjeto: string, arquivos: string[]): Promise<SuperficieConsumerImportada[]> {
+  const superficies: SuperficieConsumerImportada[] = [];
+
+  for (const arquivo of arquivos) {
+    const relacao = path.relative(baseProjeto, arquivo);
+    const codigo = await readFile(arquivo, "utf8");
+    if (arquivoEhRotasReactViteConsumer(relacao, codigo)) {
+      for (const rota of extrairRotasReactViteConsumer(relacao, codigo)) {
+        superficies.push({
+          caminho: rota.caminho,
+          arquivo: rota.arquivoRotas,
+          tipoArquivo: "router",
+        });
+        if (rota.arquivoComponente) {
+          superficies.push({
+            caminho: rota.caminho,
+            arquivo: rota.arquivoComponente,
+            tipoArquivo: "page",
+          });
+        }
+      }
+    }
+  }
+
+  for (const arquivo of arquivos) {
+    const superficie = inferirCaminhoReactViteConsumer(path.relative(baseProjeto, arquivo));
+    if (superficie) {
+      superficies.push(superficie);
+    }
+  }
+
+  return superficies;
+}
+
+async function coletarSuperficiesAngularConsumer(baseProjeto: string, arquivos: string[]): Promise<SuperficieConsumerImportada[]> {
+  const superficies: SuperficieConsumerImportada[] = [];
+  const arquivosRotas = arquivos.filter((arquivo) => arquivoEhRotasAngularConsumer(path.relative(baseProjeto, arquivo)));
+  const arquivosRaiz = arquivosRotas.filter((arquivo) => arquivoEhRotasAngularConsumerRaiz(path.relative(baseProjeto, arquivo)));
+  const pontosEntrada = arquivosRaiz.length > 0 ? arquivosRaiz : arquivosRotas;
+  for (const arquivoRotas of pontosEntrada) {
+    const relacao = path.relative(baseProjeto, arquivoRotas);
+    for (const rota of await extrairRotasAngularConsumer(baseProjeto, relacao)) {
+      superficies.push({
+        caminho: rota.caminho,
+        arquivo: rota.arquivoRotas,
+        tipoArquivo: "routes",
+      });
+      if (rota.arquivoComponente) {
+        superficies.push({
+          caminho: rota.caminho,
+          arquivo: rota.arquivoComponente,
+          tipoArquivo: "component",
+        });
+      }
+    }
+  }
+  return superficies;
+}
+
+async function importarNextJsConsumerBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  return importarConsumerBase(
+    diretorio,
+    namespaceBase,
+    "Next.js",
+    arquivoEhBridgeNextJsConsumer,
+    coletarSuperficiesNextJsConsumer,
+  );
+}
+
+async function importarReactViteConsumerBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  return importarConsumerBase(
+    diretorio,
+    namespaceBase,
+    "React/Vite",
+    arquivoEhBridgeReactViteConsumer,
+    coletarSuperficiesReactViteConsumer,
+  );
+}
+
+async function importarAngularConsumerBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  return importarConsumerBase(
+    diretorio,
+    namespaceBase,
+    "Angular",
+    arquivoEhBridgeAngularConsumer,
+    coletarSuperficiesAngularConsumer,
+  );
+}
+
+async function extrairTasksBridgeFlutterConsumer(baseProjeto: string, arquivosBridge: string[]): Promise<TarefaImportada[]> {
+  const tasks: TarefaImportada[] = [];
+
+  for (const arquivo of arquivosBridge) {
+    const texto = await readFile(arquivo, "utf8");
+    const relacao = path.relative(baseProjeto, arquivo);
+
+    for (const match of texto.matchAll(/(?:Future<([^\n]+)>|([\w?<>.,\s]+))\s+(\w+)\(([^)]*)\)\s*(?:async\s*)?\{/g)) {
+      const retorno = (match[1] ?? match[2] ?? "").trim();
+      const nome = match[3]!;
+      if (["build", "toString", "hashCode"].includes(nome)) {
+        continue;
+      }
+      const parametros = match[4]!;
+      const input = parametros
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => item.replace(/^(required|final)\s+/g, ""))
+        .map((item) => {
+          const partes = item.split(/\s+/).filter(Boolean);
+          const nomeParametro = partes.at(-1) ?? "arg";
+          const tipoParametro = partes.slice(0, -1).join(" ");
+          return {
+            nome: paraSnakeCase(nomeParametro),
+            tipo: mapearTipoPrimitivo(tipoParametro || "Json"),
+            obrigatorio: !/\?/.test(tipoParametro),
+          };
+        });
+      const caminhoSimbolo = caminhoImplDart(baseProjeto, arquivo, nome);
+      tasks.push({
+        nome: nomeTaskBridgeConsumer(nome),
+        resumo: `Task consumer importada automaticamente de ${relacao}#${nome}.`,
+        input,
+        output: retorno && mapearTipoPrimitivo(retorno) === "Vazio"
+          ? []
+          : [{ nome: "resultado", tipo: mapearTipoPrimitivo(retorno || "Json"), obrigatorio: false }],
+        errors: [],
+        effects: descreverEfeitosPorHeuristica(texto),
+        impl: { dart: caminhoSimbolo },
+        vinculos: deduplicarVinculos([
+          { tipo: "arquivo", valor: normalizarCaminhoImportado(relacao) },
+          { tipo: "simbolo", valor: caminhoSimbolo },
+        ]),
+        origemArquivo: relacao,
+        origemSimbolo: nome,
+      });
+    }
+  }
+
+  return tasks;
+}
+
+async function coletarSuperficiesFlutterConsumer(baseProjeto: string, arquivos: string[]): Promise<SuperficieConsumerImportada[]> {
+  const superficies: SuperficieConsumerImportada[] = [];
+
+  for (const arquivo of arquivos) {
+    const relacao = path.relative(baseProjeto, arquivo);
+    const codigo = await readFile(arquivo, "utf8");
+    if (arquivoEhRotasFlutterConsumer(relacao, codigo)) {
+      for (const rota of extrairRotasFlutterConsumer(relacao, codigo)) {
+        superficies.push({
+          caminho: rota.caminho,
+          arquivo: rota.arquivoRotas,
+          tipoArquivo: "router",
+        });
+      }
+    }
+  }
+
+  for (const arquivo of arquivos) {
+    const superficie = inferirCaminhoFlutterConsumer(path.relative(baseProjeto, arquivo));
+    if (superficie) {
+      superficies.push(superficie);
+    }
+  }
+
+  return superficies;
+}
+
+async function importarFlutterConsumerBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const escopo = resolverEscopoImportacaoFrontendConsumer(diretorio);
+  const arquivos = (await listarArquivosRecursivos(escopo.baseProjeto, [".dart"]))
+    .filter((arquivo) => !arquivo.endsWith(".g.dart") && !arquivo.endsWith(".freezed.dart"));
+  const arquivosBridge = arquivos.filter((arquivo) => arquivoEhBridgeFlutterConsumer(path.relative(escopo.baseProjeto, arquivo)));
+  const tasks = await extrairTasksBridgeFlutterConsumer(escopo.baseProjeto, arquivosBridge);
+  const superficiesImportadas = await coletarSuperficiesFlutterConsumer(escopo.baseProjeto, arquivos);
+  const superficies = montarVinculosSuperficiesConsumer(superficiesImportadas);
+
+  if (tasks.length === 0 && superficies.length === 0) {
+    return [];
+  }
+
+  const nomeModulo = namespaceBase.endsWith(".consumer")
+    ? namespaceBase
+    : `${namespaceBase}.consumer`;
+
+  return [{
+    nome: nomeModulo,
+    resumo: `Rascunho Sema importado automaticamente do consumer Flutter em ${escopo.baseProjeto}.`,
+    tasks: deduplicarTarefas(tasks),
+    routes: [],
+    entities: [],
+    enums: [],
+    vinculos: superficies,
+  }];
+}
+
+function nomeTaskBridgeConsumer(nome: string): string {
+  return paraSnakeCase(nome.replace(/^sema/, "")) || paraSnakeCase(nome) || "task_consumer";
+}
+
 function extrairChamadaServiceTs(node: ts.Node): string | undefined {
   let encontrado: string | undefined;
   const visitar = (atual: ts.Node): void => {
@@ -864,6 +1657,17 @@ function deduplicarEfeitos(effects: EfeitoImportado[]): EfeitoImportado[] {
   return [...mapa.values()];
 }
 
+function deduplicarVinculos(vinculos: VinculoImportado[]): VinculoImportado[] {
+  const mapa = new Map<string, VinculoImportado>();
+  for (const vinculo of vinculos) {
+    const chave = `${vinculo.tipo}:${vinculo.valor}`;
+    if (!mapa.has(chave)) {
+      mapa.set(chave, vinculo);
+    }
+  }
+  return [...mapa.values()];
+}
+
 function deduplicarEntidades(entities: EntidadeImportada[]): EntidadeImportada[] {
   const mapa = new Map<string, EntidadeImportada>();
   for (const entity of entities) {
@@ -896,6 +1700,7 @@ function deduplicarTarefas(tasks: TarefaImportada[]): TarefaImportada[] {
     existente.output = deduplicarCampos([...existente.output, ...task.output]);
     existente.errors = deduplicarErros([...existente.errors, ...task.errors]);
     existente.effects = deduplicarEfeitos([...existente.effects, ...task.effects]);
+    existente.vinculos = deduplicarVinculos([...(existente.vinculos ?? []), ...(task.vinculos ?? [])]);
   }
   return [...mapa.values()];
 }
@@ -982,6 +1787,28 @@ function renderizarImpl(impl: Partial<Record<OrigemInteropImportada, string>> | 
   ];
 }
 
+function renderizarValorVinculo(vinculo: VinculoImportado): string {
+  if (vinculo.tipo === "simbolo") {
+    return vinculo.valor;
+  }
+  if (vinculo.tipo === "arquivo" || vinculo.valor.includes("/") || vinculo.valor.includes("\\") || vinculo.valor.includes("{")) {
+    return `"${escaparTexto(vinculo.valor)}"`;
+  }
+  return vinculo.valor;
+}
+
+function renderizarVinculos(vinculos: VinculoImportado[] | undefined, indentacao = "  "): string[] {
+  if (!vinculos || vinculos.length === 0) {
+    return [];
+  }
+  return [
+    `${indentacao}vinculos {`,
+    ...vinculos.map((vinculo) => `${indentacao}  ${vinculo.tipo}: ${renderizarValorVinculo(vinculo)}`),
+    `${indentacao}}`,
+    "",
+  ];
+}
+
 function renderizarTask(task: TarefaImportada): string[] {
   const linhas = [
     `  task ${task.nome} {`,
@@ -993,6 +1820,7 @@ function renderizarTask(task: TarefaImportada): string[] {
     ...renderizarCampos("output", task.output, "    ", true),
     ...renderizarEffects(task.effects, "    "),
     ...renderizarImpl(task.impl, "    "),
+    ...renderizarVinculos(task.vinculos, "    "),
     ...renderizarErrors(task.errors, "    "),
   ];
 
@@ -1056,6 +1884,7 @@ function moduloParaCodigo(modulo: ModuloImportado): string {
     `    resumo: "${escaparTexto(modulo.resumo)}"`,
     "  }",
     "",
+    ...renderizarVinculos(modulo.vinculos, "  "),
     ...modulo.enums.flatMap(renderizarEnum),
     ...modulo.entities.flatMap(renderizarEntidade),
     ...modulo.tasks.flatMap(renderizarTask),
@@ -2103,6 +2932,7 @@ function criarModuloImportadoSimples(
   resumo: string,
   tasks: TarefaImportada[],
   routes: RotaImportada[] = [],
+  vinculos: VinculoImportado[] = [],
 ): ModuloImportado {
   sincronizarRotasComTasks(routes, tasks);
   return {
@@ -2112,6 +2942,7 @@ function criarModuloImportadoSimples(
     routes: deduplicarRotas(routes),
     entities: [],
     enums: [],
+    vinculos: deduplicarVinculos(vinculos),
   };
 }
 
@@ -2129,6 +2960,7 @@ function acumularModuloImportado(
   existente.routes = deduplicarRotas([...existente.routes, ...modulo.routes]);
   existente.entities = deduplicarEntidades([...existente.entities, ...modulo.entities]);
   existente.enums = deduplicarEnums([...existente.enums, ...modulo.enums]);
+  existente.vinculos = deduplicarVinculos([...(existente.vinculos ?? []), ...(modulo.vinculos ?? [])]);
 }
 
 function selecionarSimbolosPreferidos<T extends { simbolo: string }>(simbolos: T[]): T[] {
@@ -2540,6 +3372,14 @@ export async function importarProjetoLegado(
     modulos = await importarTypeScriptBase(base, namespace, true);
   } else if (fonte === "nextjs") {
     modulos = await importarNextJsBase(base, namespace);
+  } else if (fonte === "nextjs-consumer") {
+    modulos = await importarNextJsConsumerBase(base, namespace);
+  } else if (fonte === "react-vite-consumer") {
+    modulos = await importarReactViteConsumerBase(base, namespace);
+  } else if (fonte === "angular-consumer") {
+    modulos = await importarAngularConsumerBase(base, namespace);
+  } else if (fonte === "flutter-consumer") {
+    modulos = await importarFlutterConsumerBase(base, namespace);
   } else if (fonte === "firebase") {
     modulos = await importarFirebaseBase(base, namespace);
   } else if (fonte === "typescript") {

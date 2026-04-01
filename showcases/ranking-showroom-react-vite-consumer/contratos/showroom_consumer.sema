@@ -1,0 +1,22 @@
+module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      ranking: Json
+    }
+    impl {
+      ts: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "src/lib/sema_consumer_bridge.ts"
+      simbolo: src.lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "src/router.tsx"
+      arquivo: "src/pages/ranking.tsx"
+    }
+    guarantees {
+      ranking existe
+    }
+  }
+}

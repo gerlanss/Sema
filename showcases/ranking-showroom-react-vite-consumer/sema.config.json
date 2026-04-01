@@ -1,0 +1,9 @@
+{
+  "origens": ["./contratos"],
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["react-vite-consumer", "typescript"],
+  "modoAdocao": "incremental",
+  "alvos": ["typescript"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos"
+}

@@ -1,0 +1,22 @@
+module showroom.consumer {
+  task fetch_showroom_ranking {
+    input {
+    }
+    output {
+      resultado: Json
+    }
+    impl {
+      dart: lib.sema_consumer_bridge.semaFetchShowroomRanking
+    }
+    vinculos {
+      arquivo: "lib/sema_consumer_bridge.dart"
+      simbolo: lib.sema_consumer_bridge.semaFetchShowroomRanking
+      superficie: "/ranking"
+      arquivo: "lib/router.dart"
+      arquivo: "lib/screens/ranking_screen.dart"
+    }
+    guarantees {
+      resultado existe
+    }
+  }
+}

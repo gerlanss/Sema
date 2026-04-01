@@ -6,13 +6,17 @@ import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import {
+  criarProjetoAngularConsumer,
   criarProjetoCppBridge,
   criarProjetoDotnetAspNet,
   criarProjetoFirebaseWorker,
   criarProjetoFlaskEstiloGestech,
+  criarProjetoFlutterConsumer,
   criarProjetoGoHttp,
   criarProjetoNextJsAppRouter,
+  criarProjetoNextJsConsumer,
   criarProjetoNextJsAppRouterSemantico,
+  criarProjetoReactViteConsumer,
   criarProjetoRustAxum,
   criarProjetoSpringBoot,
 } from "./futebot-fixture.ts";
@@ -331,6 +335,137 @@ test("cli importa projeto Next.js App Router a partir de app, api e subpasta con
     const arquivoSessao = await readFile(path.join(saidaSubpasta, "api", "auth", "session.sema"), "utf8");
     assert.match(arquivoSessao, /route api_auth_session_get_publico/);
     assert.doesNotMatch(arquivoSessao, /route api_catalogo_busca_get_publico/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli importa projeto Next.js consumer a partir do bridge e inventaria superficies App Router", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-nextjs-consumer-"));
+
+  try {
+    await criarProjetoNextJsConsumer(base);
+
+    const execucao = executarImportacao([
+      "importar",
+      "nextjs-consumer",
+      base,
+      "--namespace",
+      "showroom",
+      "--saida",
+      path.join(base, "sema"),
+      "--json",
+    ]);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.fonte, "nextjs-consumer");
+    assert.equal(json.resumo.sucesso, true);
+    assert.equal(json.resumo.modulos, 1);
+    assert.equal(json.resumo.tarefas >= 2, true);
+
+    const arquivoConsumer = await readFile(path.join(base, "sema", "consumer.sema"), "utf8");
+    assert.match(arquivoConsumer, /ts: src\.lib\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(arquivoConsumer, /ts: src\.lib\.sema_consumer_bridge\.semaLoadRankingSummary/);
+    assert.match(arquivoConsumer, /vinculos \{/);
+    assert.match(arquivoConsumer, /superficie: "?\/ranking"?/);
+    assert.match(arquivoConsumer, /arquivo: "src\/app\/ranking\/page\.tsx"/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli importa projeto React Vite consumer a partir do bridge e inventaria page surfaces", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-react-vite-consumer-"));
+
+  try {
+    await criarProjetoReactViteConsumer(base);
+
+    const execucao = executarImportacao([
+      "importar",
+      "react-vite-consumer",
+      base,
+      "--namespace",
+      "showroom",
+      "--saida",
+      path.join(base, "sema"),
+      "--json",
+    ]);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.fonte, "react-vite-consumer");
+    assert.equal(json.resumo.sucesso, true);
+
+    const arquivoConsumer = await readFile(path.join(base, "sema", "consumer.sema"), "utf8");
+    assert.match(arquivoConsumer, /ts: src\.lib\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(arquivoConsumer, /superficie: "?\/ranking"?/);
+    assert.match(arquivoConsumer, /arquivo: "src\/pages\/ranking\.tsx"/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli importa projeto Angular consumer a partir do bridge e inventaria route config + component", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-angular-consumer-"));
+
+  try {
+    await criarProjetoAngularConsumer(base);
+
+    const execucao = executarImportacao([
+      "importar",
+      "angular-consumer",
+      base,
+      "--namespace",
+      "showroom",
+      "--saida",
+      path.join(base, "sema"),
+      "--json",
+    ]);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.fonte, "angular-consumer");
+    assert.equal(json.resumo.sucesso, true);
+
+    const arquivoConsumer = await readFile(path.join(base, "sema", "consumer.sema"), "utf8");
+    assert.match(arquivoConsumer, /ts: src\.app\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(arquivoConsumer, /superficie: "?\/ranking"?/);
+    assert.match(arquivoConsumer, /arquivo: "src\/app\/app\.routes\.ts"/);
+    assert.match(arquivoConsumer, /arquivo: "src\/app\/features\/ranking\/ranking-page\.component\.ts"/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli importa projeto Flutter consumer a partir do bridge e inventaria router + screen", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-flutter-consumer-"));
+
+  try {
+    await criarProjetoFlutterConsumer(base);
+
+    const execucao = executarImportacao([
+      "importar",
+      "flutter-consumer",
+      base,
+      "--namespace",
+      "showroom",
+      "--saida",
+      path.join(base, "sema"),
+      "--json",
+    ]);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.fonte, "flutter-consumer");
+    assert.equal(json.resumo.sucesso, true);
+
+    const arquivoConsumer = await readFile(path.join(base, "sema", "consumer.sema"), "utf8");
+    assert.match(arquivoConsumer, /dart: lib\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(arquivoConsumer, /dart: lib\.sema_consumer_bridge\.semaLoadRankingSummary/);
+    assert.match(arquivoConsumer, /superficie: "?\/ranking"?/);
+    assert.match(arquivoConsumer, /arquivo: "lib\/router\.dart"/);
+    assert.match(arquivoConsumer, /arquivo: "lib\/screens\/ranking_screen\.dart"/);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

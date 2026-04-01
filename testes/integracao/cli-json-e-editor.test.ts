@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
   DIRETORIOS_CODIGO_FUTEBOT_FIXTURE,
+  criarProjetoAngularConsumer,
   criarProjetoBridgeDart,
   criarProjetoCppBridge,
   criarProjetoDotnetAspNet,
@@ -15,7 +16,10 @@ import {
   criarProjetoFlaskEstiloGestech,
   criarProjetoGoHttp,
   criarProjetoNextJsAppRouter,
+  criarProjetoNextJsConsumer,
   criarProjetoPythonEstiloFuteBot,
+  criarProjetoReactViteConsumer,
+  criarProjetoFlutterConsumer,
   criarProjetoRustAxum,
   criarProjetoSpringBoot,
 } from "./futebot-fixture.ts";
@@ -253,7 +257,27 @@ test("cli expoe ajuda de ia com mapa de comandos", () => {
   assert.match(ajuda.stdout, /sema prompt-curto <arquivo> --curto --para mudanca/);
   assert.match(ajuda.stdout, /sema prompt-ia-react/);
   assert.match(ajuda.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
+  assert.match(ajuda.stdout, /Tres jeitos de usar a Sema/);
+  assert.match(ajuda.stdout, /Capacidade de IA/);
+  assert.match(ajuda.stdout, /Projeto sem Sema ainda: importe, revise o rascunho/);
   assert.match(ajuda.stdout, /nao peca so HTML solto/);
+});
+
+test("cli organiza help publico por fluxo e capacidade", () => {
+  const ajuda = spawnSync(
+    "node",
+    ["pacotes/cli/dist/index.js", "--help"],
+    { stdio: "pipe", encoding: "utf8" },
+  );
+  assert.equal(ajuda.status, 0, ajuda.stderr || ajuda.stdout);
+  assert.match(ajuda.stdout, /Sema CLI v/);
+  assert.match(ajuda.stdout, /Fluxos rapidos/);
+  assert.match(ajuda.stdout, /Projeto novo \/ producao inicial/);
+  assert.match(ajuda.stdout, /Editar projeto que ja usa Sema/);
+  assert.match(ajuda.stdout, /Adotar Sema em projeto que ainda nao usa/);
+  assert.match(ajuda.stdout, /IA por capacidade/);
+  assert.match(ajuda.stdout, /pequena: sema resumo --micro/);
+  assert.match(ajuda.stdout, /grande: sema contexto-ia \+ briefing\.json \+ ir\.json \+ ast\.json/);
 });
 
 test("cli gera resumo compacto e prompt curto para modulo", () => {
@@ -587,6 +611,99 @@ test("cli inspeciona projeto Next.js App Router e detecta fonte legado correta",
   }
 });
 
+test("cli inspeciona projeto Next.js consumer e expõe sinais consumer no JSON", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-nextjs-consumer-"));
+
+  try {
+    await criarProjetoNextJsConsumer(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", baseTemporaria, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.baseProjeto, baseTemporaria);
+    assert.equal(json.configuracao.fontesLegado.includes("nextjs-consumer"), true);
+    assert.equal(json.configuracao.consumerFramework, "nextjs-consumer");
+    assert.equal(json.configuracao.appRoutes.includes("/ranking"), true);
+    assert.equal(json.configuracao.consumerBridges.some((bridge: { caminho: string }) => bridge.caminho === "src.lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto React Vite consumer e expõe sinais consumer no JSON", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-react-vite-consumer-"));
+
+  try {
+    await criarProjetoReactViteConsumer(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", baseTemporaria, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.fontesLegado.includes("react-vite-consumer"), true);
+    assert.equal(json.configuracao.consumerFramework, "react-vite-consumer");
+    assert.equal(json.configuracao.appRoutes.includes("/ranking"), true);
+    assert.equal(json.configuracao.consumerBridges.some((bridge: { caminho: string }) => bridge.caminho === "src.lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto Angular consumer e expõe sinais consumer no JSON", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-angular-consumer-"));
+
+  try {
+    await criarProjetoAngularConsumer(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", baseTemporaria, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.fontesLegado.includes("angular-consumer"), true);
+    assert.equal(json.configuracao.consumerFramework, "angular-consumer");
+    assert.equal(json.configuracao.appRoutes.includes("/ranking"), true);
+    assert.equal(json.configuracao.consumerBridges.some((bridge: { caminho: string }) => bridge.caminho === "src.app.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto Flutter consumer e expõe sinais consumer no JSON", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-flutter-consumer-"));
+
+  try {
+    await criarProjetoFlutterConsumer(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", ".", "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.fontesLegado.includes("flutter-consumer"), true);
+    assert.equal(json.configuracao.consumerFramework, "flutter-consumer");
+    assert.equal(json.configuracao.appRoutes.includes("/ranking"), true);
+    assert.equal(json.configuracao.consumerBridges.some((bridge: { caminho: string }) => bridge.caminho === "lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
 test("cli resolve base de projeto sem config a partir de contratos e arquivo isolado", async () => {
   const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-contratos-"));
 
@@ -696,6 +813,128 @@ test("cli gera contexto de ia acionavel para bridge Dart consumidor", async () =
     const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
     assert.equal(drift.resumo.implsQuebrados, 0);
     assert.equal(drift.resumo.implsValidos, 2);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+    await rm(pastaSaida, { recursive: true, force: true });
+  }
+});
+
+test("cli gera contexto de ia acionavel para Next.js consumer com bridge e superficies", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-nextjs-consumer-"));
+  const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-nextjs-consumer-out-"));
+
+  try {
+    await criarProjetoNextJsConsumer(baseTemporaria);
+    const arquivo = path.join(baseTemporaria, "contratos", "showroom_consumer.sema");
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "contexto-ia", arquivo, "--saida", pastaSaida, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
+    const briefing = JSON.parse(await readFile(path.join(pastaSaida, "briefing.json"), "utf8"));
+    const briefingMin = JSON.parse(await readFile(path.join(pastaSaida, "briefing.min.json"), "utf8"));
+
+    assert.equal(drift.drift.consumerFramework, "nextjs-consumer");
+    assert.equal(drift.drift.appRoutes.includes("/ranking"), true);
+    assert.equal(drift.resumo.consumerFramework, "nextjs-consumer");
+    assert.equal(drift.resumo.consumerBridges.some((item: string) => item === "src.lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+    assert.equal(briefing.consumerFramework, "nextjs-consumer");
+    assert.equal(briefing.appRoutes.includes("/ranking"), true);
+    assert.equal(briefing.consumerSurfaces.some((item: string) => item.includes("page:/ranking")), true);
+    assert.equal(briefingMin.consumerFramework, "nextjs-consumer");
+    assert.equal(briefingMin.appRoutes.includes("/ranking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+    await rm(pastaSaida, { recursive: true, force: true });
+  }
+});
+
+test("cli gera contexto de ia acionavel para React Vite consumer com bridge e superfícies", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-react-vite-consumer-"));
+  const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-react-vite-consumer-out-"));
+
+  try {
+    await criarProjetoReactViteConsumer(baseTemporaria);
+    const arquivo = path.join(baseTemporaria, "contratos", "showroom_consumer.sema");
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "contexto-ia", arquivo, "--saida", pastaSaida, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
+    const briefing = JSON.parse(await readFile(path.join(pastaSaida, "briefing.json"), "utf8"));
+
+    assert.equal(drift.drift.consumerFramework, "react-vite-consumer");
+    assert.equal(drift.drift.appRoutes.includes("/ranking"), true);
+    assert.equal(briefing.consumerFramework, "react-vite-consumer");
+    assert.equal(briefing.consumerBridges.some((item: string) => item === "src.lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+    await rm(pastaSaida, { recursive: true, force: true });
+  }
+});
+
+test("cli gera contexto de ia acionavel para Angular consumer com bridge e superfícies", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-angular-consumer-"));
+  const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-angular-consumer-out-"));
+
+  try {
+    await criarProjetoAngularConsumer(baseTemporaria);
+    const arquivo = path.join(baseTemporaria, "contratos", "showroom_consumer.sema");
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "contexto-ia", arquivo, "--saida", pastaSaida, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
+    const briefing = JSON.parse(await readFile(path.join(pastaSaida, "briefing.json"), "utf8"));
+
+    assert.equal(drift.drift.consumerFramework, "angular-consumer");
+    assert.equal(drift.drift.appRoutes.includes("/ranking"), true);
+    assert.equal(briefing.consumerFramework, "angular-consumer");
+    assert.equal(briefing.consumerBridges.some((item: string) => item === "src.app.sema_consumer_bridge.semaFetchShowroomRanking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+    await rm(pastaSaida, { recursive: true, force: true });
+  }
+});
+
+test("cli gera contexto de ia acionavel para Flutter consumer com bridge e superfícies", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-flutter-consumer-"));
+  const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-flutter-consumer-out-"));
+
+  try {
+    await criarProjetoFlutterConsumer(baseTemporaria);
+    const arquivo = path.join(baseTemporaria, "contratos", "showroom_consumer.sema");
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "contexto-ia", arquivo, "--saida", pastaSaida, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
+    const briefing = JSON.parse(await readFile(path.join(pastaSaida, "briefing.json"), "utf8"));
+
+    assert.equal(drift.drift.consumerFramework, "flutter-consumer");
+    assert.equal(drift.drift.appRoutes.includes("/ranking"), true);
+    assert.equal(briefing.consumerFramework, "flutter-consumer");
+    assert.equal(briefing.consumerBridges.some((item: string) => item === "lib.sema_consumer_bridge.semaFetchShowroomRanking"), true);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
     await rm(pastaSaida, { recursive: true, force: true });
@@ -844,6 +1083,109 @@ test("cli inicia template Next.js API com trilha oficial de criacao", async () =
     const route = await readFile(path.join(baseTemporaria, "src", "app", "api", "health", "route.ts"), "utf8");
     assert.match(contrato, /ts: src\.app\.api\.health\.route\.GET/);
     assert.match(route, /export async function GET/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inicia template Next.js consumer com bridge canonico e superfícies App Router", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-starter-nextjs-consumer-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "nextjs-consumer"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const contrato = await readFile(path.join(baseTemporaria, "contratos", "showroom_consumer.sema"), "utf8");
+    const bridge = await readFile(path.join(baseTemporaria, "src", "lib", "sema_consumer_bridge.ts"), "utf8");
+    const page = await readFile(path.join(baseTemporaria, "src", "app", "ranking", "page.tsx"), "utf8");
+    assert.match(contrato, /ts: src\.lib\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(contrato, /superficie: "\/ranking"/);
+    assert.match(bridge, /export async function semaFetchShowroomRanking/);
+    assert.match(page, /RankingPage/);
+
+    const inspecao = spawnSync(
+      "node",
+      [CLI, "inspecionar", ".", "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(inspecao.status, 0, inspecao.stderr || inspecao.stdout);
+    const json = JSON.parse(inspecao.stdout);
+    assert.equal(json.configuracao.fontesLegado.includes("nextjs-consumer"), true);
+    assert.equal(json.configuracao.consumerFramework, "nextjs-consumer");
+    assert.equal(json.configuracao.appRoutes.includes("/ranking"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inicia template React Vite consumer com bridge canonico e páginas consumer", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-starter-react-vite-consumer-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "react-vite-consumer"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const contrato = await readFile(path.join(baseTemporaria, "contratos", "showroom_consumer.sema"), "utf8");
+    const bridge = await readFile(path.join(baseTemporaria, "src", "lib", "sema_consumer_bridge.ts"), "utf8");
+    const page = await readFile(path.join(baseTemporaria, "src", "pages", "ranking.tsx"), "utf8");
+    assert.match(contrato, /ts: src\.lib\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(contrato, /superficie: "\/ranking"/);
+    assert.match(bridge, /export async function semaFetchShowroomRanking/);
+    assert.match(page, /RankingPage/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inicia template Angular consumer com bridge canonico e route config", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-starter-angular-consumer-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "angular-consumer"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const contrato = await readFile(path.join(baseTemporaria, "contratos", "showroom_consumer.sema"), "utf8");
+    const bridge = await readFile(path.join(baseTemporaria, "src", "app", "sema_consumer_bridge.ts"), "utf8");
+    const routes = await readFile(path.join(baseTemporaria, "src", "app", "app.routes.ts"), "utf8");
+    assert.match(contrato, /ts: src\.app\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(contrato, /superficie: "\/ranking"/);
+    assert.match(bridge, /export async function semaFetchShowroomRanking/);
+    assert.match(routes, /loadChildren: \(\) => import\("\.\/features\/ranking\/ranking\.routes"\)/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inicia template Flutter consumer com bridge canonico e router", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-starter-flutter-consumer-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "flutter-consumer"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const contrato = await readFile(path.join(baseTemporaria, "contratos", "showroom_consumer.sema"), "utf8");
+    const bridge = await readFile(path.join(baseTemporaria, "lib", "sema_consumer_bridge.dart"), "utf8");
+    const router = await readFile(path.join(baseTemporaria, "lib", "router.dart"), "utf8");
+    assert.match(contrato, /dart: lib\.sema_consumer_bridge\.semaFetchShowroomRanking/);
+    assert.match(contrato, /superficie: "\/ranking"/);
+    assert.match(bridge, /Future<Map<String, dynamic>> semaFetchShowroomRanking/);
+    assert.match(router, /GoRoute\(/);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
   }

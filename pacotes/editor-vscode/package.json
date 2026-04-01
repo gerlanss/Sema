@@ -2,7 +2,7 @@
   "name": "sema-language-tools",
   "displayName": "Sema Language Tools",
   "description": "Extensao oficial do VS Code para a Sema, com diagnosticos semanticos, contexto de projeto e integracao com a CLI IA-first.",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "publisher": "OtimiTare",
   "private": true,
   "icon": "logo.png",

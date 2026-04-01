@@ -22,7 +22,7 @@ for arg in "$@"; do
 done
 
 if ! command -v npm >/dev/null 2>&1; then
-  echo "npm nao encontrado. Instale Node.js antes de continuar." >&2
+  echo "npm nao encontrado. Instale Node.js LTS antes de continuar. O npm vem junto no instalador oficial: https://nodejs.org/" >&2
   exit 1
 fi
 

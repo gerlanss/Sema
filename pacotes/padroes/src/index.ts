@@ -64,7 +64,61 @@ export function mapearTipoParaTypeScript(tipo: string): string {
   return tabela[tipo] ?? tipo;
 }
 
+function dividirTipoNoNivelRaiz(valor: string, separador: "|" | ","): string[] {
+  const partes: string[] = [];
+  let atual = "";
+  let profundidade = 0;
+
+  for (const caractere of valor) {
+    if (caractere === "<") {
+      profundidade += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === ">") {
+      profundidade = Math.max(0, profundidade - 1);
+      atual += caractere;
+      continue;
+    }
+    if (caractere === separador && profundidade === 0) {
+      if (atual.trim()) {
+        partes.push(atual.trim());
+      }
+      atual = "";
+      continue;
+    }
+    atual += caractere;
+  }
+
+  if (atual.trim()) {
+    partes.push(atual.trim());
+  }
+
+  return partes;
+}
+
 export function mapearTipoParaPython(tipo: string): string {
+  const limpo = tipo.trim();
+  if (/^Opcional<.+>$/.test(limpo)) {
+    return `${mapearTipoParaPython(limpo.slice("Opcional<".length, -1))} | None`;
+  }
+
+  const uniao = dividirTipoNoNivelRaiz(limpo, "|");
+  if (uniao.length > 1) {
+    return uniao.map((item) => mapearTipoParaPython(item)).join(" | ");
+  }
+
+  if (/^Lista<.+>$/.test(limpo)) {
+    return `list[${mapearTipoParaPython(limpo.slice("Lista<".length, -1))}]`;
+  }
+
+  if (/^Mapa<.+>$/.test(limpo)) {
+    const partesMapa = dividirTipoNoNivelRaiz(limpo.slice("Mapa<".length, -1), ",");
+    const chave = mapearTipoParaPython(partesMapa[0] ?? "Texto");
+    const valor = mapearTipoParaPython(partesMapa[1] ?? "Json");
+    return `dict[${chave}, ${valor}]`;
+  }
+
   const tabela: Record<string, string> = {
     Texto: "str",
     Numero: "float",
@@ -79,7 +133,7 @@ export function mapearTipoParaPython(tipo: string): string {
     Json: "dict[str, object]",
     Vazio: "None",
   };
-  return tabela[tipo] ?? tipo;
+  return tabela[limpo] ?? limpo;
 }
 
 export function mapearTipoParaDart(tipo: string): string {
