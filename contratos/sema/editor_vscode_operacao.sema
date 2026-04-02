@@ -1,0 +1,184 @@
+module sema.produto.editor_vscode_operacao {
+  docs {
+    resumo: "Contrato interno da Sema para extensao VS Code resolver, diagnosticar e autoconfigurar a CLI sem deixar o usuario no escuro."
+  }
+  vinculos {
+    arquivo: "pacotes/editor-vscode/sema-cli-service.js"
+  }
+
+  task resolver_cli_para_workspace {
+    input {
+      workspace_root: Texto required
+      cli_path_configurado: Texto optional
+      ambiente_windows: Booleano required
+    }
+    output {
+      cli_encontrada: Booleano
+      origem_resolvida: Texto optional
+      comando_resolvido: Texto optional
+    }
+    impl {
+      ts: editor_vscode.sema_cli_service.getInfo
+    }
+    vinculos {
+      arquivo: "pacotes/editor-vscode/sema-cli-service.js"
+      simbolo: editor_vscode.sema_cli_service.getInfo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      cli_encontrada existe
+    }
+    tests {
+      caso "workspace com cli configurada vence heuristica" {
+        given {
+          workspace_root: "C:/GitHub/Projeto"
+          cli_path_configurado: "C:/Users/usuario/AppData/Roaming/npm/sema.cmd"
+          ambiente_windows: verdadeiro
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task diagnosticar_resolucao_da_cli {
+    input {
+      workspace_root: Texto required
+      configuracao_ativa: Texto optional
+    }
+    output {
+      caminhos_tentados: Booleano
+      falhas_explicitadas: Booleano
+      sugestao_reparavel: Booleano
+      compatibilidade_minima_clara: Booleano
+    }
+    impl {
+      ts: editor_vscode.sema_cli_service.explainResolution
+    }
+    vinculos {
+      arquivo: "pacotes/editor-vscode/sema-cli-service.js"
+      simbolo: editor_vscode.sema_cli_service.explainResolution
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      caminhos_tentados existe
+      falhas_explicitadas existe
+      sugestao_reparavel existe
+      compatibilidade_minima_clara existe
+    }
+    tests {
+      caso "diagnostico nao devolve erro generico vazio" {
+        given {
+          workspace_root: "C:/GitHub/Projeto"
+          configuracao_ativa: ""
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task autoconfigurar_cli_para_workspace {
+    input {
+      workspace_root: Texto required
+      caminho_detectado: Texto required
+    }
+    output {
+      configuracao_gravada: Booleano
+      escopo_usuario: Booleano
+    }
+    impl {
+      ts: editor_vscode.sema_ai_coordinator.autoConfigureCli
+    }
+    vinculos {
+      arquivo: "pacotes/editor-vscode/sema-ai-coordinator.js"
+      simbolo: editor_vscode.sema_ai_coordinator.autoConfigureCli
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      configuracao_gravada existe
+      escopo_usuario existe
+    }
+    tests {
+      caso "caminho detectado vira configuracao do workspace" {
+        given {
+          workspace_root: "C:/GitHub/Projeto"
+          caminho_detectado: "C:/Users/usuario/AppData/Roaming/npm/sema.cmd"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task bootstrap_automatico_da_cli_no_primeiro_carregamento {
+    input {
+      cli_path_configurado: Texto optional
+      candidatos_validos: Decimal required
+      caminho_detectado: Texto optional
+    }
+    output {
+      configuracao_automatica_aplicada: Booleano
+      escopo_usuario: Booleano
+      auto_sem_pergunta: Booleano
+    }
+    impl {
+      ts: editor_vscode.sema_ai_coordinator.maybeAutoBootstrapCli
+    }
+    vinculos {
+      arquivo: "pacotes/editor-vscode/sema-ai-coordinator.js"
+      simbolo: editor_vscode.sema_ai_coordinator.maybeAutoBootstrapCli
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      configuracao_automatica_aplicada existe
+      escopo_usuario existe
+      auto_sem_pergunta existe
+    }
+    tests {
+      caso "unico candidato valido vira bootstrap de usuario" {
+        given {
+          candidatos_validos: 1
+          caminho_detectado: "C:/Users/usuario/AppData/Roaming/npm/sema.cmd"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow operar_cli_da_extensao_sem_adivinhacao {
+    workspace_root: Texto
+    configuracao_ativa: Texto
+    etapa resolver usa resolver_cli_para_workspace com workspace_root = workspace_root, cli_path_configurado = configuracao_ativa, ambiente_windows = verdadeiro
+    etapa diagnosticar usa diagnosticar_resolucao_da_cli com workspace_root = workspace_root, configuracao_ativa = configuracao_ativa depende_de resolver
+    etapa bootstrap usa bootstrap_automatico_da_cli_no_primeiro_carregamento com cli_path_configurado = configuracao_ativa, candidatos_validos = 1, caminho_detectado = configuracao_ativa depende_de diagnosticar
+    effects {
+      auditoria cli_vscode criticidade = alta
+      persistencia configuracao_usuario criticidade = media
+    }
+    vinculos {
+      simbolo: editor_vscode.sema_ai_coordinator.executeAction
+    }
+  }
+}

@@ -37,8 +37,8 @@ npx sema --help
 
 Instaladores auxiliares para a linha publica atual:
 
-- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.2.0/install-sema.sh | bash`
-- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v1.2.0/install-sema.ps1 | iex`
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.2.8/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v1.2.8/install-sema.ps1 | iex`
 
 Se voce quiser reproducao estrita, prefira o npm registry ou o tarball da GitHub Release.
 

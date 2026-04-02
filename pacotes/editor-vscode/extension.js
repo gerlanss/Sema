@@ -1,95 +1,34 @@
 const vscode = require("vscode");
-const { execFile } = require("node:child_process");
-const { existsSync } = require("node:fs");
-const path = require("node:path");
-const { promisify } = require("node:util");
 const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
-
-const executarArquivo = promisify(execFile);
+const { SemaCliService } = require("./sema-cli-service");
+const { SemaWorkspaceStateService } = require("./sema-workspace-state-service");
+const { SemaSidebarProvider } = require("./sema-sidebar-provider");
+const { SemaAiCoordinator } = require("./sema-ai-coordinator");
 
 let clienteLinguagem = undefined;
+let cliService = undefined;
+let aiCoordinator = undefined;
 
 function obterRaizWorkspace() {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
-function obterNomeExecutavelSema() {
-  return process.platform === "win32" ? "sema.cmd" : "sema";
-}
-
-function criarExecucaoPorCaminho(caminhoExecutavel, origem) {
-  const finalizaEmJs = caminhoExecutavel.toLowerCase().endsWith(".js") || caminhoExecutavel.toLowerCase().endsWith(".mjs");
-  if (finalizaEmJs) {
-    return {
-      comando: "node",
-      argumentosBase: [caminhoExecutavel],
-      origem,
-    };
+async function executarCliSema(argumentos, opcoes = {}) {
+  if (!cliService) {
+    throw new Error("A CLI da Sema ainda nao foi inicializada na extensao.");
   }
 
-  return {
-    comando: caminhoExecutavel,
-    argumentosBase: [],
-    origem,
-  };
-}
-
-function obterCandidatosCli() {
-  const configuracao = vscode.workspace.getConfiguration("sema");
-  const cliConfigurada = configuracao.get("cliPath");
-  const raizWorkspace = obterRaizWorkspace();
-  const nomeExecutavel = obterNomeExecutavelSema();
-  const candidatos = [];
-
-  if (typeof cliConfigurada === "string" && cliConfigurada.trim().length > 0) {
-    candidatos.push(criarExecucaoPorCaminho(cliConfigurada.trim(), "configuracao sema.cliPath"));
-  }
-
-  candidatos.push({
-    comando: "sema",
-    argumentosBase: [],
-    origem: "bin global ou shell atual",
+  const resultado = await cliService.run(argumentos, {
+    workspaceRoot: obterRaizWorkspace(),
+    cwd: obterRaizWorkspace(),
+    allowNonZero: Boolean(opcoes.allowNonZero),
+    timeoutMs: opcoes.timeout,
   });
 
-  if (raizWorkspace) {
-    const binLocal = path.join(raizWorkspace, "node_modules", ".bin", nomeExecutavel);
-    if (existsSync(binLocal)) {
-      candidatos.push(criarExecucaoPorCaminho(binLocal, "bin local do projeto"));
-    }
-
-    const cliRepositorio = path.join(raizWorkspace, "pacotes", "cli", "dist", "index.js");
-    if (existsSync(cliRepositorio)) {
-      candidatos.push(criarExecucaoPorCaminho(cliRepositorio, "CLI local do repositorio"));
-    }
-  }
-
-  return candidatos;
-}
-
-async function executarCliSema(argumentos, opcoes = {}) {
-  const raizWorkspace = obterRaizWorkspace();
-  const erros = [];
-
-  for (const candidato of obterCandidatosCli()) {
-    try {
-      return await executarArquivo(candidato.comando, [...candidato.argumentosBase, ...argumentos], {
-        cwd: raizWorkspace,
-        windowsHide: true,
-        ...opcoes,
-      });
-    } catch (erro) {
-      erros.push({ candidato, erro });
-    }
-  }
-
-  const detalhes = erros
-    .map(({ candidato, erro }) => {
-      const mensagem = erro && typeof erro === "object" && "message" in erro ? erro.message : String(erro);
-      return `- ${candidato.origem}: ${mensagem}`;
-    })
-    .join("\n");
-
-  throw new Error(`Nao foi possivel executar a CLI da Sema.\n${detalhes}`);
+  return {
+    stdout: resultado.stdout,
+    stderr: resultado.stderr,
+  };
 }
 
 async function formatarDocumentoAtivo() {
@@ -154,8 +93,13 @@ async function iniciarCliente(context) {
     clientOptions,
   );
 
-  context.subscriptions.push(clienteLinguagem.start());
-  await clienteLinguagem.onReady();
+  const resultadoStart = clienteLinguagem.start();
+  context.subscriptions.push(resultadoStart);
+  if (typeof clienteLinguagem.onReady === "function") {
+    await clienteLinguagem.onReady();
+    return;
+  }
+  await Promise.resolve(resultadoStart);
 }
 
 async function reiniciarCliente(context) {
@@ -164,11 +108,26 @@ async function reiniciarCliente(context) {
     clienteLinguagem = undefined;
   }
 
-  await iniciarCliente(context);
-  vscode.window.showInformationMessage("Servidor de linguagem da Sema reiniciado.");
+  try {
+    await iniciarCliente(context);
+    vscode.window.showInformationMessage("Servidor de linguagem da Sema reiniciado.");
+  } catch (erro) {
+    const mensagem = erro instanceof Error ? erro.message : String(erro);
+    vscode.window.showErrorMessage(`Falha ao reiniciar o servidor de linguagem da Sema: ${mensagem}`);
+  }
 }
 
 async function activate(context) {
+  cliService = new SemaCliService(vscode, context);
+  const workspaceStateService = new SemaWorkspaceStateService(vscode, cliService);
+  const sidebarProvider = new SemaSidebarProvider(vscode, workspaceStateService);
+  aiCoordinator = new SemaAiCoordinator(
+    vscode,
+    context,
+    workspaceStateService,
+    sidebarProvider,
+  );
+
   context.subscriptions.push(
     vscode.commands.registerCommand("sema.formatarDocumento", formatarDocumentoAtivo),
   );
@@ -182,15 +141,34 @@ async function activate(context) {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (evento) => {
       if (evento.affectsConfiguration("sema.cliPath") || evento.affectsConfiguration("sema.diagnosticosAoDigitar")) {
+        cliService?.invalidateInfo(obterRaizWorkspace());
         await reiniciarCliente(context);
       }
     }),
   );
 
-  await iniciarCliente(context);
+  context.subscriptions.push(workspaceStateService);
+  context.subscriptions.push(sidebarProvider);
+  context.subscriptions.push({
+    dispose() {
+      aiCoordinator = undefined;
+      cliService = undefined;
+    },
+  });
+
+  await aiCoordinator.register();
+
+  try {
+    await iniciarCliente(context);
+  } catch (erro) {
+    const mensagem = erro instanceof Error ? erro.message : String(erro);
+    vscode.window.showErrorMessage(`A Sema carregou o painel de contexto, mas o servidor de linguagem falhou ao iniciar: ${mensagem}`);
+  }
 }
 
 async function deactivate() {
+  aiCoordinator = undefined;
+  cliService = undefined;
   if (clienteLinguagem) {
     await clienteLinguagem.stop();
     clienteLinguagem = undefined;

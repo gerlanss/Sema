@@ -1,8 +1,8 @@
 # Sema Language Tools
 
-Sema Language Tools e a extensao oficial do VS Code para a Sema, o protocolo semantico IA-first para contrato, fluxo, erro, efeito, garantia, vinculos, execucao e `drift` em backend vivo.
+Sema Language Tools e a extensao oficial do VS Code para a Sema, a camada semantica que auxilia IA a entender melhor contrato, fluxo, erro, efeito, garantia, vinculos, execucao e `drift` em backend vivo.
 
-Ela nao existe para virar enfeite de sintaxe. Ela existe para deixar a camada semantica da Sema util no editor enquanto a CLI fecha o resto do fluxo.
+Ela nao tenta virar uma IA. Ela ajuda voce a preparar contexto utilizavel por qualquer IA, sem depender de adivinhacao ou de conversa magica entre extensao e agente.
 
 ## O que a extensao entrega
 
@@ -13,15 +13,45 @@ Ela nao existe para virar enfeite de sintaxe. Ela existe para deixar a camada se
 - diagnosticos semanticos no editor
 - validacao com contexto de projeto, incluindo `use` cross-module
 - formatacao de documento
-- integracao com a CLI oficial da Sema
+- painel `Sema Contexto` com estado do projeto, alvo atual, drift, prompt e artefatos recentes
+- comandos para copiar prompt, gerar `contexto-ia`, inspecionar, medir drift, importar, compilar, testar e preparar handoff para IA externa
+- integracao com a CLI oficial da Sema como backend unico da camada semantica
 
-## O que ela nao tenta fazer sozinha
+## O que ela nao tenta fazer
 
 - substituir a CLI
-- rodar scaffold completo
-- fazer `drift`, `contexto-ia` e verificacao de projeto so pelo editor
+- fingir que a extensao fala sozinha com qualquer IA externa
+- duplicar a semantica pesada da Sema dentro do VS Code
 
-O fluxo bom continua sendo: editor para escrever e revisar, CLI para validar, medir `drift`, gerar contexto para IA e compilar.
+O fluxo bom e simples: editor para escrever, extensao para preparar contexto e CLI para operar a verdade semantica.
+
+## Fluxo recomendado
+
+1. abra o projeto no VS Code
+2. abra `Sema Contexto` na Activity Bar
+3. deixe a extensao tentar o bootstrap automatico da CLI no primeiro carregamento
+4. se a CLI nao subir sozinha, use `Sema: Diagnosticar CLI` ou `Sema: Autoconfigurar CLI`
+5. rode `Sema: Preparar Contexto para IA Externa`
+6. cole o prompt copiado na IA que voce quiser
+7. se houver um contrato `.sema` ativo, abra tambem o handoff gerado em `.tmp/vscode-sema/`
+
+## Comandos da extensao
+
+- `Sema: Abrir Painel de Contexto`
+- `Sema: Atualizar Contexto Sema`
+- `Sema: Preparar Contexto para IA Externa`
+- `Sema: Diagnosticar CLI`
+- `Sema: Autoconfigurar CLI`
+- `Sema: Copiar Prompt para IA`
+- `Sema: Executar Acao Sema`
+
+## Settings
+
+- `sema.ai.autoSeedOnOpen`
+- `sema.ai.sidebarEnabled`
+- `sema.ai.seedScope`
+- `sema.cliPath`
+- `sema.diagnosticosAoDigitar`
 
 ## Instale a extensao
 
@@ -61,32 +91,26 @@ sema --help
 sema doctor
 ```
 
-Guia completo:
-
-- [Instalacao e primeiro uso da Sema](https://github.com/gerlanss/Sema/blob/main/docs/instalacao-e-primeiro-uso.md)
-
-## Primeiro fluxo recomendado
-
-1. abra ou crie um arquivo `.sema`
-2. use `Sema: Formatar Documento`
-3. corrija os diagnosticos do editor
-4. feche o ciclo com a CLI
-
-```bash
-sema validar contratos/pedidos.sema --json
-sema diagnosticos contratos/pedidos.sema --json
-sema drift contratos/pedidos.sema --json
-sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto-pedidos --json
-```
-
 ## Como a extensao encontra a CLI
 
 1. `sema.cliPath`, se voce configurar manualmente
 2. bin `sema` disponivel no sistema
-3. `node_modules/.bin/sema` do projeto atual
-4. CLI local do proprio repositorio da Sema
+3. prefixo global do npm, como `C:\Users\<usuario>\AppData\Roaming\npm\sema.cmd` no Windows
+4. `node_modules/.bin/sema` do projeto atual
+5. CLI local do proprio repositorio da Sema
 
-Se `sema --help` funciona no terminal do projeto, a extensao quase sempre encontra o caminho certo.
+Quando `sema.cliPath` esta vazio e a extensao encontra uma unica CLI valida, ela grava esse caminho automaticamente nas configuracoes do usuario.
+
+## O que sai no handoff
+
+Quando voce usa `Sema: Preparar Contexto para IA Externa`, a extensao:
+
+- atualiza o seed local do workspace
+- copia um prompt pronto para a area de transferencia
+- gera um arquivo `SEMA_EXTERNAL_AI.md`
+- se houver um `.sema` ativo, roda `sema contexto-ia` e salva o pacote na pasta `.tmp/vscode-sema/contexto/<alvo>`
+
+Isso te da um ponto de entrada concreto para Codex, ChatGPT, Claude ou qualquer outra IA sem depender de integração especial do editor.
 
 ## Links diretos
 
@@ -95,9 +119,3 @@ Se `sema --help` funciona no terminal do projeto, a extensao quase sempre encont
 - [Sintaxe da linguagem](https://github.com/gerlanss/Sema/blob/main/docs/sintaxe.md)
 - [Integracao com IA](https://github.com/gerlanss/Sema/blob/main/docs/integracao-com-ia.md)
 - [Issues](https://github.com/gerlanss/Sema/issues)
-
-## Sobre a Sema
-
-A Sema nao foi desenhada para ser human-first.
-
-Ela foi desenhada para reduzir ambiguidade para IA em sistema real. O editor entra como apoio. A camada principal continua sendo a semantica explicita e o fluxo completo da CLI.

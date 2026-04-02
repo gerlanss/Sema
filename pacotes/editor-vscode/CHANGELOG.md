@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- reposiciona a extensao como ponte de contexto para IA externa, em vez de depender de participante de chat embutido
+- adiciona o comando `Sema: Preparar Contexto para IA Externa`, que copia prompt pronto e gera `SEMA_EXTERNAL_AI.md`
+- adiciona `Sema: Diagnosticar CLI` e `Sema: Autoconfigurar CLI` para reduzir adivinhacao no bootstrap da extensao
+- mantem o painel lateral com estado do projeto, alvo atual, drift, prompt e artefatos recentes
+- preserva a CLI da Sema como backend unico para `inspecionar`, `resumo`, `drift`, `contexto-ia`, `validar`, `importar`, `compilar` e `testar`
+- simplifica o empacotamento da extensao removendo a camada de chat/tools que nao ajudava IA externa
+
 ## 1.0.2
 
 - consolida a pagina publica da extensao com instalacao oficial, links diretos e fluxo real com a CLI

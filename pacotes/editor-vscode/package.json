@@ -1,8 +1,8 @@
 {
   "name": "sema-language-tools",
   "displayName": "Sema Language Tools",
-  "description": "Extensao oficial do VS Code para a Sema, com diagnosticos semanticos, contexto de projeto e integracao com a CLI IA-first.",
-  "version": "1.2.0",
+  "description": "Extensao oficial do VS Code para a Sema, com contexto, prompt e pacote operacional para IA externa apoiados pela CLI.",
+  "version": "1.2.8",
   "publisher": "OtimiTare",
   "private": true,
   "icon": "logo.png",
@@ -16,7 +16,9 @@
     "semantica",
     "ia",
     "contracts",
-    "lsp"
+    "lsp",
+    "contexto",
+    "prompt"
   ],
   "repository": {
     "type": "git",
@@ -31,19 +33,32 @@
   },
   "categories": [
     "Programming Languages",
-    "Formatters"
+    "Formatters",
+    "Other"
   ],
   "galleryBanner": {
     "color": "#0b1220",
     "theme": "dark"
   },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "A extensao segue disponivel em modo restrito, mas bloqueia a geracao de artefatos derivados para IA externa ate o workspace ser confiavel.",
+      "restrictedConfigurations": [
+        "sema.cliPath"
+      ]
+    }
+  },
   "extensionKind": [
     "workspace"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:sema",
-    "onCommand:sema.formatarDocumento",
-    "onCommand:sema.reiniciarServidor"
+    "onView:semaAiProject",
+    "onView:semaAiContext",
+    "workspaceContains:sema.config.json",
+    "workspaceContains:**/*.sema"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -81,20 +96,96 @@
       {
         "command": "sema.reiniciarServidor",
         "title": "Sema: Reiniciar Servidor de Linguagem"
+      },
+      {
+        "command": "sema.abrirPainelIa",
+        "title": "Sema: Abrir Painel de Contexto"
+      },
+      {
+        "command": "sema.atualizarContextoIa",
+        "title": "Sema: Atualizar Contexto Sema"
+      },
+      {
+        "command": "sema.prepararContextoIaExterna",
+        "title": "Sema: Preparar Contexto para IA Externa"
+      },
+      {
+        "command": "sema.diagnosticarCli",
+        "title": "Sema: Diagnosticar CLI"
+      },
+      {
+        "command": "sema.autoconfigurarCli",
+        "title": "Sema: Autoconfigurar CLI"
+      },
+      {
+        "command": "sema.copiarPromptSema",
+        "title": "Sema: Copiar Prompt para IA"
+      },
+      {
+        "command": "sema.executarAcaoIa",
+        "title": "Sema: Executar Acao Sema"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sema-ai",
+          "title": "Sema Contexto",
+          "icon": "media/sema-ai.svg"
+        }
+      ]
+    },
+    "views": {
+      "sema-ai": [
+        {
+          "id": "semaAiProject",
+          "name": "Projeto",
+          "when": "config.sema.ai.sidebarEnabled",
+          "icon": "media/sema-ai.svg",
+          "contextualTitle": "Projeto Sema"
+        },
+        {
+          "id": "semaAiContext",
+          "type": "webview",
+          "name": "Pacote",
+          "when": "config.sema.ai.sidebarEnabled",
+          "icon": "media/sema-ai.svg",
+          "contextualTitle": "Pacote Sema"
+        }
+      ]
+    },
     "configuration": {
       "title": "Sema",
       "properties": {
         "sema.cliPath": {
           "type": "string",
           "default": "",
-          "description": "Caminho opcional para o executavel da CLI da Sema. Quando vazio, a extensao tenta usar o bin `sema`, depois o bin local do projeto e por fim a CLI do proprio repositorio."
+          "description": "Caminho opcional para o executavel da CLI da Sema. Quando vazio, a extensao tenta bootstrap automatico a partir de uma unica CLI valida detectada no ambiente do usuario."
         },
         "sema.diagnosticosAoDigitar": {
           "type": "boolean",
           "default": true,
           "description": "Quando ativo, o servidor de linguagem recalcula diagnosticos semanticos durante a digitacao."
+        },
+        "sema.ai.autoSeedOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Precarrega o seed IA da Sema ao abrir o workspace, sem enviar mensagens automaticamente para o chat."
+        },
+        "sema.ai.sidebarEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mantem o painel de contexto da Sema visivel e atualizado com o estado do projeto."
+        },
+        "sema.ai.seedScope": {
+          "type": "string",
+          "default": "workspace+active",
+          "enum": [
+            "workspace+active",
+            "workspace",
+            "active"
+          ],
+          "description": "Controla como o auto-seed combina inspecionar o workspace e resumir o alvo ativo."
         }
       }
     }
