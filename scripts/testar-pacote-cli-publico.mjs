@@ -99,10 +99,26 @@ async function main() {
       }
     }
 
-    const pacotesInternosAninhados = path.join(sandbox, "node_modules", "@semacode", "cli", "node_modules", "@sema");
-    const pacotesInternosHoistados = path.join(sandbox, "node_modules", "@sema");
-    if (!(await existe(pacotesInternosAninhados)) && !(await existe(pacotesInternosHoistados))) {
+    const basePacotesInternosAninhados = path.join(sandbox, "node_modules", "@semacode", "cli", "node_modules", "@sema");
+    const basePacotesInternosHoistados = path.join(sandbox, "node_modules", "@sema");
+    if (!(await existe(basePacotesInternosAninhados)) && !(await existe(basePacotesInternosHoistados))) {
       throw new Error("A instalacao do pacote publico nao carregou os pacotes internos esperados.");
+    }
+
+    const pacotesEsperados = [
+      "nucleo",
+      "padroes",
+      "gerador-typescript",
+      "gerador-python",
+      "gerador-dart",
+      "gerador-lua",
+    ];
+    for (const pacote of pacotesEsperados) {
+      const caminhoAninhado = path.join(basePacotesInternosAninhados, pacote);
+      const caminhoHoistado = path.join(basePacotesInternosHoistados, pacote);
+      if (!(await existe(caminhoAninhado)) && !(await existe(caminhoHoistado))) {
+        throw new Error(`A instalacao do pacote publico nao incluiu o pacote interno @sema/${pacote}.`);
+      }
     }
   } finally {
     await rm(sandbox, { recursive: true, force: true });
