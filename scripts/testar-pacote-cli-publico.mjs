@@ -104,6 +104,12 @@ async function main() {
     if (!(await existe(pacotesInternosAninhados)) && !(await existe(pacotesInternosHoistados))) {
       throw new Error("A instalacao do pacote publico nao carregou os pacotes internos esperados.");
     }
+
+    const geradorLuaAninhado = path.join(pacotesInternosAninhados, "gerador-lua", "package.json");
+    const geradorLuaHoistado = path.join(pacotesInternosHoistados, "gerador-lua", "package.json");
+    if (!(await existe(geradorLuaAninhado)) && !(await existe(geradorLuaHoistado))) {
+      throw new Error("A instalacao do pacote publico nao incluiu o pacote interno @sema/gerador-lua.");
+    }
   } finally {
     await rm(sandbox, { recursive: true, force: true });
   }

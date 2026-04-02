@@ -2,7 +2,7 @@
   "name": "sema-language-tools",
   "displayName": "Sema Language Tools",
   "description": "Extensao oficial do VS Code para a Sema, com diagnosticos semanticos, contexto de projeto e integracao com a CLI IA-first.",
-  "version": "1.1.0",
+  "version": "1.2.9",
   "publisher": "OtimiTare",
   "private": true,
   "icon": "logo.png",
@@ -89,7 +89,7 @@
         "sema.cliPath": {
           "type": "string",
           "default": "",
-          "description": "Caminho opcional para o executavel da CLI da Sema. Quando vazio, a extensao tenta usar o bin `sema`, depois o bin local do projeto e por fim a CLI do proprio repositorio."
+          "description": "Caminho opcional para o executavel da CLI da Sema. Quando preenchido, a extensao usa esse caminho como fonte unica. Quando vazio, ela tenta primeiro a CLI instalada no usuario e so depois o bin local do projeto."
         },
         "sema.diagnosticosAoDigitar": {
           "type": "boolean",

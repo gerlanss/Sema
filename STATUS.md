@@ -4,13 +4,13 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Quadro-resumo
 
-- Ultima atualizacao: 2026-03-31
+- Ultima atualizacao: 2026-04-01
 - Ultimo commit de referencia: `15ff067`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: linha publica `1.1.0` fechada como release estavel com backend-first consolidado, primeira onda consumer oficial, compressao por capacidade de IA e onboarding de instalacao/release mais claro
+- Estagio atual: linha publica `1.2.9` alinhada para release estavel com correcao da extensao VS Code na resolucao da CLI, pacote Lua saneado no workspace e distribuicao publica revisada
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `1.1.0`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Linha publica de release: `1.2.9`, alinhada entre CLI, pacotes internos e extensao do VS Code
 - Pacote npm publico da CLI: `@semacode/cli`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
@@ -177,7 +177,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Publicar showcases stack combinando backend Flask + consumers oficiais
 - `[x]` Reorganizar `sema --help` e `sema ajuda-ia` por projeto novo, edicao guiada e legado sem contrato inicial
 - `[x]` Corrigir o gerador Python para tipos compostos validos em codigo gerado
-- `[x]` Alinhar release publica `1.1.0` entre CLI, pacotes, extensao, README e instaladores
+- `[x]` Alinhar release publica `1.2.9` entre CLI, pacotes, extensao, README e instaladores
 
 ## Fundacao do Projeto
 

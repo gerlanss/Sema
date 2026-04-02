@@ -106,6 +106,7 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   const gramatica = JSON.parse(await readFile(path.resolve("pacotes/editor-vscode/syntaxes/sema.tmLanguage.json"), "utf8"));
   const snippets = JSON.parse(await readFile(path.resolve("pacotes/editor-vscode/snippets/sema.code-snippets"), "utf8"));
   const extension = await readFile(path.resolve("pacotes/editor-vscode/extension.js"), "utf8");
+  const cliHelpers = await readFile(path.resolve("pacotes/editor-vscode/cli-helpers.js"), "utf8");
   const servidor = await readFile(path.resolve("pacotes/editor-vscode/server.js"), "utf8");
   const loaderProjeto = await readFile(path.resolve("pacotes/editor-vscode/project-loader.js"), "utf8");
 
@@ -126,6 +127,9 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   assert.equal(typeof pacote.dependencies["@sema/nucleo"], "string");
   assert.match(extension, /LanguageClient/);
   assert.match(extension, /sema\.cliPath/);
+  assert.match(extension, /cli-helpers/);
+  assert.match(cliHelpers, /configuracao sema\.cliPath/);
+  assert.match(cliHelpers, /AppData do usuario no Windows/);
   assert.match(servidor, /createConnection/);
   assert.match(servidor, /documentFormattingProvider/);
   assert.match(servidor, /carregarProjetoParaDocumento/);
@@ -225,10 +229,10 @@ test("cli expoe starter e prompt de ia", () => {
   assert.match(starter.stdout, /Modo IA-first da instalacao atual/);
   assert.doesNotMatch(starter.stdout, /Origem da instalacao:/);
   assert.match(starter.stdout, /AGENT_STARTER\.md/);
-  assert.match(starter.stdout, /Sema, um Protocolo de Governanca de Intencao para IA e backend vivo/);
+  assert.match(starter.stdout, /Sema, um Protocolo de Governanca de Intencao para IA sobre software vivo em backend e front consumer/);
   assert.match(starter.stdout, /sema resumo/);
   assert.match(starter.stdout, /nao invente sintaxe/);
-  assert.match(starter.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
+  assert.match(starter.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart\|lua> --saida <diretorio>/);
 
   const prompt = spawnSync(
     "node",
@@ -256,7 +260,7 @@ test("cli expoe ajuda de ia com mapa de comandos", () => {
   assert.match(ajuda.stdout, /sema resumo <arquivo> --micro --para onboarding/);
   assert.match(ajuda.stdout, /sema prompt-curto <arquivo> --curto --para mudanca/);
   assert.match(ajuda.stdout, /sema prompt-ia-react/);
-  assert.match(ajuda.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
+  assert.match(ajuda.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart\|lua> --saida <diretorio>/);
   assert.match(ajuda.stdout, /Tres jeitos de usar a Sema/);
   assert.match(ajuda.stdout, /Capacidade de IA/);
   assert.match(ajuda.stdout, /Projeto sem Sema ainda: importe, revise o rascunho/);

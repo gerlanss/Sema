@@ -37,9 +37,9 @@ npx sema --help
 
 Cada release publica entrega:
 
-- `sema-cli-1.0.0.tgz`
+- `sema-cli-1.2.9.tgz`
 - `sema-cli-latest.tgz`
-- `sema-language-tools-1.0.0.vsix`
+- `sema-language-tools-1.2.9.vsix`
 - `sema-language-tools-latest.vsix`
 - `install-sema.sh`
 - `install-sema.ps1`

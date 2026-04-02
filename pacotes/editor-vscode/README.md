@@ -82,11 +82,11 @@ sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto-pedidos --json
 ## Como a extensao encontra a CLI
 
 1. `sema.cliPath`, se voce configurar manualmente
-2. bin `sema` disponivel no sistema
-3. `node_modules/.bin/sema` do projeto atual
-4. CLI local do proprio repositorio da Sema
+2. CLI instalada para o usuario e resolvida pelo sistema
+3. prefixo global do npm e `%APPDATA%\npm\sema.cmd` no Windows
+4. `node_modules/.bin/sema` do projeto atual
 
-Se `sema --help` funciona no terminal do projeto, a extensao quase sempre encontra o caminho certo.
+Se `sema.cliPath` estiver preenchido, a extensao usa esse caminho como autoridade total e nao cai para a CLI do proprio projeto.
 
 ## Links diretos
 

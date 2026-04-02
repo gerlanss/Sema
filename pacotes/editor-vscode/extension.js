@@ -1,9 +1,11 @@
 const vscode = require("vscode");
-const { execFile } = require("node:child_process");
-const { existsSync } = require("node:fs");
-const path = require("node:path");
-const { promisify } = require("node:util");
 const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
+const {
+  executarCandidato,
+  obterCandidatosCli,
+} = require("./cli-helpers");
 
 const executarArquivo = promisify(execFile);
 
@@ -13,66 +15,68 @@ function obterRaizWorkspace() {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
-function obterNomeExecutavelSema() {
-  return process.platform === "win32" ? "sema.cmd" : "sema";
-}
+async function descobrirShellResolvedPath() {
+  try {
+    if (process.platform === "win32") {
+      const resultado = await executarArquivo("where.exe", ["sema"], {
+        windowsHide: true,
+        timeout: 10000,
+        maxBuffer: 1024 * 1024,
+      });
+      return String(resultado.stdout ?? "")
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .find(Boolean);
+    }
 
-function criarExecucaoPorCaminho(caminhoExecutavel, origem) {
-  const finalizaEmJs = caminhoExecutavel.toLowerCase().endsWith(".js") || caminhoExecutavel.toLowerCase().endsWith(".mjs");
-  if (finalizaEmJs) {
-    return {
-      comando: "node",
-      argumentosBase: [caminhoExecutavel],
-      origem,
-    };
+    const resultado = await executarArquivo("which", ["sema"], {
+      windowsHide: true,
+      timeout: 10000,
+      maxBuffer: 1024 * 1024,
+    });
+    return String(resultado.stdout ?? "").trim() || undefined;
+  } catch {
+    return undefined;
   }
-
-  return {
-    comando: caminhoExecutavel,
-    argumentosBase: [],
-    origem,
-  };
 }
 
-function obterCandidatosCli() {
+async function descobrirPrefixoGlobalNpm() {
+  try {
+    const resultado = await executarArquivo("npm", ["prefix", "-g"], {
+      windowsHide: true,
+      timeout: 15000,
+      maxBuffer: 1024 * 1024,
+    });
+    return String(resultado.stdout ?? "").trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function obterCandidatosCliResolvidos() {
   const configuracao = vscode.workspace.getConfiguration("sema");
   const cliConfigurada = configuracao.get("cliPath");
   const raizWorkspace = obterRaizWorkspace();
-  const nomeExecutavel = obterNomeExecutavelSema();
-  const candidatos = [];
+  const [shellResolvedPath, globalPrefix] = await Promise.all([
+    descobrirShellResolvedPath(),
+    descobrirPrefixoGlobalNpm(),
+  ]);
 
-  if (typeof cliConfigurada === "string" && cliConfigurada.trim().length > 0) {
-    candidatos.push(criarExecucaoPorCaminho(cliConfigurada.trim(), "configuracao sema.cliPath"));
-  }
-
-  candidatos.push({
-    comando: "sema",
-    argumentosBase: [],
-    origem: "bin global ou shell atual",
+  return obterCandidatosCli({
+    cliConfigurada,
+    workspaceRoot: raizWorkspace,
+    shellResolvedPath,
+    globalPrefix,
   });
-
-  if (raizWorkspace) {
-    const binLocal = path.join(raizWorkspace, "node_modules", ".bin", nomeExecutavel);
-    if (existsSync(binLocal)) {
-      candidatos.push(criarExecucaoPorCaminho(binLocal, "bin local do projeto"));
-    }
-
-    const cliRepositorio = path.join(raizWorkspace, "pacotes", "cli", "dist", "index.js");
-    if (existsSync(cliRepositorio)) {
-      candidatos.push(criarExecucaoPorCaminho(cliRepositorio, "CLI local do repositorio"));
-    }
-  }
-
-  return candidatos;
 }
 
 async function executarCliSema(argumentos, opcoes = {}) {
   const raizWorkspace = obterRaizWorkspace();
   const erros = [];
 
-  for (const candidato of obterCandidatosCli()) {
+  for (const candidato of await obterCandidatosCliResolvidos()) {
     try {
-      return await executarArquivo(candidato.comando, [...candidato.argumentosBase, ...argumentos], {
+      return await executarCandidato(candidato, argumentos, {
         cwd: raizWorkspace,
         windowsHide: true,
         ...opcoes,
@@ -154,8 +158,13 @@ async function iniciarCliente(context) {
     clientOptions,
   );
 
-  context.subscriptions.push(clienteLinguagem.start());
-  await clienteLinguagem.onReady();
+  const resultadoStart = clienteLinguagem.start();
+  context.subscriptions.push(resultadoStart);
+  if (typeof clienteLinguagem.onReady === "function") {
+    await clienteLinguagem.onReady();
+    return;
+  }
+  await Promise.resolve(resultadoStart);
 }
 
 async function reiniciarCliente(context) {
@@ -200,4 +209,9 @@ async function deactivate() {
 module.exports = {
   activate,
   deactivate,
+  __testables: {
+    descobrirPrefixoGlobalNpm,
+    descobrirShellResolvedPath,
+    obterCandidatosCliResolvidos,
+  },
 };

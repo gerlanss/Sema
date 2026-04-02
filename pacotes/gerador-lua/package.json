@@ -1,10 +1,14 @@
 {
-  "name": "@sema/nucleo",
+  "name": "@sema/gerador-lua",
   "version": "1.2.9",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sema/nucleo": "file:../nucleo",
+    "@sema/padroes": "file:../padroes"
   }
 }

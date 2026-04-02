@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.9
+
+- faz `sema.cliPath` virar autoridade total para a extensao, sem fallback silencioso para a CLI do proprio projeto
+- executa wrappers `.cmd` no Windows do jeito certo, evitando que a CLI instalada pelo usuario falhe e seja trocada por um candidato errado
+- prioriza a CLI instalada no usuario antes do bin local do projeto e remove a dependencia da CLI do repositorio como fallback implicito
+
 ## 1.0.2
 
 - consolida a pagina publica da extensao com instalacao oficial, links diretos e fluxo real com a CLI

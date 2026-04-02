@@ -9,6 +9,7 @@
     "baseUrl": ".",
     "paths": {
       "@sema/nucleo": ["pacotes/nucleo/src/index.ts"],
+      "@sema/gerador-lua": ["pacotes/gerador-lua/src/index.ts"],
       "@sema/gerador-python": ["pacotes/gerador-python/src/index.ts"],
       "@sema/gerador-typescript": ["pacotes/gerador-typescript/src/index.ts"],
       "@sema/padroes": ["pacotes/padroes/src/index.ts"]

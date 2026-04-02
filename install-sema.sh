@@ -71,6 +71,7 @@ fi
 
 echo "Sema instalada com sucesso."
 echo "Teste rapido:"
+echo "  sema --version"
 echo "  sema --help"
 echo "  sema doctor"
 echo "  sema starter-ia"

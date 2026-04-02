@@ -30,6 +30,7 @@ async function copiarEstruturaBase() {
   await mkdir(saidaDir, { recursive: true });
 
   const itens = [
+    "cli-helpers.js",
     "extension.js",
     "server.js",
     "project-loader.js",

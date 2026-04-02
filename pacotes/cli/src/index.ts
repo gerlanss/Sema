@@ -14,6 +14,7 @@ import {
 } from "@sema/nucleo";
 import { descreverEstruturaModulo, type AlvoGeracao, type FrameworkGeracao } from "@sema/padroes";
 import { gerarDart } from "@sema/gerador-dart";
+import { gerarLua } from "@sema/gerador-lua";
 import { gerarPython } from "@sema/gerador-python";
 import { gerarTypeScript } from "@sema/gerador-typescript";
 import {
@@ -260,7 +261,7 @@ Comandos essenciais:
 - diagnosticos: \`sema diagnosticos <arquivo.sema> --json\`
 - formatacao: \`sema formatar <arquivo.sema>\`
 - importacao assistida de legado: \`sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> --saida <diretorio>\`
-- geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>\`
+- geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart|lua> --saida <diretorio>\`
 - verificacao final: \`sema verificar <arquivo-ou-pasta> [--json]\`
 
 Antes de editar:
@@ -572,7 +573,7 @@ function ajuda(): string {
       "[1] Projeto novo / producao inicial",
       "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer>",
       "sema validar contratos/<modulo>.sema --json",
-      "sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>",
+      "sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart|lua> --saida <diretorio>",
       "sema verificar <arquivo-ou-pasta> --json",
       "",
       "[2] Editar projeto que ja usa Sema",
@@ -600,8 +601,8 @@ function ajuda(): string {
       "importacao: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]",
       "validacao: sema validar <arquivo-ou-pasta> [--json]",
       "diagnostico: sema diagnosticos <arquivo.sema> [--json]",
-      "geracao: sema compilar <arquivo-ou-pasta> --alvo <python|typescript|dart> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]",
-      "teste local: sema testar <arquivo.sema> --alvo <python|typescript|dart> --saida <diretorio-temporario> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]",
+      "geracao: sema compilar <arquivo-ou-pasta> --alvo <python|typescript|dart|lua> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]",
+      "teste local: sema testar <arquivo.sema> --alvo <python|typescript|dart|lua> --saida <diretorio-temporario> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]",
       "verificacao final: sema verificar <arquivo-ou-pasta> [--saida <diretorio-base>] [--json]",
       "formatacao: sema formatar <arquivo-ou-pasta> [--check] [--json]",
     ]),
@@ -744,8 +745,8 @@ function validarCompatibilidadeFramework(alvo: AlvoGeracao, framework: Framework
   if (framework === "fastapi" && alvo !== "python") {
     return `Framework "${framework}" so pode ser usado com o alvo python.`;
   }
-  if (alvo === "dart") {
-    return `Framework "${framework}" nao e suportado para o alvo dart.`;
+  if (alvo === "dart" || alvo === "lua") {
+    return `Framework "${framework}" nao e suportado para o alvo ${alvo}.`;
   }
   return undefined;
 }
@@ -858,6 +859,9 @@ function gerarArquivosPorAlvo(ir: IrModulo, alvo: AlvoGeracao, framework: Framew
   if (alvo === "dart") {
     return gerarDart(ir);
   }
+  if (alvo === "lua") {
+    return gerarLua(ir);
+  }
   return gerarTypeScript(ir, { framework });
 }
 
@@ -892,6 +896,11 @@ function aplicarEstruturaSaida(
       conteudo = conteudo.replace(`from ${nomeBaseAntigo} import *`, `from ${nomeArquivo} import *`);
     } else if (basename === `${nomeBaseAntigo}.dart`) {
       novoBasename = `${nomeArquivo}.dart`;
+    } else if (basename === `${nomeBaseAntigo}.lua`) {
+      novoBasename = `${nomeArquivo}.lua`;
+    } else if (basename === `test_${nomeBaseAntigo}.lua`) {
+      novoBasename = `test_${nomeArquivo}.lua`;
+      conteudo = conteudo.replace(`${nomeBaseAntigo}.lua`, `${nomeArquivo}.lua`);
     }
 
     return {
@@ -904,6 +913,13 @@ function aplicarEstruturaSaida(
 function contarCasosDeTesteGerados(alvo: AlvoGeracao, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): number {
   if (alvo === "dart") {
     return 0;
+  }
+  if (alvo === "lua") {
+    const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_") && item.caminhoRelativo.endsWith(".lua"));
+    if (!arquivoTeste) {
+      return 0;
+    }
+    return (arquivoTeste.conteudo.match(/\blocal function test_/g) ?? []).length;
   }
 
   if (alvo === "typescript") {
@@ -930,7 +946,14 @@ function executarTestesGerados(
   const quantidadeTestes = contarCasosDeTesteGerados(alvo, arquivos);
   if (quantidadeTestes === 0) {
     if (!silencioso) {
-      console.log(`Nenhum teste ${alvo === "typescript" ? "TypeScript" : "Python"} foi gerado.`);
+      const nomeAlvo = alvo === "typescript"
+        ? "TypeScript"
+        : alvo === "python"
+          ? "Python"
+          : alvo === "lua"
+            ? "Lua"
+            : "Dart";
+      console.log(`Nenhum teste ${nomeAlvo} foi gerado.`);
     }
     return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
   }
@@ -946,6 +969,28 @@ function executarTestesGerados(
     const execucao = spawnSync("node", ["--import", "tsx", path.join(baseSaida, arquivoTeste)], {
       stdio: silencioso ? "pipe" : "inherit",
       encoding: silencioso ? "utf8" : undefined,
+    });
+    return {
+      codigoSaida: execucao.status ?? 1,
+      quantidadeTestes,
+      saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
+      saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : "",
+    };
+  }
+
+  if (alvo === "lua") {
+    const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_") && item.caminhoRelativo.endsWith(".lua"))?.caminhoRelativo;
+    if (!arquivoTeste) {
+      if (!silencioso) {
+        console.log("Nenhum teste Lua foi gerado.");
+      }
+      return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
+    }
+    const execucao = spawnSync("lua", [arquivoTeste], {
+      stdio: silencioso ? "pipe" : "inherit",
+      cwd: baseSaida,
+      encoding: silencioso ? "utf8" : undefined,
+      shell: process.platform === "win32",
     });
     return {
       codigoSaida: execucao.status ?? 1,
@@ -3702,7 +3747,7 @@ async function comandoAjudaIa(): Promise<number> {
     "Use `sema inspecionar` para descobrir base, codigo vivo e fontes legado.",
     "Use `sema drift` para medir impls, vinculos, rotas, score e lacunas.",
     "Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json`.",
-    "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
+    "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart|lua> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
   ]));
   console.log("");
   console.log(renderizarSecaoAscii("Regras praticas", [

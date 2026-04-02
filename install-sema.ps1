@@ -48,6 +48,7 @@ try {
 
   Write-Host "Sema instalada com sucesso."
   Write-Host "Teste rapido:"
+  Write-Host "  sema --version"
   Write-Host "  sema --help"
   Write-Host "  sema doctor"
   Write-Host "  sema starter-ia"

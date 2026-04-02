@@ -29,6 +29,7 @@ const ARQUIVOS_RAIZ_IA_PUBLICOS = [
 const PACOTES_RUNTIME = [
   "nucleo",
   "padroes",
+  "gerador-lua",
   "gerador-typescript",
   "gerador-python",
   "gerador-dart",
