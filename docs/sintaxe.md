@@ -40,6 +40,12 @@ A Sema usa blocos declarativos com chaves e forma previsivel. A regra aqui nao e
 - `output`
 - `rules`
 - `effects`
+- `auth`
+- `authz`
+- `dados`
+- `audit`
+- `segredos`
+- `forbidden`
 - `impl`
 - `vinculos`
 - `execucao`
@@ -202,6 +208,89 @@ Campos canonicos:
 - `compensacao`
 - `criticidade_operacional`
 
+## Seguranca semantica
+
+Em `task`, `route` e superficies modernas, a Sema agora aceita contratos de seguranca explicitos para reduzir adivinhacao em producao.
+
+- `auth`: como a chamada autentica, com `modo`, `estrategia`, `principal` e `origem`
+- `authz`: quem pode executar, com `papel`, `escopo`, `politica` e `tenant`
+- `dados`: classificacao de input/output, `redacao_log` e `retencao`
+- `audit`: trilha obrigatoria com `evento`, `ator`, `correlacao`, `retencao` e `motivo`
+- `segredos`: origem, escopo, rotacao e protecoes de segredo
+- `forbidden`: proibicoes explicitas como `shell.exec`, `network.egress`, `log.segredo` e `retorno.credencial`
+
+Exemplo:
+
+```sema
+task processar_pagamento {
+  input {
+    cliente_id: Id required
+    token_gateway: Texto required
+  }
+  output {
+    protocolo: Id
+    status: Texto
+  }
+  effects {
+    db.write Pagamento criticidade=alta privilegio=escrita isolamento=tenant
+    secret.read gateway_api_key criticidade=media privilegio=leitura isolamento=processo
+  }
+  auth {
+    modo: interno
+    estrategia: jwt
+    principal: servico
+    origem: worker
+  }
+  authz {
+    papel: pagamentos_admin
+    escopo: pagamentos.processar
+    tenant: isolado
+  }
+  dados {
+    classificacao_padrao: interno
+    redacao_log: obrigatoria
+    retencao: "90d"
+    input {
+      cliente_id: pii
+      token_gateway: credencial
+    }
+    output {
+      protocolo: interno
+      status: interno
+    }
+  }
+  audit {
+    evento: pagamentos.processado
+    ator: auth.servico
+    correlacao: request_id
+    retencao: "180d"
+    motivo: obrigatorio
+  }
+  segredos {
+    gateway_api_key {
+      origem: vault
+      escopo: runtime
+      acesso: gateway_pagamento
+      rotacao: "30d"
+      nao_logar: verdadeiro
+      nao_retornar: verdadeiro
+      mascarar: verdadeiro
+    }
+  }
+  forbidden {
+    shell.exec
+    retorno.credencial
+    log.segredo
+  }
+  guarantees {
+    protocolo existe
+    status existe
+  }
+}
+```
+
+Esses blocos nao tentam implementar seguranca magica. Eles tornam a intencao auditavel por parser, IR, `drift`, `contexto-ia` e verificacao semantica.
+
 ## Superficies modernas
 
 A Sema nao fica presa em HTTP. As bordas abaixo sao blocos irmaos de `route`, com shape minimo compativel com `task`, `impl`, `vinculos`, `execucao` e `effects`.
@@ -253,8 +342,12 @@ flow operar_contexto_ia {
 O formatador passa a preferir:
 
 - `vinculos` com `arquivo` antes de `simbolo`
+- `auth` com `modo`, `estrategia`, `principal` e `origem`
+- `authz` com `papel|papeis`, `escopo|escopos`, `politica` e `tenant`
+- `dados` com `classificacao_padrao`, `redacao_log` e `retencao`
+- `audit` com `evento`, `ator`, `correlacao`, `retencao` e `motivo`
 - `execucao` com `idempotencia`, `timeout`, `retry`, `compensacao` e `criticidade_operacional`
-- strings operacionais como `arquivo`, `timeout`, `retry` e `compensacao` com aspas
+- strings operacionais como `arquivo`, `timeout`, `retry`, `compensacao`, `retencao` e `rotacao` com aspas
 - tipos compostos sem espacos quebrados em `Lista<T>` e `Mapa<K, V>`
 
 ## Resumo pratico
@@ -262,6 +355,7 @@ O formatador passa a preferir:
 Se a duvida for "isso vai ajudar a IA a editar com menos chute?", a sintaxe nova aponta para quatro coisas:
 
 - contrato rico
+- seguranca semantica explicita
 - vinculo rastreavel
 - execucao explicita
 - superficie moderna de primeira classe

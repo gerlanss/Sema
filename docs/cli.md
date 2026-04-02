@@ -538,11 +538,19 @@ Com `--json`, retorna um envelope estruturado com arquivo, modulo, pasta de said
 4. `output`
 5. `rules`
 6. `effects`
-7. `impl`
-8. `state`
-9. `guarantees`
-10. `error`
-11. `tests`
+7. `auth`
+8. `authz`
+9. `dados`
+10. `audit`
+11. `segredos`
+12. `forbidden`
+13. `impl`
+14. `vinculos`
+15. `execucao`
+16. `state`
+17. `guarantees`
+18. `error`
+19. `tests`
 
 ## Saida JSON estavel
 

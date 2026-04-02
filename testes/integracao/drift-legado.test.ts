@@ -209,7 +209,128 @@ export class PedidosController {
     assert.equal(json.impls_quebrados[0].candidatos.some((candidato: { caminho: string }) => candidato.caminho === "src.pedidos.pedidos_service.criar"), true);
     assert.equal(json.tasks.some((task: { task: string; arquivosReferenciados: string[] }) => task.task === "criar_pedido" && task.arquivosReferenciados.length === 1), true);
     assert.equal(json.tasks.some((task: { task: string; lacunas: string[] }) => task.task === "cancelar_pedido" && task.lacunas.includes("impl_quebrado")), true);
+    assert.equal(json.tasks.some((task: { task: string; lacunas: string[] }) => task.task === "criar_pedido" && task.lacunas.includes("superficie_publica_sem_execucao")), true);
     assert.equal(json.diagnosticos.some((diag: { tipo: string }) => diag.tipo === "task_sem_impl"), true);
+    assert.equal(json.diagnosticos.some((diag: { tipo: string; task?: string }) => diag.tipo === "seguranca_frouxa" && diag.task === "criar_pedido"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift explicita lacunas de seguranca semantica em task publica e sensivel", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-seguranca-"));
+
+  try {
+    await mkdir(path.join(base, "src", "clientes"), { recursive: true });
+    await mkdir(path.join(base, "sema"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./sema"],
+        diretoriosCodigo: ["./src"],
+        fontesLegado: ["nestjs"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "clientes", "clientes.controller.ts"),
+      `import { Body, Controller, Post } from "@nestjs/common";
+import { ClientesService } from "./clientes.service";
+
+@Controller("clientes")
+export class ClientesController {
+  constructor(private readonly clientesService: ClientesService) {}
+
+  @Post("sincronizar")
+  async sincronizar(@Body() body: { cliente_id: string; payload: unknown }) {
+    return this.clientesService.sincronizar(body);
+  }
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "clientes", "clientes.service.ts"),
+      `export class ClientesService {
+  async sincronizar(entrada: { cliente_id: string; payload: unknown }) {
+    return { status: "ok" };
+  }
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "sema", "clientes.sema"),
+      `module app.clientes {
+  task sincronizar_cliente {
+    input {
+      cliente_id: Id required
+      payload: Json required
+    }
+    output {
+      status: Texto
+    }
+    impl {
+      ts: src.clientes.clientes_service.sincronizar
+    }
+    effects {
+      db.write Cliente criticidade=alta privilegio=escrita isolamento=tenant
+      secret.read gateway_token criticidade=media privilegio=leitura isolamento=processo
+    }
+    guarantees {
+      status existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          cliente_id: "cli_1"
+          payload: "{}"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route sincronizar_cliente_publico {
+    metodo: POST
+    caminho: /clientes/sincronizar
+    task: sincronizar_cliente
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    const task = json.tasks.find((item: { task: string }) => item.task === "sincronizar_cliente");
+    assert.ok(task);
+    for (const lacuna of [
+      "auth_ausente",
+      "authz_frouxa",
+      "dados_nao_classificados",
+      "audit_ausente",
+      "segredo_sem_governanca",
+      "proibicoes_ausentes",
+    ]) {
+      assert.equal(task.lacunas.includes(lacuna), true, `lacuna ausente: ${lacuna}`);
+    }
+    assert.equal(
+      json.diagnosticos.some((diag: { tipo: string; task?: string; mensagem: string }) =>
+        diag.tipo === "seguranca_frouxa"
+        && diag.task === "sincronizar_cliente"
+        && diag.mensagem.includes("segredo")),
+      true,
+    );
   } finally {
     await rm(base, { recursive: true, force: true });
   }

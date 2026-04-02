@@ -1,20 +1,36 @@
 import type { BlocoCasoTesteAst, BlocoGenericoAst, CampoAst, ModuloAst } from "../ast/tipos.js";
 import type { Diagnostico } from "../diagnosticos/index.js";
 import type { ContextoSemantico, ErroSemanticoTask } from "../semantico/analisador.js";
+import {
+  contratoDadosTemSensivel,
+  extrairContratoAudit,
+  extrairContratoAuth,
+  extrairContratoAuthz,
+  extrairContratoDados,
+  extrairContratoForbidden,
+  extrairContratoSegredos,
+  efeitoEhPrivilegiado,
+} from "../semantico/seguranca.js";
 import { parsearEfeitoSemantico, parsearEtapaFlow, parsearExpressaoSemantica, parsearTransicaoEstado } from "../semantico/estruturas.js";
 import type {
   IrBlocoDeclarativo,
   IrCampo,
   IrCasoTeste,
+  IrAudit,
+  IrAuth,
+  IrAuthz,
+  IrDados,
   IrEntity,
   IrErroOperacional,
   IrExecucao,
+  IrForbidden,
   IrFlow,
   IrImplementacaoTask,
   IrModulo,
   IrResumoAgente,
   IrRoute,
   IrRoutePublica,
+  IrSegredos,
   IrState,
   IrSuperficie,
   IrTask,
@@ -291,6 +307,30 @@ function converterExecucao(bloco?: BlocoGenericoAst): IrExecucao {
   };
 }
 
+function converterAuth(bloco?: BlocoGenericoAst): IrAuth {
+  return extrairContratoAuth(bloco);
+}
+
+function converterAuthz(bloco?: BlocoGenericoAst): IrAuthz {
+  return extrairContratoAuthz(bloco);
+}
+
+function converterDados(bloco?: BlocoGenericoAst): IrDados {
+  return extrairContratoDados(bloco);
+}
+
+function converterAudit(bloco?: BlocoGenericoAst): IrAudit {
+  return extrairContratoAudit(bloco);
+}
+
+function converterSegredos(bloco?: BlocoGenericoAst): IrSegredos {
+  return extrairContratoSegredos(bloco);
+}
+
+function converterForbidden(bloco?: BlocoGenericoAst): IrForbidden {
+  return extrairContratoForbidden(bloco);
+}
+
 function converterErrosTask(bloco?: BlocoGenericoAst, fallback?: ErroSemanticoTask[]): IrErroOperacional[] {
   const erros = new Map<string, IrErroOperacional>();
 
@@ -374,6 +414,12 @@ function resumirAgente(params: {
   efeitos?: Array<{ categoria: string; alvo: string; criticidade?: string }>;
   vinculos?: IrVinculo[];
   execucao?: IrExecucao;
+  auth?: IrAuth;
+  authz?: IrAuthz;
+  dados?: IrDados;
+  audit?: IrAudit;
+  segredos?: IrSegredos;
+  forbidden?: IrForbidden;
   superficiePublica?: string;
 }): IrResumoAgente {
   const entidadesAfetadas = deduplicarTexto([
@@ -390,11 +436,20 @@ function resumirAgente(params: {
   if ((params.efeitos ?? []).some((efeito) => efeito.categoria === "persistencia")) {
     riscos.add("altera_persistencia");
   }
+  if ((params.efeitos ?? []).some((efeito) => efeitoEhPrivilegiado(efeito))) {
+    riscos.add("efeito_privilegiado");
+  }
   if ((params.efeitos ?? []).some((efeito) => efeito.criticidade === "alta" || efeito.criticidade === "critica")) {
     riscos.add("efeito_critico");
   }
   if (params.execucao?.criticidadeOperacional === "alta" || params.execucao?.criticidadeOperacional === "critica") {
     riscos.add("execucao_critica");
+  }
+  if (contratoDadosTemSensivel(params.dados)) {
+    riscos.add("dados_sensiveis");
+  }
+  if (params.segredos?.itens.length) {
+    riscos.add("segredo_operacional");
   }
   if ((params.vinculos ?? []).length === 0) {
     riscos.add("vinculo_fraco");
@@ -407,6 +462,18 @@ function resumirAgente(params: {
   }
   if ((params.vinculos ?? []).length > 0) {
     checks.add("rodar sema drift --json");
+  }
+  if (params.auth?.explicita || params.authz?.explicita) {
+    checks.add("revisar auth e authz");
+  }
+  if (params.dados?.explicita) {
+    checks.add("validar classificacao de dados");
+  }
+  if (params.audit?.explicita) {
+    checks.add("validar trilha de auditoria");
+  }
+  if (params.forbidden?.explicita) {
+    checks.add("confirmar proibicoes operacionais");
   }
   if (params.superficiePublica) {
     checks.add("validar superficie publica impactada");
@@ -457,7 +524,11 @@ function calcularConfiancaPublica(route: IrRoute): NivelConfiancaSemantica {
 }
 
 function calcularRiscoPublico(route: IrRoute): NivelRiscoSemantico {
-  if (route.efeitosPublicos.some((efeito) => efeito.categoria === "persistencia" || efeito.criticidade === "critica")) {
+  if (
+    !route.auth.explicita
+    || contratoDadosTemSensivel(route.dados)
+    || route.efeitosPublicos.some((efeito) => efeitoEhPrivilegiado(efeito) || efeito.categoria === "persistencia" || efeito.criticidade === "critica")
+  ) {
     return "alto";
   }
   if (route.efeitosPublicos.length > 0 || route.errosPublicos.length > 0) {
@@ -477,6 +548,12 @@ function converterSuperficie(
     .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha));
   const vinculos = converterVinculos(encontrarSubBloco(superficie, "vinculos"));
   const execucao = converterExecucao(encontrarSubBloco(superficie, "execucao"));
+  const auth = converterAuth(encontrarSubBloco(superficie, "auth"));
+  const authz = converterAuthz(encontrarSubBloco(superficie, "authz"));
+  const dados = converterDados(encontrarSubBloco(superficie, "dados"));
+  const audit = converterAudit(encontrarSubBloco(superficie, "audit"));
+  const segredos = converterSegredos(encontrarSubBloco(superficie, "segredos"));
+  const forbidden = converterForbidden(encontrarSubBloco(superficie, "forbidden"));
   const task = valorCampoCompleto(localizarCampo(superficie, "task", "tarefa"));
   const perfilCompatibilidade = extrairPerfil(superficie, tipo === "webhook" ? "publico" : "interno");
   const resumoAgente = resumirAgente({
@@ -485,6 +562,12 @@ function converterSuperficie(
     efeitos: effects,
     vinculos,
     execucao,
+    auth,
+    authz,
+    dados,
+    audit,
+    segredos,
+    forbidden,
     superficiePublica: perfilCompatibilidade === "publico" ? `${tipo}:${superficie.nome ?? tipo}` : undefined,
   });
 
@@ -500,6 +583,12 @@ function converterSuperficie(
     implementacoesExternas: converterImplementacoes(encontrarSubBloco(superficie, "impl")),
     vinculos,
     execucao,
+    auth,
+    authz,
+    dados,
+    audit,
+    segredos,
+    forbidden,
     perfilCompatibilidade,
     resumoAgente,
   };
@@ -533,6 +622,12 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
       .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha));
     const vinculos = converterVinculos(task.vinculos);
     const execucao = converterExecucao(task.execucao);
+    const auth = converterAuth(encontrarSubBloco(task.corpo, "auth"));
+    const authz = converterAuthz(encontrarSubBloco(task.corpo, "authz"));
+    const dados = converterDados(encontrarSubBloco(task.corpo, "dados"));
+    const audit = converterAudit(encontrarSubBloco(task.corpo, "audit"));
+    const segredos = converterSegredos(encontrarSubBloco(task.corpo, "segredos"));
+    const forbidden = converterForbidden(encontrarSubBloco(task.corpo, "forbidden"));
     const errosDetalhados = converterErrosTask(task.error, tarefasSemanticas.get(task.nome)?.errors);
     const perfilCompatibilidade = extrairPerfil(task.corpo, "interno");
     const resumoAgente = resumirAgente({
@@ -541,6 +636,12 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
       efeitos: effects,
       vinculos,
       execucao,
+      auth,
+      authz,
+      dados,
+      audit,
+      segredos,
+      forbidden,
     });
 
     return {
@@ -556,6 +657,12 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
       implementacoesExternas: converterImplementacoes(task.impl),
       vinculos,
       execucao,
+      auth,
+      authz,
+      dados,
+      audit,
+      segredos,
+      forbidden,
       guarantees: task.guarantees?.linhas.map((linha) => linha.conteudo) ?? [],
       garantiasEstruturadas: (task.guarantees?.linhas ?? [])
         .map((linha) => parsearExpressaoSemantica(linha.conteudo))
@@ -619,6 +726,12 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
     errosPublicos: [],
     efeitosPublicos: [],
     vinculos: converterVinculos(route.vinculos),
+    auth: converterAuth(encontrarSubBloco(route.corpo, "auth")),
+    authz: converterAuthz(encontrarSubBloco(route.corpo, "authz")),
+    dados: converterDados(encontrarSubBloco(route.corpo, "dados")),
+    audit: converterAudit(encontrarSubBloco(route.corpo, "audit")),
+    segredos: converterSegredos(encontrarSubBloco(route.corpo, "segredos")),
+    forbidden: converterForbidden(encontrarSubBloco(route.corpo, "forbidden")),
     perfilCompatibilidade: extrairPerfil(route.corpo, "publico"),
     garantiasPublicasMinimas: [],
     resumoAgente: {
@@ -695,6 +808,12 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
         output: outputPublicoResolvido,
         efeitos: efeitosPublicosDeclarados,
         vinculos: route.vinculos,
+        auth: route.auth,
+        authz: route.authz,
+        dados: route.dados,
+        audit: route.audit,
+        segredos: route.segredos,
+        forbidden: route.forbidden,
         superficiePublica: `${route.metodo ?? "?"} ${route.caminho ?? "?"}`,
       }),
       publico: {

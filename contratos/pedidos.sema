@@ -16,12 +16,64 @@ module app.pedidos {
       pedido_id: Id
       status: Texto
     }
+    authz {
+      escopo: pedidos.criar
+      tenant: obrigatorio
+    }
     rules {
       total > 0
     }
     effects {
-      persistencia Pedido criticidade=alta
-      auditoria pedidos
+      db.write Pedido criticidade=alta privilegio=escrita isolamento=tenant
+      secret.read pedidos_api_key criticidade=media privilegio=leitura isolamento=processo
+      auditoria pedidos criticidade=media
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      retencao: "90d"
+      input {
+        cliente_id: pii
+        total: financeiro
+      }
+      output {
+        pedido_id: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: pedidos.criado
+      ator: auth.usuario
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    segredos {
+      pedidos_api_key {
+        origem: vault
+        escopo: runtime
+        acesso: integracao_pedidos
+        rotacao: "30d"
+        nao_logar: verdadeiro
+        nao_retornar: verdadeiro
+        mascarar: verdadeiro
+      }
+    }
+    forbidden {
+      shell.exec
+      retorno.credencial
+      log.segredo
+    }
+    vinculos {
+      tabela: pedidos
+      rota: /pedidos
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "2x exponencial"
+      compensacao: "cancelar_reserva"
+      criticidade_operacional: alta
     }
     guarantees {
       pedido_id existe
@@ -44,5 +96,25 @@ module app.pedidos {
     metodo: POST
     caminho: /pedidos
     task: criar_pedido
+    auth {
+      modo: obrigatorio
+      principal: usuario
+      origem: publica
+    }
+    authz {
+      escopo: pedidos.criar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: pedidos.criado.publico
+      ator: auth.usuario
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
   }
 }

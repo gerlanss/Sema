@@ -38,6 +38,12 @@ type PalavraBloco =
   | "impl"
   | "vinculos"
   | "execucao"
+  | "auth"
+  | "authz"
+  | "dados"
+  | "audit"
+  | "segredos"
+  | "forbidden"
   | "guarantees"
   | "state"
   | "tests"
@@ -138,6 +144,12 @@ class Parser {
       "impl",
       "vinculos",
       "execucao",
+      "auth",
+      "authz",
+      "dados",
+      "audit",
+      "segredos",
+      "forbidden",
       "guarantees",
       "tests",
       "error",
@@ -474,6 +486,12 @@ class Parser {
       impl: localizar("impl"),
       vinculos: localizar("vinculos"),
       execucao: localizar("execucao"),
+      auth: localizar("auth"),
+      authz: localizar("authz"),
+      dados: localizar("dados"),
+      audit: localizar("audit"),
+      segredos: localizar("segredos"),
+      forbidden: localizar("forbidden"),
       guarantees: localizar("guarantees"),
       state: localizar("state"),
       tests: localizar("tests"),

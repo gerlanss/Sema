@@ -85,6 +85,31 @@ module sema.produto.ergonomia_e_dominio {
       cardinalidade_explicita: Booleano
       shape_rico: Booleano
     }
+    authz {
+      escopo: sema.contrato.modelar_payload
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_atual: interno
+        payload_json_generico: interno
+        exemplos_payload: interno
+      }
+      output {
+        tipo_composto_explicito: interno
+        cardinalidade_explicita: interno
+        shape_rico: interno
+      }
+    }
+    audit {
+      evento: sema.payload_composto.modelado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
     impl {
       ts: nucleo.src.semantico.analisador.analisarSemantica
     }

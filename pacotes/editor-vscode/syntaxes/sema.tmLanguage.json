@@ -31,7 +31,7 @@
       "patterns": [
         {
           "name": "keyword.control.sema",
-          "match": "\\b(module|use|type|entity|enum|task|input|output|rules|effects|guarantees|state|flow|route|tests|error|docs|comments|fields|invariants|transitions|given|when|expect|caso|required|depende_de|em_sucesso|em_erro|por_erro|com|usa)\\b"
+          "match": "\\b(module|use|type|entity|enum|task|input|output|rules|effects|auth|authz|dados|audit|segredos|forbidden|impl|vinculos|execucao|guarantees|state|flow|route|worker|evento|fila|cron|webhook|cache|storage|policy|tests|error|docs|comments|fields|invariants|transitions|given|when|expect|caso|required|depende_de|em_sucesso|em_erro|por_erro|com|usa)\\b"
         },
         {
           "name": "keyword.operator.logical.sema",

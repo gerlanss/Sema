@@ -21,6 +21,26 @@ import {
   parsearExpressaoSemantica,
   parsearTransicaoEstado,
 } from "./estruturas.js";
+import {
+  CLASSIFICACOES_DADO_SUPORTADAS,
+  MODOS_AUTH_SUPORTADOS,
+  MOTIVOS_AUDIT_SUPORTADOS,
+  ORIGENS_AUTH_SUPORTADAS,
+  PRINCIPAIS_AUTH_SUPORTADOS,
+  REDACOES_LOG_SUPORTADAS,
+  TENANTS_AUTHZ_SUPORTADOS,
+  contratoDadosTemSegredoOuCredencial,
+  contratoDadosTemSensivel,
+  extrairContratoAudit,
+  extrairContratoAuth,
+  extrairContratoAuthz,
+  extrairContratoDados,
+  extrairContratoForbidden,
+  extrairContratoSegredos,
+  efeitoEhPrivilegiado,
+  efeitoRequerSegredo,
+  forbiddenContemRegra,
+} from "./seguranca.js";
 
 export interface SimboloSemantico {
   nome: string;
@@ -129,6 +149,41 @@ const CAMPOS_EXECUCAO_SUPORTADOS = new Set([
   "compensacao",
   "criticidade_operacional",
 ]);
+const CAMPOS_AUTH_SUPORTADOS = new Set([
+  "modo",
+  "estrategia",
+  "principal",
+  "origem",
+]);
+const CAMPOS_AUTHZ_SUPORTADOS = new Set([
+  "papel",
+  "papeis",
+  "escopo",
+  "escopos",
+  "politica",
+  "tenant",
+]);
+const CAMPOS_DADOS_SUPORTADOS = new Set([
+  "classificacao_padrao",
+  "redacao_log",
+  "retencao",
+]);
+const CAMPOS_AUDIT_SUPORTADOS = new Set([
+  "evento",
+  "ator",
+  "correlacao",
+  "retencao",
+  "motivo",
+]);
+const CAMPOS_SEGREDO_SUPORTADOS = new Set([
+  "origem",
+  "escopo",
+  "acesso",
+  "rotacao",
+  "nao_logar",
+  "nao_retornar",
+  "mascarar",
+]);
 const CAMPOS_ERRO_OPERACIONAL = new Set([
   "mensagem",
   "categoria",
@@ -138,6 +193,7 @@ const CAMPOS_ERRO_OPERACIONAL = new Set([
   "requer_compensacao",
 ]);
 const CRITICIDADES_OPERACIONAIS = new Set(["baixa", "media", "alta", "critica"]);
+type PerfilCompatibilidadeSemantica = "publico" | "interno" | "experimental" | "legado" | "deprecado";
 
 const PADRAO_CAMINHO_INTEROP = /^[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)*$/;
 
@@ -220,11 +276,18 @@ function validarCamposDeTipos(
   }
 }
 
-function localizarBloco(corpo: BlocoGenericoAst, nome: string): BlocoGenericoAst | undefined {
-  return corpo.blocos.find((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === nome);
+function localizarBloco(corpo: BlocoGenericoAst | undefined, nome: string): BlocoGenericoAst | undefined {
+  if (!corpo) {
+    return undefined;
+  }
+  return corpo.blocos.find((bloco): bloco is BlocoGenericoAst =>
+    bloco.tipo === "bloco_generico" && (bloco.palavraChave === nome || bloco.nome === nome));
 }
 
-function localizarCampo(bloco: BlocoGenericoAst, ...nomes: string[]): CampoAst | undefined {
+function localizarCampo(bloco: BlocoGenericoAst | undefined, ...nomes: string[]): CampoAst | undefined {
+  if (!bloco) {
+    return undefined;
+  }
   return bloco.campos.find((campo) => nomes.includes(campo.nome));
 }
 
@@ -393,17 +456,86 @@ function validarVinculos(bloco: BlocoGenericoAst | undefined, diagnosticos: Diag
   }
 }
 
-function validarExecucao(task: TaskAst, diagnosticos: Diagnostico[]): void {
-  if (!task.execucao) {
+function extrairPerfilCompatibilidade(
+  bloco: BlocoGenericoAst | undefined,
+  padrao: PerfilCompatibilidadeSemantica = "interno",
+): PerfilCompatibilidadeSemantica {
+  const perfil = bloco
+    ? valorCampoCompleto(localizarCampo(bloco, "perfil", "compatibilidade"))?.toLowerCase()
+    : undefined;
+  if (
+    perfil === "publico"
+    || perfil === "interno"
+    || perfil === "experimental"
+    || perfil === "legado"
+    || perfil === "deprecado"
+  ) {
+    return perfil;
+  }
+  return padrao;
+}
+
+function coletarSuperficiesModulo(modulo: ModuloAst): Array<{ tipo: SimboloSemantico["categoria"]; superficie: BlocoGenericoAst }> {
+  return [
+    ...modulo.workers.map((superficie) => ({ tipo: "worker" as const, superficie })),
+    ...modulo.eventos.map((superficie) => ({ tipo: "evento" as const, superficie })),
+    ...modulo.filas.map((superficie) => ({ tipo: "fila" as const, superficie })),
+    ...modulo.crons.map((superficie) => ({ tipo: "cron" as const, superficie })),
+    ...modulo.webhooks.map((superficie) => ({ tipo: "webhook" as const, superficie })),
+    ...modulo.caches.map((superficie) => ({ tipo: "cache" as const, superficie })),
+    ...modulo.storages.map((superficie) => ({ tipo: "storage" as const, superficie })),
+    ...modulo.policies.map((superficie) => ({ tipo: "policy" as const, superficie })),
+  ];
+}
+
+function superficieEhPublica(
+  superficie: BlocoGenericoAst,
+  tipoSuperficie: SimboloSemantico["categoria"],
+): boolean {
+  return extrairPerfilCompatibilidade(superficie, tipoSuperficie === "webhook" ? "publico" : "interno") === "publico";
+}
+
+function taskEhSensivel(task: TaskAst): boolean {
+  const criticidadeOperacional = task.execucao
+    ? valorCampoCompleto(localizarCampo(task.execucao, "criticidade_operacional"))
+    : undefined;
+  if (criticidadeOperacional === "alta" || criticidadeOperacional === "critica") {
+    return true;
+  }
+
+  return (task.effects?.linhas ?? []).some((linha) => {
+    const efeito = parsearEfeitoSemantico(linha.conteudo);
+    if (!efeito) {
+      return false;
+    }
+    return efeito.categoria === "persistencia" || efeito.criticidade === "alta" || efeito.criticidade === "critica" || efeitoEhPrivilegiado(efeito);
+  });
+}
+
+function taskTemRastreabilidade(task: TaskAst): boolean {
+  return Boolean(task.impl || task.vinculos);
+}
+
+function routeEhMutante(route: RouteAst): boolean {
+  const metodo = (localizarCampo(route.corpo, "metodo")?.valor ?? "").toUpperCase();
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(metodo);
+}
+
+function validarExecucaoBloco(
+  execucao: BlocoGenericoAst | undefined,
+  diagnosticos: Diagnostico[],
+  contexto: string,
+): void {
+  if (!execucao) {
     return;
   }
 
-  for (const campo of task.execucao.campos) {
+  for (const campo of execucao.campos) {
     if (!CAMPOS_EXECUCAO_SUPORTADOS.has(campo.nome)) {
       diagnosticos.push(
         criarDiagnostico(
           "SEM065",
-          `Campo de execucao "${campo.nome}" nao e suportado na task "${task.nome}".`,
+          `Campo de execucao "${campo.nome}" nao e suportado em ${contexto}.`,
           "erro",
           campo.intervalo,
           "Use apenas idempotencia, timeout, retry, compensacao ou criticidade_operacional.",
@@ -418,7 +550,7 @@ function validarExecucao(task: TaskAst, diagnosticos: Diagnostico[]): void {
         diagnosticos.push(
           criarDiagnostico(
             "SEM066",
-            `Task "${task.nome}" declarou criticidade_operacional invalida: "${criticidade}".`,
+            `Execucao de ${contexto} declarou criticidade_operacional invalida: "${criticidade}".`,
             "erro",
             campo.intervalo,
             "Use apenas baixa, media, alta ou critica em execucao.",
@@ -426,6 +558,488 @@ function validarExecucao(task: TaskAst, diagnosticos: Diagnostico[]): void {
         );
       }
     }
+  }
+}
+
+function validarExecucao(task: TaskAst, diagnosticos: Diagnostico[]): void {
+  validarExecucaoBloco(task.execucao, diagnosticos, `task "${task.nome}"`);
+}
+
+interface PerfilSegurancaDeclarado {
+  auth: ReturnType<typeof extrairContratoAuth>;
+  authz: ReturnType<typeof extrairContratoAuthz>;
+  dados: ReturnType<typeof extrairContratoDados>;
+  audit: ReturnType<typeof extrairContratoAudit>;
+  segredos: ReturnType<typeof extrairContratoSegredos>;
+  forbidden: ReturnType<typeof extrairContratoForbidden>;
+  efeitoPrivilegiado: boolean;
+  dadosSensiveis: boolean;
+  exigeSegredos: boolean;
+}
+
+function validarAuthBloco(bloco: BlocoGenericoAst | undefined, diagnosticos: Diagnostico[], contexto: string): void {
+  if (!bloco) {
+    return;
+  }
+
+  for (const campo of bloco.campos) {
+    if (!CAMPOS_AUTH_SUPORTADOS.has(campo.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM074",
+          `Campo de auth "${campo.nome}" nao e suportado em ${contexto}.`,
+          "erro",
+          campo.intervalo,
+          "Use apenas modo, estrategia, principal ou origem em auth.",
+        ),
+      );
+    }
+  }
+
+  const auth = extrairContratoAuth(bloco);
+  if (auth.modo && !MODOS_AUTH_SUPORTADOS.has(auth.modo as (typeof MODOS_AUTH_SUPORTADOS extends Set<infer T> ? T : never))) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM075",
+        `Auth em ${contexto} declarou modo invalido: "${auth.modo}".`,
+        "erro",
+        bloco.intervalo,
+        "Use obrigatorio, opcional, anonimo, interno ou m2m.",
+      ),
+    );
+  }
+  if (auth.principal && !PRINCIPAIS_AUTH_SUPORTADOS.has(auth.principal as (typeof PRINCIPAIS_AUTH_SUPORTADOS extends Set<infer T> ? T : never))) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM076",
+        `Auth em ${contexto} declarou principal invalido: "${auth.principal}".`,
+        "erro",
+        bloco.intervalo,
+        "Use usuario, servico, sistema ou anonimo.",
+      ),
+    );
+  }
+  if (auth.origem && !ORIGENS_AUTH_SUPORTADAS.has(auth.origem as (typeof ORIGENS_AUTH_SUPORTADAS extends Set<infer T> ? T : never))) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM077",
+        `Auth em ${contexto} declarou origem invalida: "${auth.origem}".`,
+        "erro",
+        bloco.intervalo,
+        "Use publica, interna, worker, webhook, fila ou cron.",
+      ),
+    );
+  }
+}
+
+function validarAuthzBloco(bloco: BlocoGenericoAst | undefined, diagnosticos: Diagnostico[], contexto: string): void {
+  if (!bloco) {
+    return;
+  }
+
+  for (const campo of bloco.campos) {
+    if (!CAMPOS_AUTHZ_SUPORTADOS.has(campo.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM078",
+          `Campo de authz "${campo.nome}" nao e suportado em ${contexto}.`,
+          "erro",
+          campo.intervalo,
+          "Use papel, papeis, escopo, escopos, politica ou tenant em authz.",
+        ),
+      );
+    }
+  }
+
+  const authz = extrairContratoAuthz(bloco);
+  if (authz.tenant && !TENANTS_AUTHZ_SUPORTADOS.has(authz.tenant as (typeof TENANTS_AUTHZ_SUPORTADOS extends Set<infer T> ? T : never))) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM079",
+        `Authz em ${contexto} declarou tenant invalido: "${authz.tenant}".`,
+        "erro",
+        bloco.intervalo,
+        "Use obrigatorio, opcional ou isolado.",
+      ),
+    );
+  }
+  if (authz.papeis.length === 0 && authz.escopos.length === 0 && !authz.politica) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM080",
+        `Authz em ${contexto} precisa declarar papeis, escopos ou politica.`,
+        "erro",
+        bloco.intervalo,
+        "Explicite ao menos um papel, escopo ou politica para a autorizacao nao virar enfeite.",
+      ),
+    );
+  }
+}
+
+function validarDadosBloco(bloco: BlocoGenericoAst | undefined, diagnosticos: Diagnostico[], contexto: string): void {
+  if (!bloco) {
+    return;
+  }
+
+  for (const campo of bloco.campos) {
+    const valor = valorCampoCompleto(campo);
+    if (CAMPOS_DADOS_SUPORTADOS.has(campo.nome)) {
+      continue;
+    }
+    if (valor && !CLASSIFICACOES_DADO_SUPORTADAS.has(valor as (typeof CLASSIFICACOES_DADO_SUPORTADAS extends Set<infer T> ? T : never))) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM081",
+          `Dados em ${contexto} declarou classificacao invalida para "${campo.nome}": "${valor}".`,
+          "erro",
+          campo.intervalo,
+          "Use publico, interno, pii, financeiro, credencial ou segredo.",
+        ),
+      );
+    }
+  }
+
+  const dados = extrairContratoDados(bloco);
+  if (dados.classificacaoPadrao && !CLASSIFICACOES_DADO_SUPORTADAS.has(dados.classificacaoPadrao as (typeof CLASSIFICACOES_DADO_SUPORTADAS extends Set<infer T> ? T : never))) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM081",
+        `Dados em ${contexto} declarou classificacao_padrao invalida: "${dados.classificacaoPadrao}".`,
+        "erro",
+        bloco.intervalo,
+        "Use publico, interno, pii, financeiro, credencial ou segredo.",
+      ),
+    );
+  }
+  if (dados.redacaoLog && !REDACOES_LOG_SUPORTADAS.has(dados.redacaoLog as (typeof REDACOES_LOG_SUPORTADAS extends Set<infer T> ? T : never))) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM082",
+        `Dados em ${contexto} declarou redacao_log invalida: "${dados.redacaoLog}".`,
+        "erro",
+        bloco.intervalo,
+        "Use livre, parcial, obrigatoria ou proibida.",
+      ),
+    );
+  }
+
+  for (const subbloco of bloco.blocos) {
+    if (subbloco.tipo !== "bloco_generico") {
+      continue;
+    }
+    const nomeSubbloco = subbloco.nome ?? subbloco.palavraChave;
+    if (nomeSubbloco !== "input" && nomeSubbloco !== "output") {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM083",
+          `Dados em ${contexto} nao suporta o subbloco "${nomeSubbloco}".`,
+          "erro",
+          subbloco.intervalo,
+          "Use apenas campos diretos ou subblocos input/output para classificar dados.",
+        ),
+      );
+      continue;
+    }
+
+    for (const campo of subbloco.campos) {
+      const classificacao = valorCampoCompleto(campo);
+      if (classificacao && !CLASSIFICACOES_DADO_SUPORTADAS.has(classificacao as (typeof CLASSIFICACOES_DADO_SUPORTADAS extends Set<infer T> ? T : never))) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM081",
+            `Dados em ${contexto} declarou classificacao invalida para "${nomeSubbloco}.${campo.nome}": "${classificacao}".`,
+            "erro",
+            campo.intervalo,
+            "Use publico, interno, pii, financeiro, credencial ou segredo.",
+          ),
+        );
+      }
+    }
+  }
+}
+
+function validarAuditBloco(bloco: BlocoGenericoAst | undefined, diagnosticos: Diagnostico[], contexto: string): void {
+  if (!bloco) {
+    return;
+  }
+
+  for (const campo of bloco.campos) {
+    if (!CAMPOS_AUDIT_SUPORTADOS.has(campo.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM084",
+          `Campo de audit "${campo.nome}" nao e suportado em ${contexto}.`,
+          "erro",
+          campo.intervalo,
+          "Use evento, ator, correlacao, retencao ou motivo em audit.",
+        ),
+      );
+    }
+  }
+
+  const audit = extrairContratoAudit(bloco);
+  if (!audit.evento) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM085",
+        `Audit em ${contexto} precisa declarar evento.`,
+        "erro",
+        bloco.intervalo,
+        "Explique qual evento auditavel sera registrado para a operacao.",
+      ),
+    );
+  }
+  if (audit.motivo && !MOTIVOS_AUDIT_SUPORTADOS.has(audit.motivo as (typeof MOTIVOS_AUDIT_SUPORTADOS extends Set<infer T> ? T : never))) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM086",
+        `Audit em ${contexto} declarou motivo invalido: "${audit.motivo}".`,
+        "erro",
+        bloco.intervalo,
+        "Use obrigatorio, opcional ou dispensado.",
+      ),
+    );
+  }
+}
+
+function validarSegredosBloco(bloco: BlocoGenericoAst | undefined, diagnosticos: Diagnostico[], contexto: string): void {
+  if (!bloco) {
+    return;
+  }
+
+  const segredos = extrairContratoSegredos(bloco);
+  if (segredos.itens.length === 0) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM087",
+        `Segredos em ${contexto} precisa declarar ao menos um segredo nomeado.`,
+        "erro",
+        bloco.intervalo,
+        "Use segredos { nome_do_segredo { origem: vault escopo: runtime ... } }.",
+      ),
+    );
+    return;
+  }
+
+  for (const item of bloco.blocos) {
+    if (item.tipo !== "bloco_generico") {
+      continue;
+    }
+
+    for (const campo of item.campos) {
+      if (!CAMPOS_SEGREDO_SUPORTADOS.has(campo.nome)) {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM087",
+            `Segredo "${item.nome ?? item.palavraChave}" em ${contexto} usa o campo "${campo.nome}", que nao e suportado.`,
+            "erro",
+            campo.intervalo,
+            "Use origem, escopo, acesso, rotacao, nao_logar, nao_retornar ou mascarar.",
+          ),
+        );
+      }
+    }
+
+    const nomeSegredo = item.nome ?? item.palavraChave;
+    const origem = valorCampoCompleto(localizarCampo(item, "origem"));
+    if (!origem) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM088",
+          `Segredo "${nomeSegredo}" em ${contexto} precisa declarar origem.`,
+          "erro",
+          item.intervalo,
+          "Explicite a origem do segredo, como vault, env, secret_manager ou runtime.",
+        ),
+      );
+    }
+
+    for (const nomeBooleano of ["nao_logar", "nao_retornar", "mascarar"]) {
+      const campo = localizarCampo(item, nomeBooleano);
+      const valor = valorCampoCompleto(campo);
+      if (campo && valor !== "verdadeiro" && valor !== "true" && valor !== "falso" && valor !== "false") {
+        diagnosticos.push(
+          criarDiagnostico(
+            "SEM089",
+            `Segredo "${nomeSegredo}" em ${contexto} declarou "${nomeBooleano}" com valor invalido: "${valor}".`,
+            "erro",
+            campo.intervalo,
+            "Use verdadeiro/falso para campos booleanos de segredos.",
+          ),
+        );
+      }
+    }
+  }
+}
+
+function validarForbiddenBloco(
+  bloco: BlocoGenericoAst | undefined,
+  efeitos: BlocoGenericoAst["linhas"],
+  diagnosticos: Diagnostico[],
+  contexto: string,
+): ReturnType<typeof extrairContratoForbidden> {
+  const forbidden = extrairContratoForbidden(bloco);
+  if (!bloco) {
+    return forbidden;
+  }
+
+  for (const regra of forbidden.regras) {
+    if (!/^[A-Za-z_][A-Za-z0-9_.-]*$/u.test(regra)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM090",
+          `Forbidden em ${contexto} declarou regra invalida: "${regra}".`,
+          "erro",
+          bloco.intervalo,
+          "Use regras simples como network.egress, shell.exec, retorno.credencial ou log.segredo.",
+        ),
+      );
+    }
+  }
+
+  for (const linha of efeitos) {
+    const efeito = parsearEfeitoSemantico(linha.conteudo);
+    if (efeito && forbiddenContemRegra(forbidden, efeito.categoria)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM091",
+          `Forbidden em ${contexto} proibe "${efeito.categoria}", mas effects ainda declara esse efeito.`,
+          "erro",
+          linha.intervalo,
+          "Remova o efeito proibido ou ajuste o bloco forbidden para refletir a operacao permitida de verdade.",
+        ),
+      );
+    }
+  }
+
+  return forbidden;
+}
+
+function coletarPerfilSegurancaDeclarado(
+  corpo: BlocoGenericoAst,
+  effects: BlocoGenericoAst | undefined,
+  diagnosticos: Diagnostico[] | undefined,
+  contexto: string,
+): PerfilSegurancaDeclarado {
+  const authBloco = localizarBloco(corpo, "auth");
+  const authzBloco = localizarBloco(corpo, "authz");
+  const dadosBloco = localizarBloco(corpo, "dados");
+  const auditBloco = localizarBloco(corpo, "audit");
+  const segredosBloco = localizarBloco(corpo, "segredos");
+  const forbiddenBloco = localizarBloco(corpo, "forbidden");
+
+  if (diagnosticos) {
+    validarAuthBloco(authBloco, diagnosticos, contexto);
+    validarAuthzBloco(authzBloco, diagnosticos, contexto);
+    validarDadosBloco(dadosBloco, diagnosticos, contexto);
+    validarAuditBloco(auditBloco, diagnosticos, contexto);
+    validarSegredosBloco(segredosBloco, diagnosticos, contexto);
+  }
+  const forbidden = diagnosticos
+    ? validarForbiddenBloco(forbiddenBloco, effects?.linhas ?? [], diagnosticos, contexto)
+    : extrairContratoForbidden(forbiddenBloco);
+
+  const auth = extrairContratoAuth(authBloco);
+  const authz = extrairContratoAuthz(authzBloco);
+  const dados = extrairContratoDados(dadosBloco);
+  const audit = extrairContratoAudit(auditBloco);
+  const segredos = extrairContratoSegredos(segredosBloco);
+  const efeitosEstruturados = (effects?.linhas ?? [])
+    .map((linha) => parsearEfeitoSemantico(linha.conteudo))
+    .filter((efeito): efeito is NonNullable<typeof efeito> => Boolean(efeito));
+
+  return {
+    auth,
+    authz,
+    dados,
+    audit,
+    segredos,
+    forbidden,
+    efeitoPrivilegiado: efeitosEstruturados.some((efeito) => efeitoEhPrivilegiado(efeito)),
+    dadosSensiveis: contratoDadosTemSensivel(dados),
+    exigeSegredos: efeitosEstruturados.some((efeito) => efeitoRequerSegredo(efeito)) || contratoDadosTemSegredoOuCredencial(dados),
+  };
+}
+
+function emitirGuardrailsSeguranca(
+  contexto: string,
+  intervalo: CampoAst["intervalo"] | undefined,
+  perfil: PerfilSegurancaDeclarado,
+  diagnosticos: Diagnostico[],
+  opcoes: { publico: boolean; sensivel: boolean },
+): void {
+  const exigeAuth = opcoes.publico;
+  const exigeAuthz = opcoes.publico || opcoes.sensivel || perfil.efeitoPrivilegiado || perfil.dadosSensiveis;
+  const exigeDados = opcoes.publico || opcoes.sensivel || perfil.efeitoPrivilegiado;
+  const exigeAudit = opcoes.publico || opcoes.sensivel || perfil.efeitoPrivilegiado || perfil.dadosSensiveis;
+  const exigeSegredos = perfil.exigeSegredos;
+  const exigeForbidden = perfil.efeitoPrivilegiado || perfil.dadosSensiveis;
+
+  if (exigeAuth && !perfil.auth.explicita) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM094",
+        `${contexto} deveria declarar auth explicita para reduzir ambiguidade de seguranca na borda publica.`,
+        "aviso",
+        intervalo,
+        "Declare auth { modo: obrigatorio|anonimo ... } para deixar a intencao da exposicao publica cristalina.",
+      ),
+    );
+  }
+  if (exigeAuthz && !perfil.authz.explicita) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM095",
+        `${contexto} deveria declarar authz explicita porque opera com risco, privilegio ou exposicao publica.`,
+        "aviso",
+        intervalo,
+        "Declare papeis, escopos ou politica em authz para nao empurrar autorizacao para o limbo do codigo vivo.",
+      ),
+    );
+  }
+  if (exigeDados && !perfil.dados.explicita) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM096",
+        `${contexto} deveria classificar dados de forma explicita em dados { ... }.`,
+        "aviso",
+        intervalo,
+        "Classifique input/output com publico, interno, pii, financeiro, credencial ou segredo.",
+      ),
+    );
+  }
+  if (exigeAudit && !perfil.audit.explicita) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM097",
+        `${contexto} deveria declarar audit explicita para operar com trilha semantica de seguranca.`,
+        "aviso",
+        intervalo,
+        "Declare audit { evento: ... correlacao: ... motivo: ... } para nao depender de adivinhacao operacional.",
+      ),
+    );
+  }
+  if (exigeSegredos && !perfil.segredos.explicita) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM098",
+        `${contexto} deveria declarar segredos explicitos porque toca credencial, segredo ou secret.read.`,
+        "aviso",
+        intervalo,
+        "Use segredos { nome { origem: vault escopo: runtime ... } } para governar acesso sensivel.",
+      ),
+    );
+  }
+  if (exigeForbidden && !perfil.forbidden.explicita) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM099",
+        `${contexto} deveria declarar forbidden explicito para proibir operacoes perigosas ou vazamento semantico.`,
+        "aviso",
+        intervalo,
+        "Use forbidden { network.egress shell.exec log.segredo retorno.credencial } conforme o risco da operacao.",
+      ),
+    );
   }
 }
 
@@ -500,6 +1114,7 @@ function validarSuperficie(
   const effects = localizarBloco(superficie, "effects");
   const impl = localizarBloco(superficie, "impl");
   const vinculos = localizarBloco(superficie, "vinculos");
+  const execucao = localizarBloco(superficie, "execucao");
 
   if (!task && !impl && !vinculos) {
     diagnosticos.push(
@@ -534,7 +1149,25 @@ function validarSuperficie(
   if (effects) {
     validarEfeitosDeclarados(effects.linhas, diagnosticos, `effects da superficie ${tipoSuperficie} ${nomeSuperficie}`);
   }
+  validarExecucaoBloco(execucao, diagnosticos, `superficie ${tipoSuperficie} "${nomeSuperficie}"`);
   validarVinculos(vinculos, diagnosticos, `${tipoSuperficie} ${nomeSuperficie}`);
+
+  const perfilSeguranca = coletarPerfilSegurancaDeclarado(
+    superficie,
+    effects,
+    diagnosticos,
+    `superficie ${tipoSuperficie} "${nomeSuperficie}"`,
+  );
+  emitirGuardrailsSeguranca(
+    `Superficie ${tipoSuperficie} "${nomeSuperficie}"`,
+    superficie.intervalo,
+    perfilSeguranca,
+    diagnosticos,
+    {
+      publico: superficieEhPublica(superficie, tipoSuperficie),
+      sensivel: perfilSeguranca.efeitoPrivilegiado || perfilSeguranca.dadosSensiveis,
+    },
+  );
 }
 
 function recomporCaminhoRoute(campo?: CampoAst): string | undefined {
@@ -675,7 +1308,7 @@ function validarEfeitosDeclarados(linhas: BlocoGenericoAst["linhas"], diagnostic
           `Declaracao invalida de efeito em ${contexto}: "${linha.conteudo}".`,
           "erro",
           linha.intervalo,
-          "Use o formato \"categoria alvo\" ou \"categoria alvo detalhe\", com categorias como persistencia, consulta, evento, notificacao ou auditoria.",
+          "Use o formato \"categoria alvo\" ou \"categoria alvo detalhe\", podendo adicionar criticidade=..., privilegio=... e isolamento=....",
         ),
       );
       continue;
@@ -688,7 +1321,7 @@ function validarEfeitosDeclarados(linhas: BlocoGenericoAst["linhas"], diagnostic
           `Categoria de efeito "${efeito.categoria}" nao e suportada em ${contexto}.`,
           "erro",
           linha.intervalo,
-          "Use apenas persistencia, consulta, evento, notificacao ou auditoria.",
+          "Use categorias como persistencia, consulta, evento, auditoria, db.write, queue.publish, fs.write, network.egress, secret.read ou shell.exec.",
         ),
       );
     }
@@ -701,6 +1334,36 @@ function validarEfeitosDeclarados(linhas: BlocoGenericoAst["linhas"], diagnostic
           "erro",
           linha.intervalo,
           "Use apenas criticidade=baixa, criticidade=media, criticidade=alta ou criticidade=critica.",
+        ),
+      );
+    }
+
+    if (
+      efeito.privilegioTexto
+      && !["leitura", "escrita", "publicacao", "execucao", "admin", "egress"].includes(efeito.privilegioTexto)
+    ) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM092",
+          `Privilegio de efeito "${efeito.privilegioTexto}" nao e suportado em ${contexto}.`,
+          "erro",
+          linha.intervalo,
+          "Use privilegio=leitura, privilegio=escrita, privilegio=publicacao, privilegio=execucao, privilegio=admin ou privilegio=egress.",
+        ),
+      );
+    }
+
+    if (
+      efeito.isolamentoTexto
+      && !["tenant", "processo", "host", "vps", "global"].includes(efeito.isolamentoTexto)
+    ) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM093",
+          `Isolamento de efeito "${efeito.isolamentoTexto}" nao e suportado em ${contexto}.`,
+          "erro",
+          linha.intervalo,
+          "Use isolamento=tenant, isolamento=processo, isolamento=host, isolamento=vps ou isolamento=global.",
         ),
       );
     }
@@ -1326,6 +1989,23 @@ function validarRoute(
   }
   validarVinculos(route.vinculos, diagnosticos, `route ${route.nome}`);
 
+  const perfilSeguranca = coletarPerfilSegurancaDeclarado(
+    route.corpo,
+    effects,
+    diagnosticos,
+    `route "${route.nome}"`,
+  );
+  emitirGuardrailsSeguranca(
+    `Route "${route.nome}"`,
+    route.intervalo,
+    perfilSeguranca,
+    diagnosticos,
+    {
+      publico: extrairPerfilCompatibilidade(route.corpo, "publico") === "publico",
+      sensivel: routeEhMutante(route) || perfilSeguranca.efeitoPrivilegiado || perfilSeguranca.dadosSensiveis,
+    },
+  );
+
   if (task && !tasksConhecidas.has(task.valor)) {
     diagnosticos.push(
       criarDiagnostico(
@@ -1341,6 +2021,126 @@ function validarRoute(
 
   if (task) {
     validarContratoRoute(route, task.valor, tarefasDetalhadas, diagnosticos);
+  }
+}
+
+function validarGuardrailsSeguranca(modulo: ModuloAst, diagnosticos: Diagnostico[]): void {
+  const superficies = coletarSuperficiesModulo(modulo);
+
+  for (const task of modulo.tasks) {
+    const motivos = new Set<string>();
+    const rotasPublicasAssociadas = modulo.routes.filter((route) =>
+      localizarCampo(route.corpo, "task", "tarefa")?.valor === task.nome
+      && extrairPerfilCompatibilidade(route.corpo, "publico") === "publico");
+    const superficiesPublicasAssociadas = superficies.filter((item) =>
+      localizarCampo(item.superficie, "task", "tarefa")?.valor === task.nome
+      && superficieEhPublica(item.superficie, item.tipo));
+    const perfilTask = coletarPerfilSegurancaDeclarado(task.corpo, task.effects, undefined, `task "${task.nome}"`);
+
+    if (taskEhSensivel(task)) {
+      motivos.add("criticidade operacional alta/critica ou efeito sensivel");
+    }
+
+    for (const route of rotasPublicasAssociadas) {
+      motivos.add(`route publica "${route.nome}"`);
+    }
+
+    for (const item of superficiesPublicasAssociadas) {
+      motivos.add(`superficie publica ${item.tipo} "${item.superficie.nome ?? item.tipo}"`);
+    }
+
+    const motivosOrdenados = [...motivos];
+    if (motivosOrdenados.length === 0) {
+      continue;
+    }
+
+    const perfisPublicos = [
+      ...rotasPublicasAssociadas.map((route) => coletarPerfilSegurancaDeclarado(route.corpo, localizarBloco(route.corpo, "effects"), undefined, `route "${route.nome}"`)),
+      ...superficiesPublicasAssociadas.map((item) => coletarPerfilSegurancaDeclarado(item.superficie, localizarBloco(item.superficie, "effects"), undefined, `superficie ${item.tipo} "${item.superficie.nome ?? item.tipo}"`)),
+    ];
+    const perfilPublico: PerfilSegurancaDeclarado = {
+      auth: { ...perfilTask.auth, explicita: perfilTask.auth.explicita || perfisPublicos.some((perfil) => perfil.auth.explicita) },
+      authz: {
+        ...perfilTask.authz,
+        explicita: perfilTask.authz.explicita || perfisPublicos.some((perfil) => perfil.authz.explicita),
+        papeis: [...new Set([perfilTask.authz.papeis, ...perfisPublicos.map((perfil) => perfil.authz.papeis)].flat())],
+        escopos: [...new Set([perfilTask.authz.escopos, ...perfisPublicos.map((perfil) => perfil.authz.escopos)].flat())],
+      },
+      dados: {
+        ...perfilTask.dados,
+        explicita: perfilTask.dados.explicita || perfisPublicos.some((perfil) => perfil.dados.explicita),
+        campos: [...perfilTask.dados.campos, ...perfisPublicos.flatMap((perfil) => perfil.dados.campos)],
+      },
+      audit: { ...perfilTask.audit, explicita: perfilTask.audit.explicita || perfisPublicos.some((perfil) => perfil.audit.explicita) },
+      segredos: {
+        ...perfilTask.segredos,
+        explicita: perfilTask.segredos.explicita || perfisPublicos.some((perfil) => perfil.segredos.explicita),
+        itens: [...perfilTask.segredos.itens, ...perfisPublicos.flatMap((perfil) => perfil.segredos.itens)],
+      },
+      forbidden: {
+        ...perfilTask.forbidden,
+        explicita: perfilTask.forbidden.explicita || perfisPublicos.some((perfil) => perfil.forbidden.explicita),
+        regras: [...new Set([perfilTask.forbidden.regras, ...perfisPublicos.map((perfil) => perfil.forbidden.regras)].flat())],
+      },
+      efeitoPrivilegiado: perfilTask.efeitoPrivilegiado || perfisPublicos.some((perfil) => perfil.efeitoPrivilegiado),
+      dadosSensiveis: perfilTask.dadosSensiveis || perfisPublicos.some((perfil) => perfil.dadosSensiveis),
+      exigeSegredos: perfilTask.exigeSegredos || perfisPublicos.some((perfil) => perfil.exigeSegredos),
+    };
+
+    if (rotasPublicasAssociadas.length > 0 || superficiesPublicasAssociadas.length > 0) {
+      emitirGuardrailsSeguranca(
+        `Task "${task.nome}" exposta publicamente`,
+        task.intervalo,
+        perfilPublico,
+        diagnosticos,
+        { publico: true, sensivel: false },
+      );
+    }
+
+    const resumoMotivos = motivosOrdenados.join(", ");
+    if (!task.execucao) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM071",
+          `Task "${task.nome}" exige execucao explicita para producao por causa de ${resumoMotivos}, mas ainda opera com execucao implicita.`,
+          "aviso",
+          task.intervalo,
+          "Declare timeout, retry, compensacao, idempotencia e criticidade_operacional no bloco execucao da task.",
+        ),
+      );
+    }
+
+    if (!taskTemRastreabilidade(task)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM072",
+          `Task "${task.nome}" exige rastreabilidade forte por causa de ${resumoMotivos}, mas ainda nao declara impl nem vinculos.`,
+          "aviso",
+          task.intervalo,
+          "Adicione impl e/ou vinculos para apontar arquivo, simbolo, recurso ou superficie real do codigo vivo.",
+        ),
+      );
+    }
+  }
+
+  for (const item of superficies) {
+    if (!superficieEhPublica(item.superficie, item.tipo)) {
+      continue;
+    }
+
+    const execucao = localizarBloco(item.superficie, "execucao");
+    if (!execucao) {
+      const nomeSuperficie = item.superficie.nome ?? item.tipo;
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM073",
+          `Superficie publica ${item.tipo} "${nomeSuperficie}" deveria declarar execucao explicita para producao, mas ainda depende do padrao implicito.`,
+          "aviso",
+          item.superficie.intervalo,
+          `Declare timeout, retry, compensacao e criticidade_operacional no proprio bloco ${item.tipo}.`,
+        ),
+      );
+    }
   }
 }
 
@@ -1525,6 +2325,23 @@ function validarTask(
   }
   validarVinculos(task.vinculos, diagnosticos, `task ${task.nome}`);
   validarExecucao(task, diagnosticos);
+
+  const perfilSeguranca = coletarPerfilSegurancaDeclarado(
+    task.corpo,
+    task.effects,
+    diagnosticos,
+    `task "${task.nome}"`,
+  );
+  emitirGuardrailsSeguranca(
+    `Task "${task.nome}"`,
+    task.intervalo,
+    perfilSeguranca,
+    diagnosticos,
+    {
+      publico: false,
+      sensivel: taskEhSensivel(task) || perfilSeguranca.efeitoPrivilegiado || perfilSeguranca.dadosSensiveis || perfilSeguranca.exigeSegredos,
+    },
+  );
 
   validarImplementacoesTask(task, diagnosticos);
 
@@ -1828,6 +2645,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   for (const policy of modulo.policies) {
     validarSuperficie(policy, "policy", tasksConhecidas, tiposConhecidos, diagnosticos);
   }
+  validarGuardrailsSeguranca(modulo, diagnosticos);
 
   const assinaturasRoute = new Map<string, RouteAst>();
   for (const route of modulo.routes) {

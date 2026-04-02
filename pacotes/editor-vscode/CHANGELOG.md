@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.11
+
+- alinha a extensao com a nova semantica de seguranca da Sema
+- adiciona highlight e hover para `auth`, `authz`, `dados`, `audit`, `segredos` e `forbidden`
+- adiciona snippets para task segura e governanca de segredos
+
 ## 1.2.10
 
 - traz de volta uma lateral `Sema` no VS Code com status do workspace, CLI e alvo atual

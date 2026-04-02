@@ -31,6 +31,30 @@ module sema.produto.linguagem_composta {
       blocos_preservados: Booleano
       status: StatusEvolucao
     }
+    authz {
+      escopo: sema.parser.bloco_nomeado
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        arquivo_semantico: interno
+        sinais: interno
+      }
+      output {
+        ast_valida: interno
+        blocos_preservados: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: sema.parser.bloco_nomeado.interpretado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
     impl {
       ts: nucleo.src.parser.parser.parsear
     }
@@ -72,6 +96,29 @@ module sema.produto.linguagem_composta {
       ir_coerente: Booleano
       contexto_preservado: Booleano
       status: StatusEvolucao
+    }
+    authz {
+      escopo: sema.ir.bloco_composto
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        arquivo_semantico: interno
+      }
+      output {
+        ir_coerente: interno
+        contexto_preservado: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: sema.ir.bloco_composto.convertido
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
     }
     impl {
       ts: nucleo.src.ir.conversor.converterParaIr

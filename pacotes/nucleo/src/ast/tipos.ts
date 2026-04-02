@@ -22,6 +22,12 @@ export type TipoBloco =
   | "impl"
   | "vinculos"
   | "execucao"
+  | "auth"
+  | "authz"
+  | "dados"
+  | "audit"
+  | "segredos"
+  | "forbidden"
   | "guarantees"
   | "state"
   | "flow"
@@ -112,6 +118,12 @@ export interface TaskAst extends NoAstBase {
   impl?: BlocoGenericoAst;
   vinculos?: BlocoGenericoAst;
   execucao?: BlocoGenericoAst;
+  auth?: BlocoGenericoAst;
+  authz?: BlocoGenericoAst;
+  dados?: BlocoGenericoAst;
+  audit?: BlocoGenericoAst;
+  segredos?: BlocoGenericoAst;
+  forbidden?: BlocoGenericoAst;
   guarantees?: BlocoGenericoAst;
   state?: BlocoGenericoAst;
   tests?: BlocoGenericoAst;

@@ -48,25 +48,37 @@ const ORDEM_SUBBLOCOS_TASK = new Map<string, number>([
   ["output", 3],
   ["rules", 4],
   ["effects", 5],
-  ["impl", 6],
-  ["vinculos", 7],
-  ["execucao", 8],
-  ["state", 9],
-  ["guarantees", 10],
-  ["error", 11],
-  ["tests", 12],
-  ["desconhecido", 13],
+  ["auth", 6],
+  ["authz", 7],
+  ["dados", 8],
+  ["audit", 9],
+  ["segredos", 10],
+  ["forbidden", 11],
+  ["impl", 12],
+  ["vinculos", 13],
+  ["execucao", 14],
+  ["state", 15],
+  ["guarantees", 16],
+  ["error", 17],
+  ["tests", 18],
+  ["desconhecido", 19],
 ]);
 
 const ORDEM_SUBBLOCOS_ROUTE = new Map<string, number>([
   ["input", 0],
   ["output", 1],
   ["effects", 2],
-  ["vinculos", 3],
-  ["error", 4],
-  ["docs", 5],
-  ["comments", 6],
-  ["desconhecido", 7],
+  ["auth", 3],
+  ["authz", 4],
+  ["dados", 5],
+  ["audit", 6],
+  ["segredos", 7],
+  ["forbidden", 8],
+  ["vinculos", 9],
+  ["error", 10],
+  ["docs", 11],
+  ["comments", 12],
+  ["desconhecido", 13],
 ]);
 
 const ORDEM_SUBBLOCOS_FLOW = new Map<string, number>([
@@ -81,13 +93,19 @@ const ORDEM_SUBBLOCOS_SUPERFICIE = new Map<string, number>([
   ["input", 0],
   ["output", 1],
   ["effects", 2],
-  ["impl", 3],
-  ["vinculos", 4],
-  ["execucao", 5],
-  ["error", 6],
-  ["docs", 7],
-  ["comments", 8],
-  ["desconhecido", 9],
+  ["auth", 3],
+  ["authz", 4],
+  ["dados", 5],
+  ["audit", 6],
+  ["segredos", 7],
+  ["forbidden", 8],
+  ["impl", 9],
+  ["vinculos", 10],
+  ["execucao", 11],
+  ["error", 12],
+  ["docs", 13],
+  ["comments", 14],
+  ["desconhecido", 15],
 ]);
 
 const ORDEM_SUBBLOCOS_STATE = new Map<string, number>([
@@ -133,6 +151,32 @@ const ORDEM_CAMPOS_POR_BLOCO = new Map<string, Map<string, number>>([
     ["retry", 2],
     ["compensacao", 3],
     ["criticidade_operacional", 4],
+  ])],
+  ["auth", new Map<string, number>([
+    ["modo", 0],
+    ["estrategia", 1],
+    ["principal", 2],
+    ["origem", 3],
+  ])],
+  ["authz", new Map<string, number>([
+    ["papeis", 0],
+    ["papel", 1],
+    ["escopos", 2],
+    ["escopo", 3],
+    ["politica", 4],
+    ["tenant", 5],
+  ])],
+  ["dados", new Map<string, number>([
+    ["classificacao_padrao", 0],
+    ["redacao_log", 1],
+    ["retencao", 2],
+  ])],
+  ["audit", new Map<string, number>([
+    ["evento", 0],
+    ["ator", 1],
+    ["correlacao", 2],
+    ["retencao", 3],
+    ["motivo", 4],
   ])],
 ]);
 
@@ -201,7 +245,7 @@ function deveColocarAspas(contexto: string, campo: CampoAst, combinado: string):
   if (contexto === "vinculos" && ["arquivo", "webhook"].includes(campo.nome)) {
     return true;
   }
-  if (contexto === "execucao" && ["timeout", "retry", "compensacao"].includes(campo.nome)) {
+  if (["timeout", "retry", "compensacao", "retencao", "rotacao"].includes(campo.nome)) {
     return true;
   }
   if (contexto === "docs" || contexto === "comments") {

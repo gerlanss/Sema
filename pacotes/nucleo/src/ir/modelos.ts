@@ -6,6 +6,15 @@ import type {
   ExpressaoSemantica,
   TransicaoEstadoSemantica,
 } from "../semantico/estruturas.js";
+import type {
+  ClassificacaoDadoSemantico,
+  ModoAuthSemantico,
+  MotivoAuditSemantico,
+  OrigemAuthSemantica,
+  PrincipalAuthSemantico,
+  RedacaoLogSemantica,
+  TenantAuthzSemantico,
+} from "../semantico/seguranca.js";
 
 export type PerfilCompatibilidade = "publico" | "interno" | "experimental" | "legado" | "deprecado";
 export type StatusResolucaoSemantica = "nao_verificado" | "resolvido" | "parcial" | "inferido" | "quebrado" | "nao_encontrado";
@@ -55,6 +64,66 @@ export interface IrExecucao {
   compensacao: string;
   criticidadeOperacional: "baixa" | "media" | "alta" | "critica";
   explicita: boolean;
+}
+
+export interface IrAuth {
+  explicita: boolean;
+  modo?: ModoAuthSemantico | string;
+  estrategia?: string;
+  principal?: PrincipalAuthSemantico | string;
+  origem?: OrigemAuthSemantica | string;
+}
+
+export interface IrAuthz {
+  explicita: boolean;
+  papeis: string[];
+  escopos: string[];
+  politica?: string;
+  tenant?: TenantAuthzSemantico | string;
+}
+
+export interface IrCampoDadoClassificado {
+  origem: string;
+  campo: string;
+  classificacao: ClassificacaoDadoSemantico | string;
+}
+
+export interface IrDados {
+  explicita: boolean;
+  classificacaoPadrao?: ClassificacaoDadoSemantico | string;
+  redacaoLog?: RedacaoLogSemantica | string;
+  retencao?: string;
+  campos: IrCampoDadoClassificado[];
+}
+
+export interface IrAudit {
+  explicita: boolean;
+  evento?: string;
+  ator?: string;
+  correlacao?: string;
+  retencao?: string;
+  motivo?: MotivoAuditSemantico | string;
+}
+
+export interface IrSegredo {
+  nome: string;
+  origem?: string;
+  escopo?: string;
+  acesso?: string;
+  rotacao?: string;
+  naoLogar?: boolean;
+  naoRetornar?: boolean;
+  mascarar?: boolean;
+}
+
+export interface IrSegredos {
+  explicita: boolean;
+  itens: IrSegredo[];
+}
+
+export interface IrForbidden {
+  explicita: boolean;
+  regras: string[];
 }
 
 export interface IrBlocoDeclarativo {
@@ -134,6 +203,12 @@ export interface IrTask {
   implementacoesExternas: IrImplementacaoTask[];
   vinculos: IrVinculo[];
   execucao: IrExecucao;
+  auth: IrAuth;
+  authz: IrAuthz;
+  dados: IrDados;
+  audit: IrAudit;
+  segredos: IrSegredos;
+  forbidden: IrForbidden;
   guarantees: string[];
   garantiasEstruturadas: ExpressaoSemantica[];
   errors: Record<string, string>;
@@ -194,6 +269,12 @@ export interface IrRoute {
   errosPublicos: ContratoErroRouteSemantico[];
   efeitosPublicos: EfeitoSemantico[];
   vinculos: IrVinculo[];
+  auth: IrAuth;
+  authz: IrAuthz;
+  dados: IrDados;
+  audit: IrAudit;
+  segredos: IrSegredos;
+  forbidden: IrForbidden;
   perfilCompatibilidade: PerfilCompatibilidade;
   garantiasPublicasMinimas: string[];
   resumoAgente: IrResumoAgente;
@@ -212,6 +293,12 @@ export interface IrSuperficie {
   implementacoesExternas: IrImplementacaoTask[];
   vinculos: IrVinculo[];
   execucao: IrExecucao;
+  auth: IrAuth;
+  authz: IrAuthz;
+  dados: IrDados;
+  audit: IrAudit;
+  segredos: IrSegredos;
+  forbidden: IrForbidden;
   perfilCompatibilidade: PerfilCompatibilidade;
   resumoAgente: IrResumoAgente;
 }

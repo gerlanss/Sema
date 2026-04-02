@@ -106,6 +106,8 @@ sema sync-ai-entrypoints --json
 - `impl` para ligar contrato a simbolo real
 - `vinculos` para ligar contrato a arquivo, simbolo, recurso e superficie
 - `execucao` para timeout, retry, compensacao, idempotencia e criticidade
+- contratos de seguranca semantica via `auth`, `authz`, `dados`, `audit`, `segredos` e `forbidden`
+- `effects` com criticidade, privilegio e isolamento quando a operacao pedir mais dureza
 - tipos compostos como `Lista<T>`, `Mapa<K, V>`, `Opcional<T>` e uniao controlada
 - `drift` com score semantico, confianca, risco e lacunas
 - `resumo` com modos `micro`, `curto` e `medio` para IA de capacidade diferente
@@ -167,10 +169,64 @@ module exemplos.pedidos {
     input {
       pedido_id: Id required
       itens: Lista<Texto> required
+      token_gateway: Texto required
     }
     output {
       protocolo: Id
       status: Texto
+    }
+    effects {
+      db.write pedidos criticidade=alta privilegio=escrita isolamento=tenant
+      secret.read gateway_api_key criticidade=media privilegio=leitura isolamento=processo
+      auditoria pedidos criticidade=media
+    }
+    auth {
+      modo: interno
+      estrategia: jwt
+      principal: servico
+      origem: worker
+    }
+    authz {
+      papel: pedidos_admin
+      escopo: pedidos.processar
+      tenant: isolado
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      retencao: "90d"
+      input {
+        pedido_id: interno
+        itens: interno
+        token_gateway: credencial
+      }
+      output {
+        protocolo: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: pedidos.processado
+      ator: auth.servico
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    segredos {
+      gateway_api_key {
+        origem: vault
+        escopo: runtime
+        acesso: gateway_pagamento
+        rotacao: "30d"
+        nao_logar: verdadeiro
+        nao_retornar: verdadeiro
+        mascarar: verdadeiro
+      }
+    }
+    forbidden {
+      shell.exec
+      retorno.credencial
+      log.segredo
     }
     impl {
       ts: app.pedidos.processar
@@ -187,10 +243,6 @@ module exemplos.pedidos {
       compensacao: "reverter_reserva"
       criticidade_operacional: alta
     }
-    effects {
-      persistencia pedidos criticidade = alta
-      auditoria pedidos criticidade = media
-    }
     guarantees {
       protocolo existe
       status existe
@@ -199,6 +251,7 @@ module exemplos.pedidos {
       caso "pedido valido" {
         given {
           pedido_id: "ped_1"
+          token_gateway: "tok_1"
         }
         expect {
           sucesso: verdadeiro
@@ -211,6 +264,15 @@ module exemplos.pedidos {
     metodo: POST
     caminho: /pedidos/processar
     task: processar_pedido
+    auth {
+      modo: obrigatorio
+      principal: usuario
+      origem: publica
+    }
+    authz {
+      escopo: pedidos.processar.publico
+      tenant: obrigatorio
+    }
   }
 }
 ```

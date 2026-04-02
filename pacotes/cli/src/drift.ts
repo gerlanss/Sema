@@ -42,7 +42,7 @@ interface RegistroConsumerBridgeDrift {
 }
 
 export interface DiagnosticoDrift {
-  tipo: "impl_quebrado" | "task_sem_impl" | "rota_divergente" | "recurso_divergente" | "vinculo_quebrado";
+  tipo: "impl_quebrado" | "task_sem_impl" | "rota_divergente" | "recurso_divergente" | "vinculo_quebrado" | "seguranca_frouxa";
   modulo: string;
   task?: string;
   route?: string;
@@ -304,9 +304,19 @@ function encontrarAncoraSuperficie(
 }
 
 function calcularRiscoOperacional(task: IrTask): NivelRiscoSemantico {
+  const dadosSensiveis = Boolean(
+    task.dados.classificacaoPadrao && ["pii", "financeiro", "credencial", "segredo"].includes(task.dados.classificacaoPadrao)
+    || task.dados.campos.some((campo) => ["pii", "financeiro", "credencial", "segredo"].includes(campo.classificacao))
+  );
+  const efeitoPrivilegiado = task.efeitosEstruturados.some((efeito) =>
+    ["db.read", "db.write", "queue.publish", "queue.consume", "fs.read", "fs.write", "network.egress", "secret.read", "shell.exec"].includes(efeito.categoria)
+    || ["alta", "critica"].includes(efeito.criticidade ?? ""),
+  );
   if (
     task.execucao.criticidadeOperacional === "alta"
     || task.execucao.criticidadeOperacional === "critica"
+    || dadosSensiveis
+    || efeitoPrivilegiado
     || task.efeitosEstruturados.some((efeito) => efeito.categoria === "persistencia" || efeito.criticidade === "critica")
   ) {
     return "alto";
@@ -365,6 +375,19 @@ function resumirLacunasTask(
   semImplementacao: boolean,
   implsQuebrados: number,
   vinculosQuebrados: number,
+  guardrails: {
+    publica: boolean;
+    sensivel: boolean;
+    auth: boolean;
+    authz: boolean;
+    dados: boolean;
+    audit: boolean;
+    segredos: boolean;
+    forbidden: boolean;
+    dadosSensiveis: boolean;
+    efeitoPrivilegiado: boolean;
+    exigeSegredos: boolean;
+  },
 ): string[] {
   const lacunas: string[] = [];
   if (semImplementacao) {
@@ -381,6 +404,33 @@ function resumirLacunasTask(
   }
   if (!task.execucao.explicita) {
     lacunas.push("execucao_implicita");
+  }
+  if (guardrails.publica && !task.execucao.explicita) {
+    lacunas.push("superficie_publica_sem_execucao");
+  }
+  if (guardrails.sensivel && !task.execucao.explicita) {
+    lacunas.push("execucao_critica_sem_bloco");
+  }
+  if ((guardrails.publica || guardrails.sensivel) && semImplementacao && task.vinculos.length === 0) {
+    lacunas.push("rastreabilidade_fraca");
+  }
+  if (guardrails.publica && !guardrails.auth) {
+    lacunas.push("auth_ausente");
+  }
+  if ((guardrails.publica || guardrails.sensivel || guardrails.efeitoPrivilegiado || guardrails.dadosSensiveis) && !guardrails.authz) {
+    lacunas.push("authz_frouxa");
+  }
+  if ((guardrails.publica || guardrails.sensivel || guardrails.efeitoPrivilegiado) && !guardrails.dados) {
+    lacunas.push("dados_nao_classificados");
+  }
+  if ((guardrails.publica || guardrails.sensivel || guardrails.efeitoPrivilegiado || guardrails.dadosSensiveis) && !guardrails.audit) {
+    lacunas.push("audit_ausente");
+  }
+  if (guardrails.exigeSegredos && !guardrails.segredos) {
+    lacunas.push("segredo_sem_governanca");
+  }
+  if ((guardrails.efeitoPrivilegiado || guardrails.dadosSensiveis) && !guardrails.forbidden) {
+    lacunas.push("proibicoes_ausentes");
   }
   return lacunas;
 }
@@ -1827,6 +1877,19 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const diagnosticos: DiagnosticoDrift[] = [];
   const tasksResumo: ResultadoDrift["tasks"] = [];
   const taskPorChave = new Map<string, IrTask>();
+  const guardrailsPorTask = new Map<string, {
+    publica: boolean;
+    sensivel: boolean;
+    auth: boolean;
+    authz: boolean;
+    dados: boolean;
+    audit: boolean;
+    segredos: boolean;
+    forbidden: boolean;
+    dadosSensiveis: boolean;
+    efeitoPrivilegiado: boolean;
+    exigeSegredos: boolean;
+  }>();
   const resumoVinculosPorTask = new Map<string, { validos: number; quebrados: number; arquivos: Set<string> }>();
 
   for (const item of contexto.modulosSelecionados) {
@@ -1837,6 +1900,87 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     const superficiesPorChave = new Map<string, IrSuperficie>(
       ir.superficies.map((superficie) => [`${superficie.tipo}:${superficie.nome}`, superficie]),
     );
+    for (const task of ir.tasks) {
+      guardrailsPorTask.set(`${ir.nome}:${task.nome}`, {
+        publica: false,
+        sensivel: calcularRiscoOperacional(task) === "alto",
+        auth: task.auth.explicita,
+        authz: task.authz.explicita,
+        dados: task.dados.explicita,
+        audit: task.audit.explicita,
+        segredos: task.segredos.explicita,
+        forbidden: task.forbidden.explicita,
+        dadosSensiveis: Boolean(
+          task.dados.classificacaoPadrao && ["pii", "financeiro", "credencial", "segredo"].includes(task.dados.classificacaoPadrao)
+          || task.dados.campos.some((campo) => ["pii", "financeiro", "credencial", "segredo"].includes(campo.classificacao))
+        ),
+        efeitoPrivilegiado: task.efeitosEstruturados.some((efeito) =>
+          ["db.read", "db.write", "queue.publish", "queue.consume", "fs.read", "fs.write", "network.egress", "secret.read", "shell.exec"].includes(efeito.categoria)
+          || ["alta", "critica"].includes(efeito.criticidade ?? ""),
+        ),
+        exigeSegredos: task.efeitosEstruturados.some((efeito) => efeito.categoria === "secret.read")
+          || Boolean(
+            task.dados.classificacaoPadrao && ["credencial", "segredo"].includes(task.dados.classificacaoPadrao)
+            || task.dados.campos.some((campo) => ["credencial", "segredo"].includes(campo.classificacao))
+          ),
+      });
+    }
+    for (const route of ir.routes) {
+      if (!route.task || route.perfilCompatibilidade !== "publico") {
+        continue;
+      }
+      const guardrails = guardrailsPorTask.get(`${ir.nome}:${route.task}`);
+      if (guardrails) {
+        guardrails.publica = true;
+        guardrails.auth = guardrails.auth || route.auth.explicita;
+        guardrails.authz = guardrails.authz || route.authz.explicita;
+        guardrails.dados = guardrails.dados || route.dados.explicita;
+        guardrails.audit = guardrails.audit || route.audit.explicita;
+        guardrails.segredos = guardrails.segredos || route.segredos.explicita;
+        guardrails.forbidden = guardrails.forbidden || route.forbidden.explicita;
+        guardrails.dadosSensiveis = guardrails.dadosSensiveis || Boolean(
+          route.dados.classificacaoPadrao && ["pii", "financeiro", "credencial", "segredo"].includes(route.dados.classificacaoPadrao)
+          || route.dados.campos.some((campo) => ["pii", "financeiro", "credencial", "segredo"].includes(campo.classificacao))
+        );
+        guardrails.efeitoPrivilegiado = guardrails.efeitoPrivilegiado || route.efeitosPublicos.some((efeito) =>
+          ["db.read", "db.write", "queue.publish", "queue.consume", "fs.read", "fs.write", "network.egress", "secret.read", "shell.exec"].includes(efeito.categoria)
+          || ["alta", "critica"].includes(efeito.criticidade ?? ""),
+        );
+        guardrails.exigeSegredos = guardrails.exigeSegredos || route.efeitosPublicos.some((efeito) => efeito.categoria === "secret.read")
+          || Boolean(
+            route.dados.classificacaoPadrao && ["credencial", "segredo"].includes(route.dados.classificacaoPadrao)
+            || route.dados.campos.some((campo) => ["credencial", "segredo"].includes(campo.classificacao))
+          );
+      }
+    }
+    for (const superficie of ir.superficies) {
+      if (!superficie.task || superficie.perfilCompatibilidade !== "publico") {
+        continue;
+      }
+      const guardrails = guardrailsPorTask.get(`${ir.nome}:${superficie.task}`);
+      if (guardrails) {
+        guardrails.publica = true;
+        guardrails.auth = guardrails.auth || superficie.auth.explicita;
+        guardrails.authz = guardrails.authz || superficie.authz.explicita;
+        guardrails.dados = guardrails.dados || superficie.dados.explicita;
+        guardrails.audit = guardrails.audit || superficie.audit.explicita;
+        guardrails.segredos = guardrails.segredos || superficie.segredos.explicita;
+        guardrails.forbidden = guardrails.forbidden || superficie.forbidden.explicita;
+        guardrails.dadosSensiveis = guardrails.dadosSensiveis || Boolean(
+          superficie.dados.classificacaoPadrao && ["pii", "financeiro", "credencial", "segredo"].includes(superficie.dados.classificacaoPadrao)
+          || superficie.dados.campos.some((campo) => ["pii", "financeiro", "credencial", "segredo"].includes(campo.classificacao))
+        );
+        guardrails.efeitoPrivilegiado = guardrails.efeitoPrivilegiado || superficie.effects.some((efeito) =>
+          ["db.read", "db.write", "queue.publish", "queue.consume", "fs.read", "fs.write", "network.egress", "secret.read", "shell.exec"].includes(efeito.categoria)
+          || ["alta", "critica"].includes(efeito.criticidade ?? ""),
+        );
+        guardrails.exigeSegredos = guardrails.exigeSegredos || superficie.effects.some((efeito) => efeito.categoria === "secret.read")
+          || Boolean(
+            superficie.dados.classificacaoPadrao && ["credencial", "segredo"].includes(superficie.dados.classificacaoPadrao)
+            || superficie.dados.campos.some((campo) => ["credencial", "segredo"].includes(campo.classificacao))
+          );
+      }
+    }
 
     for (const task of ir.tasks) {
       taskPorChave.set(`${ir.nome}:${task.nome}`, task);
@@ -1957,6 +2101,29 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
           compensacao: "nenhuma",
           criticidadeOperacional: "media",
           explicita: false,
+        },
+        auth: {
+          explicita: false,
+        },
+        authz: {
+          explicita: false,
+          papeis: [],
+          escopos: [],
+        },
+        dados: {
+          explicita: false,
+          campos: [],
+        },
+        audit: {
+          explicita: false,
+        },
+        segredos: {
+          explicita: false,
+          itens: [],
+        },
+        forbidden: {
+          explicita: false,
+          regras: [],
         },
         guarantees: [],
         garantiasEstruturadas: [],
@@ -2108,6 +2275,19 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   for (const resumo of tasksResumo) {
     const chaveTask = `${resumo.modulo}:${resumo.task}`;
     const task = taskPorChave.get(chaveTask);
+    const guardrails = guardrailsPorTask.get(chaveTask) ?? {
+      publica: false,
+      sensivel: false,
+      auth: false,
+      authz: false,
+      dados: false,
+      audit: false,
+      segredos: false,
+      forbidden: false,
+      dadosSensiveis: false,
+      efeitoPrivilegiado: false,
+      exigeSegredos: false,
+    };
     const resumoVinculos = resumoVinculosPorTask.get(chaveTask) ?? {
       validos: 0,
       quebrados: 0,
@@ -2119,7 +2299,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
 
     resumo.confiancaVinculo = calcularConfiancaTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados);
     resumo.riscoOperacional = calcularRiscoOperacional(task);
-    resumo.lacunas = resumirLacunasTask(task, resumo.semImplementacao, resumo.implsQuebrados, resumoVinculos.quebrados);
+    resumo.lacunas = resumirLacunasTask(task, resumo.semImplementacao, resumo.implsQuebrados, resumoVinculos.quebrados, guardrails);
     resumo.scoreSemantico = calcularScoreTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados, resumo.semImplementacao);
     resumo.arquivosProvaveisEditar = [...new Set([
       ...resumo.arquivosReferenciados,
@@ -2130,7 +2310,86 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
       ...task.resumoAgente.checks,
       resumo.riscoOperacional !== "baixo" ? "revisar efeitos operacionais" : "",
       resumo.lacunas.includes("vinculo_quebrado") ? "corrigir vinculos rastreaveis" : "",
+      resumo.lacunas.some((lacuna) => ["superficie_publica_sem_execucao", "execucao_critica_sem_bloco", "rastreabilidade_fraca"].includes(lacuna))
+        ? "endurecer execucao e rastreabilidade para producao"
+        : "",
+      resumo.lacunas.some((lacuna) => ["auth_ausente", "authz_frouxa", "dados_nao_classificados", "audit_ausente", "segredo_sem_governanca", "proibicoes_ausentes"].includes(lacuna))
+        ? "explicitar contratos de seguranca semantica"
+        : "",
     ].filter(Boolean))];
+
+    if (resumo.lacunas.includes("superficie_publica_sem_execucao")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" alimenta superficie publica, mas ainda depende de execucao implicita.`,
+      });
+    }
+    if (resumo.lacunas.includes("execucao_critica_sem_bloco")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" opera com risco alto, mas ainda nao declarou execucao explicita.`,
+      });
+    }
+    if (resumo.lacunas.includes("rastreabilidade_fraca")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" exige producao mais rastreavel, mas ainda nao declara impl nem vinculos.`,
+      });
+    }
+    if (resumo.lacunas.includes("auth_ausente")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" chega em superficie publica sem auth explicita em task, route ou superficie associada.`,
+      });
+    }
+    if (resumo.lacunas.includes("authz_frouxa")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" opera com risco ou exposicao, mas ainda nao explicita authz suficiente.`,
+      });
+    }
+    if (resumo.lacunas.includes("dados_nao_classificados")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" ainda nao classifica dados de entrada/saida de forma semantica.`,
+      });
+    }
+    if (resumo.lacunas.includes("audit_ausente")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" ainda nao declara audit explicita para operacao sensivel ou publica.`,
+      });
+    }
+    if (resumo.lacunas.includes("segredo_sem_governanca")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" toca segredo ou credencial sem bloco segredos governando origem, escopo e rotacao.`,
+      });
+    }
+    if (resumo.lacunas.includes("proibicoes_ausentes")) {
+      diagnosticos.push({
+        tipo: "seguranca_frouxa",
+        modulo: resumo.modulo,
+        task: resumo.task,
+        mensagem: `Task "${resumo.task}" opera com efeito privilegiado ou dado sensivel sem forbidden explicito para conter abuso e vazamento.`,
+      });
+    }
   }
 
   const consumerSurfaces = [...indexTs.consumerSurfaces, ...indexDart.consumerSurfaces].sort((a, b) =>

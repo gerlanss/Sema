@@ -1,5 +1,21 @@
+import type { IsolamentoEfeitoSemantico, PrivilegioEfeitoSemantico } from "./seguranca.js";
+
 export type TipoExpressaoSemantica = "existe" | "comparacao" | "predicado" | "pertencimento" | "composta" | "negacao";
-export type CategoriaEfeitoSemantico = "persistencia" | "consulta" | "evento" | "notificacao" | "auditoria";
+export type CategoriaEfeitoSemantico =
+  | "persistencia"
+  | "consulta"
+  | "evento"
+  | "notificacao"
+  | "auditoria"
+  | "db.read"
+  | "db.write"
+  | "queue.publish"
+  | "queue.consume"
+  | "fs.read"
+  | "fs.write"
+  | "network.egress"
+  | "secret.read"
+  | "shell.exec";
 export type CriticidadeEfeitoSemantico = "baixa" | "media" | "alta" | "critica";
 
 export interface ExpressaoBaseSemantica {
@@ -59,6 +75,10 @@ export interface EfeitoSemantico {
   detalhe?: string;
   criticidade?: CriticidadeEfeitoSemantico;
   criticidadeTexto?: string;
+  privilegio?: PrivilegioEfeitoSemantico;
+  privilegioTexto?: string;
+  isolamento?: IsolamentoEfeitoSemantico;
+  isolamentoTexto?: string;
 }
 
 export interface TransicaoEstadoSemantica {
@@ -101,6 +121,15 @@ const CATEGORIAS_EFEITO = new Set<CategoriaEfeitoSemantico>([
   "evento",
   "notificacao",
   "auditoria",
+  "db.read",
+  "db.write",
+  "queue.publish",
+  "queue.consume",
+  "fs.read",
+  "fs.write",
+  "network.egress",
+  "secret.read",
+  "shell.exec",
 ]);
 
 const CRITICIDADES_EFEITO = new Set<CriticidadeEfeitoSemantico>([
@@ -123,6 +152,23 @@ const MAPEAMENTO_EFEITOS_LEGADOS: Record<string, CategoriaEfeitoSemantico> = {
   registra: "auditoria",
   audita: "auditoria",
 };
+
+const PRIVILEGIOS_EFEITO = new Set<PrivilegioEfeitoSemantico>([
+  "leitura",
+  "escrita",
+  "publicacao",
+  "execucao",
+  "admin",
+  "egress",
+]);
+
+const ISOLAMENTOS_EFEITO = new Set<IsolamentoEfeitoSemantico>([
+  "tenant",
+  "processo",
+  "host",
+  "vps",
+  "global",
+]);
 
 const OPERADORES_COMPARACAO = new Set(["==", "!=", ">", ">=", "<", "<="]);
 
@@ -339,21 +385,34 @@ export function parsearEfeitoSemantico(texto: string): EfeitoSemantico | undefin
 
   const partesSemCriticidade = [...partes];
   let criticidadeTexto: string | undefined;
-  const indiceCriticidade = partesSemCriticidade.findIndex((parte) => parte.startsWith("criticidade="));
-  if (indiceCriticidade !== -1) {
-    criticidadeTexto = partesSemCriticidade[indiceCriticidade]!.slice("criticidade=".length).trim();
-    partesSemCriticidade.splice(indiceCriticidade, 1);
-  } else {
-    const indiceCriticidadeSeparada = partesSemCriticidade.findIndex((parte) => parte === "criticidade");
-    if (
-      indiceCriticidadeSeparada !== -1
-      && partesSemCriticidade[indiceCriticidadeSeparada + 1] === "="
-      && partesSemCriticidade[indiceCriticidadeSeparada + 2]
-    ) {
-      criticidadeTexto = partesSemCriticidade[indiceCriticidadeSeparada + 2]!.trim();
-      partesSemCriticidade.splice(indiceCriticidadeSeparada, 3);
+  let privilegioTexto: string | undefined;
+  let isolamentoTexto: string | undefined;
+
+  const extrairQualificador = (nome: string): string | undefined => {
+    const indiceInline = partesSemCriticidade.findIndex((parte) => parte.startsWith(`${nome}=`));
+    if (indiceInline !== -1) {
+      const valor = partesSemCriticidade[indiceInline]!.slice(`${nome}=`.length).trim();
+      partesSemCriticidade.splice(indiceInline, 1);
+      return valor;
     }
-  }
+
+    const indiceSeparado = partesSemCriticidade.findIndex((parte) => parte === nome);
+    if (
+      indiceSeparado !== -1
+      && partesSemCriticidade[indiceSeparado + 1] === "="
+      && partesSemCriticidade[indiceSeparado + 2]
+    ) {
+      const valor = partesSemCriticidade[indiceSeparado + 2]!.trim();
+      partesSemCriticidade.splice(indiceSeparado, 3);
+      return valor;
+    }
+
+    return undefined;
+  };
+
+  criticidadeTexto = extrairQualificador("criticidade");
+  privilegioTexto = extrairQualificador("privilegio");
+  isolamentoTexto = extrairQualificador("isolamento");
 
   if (partesSemCriticidade.length < 2) {
     return undefined;
@@ -363,6 +422,12 @@ export function parsearEfeitoSemantico(texto: string): EfeitoSemantico | undefin
   const criticidade = criticidadeTexto && CRITICIDADES_EFEITO.has(criticidadeTexto as CriticidadeEfeitoSemantico)
     ? criticidadeTexto as CriticidadeEfeitoSemantico
     : undefined;
+  const privilegio = privilegioTexto && PRIVILEGIOS_EFEITO.has(privilegioTexto as PrivilegioEfeitoSemantico)
+    ? privilegioTexto as PrivilegioEfeitoSemantico
+    : undefined;
+  const isolamento = isolamentoTexto && ISOLAMENTOS_EFEITO.has(isolamentoTexto as IsolamentoEfeitoSemantico)
+    ? isolamentoTexto as IsolamentoEfeitoSemantico
+    : undefined;
   if (CATEGORIAS_EFEITO.has(categoriaNormalizada)) {
     return {
       textoOriginal: normalizado,
@@ -371,6 +436,10 @@ export function parsearEfeitoSemantico(texto: string): EfeitoSemantico | undefin
       detalhe: partesSemCriticidade.slice(2).join(" ").trim() || undefined,
       criticidade,
       criticidadeTexto,
+      privilegio,
+      privilegioTexto,
+      isolamento,
+      isolamentoTexto,
     };
   }
 
@@ -383,6 +452,10 @@ export function parsearEfeitoSemantico(texto: string): EfeitoSemantico | undefin
       detalhe: partesSemCriticidade.slice(2).join(" ").trim() || undefined,
       criticidade,
       criticidadeTexto,
+      privilegio,
+      privilegioTexto,
+      isolamento,
+      isolamentoTexto,
     };
   }
 
@@ -393,6 +466,10 @@ export function parsearEfeitoSemantico(texto: string): EfeitoSemantico | undefin
     detalhe: partesSemCriticidade.slice(2).join(" ").trim() || undefined,
     criticidade,
     criticidadeTexto,
+    privilegio,
+    privilegioTexto,
+    isolamento,
+    isolamentoTexto,
   };
 }
 

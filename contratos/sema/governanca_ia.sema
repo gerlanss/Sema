@@ -95,6 +95,30 @@ module sema.produto.governanca_ia {
       rotas_resolvidas: Booleano
       ambiguidades_explicitas: Booleano
     }
+    authz {
+      escopo: sema.drift.executar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        codigo_vivo: interno
+      }
+      output {
+        impls_resolvidas: interno
+        rotas_resolvidas: interno
+        ambiguidades_explicitas: interno
+      }
+    }
+    audit {
+      evento: sema.drift.executado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
     impl {
       ts: cli.src.drift.analisarDriftLegado
     }
@@ -207,6 +231,26 @@ module sema.produto.governanca_ia {
 
   webhook confirmar_contexto_publico {
     task: mapear_projeto_sem_adivinhacao
+    auth {
+      modo: obrigatorio
+      principal: usuario
+      origem: publica
+    }
+    authz {
+      escopo: sema.contexto.confirmar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.contexto.confirmado
+      ator: auth.usuario
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
     vinculos {
       webhook: /interno/contexto-ia
     }

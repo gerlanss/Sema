@@ -1887,3 +1887,359 @@ module exemplo.superficie.invalida {
   assert.equal(temErros(resultado.diagnosticos), true);
   assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM069"));
 });
+
+test("compilador endurece guardrails de producao para task publica sem execucao nem rastreabilidade", () => {
+  const codigo = `
+module exemplo.producao.guardrails {
+  task processar_pagamento {
+    input {
+      pedido_id: Id required
+    }
+    output {
+      status: Texto
+    }
+    guarantees {
+      status existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          pedido_id: "ped_1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route processar_pagamento_publico {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar_pagamento
+  }
+
+  webhook confirmar_pagamento {
+    task: processar_pagamento
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM071" && diagnostico.severidade === "aviso"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM072" && diagnostico.severidade === "aviso"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM073" && diagnostico.severidade === "aviso"));
+});
+
+test("compilador valida campos de execucao tambem em superficies", () => {
+  const codigo = `
+module exemplo.superficie.execucao {
+  task processar {
+    input {
+      payload: Texto required
+    }
+    output {
+      sucesso: Booleano
+    }
+    guarantees {
+      sucesso existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          payload: "ok"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  webhook receber_payload {
+    task: processar
+    execucao {
+      janela: "10s"
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM065"));
+});
+
+test("compilador enriquece IR com contratos semanticos de seguranca", () => {
+  const codigo = `
+module exemplo.seguranca.contratos {
+  task processar_pagamento {
+    input {
+      cliente_id: Id required
+      token_gateway: Texto required
+    }
+    output {
+      protocolo: Id
+      status: Texto
+    }
+    auth {
+      modo: interno
+      estrategia: jwt
+      principal: servico
+      origem: worker
+    }
+    authz {
+      papel: pagamentos_admin
+      escopo: pagamentos.processar
+      politica: rbac.pagamentos
+      tenant: isolado
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      retencao: "90d"
+      input {
+        cliente_id: pii
+        token_gateway: credencial
+      }
+      output {
+        protocolo: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: pagamentos.processado
+      ator: auth.servico
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    segredos {
+      stripe_api_key {
+        origem: vault
+        escopo: runtime
+        acesso: gateway_pagamento
+        rotacao: "30d"
+        nao_logar: verdadeiro
+        nao_retornar: verdadeiro
+        mascarar: verdadeiro
+      }
+    }
+    forbidden {
+      shell.exec
+      retorno.credencial
+    }
+    effects {
+      db.write Pedido criticidade=alta privilegio=escrita isolamento=tenant
+      secret.read stripe_api_key criticidade=media privilegio=leitura isolamento=processo
+    }
+    guarantees {
+      protocolo existe
+      status existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          cliente_id: "cli_1"
+          token_gateway: "tok_1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route processar_pagamento_publico {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar_pagamento
+    auth {
+      modo: obrigatorio
+      principal: usuario
+      origem: publica
+    }
+    authz {
+      escopo: pagamentos.processar.publico
+      tenant: obrigatorio
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+
+  const task = resultado.ir?.tasks[0];
+  assert.equal(task?.auth.explicita, true);
+  assert.equal(task?.auth.modo, "interno");
+  assert.equal(task?.authz.papeis[0], "pagamentos_admin");
+  assert.equal(task?.authz.escopos[0], "pagamentos.processar");
+  assert.equal(task?.dados.classificacaoPadrao, "interno");
+  assert.equal(task?.dados.campos.find((campo) => campo.origem === "input" && campo.campo === "cliente_id")?.classificacao, "pii");
+  assert.equal(task?.dados.redacaoLog, "obrigatoria");
+  assert.equal(task?.audit.evento, "pagamentos.processado");
+  assert.equal(task?.audit.motivo, "obrigatorio");
+  assert.equal(task?.segredos.itens[0]?.nome, "stripe_api_key");
+  assert.equal(task?.segredos.itens[0]?.naoLogar, true);
+  assert.deepEqual(task?.forbidden.regras, ["retorno.credencial", "shell.exec"]);
+  assert.equal(task?.efeitosEstruturados[0]?.categoria, "db.write");
+  assert.equal(task?.efeitosEstruturados[0]?.privilegio, "escrita");
+  assert.equal(task?.efeitosEstruturados[0]?.isolamento, "tenant");
+  assert.equal(task?.efeitosEstruturados[1]?.categoria, "secret.read");
+  assert.equal(task?.efeitosEstruturados[1]?.isolamento, "processo");
+
+  const route = resultado.ir?.routes[0];
+  assert.equal(route?.auth.explicita, true);
+  assert.equal(route?.auth.modo, "obrigatorio");
+  assert.equal(route?.authz.escopos[0], "pagamentos.processar.publico");
+  assert.equal(route?.authz.tenant, "obrigatorio");
+});
+
+test("compilador rejeita contratos semanticos de seguranca invalidos", () => {
+  const codigo = `
+module exemplo.seguranca.invalida {
+  task operar {
+    input {
+      payload: Texto required
+    }
+    output {
+      sucesso: Booleano
+    }
+    auth {
+      modo: senha
+      principal: robo
+      origem: externa
+      provider: oauth
+    }
+    authz {
+      tenant: global
+    }
+    dados {
+      classificacao_padrao: ultrassecreto
+      redacao_log: total
+      payload_bruto: criptico
+      interno {
+        token: segredo
+      }
+    }
+    audit {
+      ator: usuario_id
+      motivo: sempre
+      canal: kafka
+    }
+    segredos {
+      api_key {
+        origem: vault
+        politica: strict
+        nao_logar: talvez
+      }
+      session_key {
+        escopo: runtime
+      }
+    }
+    forbidden {
+      shell exec
+      secret.read
+    }
+    effects {
+      secret.read api_key criticidade=alta privilegio=root isolamento=cluster
+    }
+    guarantees {
+      sucesso existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          payload: "ok"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+
+  for (const codigoDiagnostico of [
+    "SEM074",
+    "SEM075",
+    "SEM076",
+    "SEM077",
+    "SEM079",
+    "SEM080",
+    "SEM081",
+    "SEM082",
+    "SEM083",
+    "SEM084",
+    "SEM085",
+    "SEM086",
+    "SEM087",
+    "SEM088",
+    "SEM089",
+    "SEM090",
+    "SEM091",
+    "SEM092",
+    "SEM093",
+  ]) {
+    assert.ok(
+      resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === codigoDiagnostico),
+      `diagnostico ausente: ${codigoDiagnostico}`,
+    );
+  }
+});
+
+test("compilador cobra contratos semanticos de seguranca em operacao publica e sensivel", () => {
+  const codigo = `
+module exemplo.seguranca.guardrails {
+  task sincronizar_cliente {
+    input {
+      cliente_id: Id required
+      payload: Json required
+    }
+    output {
+      status: Texto
+    }
+    effects {
+      db.write Cliente criticidade=alta privilegio=escrita isolamento=tenant
+      secret.read gateway_token criticidade=media privilegio=leitura isolamento=processo
+    }
+    guarantees {
+      status existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          cliente_id: "cli_1"
+          payload: "{}"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route sincronizar_cliente_publico {
+    metodo: POST
+    caminho: /clientes/sincronizar
+    task: sincronizar_cliente
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+
+  for (const codigoDiagnostico of ["SEM094", "SEM095", "SEM096", "SEM097", "SEM098", "SEM099"]) {
+    assert.ok(
+      resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === codigoDiagnostico && diagnostico.severidade === "aviso"),
+      `guardrail ausente: ${codigoDiagnostico}`,
+    );
+  }
+});
