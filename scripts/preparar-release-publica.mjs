@@ -57,6 +57,7 @@ Sema e um Protocolo de Governanca de Intencao para IA sobre software vivo em bac
 
 ## Destaques
 
+- suporte oficial a Lua em criacao, importacao, drift, compilacao e teste local
 - \`sema resumo\` com tamanhos \`micro\`, \`curto\` e \`medio\`
 - \`sema prompt-curto\` para IA pequena ou gratuita
 - \`contexto-ia\` com \`briefing.min.json\`, \`resumo.micro.txt\`, \`resumo.curto.txt\`, \`resumo.md\` e \`prompt-curto.txt\`
@@ -83,6 +84,7 @@ cd sema-demo
 sema iniciar
 sema validar contratos/pedidos.sema --json
 sema resumo contratos/pedidos.sema --micro --para onboarding
+sema compilar contratos/pedidos.sema --alvo lua --saida ./saida/lua
 sema doctor
 \`\`\`
 

@@ -225,10 +225,10 @@ test("cli expoe starter e prompt de ia", () => {
   assert.match(starter.stdout, /Modo IA-first da instalacao atual/);
   assert.doesNotMatch(starter.stdout, /Origem da instalacao:/);
   assert.match(starter.stdout, /AGENT_STARTER\.md/);
-  assert.match(starter.stdout, /Sema, um Protocolo de Governanca de Intencao para IA e backend vivo/);
+  assert.match(starter.stdout, /Sema, um Protocolo de Governanca de Intencao para IA sobre software vivo em backend e front consumer/);
   assert.match(starter.stdout, /sema resumo/);
   assert.match(starter.stdout, /nao invente sintaxe/);
-  assert.match(starter.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
+  assert.match(starter.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart\|lua> --saida <diretorio>/);
 
   const prompt = spawnSync(
     "node",
@@ -256,7 +256,7 @@ test("cli expoe ajuda de ia com mapa de comandos", () => {
   assert.match(ajuda.stdout, /sema resumo <arquivo> --micro --para onboarding/);
   assert.match(ajuda.stdout, /sema prompt-curto <arquivo> --curto --para mudanca/);
   assert.match(ajuda.stdout, /sema prompt-ia-react/);
-  assert.match(ajuda.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart> --saida <diretorio>/);
+  assert.match(ajuda.stdout, /sema compilar <arquivo-ou-pasta> --alvo <typescript\|python\|dart\|lua> --saida <diretorio>/);
   assert.match(ajuda.stdout, /Tres jeitos de usar a Sema/);
   assert.match(ajuda.stdout, /Capacidade de IA/);
   assert.match(ajuda.stdout, /Projeto sem Sema ainda: importe, revise o rascunho/);
@@ -584,6 +584,43 @@ test("cli inspeciona projeto Flask e detecta fonte legado correta", async () => 
     assert.deepEqual(json.configuracao.origens, [path.join(baseTemporaria, "contratos")]);
     assert.deepEqual(json.configuracao.diretoriosCodigo, [path.join(baseTemporaria, "Gestech")]);
     assert.equal(json.configuracao.fontesLegado.includes("flask"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli inspeciona projeto Lua e detecta fonte legado generica", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-lua-"));
+
+  try {
+    await mkdir(path.join(baseTemporaria, "lua"), { recursive: true });
+    await writeFile(
+      path.join(baseTemporaria, "lua", "payments.lua"),
+      `local payments = {}
+
+function payments.processar_pagamento(transacao_id, valor)
+  return {
+    protocolo = transacao_id,
+    valor = valor,
+  }
+end
+
+return payments
+`,
+      "utf8",
+    );
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "inspecionar", baseTemporaria, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.configuracao.baseProjeto, baseTemporaria);
+    assert.equal(json.configuracao.fontesLegado.includes("lua"), true);
+    assert.equal(json.configuracao.diretoriosCodigo.includes(path.join(baseTemporaria, "lua")), true);
   } finally {
     await rm(baseTemporaria, { recursive: true, force: true });
   }
@@ -1245,6 +1282,64 @@ test("cli doctor checa toolchain sem explodir", () => {
   assert.match(execucao.stdout, /Sema doctor/);
   assert.match(execucao.stdout, /node: ok/);
   assert.match(execucao.stdout, /npm: ok/);
+});
+
+test("cli testar executa alvo Lua quando o interpretador esta disponivel", async () => {
+  const runtimeLua = ["lua", "luajit"].find((binario) => spawnSync(binario, ["-v"], { stdio: "pipe", encoding: "utf8" }).status === 0);
+  if (!runtimeLua) {
+    return;
+  }
+
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-cli-testar-lua-"));
+  const caminhoContrato = path.join(baseTemporaria, "lua-teste.sema");
+  const pastaSaida = path.join(baseTemporaria, "saida");
+
+  await writeFile(
+    caminhoContrato,
+    `module exemplo.cli.lua {
+  enum StatusExecucao {
+    ABERTO,
+    FECHADO
+  }
+
+  task consultar {
+    input {
+      id: Id required
+    }
+    output {
+      status: StatusExecucao
+    }
+    guarantees {
+      status em [ABERTO, FECHADO]
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`,
+    "utf8",
+  );
+
+  const execucao = spawnSync(
+    "node",
+    [CLI, "testar", caminhoContrato, "--alvo", "lua", "--saida", pastaSaida],
+    { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+  );
+
+  try {
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    assert.match(execucao.stdout, /ok 1 testes/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
 });
 
 test("cli inspeciona familias backend novas e detecta fontes corretas", async () => {

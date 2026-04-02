@@ -52,6 +52,7 @@ try {
   Write-Host "  sema doctor"
   Write-Host "  sema starter-ia"
   Write-Host "  sema resumo . --curto"
+  Write-Host "  sema compilar contratos/pedidos.sema --alvo lua --saida ./gerado-lua"
 }
 finally {
   Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue

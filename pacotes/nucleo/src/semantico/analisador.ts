@@ -52,12 +52,12 @@ export interface ResumoTaskSemantico {
 }
 
 export interface InteropSemantico {
-  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
 }
 
 export interface ImplementacaoTaskSemantica {
-  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
 }
 
@@ -151,6 +151,8 @@ function normalizarOrigemImplementacao(valor: string): ImplementacaoTaskSemantic
       return "py";
     case "dart":
       return "dart";
+    case "lua":
+      return "lua";
     case "cs":
     case "csharp":
     case "dotnet":
@@ -339,7 +341,7 @@ function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnostico[]): 
           `Task "${task.nome}" declarou implementacao externa invalida em impl: "${campo.nome}".`,
           "erro",
           campo.intervalo,
-          "Use apenas ts, py, dart, cs, java, go, rust ou cpp dentro do bloco impl.",
+          "Use apenas ts, py, dart, lua, cs, java, go, rust ou cpp dentro do bloco impl.",
         ),
       );
       continue;

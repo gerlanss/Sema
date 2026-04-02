@@ -41,6 +41,7 @@ Instalar a CLI da Sema:
 npm install -g @semacode/cli
 sema --help
 sema doctor
+sema compilar contratos/pedidos.sema --alvo lua --saida ./saida/lua
 ```
 
 Primeiro teste:
@@ -111,7 +112,7 @@ sema sync-ai-entrypoints --json
 - `resumo` com modos `micro`, `curto` e `medio` para IA de capacidade diferente
 - `prompt-curto` para colar contexto compacto em IA gratuita ou com janela curta
 - `contexto-ia` com `ast.json`, `ir.json`, `drift.json`, `briefing.json`, `briefing.min.json` e resumos locais
-- scaffold e geracao para TypeScript, Python e Dart
+- scaffold e geracao para TypeScript, Python, Dart e Lua
 - scaffold backend para NestJS e FastAPI
 - importacao incremental de legado
 
@@ -270,7 +271,7 @@ Essas duas saidas agora separam fluxo de projeto novo, edicao guiada e adocao em
 - `Rust Axum`: importacao de handlers com `drift` via `rust:`
 - `Node/Firebase worker`: importacao focada em bridge, worker route e recurso persistido
 - `C++ bridge/service`: importacao generica e `drift` de simbolo via `cpp:`
-- `TypeScript`, `Python`, `Dart`: resolucao de simbolo e importacao generica
+- `TypeScript`, `Python`, `Dart`, `Lua`: resolucao de simbolo e importacao generica
 
 Observacao importante: essas familias entram como fontes de legado para `importar` e `drift`. A criacao oficial agora cobre `base`, `nestjs`, `fastapi`, `nextjs-api`, `nextjs-consumer`, `react-vite-consumer`, `angular-consumer` e `flutter-consumer`.
 

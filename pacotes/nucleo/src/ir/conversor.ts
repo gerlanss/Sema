@@ -207,6 +207,10 @@ function converterImplementacoes(bloco?: BlocoGenericoAst): IrImplementacaoTask[
       implementacoes.push({ origem: "dart", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
       continue;
     }
+    if (origem === "lua") {
+      implementacoes.push({ origem: "lua", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
+      continue;
+    }
     if (origem === "cs" || origem === "csharp" || origem === "dotnet") {
       implementacoes.push({ origem: "cs", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
       continue;
@@ -428,7 +432,7 @@ function recomporCaminho(campo?: CampoAst): string | undefined {
 
 function ehUseInterop(
   use: ModuloAst["uses"][number],
-): use is ModuloAst["uses"][number] & { origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp" } {
+): use is ModuloAst["uses"][number] & { origem: "ts" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" } {
   return use.origem !== "sema";
 }
 

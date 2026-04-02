@@ -391,6 +391,7 @@ module app.interop {
   use ts app.gateway.pagamentos
   use py servicos.conciliacao
   use dart app.mobile.pagamentos
+  use lua app.runtime.pagamentos
   use cs src.Controllers.HealthController
   use java com.acme.health.HealthController
   use go internal.health
@@ -428,6 +429,7 @@ module app.interop {
     "ts:app.gateway.pagamentos",
     "py:servicos.conciliacao",
     "dart:app.mobile.pagamentos",
+    "lua:app.runtime.pagamentos",
     "cs:src.Controllers.HealthController",
     "java:com.acme.health.HealthController",
     "go:internal.health",
@@ -438,6 +440,7 @@ module app.interop {
     "ts:app.gateway.pagamentos",
     "py:servicos.conciliacao",
     "dart:app.mobile.pagamentos",
+    "lua:app.runtime.pagamentos",
     "cs:src.Controllers.HealthController",
     "java:com.acme.health.HealthController",
     "go:internal.health",
@@ -496,6 +499,7 @@ module app.impl {
       ts: app.gateway.pagamentos.processar
       py: servicos.pagamentos.processar
       dart: app.mobile.pagamentos.processar
+      lua: app.runtime.pagamentos.processar
     }
     guarantees {
       protocolo existe
@@ -520,6 +524,7 @@ module app.impl {
     "ts:app.gateway.pagamentos.processar",
     "py:servicos.pagamentos.processar",
     "dart:app.mobile.pagamentos.processar",
+    "lua:app.runtime.pagamentos.processar",
   ]);
 });
 
@@ -537,6 +542,7 @@ module app.impl.invalido {
       ts: app.gateway.pagamentos.processar
       py: app..gateway.invalido
       typescript: app.gateway.duplicado
+      lua: app.runtime.pagamentos.processar
       kotlin: app.gateway.legacy
     }
     guarantees {

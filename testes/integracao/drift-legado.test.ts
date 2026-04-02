@@ -279,6 +279,7 @@ test("cli valida e mede drift dos contratos internos do proprio Sema", () => {
     "nucleo.src.ir.conversor.converterParaIr",
     "nucleo.src.formatador.index.formatarCodigo",
     "nucleo.src.semantico.analisador.analisarSemantica",
+    "gerador_lua.src.index.gerarLua",
     "gerador_python.src.index.gerarPython",
     "gerador_typescript.src.index.gerarTypeScript",
     "cli.src.projeto.carregarProjeto",
@@ -478,6 +479,86 @@ test("cli drift resolve bridge Dart consumidor sem gambiarra ad hoc", async () =
     const caminhosValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
     assert.equal(caminhosValidos.has("lib.api.sema_contract_bridge.semaFetchShowroomRanking"), true);
     assert.equal(caminhosValidos.has("lib.api.sema_contract_bridge.semaCheckForUpdate"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impl Lua generico sem prometer framework inventado", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-lua-"));
+
+  try {
+    await mkdir(path.join(base, "lua"), { recursive: true });
+    await mkdir(path.join(base, "sema"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./sema"],
+        diretoriosCodigo: ["./lua"],
+        fontesLegado: ["lua"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "lua", "payments.lua"),
+      `local payments = {}
+
+function payments.processar_pagamento(transacao_id, valor)
+  return {
+    protocolo = transacao_id,
+    valor = valor,
+  }
+end
+
+return payments
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "sema", "payments.sema"),
+      `module legado.lua.payments {
+  task processar_pagamento {
+    input {
+      transacao_id: Id required
+      valor: Decimal required
+    }
+    output {
+      resultado: Json
+    }
+    impl {
+      lua: lua.payments.processar_pagamento
+    }
+    guarantees {
+      resultado existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          transacao_id: "trx_1"
+          valor: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhos.has("lua.payments.processar_pagamento"), true);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

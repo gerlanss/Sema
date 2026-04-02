@@ -13,6 +13,7 @@ export type FonteLegado =
   | "typescript"
   | "python"
   | "dart"
+  | "lua"
   | "dotnet"
   | "java"
   | "go"

@@ -110,7 +110,7 @@ export function normalizarFrameworkGeracao(valor?: string): FrameworkGeracao {
 }
 
 function normalizarAlvo(valor?: string): AlvoGeracao | undefined {
-  if (valor === "typescript" || valor === "python" || valor === "dart") {
+  if (valor === "typescript" || valor === "python" || valor === "dart" || valor === "lua") {
     return valor;
   }
   return undefined;
@@ -154,6 +154,7 @@ function normalizarFonteLegado(valor: string): FonteLegado | undefined {
     || valor === "typescript"
     || valor === "python"
     || valor === "dart"
+    || valor === "lua"
     || valor === "dotnet"
     || valor === "java"
     || valor === "go"
@@ -321,6 +322,7 @@ const EXTENSOES_CODIGO = [
   ".cjs",
   ".py",
   ".dart",
+  ".lua",
   ".cs",
   ".java",
   ".go",
@@ -531,6 +533,7 @@ async function inferirFontesLegado(
     const arquivosTs = await listarArquivosRecursivosLimitado(diretorio, [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"], 5, 40);
     const arquivosPy = await listarArquivosRecursivosLimitado(diretorio, [".py"], 5, 20);
     const arquivosDart = await listarArquivosRecursivosLimitado(diretorio, [".dart"], 5, 20);
+    const arquivosLua = await listarArquivosRecursivosLimitado(diretorio, [".lua"], 5, 20);
     const arquivosCs = await listarArquivosRecursivosLimitado(diretorio, [".cs"], 5, 20);
     const arquivosJava = await listarArquivosRecursivosLimitado(diretorio, [".java"], 5, 20);
     const arquivosGo = await listarArquivosRecursivosLimitado(diretorio, [".go"], 5, 20);
@@ -635,6 +638,10 @@ async function inferirFontesLegado(
     }
     if (arquivosDart.length > 0) {
       encontrados.add("dart");
+    }
+
+    if (arquivosLua.length > 0) {
+      encontrados.add("lua");
     }
 
     if (arquivosCs.length > 0) {

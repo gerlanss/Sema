@@ -34,7 +34,7 @@ Importante:
 - a Sema funciona como camada de navegacao operacional para agente, nao como runtime magico
 - leitura humana e bonus toleravel, nao centro do produto
 - a Sema modela contratos, estados, fluxos, erros, efeitos, garantias, vinculos e execucao
-- a Sema gera codigo e scaffolding real para TypeScript, Python e Dart
+- a Sema gera codigo e scaffolding real para TypeScript, Python, Dart e Lua
 - a Sema usa `importar` para bootstrap revisavel, nao para contrato final automatico
 - a Sema usa `drift` para medir diferenca entre contrato e codigo vivo
 - a Sema usa `impl` para ligar task a simbolo real do runtime
@@ -66,8 +66,8 @@ Comandos essenciais:
 - validacao: `sema validar <arquivo.sema> --json`
 - diagnosticos: `sema diagnosticos <arquivo.sema> --json`
 - formatacao: `sema formatar <arquivo.sema>`
-- importacao assistida de legado: `sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|typescript|python|dart|dotnet|java|go|rust|cpp> <diretorio> --saida <diretorio>`
-- geracao de codigo: `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart> --saida <diretorio>`
+- importacao assistida de legado: `sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|typescript|python|dart|lua|dotnet|java|go|rust|cpp> <diretorio> --saida <diretorio>`
+- geracao de codigo: `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart|lua> --saida <diretorio>`
 - verificacao final: `sema verificar <arquivo-ou-pasta> [--json]`
 
 Regra pratica de ouro:

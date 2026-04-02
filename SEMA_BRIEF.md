@@ -2,7 +2,7 @@
 
 Sema e IA-first. Este arquivo existe para IA achar o ponto de entrada do projeto sem ter que catar o repo inteiro feito barata tonta.
 
-- Gerado em: `2026-03-31T16:04:57.600Z`
+- Gerado em: `2026-04-02T00:02:31.211Z`
 - Modulos: `4`
 
 ## Entrada canonica para IA
@@ -42,8 +42,8 @@ Sema e IA-first. Este arquivo existe para IA achar o ponto de entrada do projeto
 - Lacunas: execucao_implicita, sem_impl, sem_vinculos
 
 ### sema.produto.linguagem_composta
-- Faz: governa 1 superficie(s), 5 task(s) com foco em regressao composta
+- Faz: governa 1 superficie(s), 6 task(s) com foco em regressao composta
 - Publico: storage:regressao_composta
-- Tocar: C:\GitHub\Sema\pacotes\gerador-python\src\index.ts, C:\GitHub\Sema\pacotes\gerador-typescript\src\index.ts, C:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts, C:\GitHub\Sema\pacotes\nucleo\src\ir\conversor.ts (+1)
+- Tocar: C:\GitHub\Sema\pacotes\gerador-lua\src\index.ts, C:\GitHub\Sema\pacotes\gerador-python\src\index.ts, C:\GitHub\Sema\pacotes\gerador-typescript\src\index.ts, C:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts (+2)
 - Score: 90 | Confianca: alta | Risco: alto
 - Lacunas: execucao_implicita, sem_impl, sem_vinculos

@@ -1,4 +1,4 @@
-export type AlvoGeracao = "typescript" | "python" | "dart";
+export type AlvoGeracao = "typescript" | "python" | "dart" | "lua";
 export type FrameworkGeracao = "base" | "nestjs" | "fastapi";
 
 export interface ArquivoGerado {
@@ -150,6 +150,24 @@ export function mapearTipoParaDart(tipo: string): string {
     Url: "String",
     Json: "Map<String, Object?>",
     Vazio: "void",
+  };
+  return tabela[tipo] ?? tipo;
+}
+
+export function mapearTipoParaLua(tipo: string): string {
+  const tabela: Record<string, string> = {
+    Texto: "string",
+    Numero: "number",
+    Inteiro: "integer",
+    Decimal: "number",
+    Booleano: "boolean",
+    Data: "string",
+    DataHora: "string",
+    Id: "string",
+    Email: "string",
+    Url: "string",
+    Json: "table",
+    Vazio: "nil",
   };
   return tabela[tipo] ?? tipo;
 }

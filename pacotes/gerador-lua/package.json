@@ -1,5 +1,5 @@
 {
-  "name": "@sema/gerador-dart",
+  "name": "@sema/gerador-lua",
   "version": "1.2.0",
   "type": "module",
   "main": "dist/index.js",

@@ -1,7 +1,7 @@
 {
   "comando": "resumo-projeto",
-  "geradoEm": "2026-03-31T16:04:57.600Z",
-  "cliVersao": "1.0.0",
+  "geradoEm": "2026-04-02T00:02:31.211Z",
+  "cliVersao": "1.2.0",
   "baseProjeto": "C:\\GitHub\\Sema",
   "totalModulos": 4,
   "entradaCanonica": {
@@ -163,7 +163,7 @@
   },
   "modulos": [
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "geradoEm": "2026-04-02T00:02:31.211Z",
       "arquivo": "C:\\GitHub\\Sema\\contratos\\pedidos.sema",
       "modulo": "app.pedidos",
       "perfilCompatibilidade": "publico",
@@ -221,10 +221,15 @@
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
-      ]
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [],
+      "consumerSurfaces": [],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": []
     },
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "geradoEm": "2026-04-02T00:02:31.211Z",
       "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\ergonomia_e_dominio.sema",
       "modulo": "sema.produto.ergonomia_e_dominio",
       "perfilCompatibilidade": "interno",
@@ -312,10 +317,20 @@
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [],
+      "consumerSurfaces": [],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": [
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\semantico\\analisador.ts"
       ]
     },
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "geradoEm": "2026-04-02T00:02:31.211Z",
       "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\governanca_ia.sema",
       "modulo": "sema.produto.governanca_ia",
       "perfilCompatibilidade": "publico",
@@ -402,23 +417,38 @@
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [
+        "/ranking"
+      ],
+      "consumerSurfaces": [
+        "router:/ranking -> C:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts"
+      ],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": [
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\drift.ts",
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts"
       ]
     },
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
+      "geradoEm": "2026-04-02T00:02:31.211Z",
       "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\linguagem_composta.sema",
       "modulo": "sema.produto.linguagem_composta",
       "perfilCompatibilidade": "interno",
       "scoreSemantico": 90,
       "confiancaGeral": "alta",
       "riscoOperacional": "alto",
-      "faz": "governa 1 superficie(s), 5 task(s) com foco em regressao composta",
+      "faz": "governa 1 superficie(s), 6 task(s) com foco em regressao composta",
       "tarefasPrincipais": [
         "interpretar_bloco_nomeado",
         "converter_bloco_composto_para_ir",
         "formatar_bloco_composto",
         "gerar_teste_python_composto",
-        "gerar_teste_typescript_composto"
+        "gerar_teste_typescript_composto",
+        "gerar_teste_lua_composto"
       ],
       "entradasChave": [
         "interpretar_bloco_nomeado(arquivo_semantico, sinais)",
@@ -452,6 +482,7 @@
         "StatusEvolucao"
       ],
       "arquivosProvaveis": [
+        "C:\\GitHub\\Sema\\pacotes\\gerador-lua\\src\\index.ts",
         "C:\\GitHub\\Sema\\pacotes\\gerador-python\\src\\index.ts",
         "C:\\GitHub\\Sema\\pacotes\\gerador-typescript\\src\\index.ts",
         "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
@@ -461,6 +492,7 @@
       "simbolosRelacionados": [
         "converterParaIr",
         "formatarCodigo",
+        "gerarLua",
         "gerarPython",
         "gerarTypeScript",
         "parsear"
@@ -468,6 +500,7 @@
       "riscosPrincipais": [
         "converter_bloco_composto_para_ir:alto",
         "formatar_bloco_composto:medio",
+        "gerar_teste_lua_composto:medio",
         "gerar_teste_python_composto:medio",
         "gerar_teste_typescript_composto:medio",
         "interpretar_bloco_nomeado:alto"
@@ -480,10 +513,10 @@
       "inferido": [
         "converter_bloco_composto_para_ir:pacotes/nucleo/src/ir/conversor.ts",
         "formatar_bloco_composto:pacotes/nucleo/src/formatador/index.ts",
+        "gerar_teste_lua_composto:pacotes/gerador-lua/src/index.ts",
         "gerar_teste_python_composto:pacotes/gerador-python/src/index.ts",
         "gerar_teste_typescript_composto:pacotes/gerador-typescript/src/index.ts",
-        "interpretar_bloco_nomeado:pacotes/nucleo/src/parser/parser.ts",
-        "sema.produto.linguagem_composta:pacotes/nucleo/src/parser/parser.ts"
+        "interpretar_bloco_nomeado:pacotes/nucleo/src/parser/parser.ts"
       ],
       "checksSugeridos": [
         "revisar efeitos operacionais",
@@ -495,6 +528,18 @@
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [],
+      "consumerSurfaces": [],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": [
+        "C:\\GitHub\\Sema\\pacotes\\gerador-lua\\src\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\gerador-python\\src\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\gerador-typescript\\src\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\parser\\parser.ts"
       ]
     }
   ]

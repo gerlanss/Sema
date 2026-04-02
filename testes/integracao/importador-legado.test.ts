@@ -606,6 +606,43 @@ test("cli importa projeto Dart generico e gera task com impl dart", async () => 
   }
 });
 
+test("cli importa projeto Lua generico e gera task com impl lua", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-lua-"));
+
+  try {
+    await mkdir(path.join(base, "lua"), { recursive: true });
+    await writeFile(
+      path.join(base, "lua", "payments.lua"),
+      `local payments = {}
+
+function payments.processar_pagamento(transacao_id, valor)
+  return {
+    protocolo = transacao_id,
+    valor = valor,
+  }
+end
+
+return payments
+`,
+      "utf8",
+    );
+
+    const execucao = executarImportacao(["importar", "lua", base, "--saida", path.join(base, "sema"), "--json"]);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.fonte, "lua");
+    assert.equal(json.resumo.sucesso, true);
+    assert.equal(json.resumo.tarefas, 1);
+
+    const arquivo = await readFile(path.join(base, "sema", "lua", "payments.sema"), "utf8");
+    assert.match(arquivo, /task processar_pagamento/);
+    assert.match(arquivo, /lua: lua\.payments\.payments\.processar_pagamento|lua: lua\.payments\.processar_pagamento/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
 test("cli importa projeto ASP.NET Core legado e gera route + task com impl cs", async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-dotnet-"));
 

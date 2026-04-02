@@ -37,8 +37,8 @@ npx sema --help
 
 Instaladores auxiliares para a linha publica atual:
 
-- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.0.0/install-sema.sh | bash`
-- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v1.0.0/install-sema.ps1 | iex`
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.2.0/install-sema.sh | bash`
+- Windows PowerShell: `irm https://raw.githubusercontent.com/gerlanss/Sema/v1.2.0/install-sema.ps1 | iex`
 
 Se voce quiser reproducao estrita, prefira o npm registry ou o tarball da GitHub Release.
 
@@ -49,6 +49,7 @@ mkdir sema-demo
 cd sema-demo
 sema iniciar
 sema validar contratos/pedidos.sema --json
+sema compilar contratos/pedidos.sema --alvo lua --saida ./saida/lua
 ```
 
 ## Primeiro fluxo util
@@ -110,6 +111,7 @@ Scaffold base:
 sema compilar contratos/pedidos.sema --alvo typescript --saida ./saida/typescript
 sema compilar contratos/pedidos.sema --alvo python --saida ./saida/python
 sema compilar contratos/pedidos.sema --alvo dart --saida ./saida/dart
+sema compilar contratos/pedidos.sema --alvo lua --saida ./saida/lua
 ```
 
 Scaffold backend:

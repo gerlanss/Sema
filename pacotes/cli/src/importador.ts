@@ -9,6 +9,7 @@ import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
 import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
 import { extrairParametrosCaminhoFlask, extrairRotasFlaskDecoradas } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
+import { extrairSimbolosLua } from "./lua-symbols.js";
 import {
   extrairRotasTypeScriptHttp,
   inferirSemanticaHandlerTypeScriptHttp,
@@ -29,13 +30,14 @@ export type FonteImportacao =
   | "typescript"
   | "python"
   | "dart"
+  | "lua"
   | "dotnet"
   | "java"
   | "go"
   | "rust"
   | "cpp";
 
-type OrigemInteropImportada = "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
+type OrigemInteropImportada = "ts" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
 
 interface CampoImportado {
   nome: string;
@@ -1777,6 +1779,7 @@ function renderizarImpl(impl: Partial<Record<OrigemInteropImportada, string>> | 
     ...(impl.ts ? [`${indentacao}  ts: ${impl.ts}`] : []),
     ...(impl.py ? [`${indentacao}  py: ${impl.py}`] : []),
     ...(impl.dart ? [`${indentacao}  dart: ${impl.dart}`] : []),
+    ...(impl.lua ? [`${indentacao}  lua: ${impl.lua}`] : []),
     ...(impl.cs ? [`${indentacao}  cs: ${impl.cs}`] : []),
     ...(impl.java ? [`${indentacao}  java: ${impl.java}`] : []),
     ...(impl.go ? [`${indentacao}  go: ${impl.go}`] : []),
@@ -2585,6 +2588,15 @@ function caminhoImplDart(diretorioBase: string, arquivo: string, simbolo: string
   return caminhoImplGenerico(diretorioBase, arquivo, simbolo);
 }
 
+function caminhoImplLua(diretorioBase: string, arquivo: string, simbolo: string): string {
+  const caminhoBase = caminhoImplGenerico(diretorioBase, arquivo, "");
+  const ultimoSegmentoArquivo = caminhoBase.split(".").filter(Boolean).at(-1);
+  const simboloNormalizado = ultimoSegmentoArquivo && simbolo.startsWith(`${ultimoSegmentoArquivo}.`)
+    ? simbolo.slice(ultimoSegmentoArquivo.length + 1)
+    : simbolo;
+  return [...caminhoBase.split(".").filter(Boolean), simboloNormalizado].filter(Boolean).join(".");
+}
+
 type ModoHttpPython = "nenhum" | "fastapi" | "flask";
 
 function dividirParametrosPython(parametros: string): string[] {
@@ -2907,6 +2919,59 @@ async function importarDartBase(diretorio: string, namespaceBase: string): Promi
         impl: { dart: caminhoImplDart(diretorio, arquivo, nome) },
         origemArquivo: relacao,
         origemSimbolo: nome,
+      });
+    }
+
+    if (tasks.length === 0) {
+      continue;
+    }
+
+    modulos.push({
+      nome: nomeModulo,
+      resumo: `Rascunho Sema importado automaticamente de ${relacao}.`,
+      tasks: deduplicarTarefas(tasks),
+      routes: [],
+      entities: [],
+      enums: [],
+    });
+  }
+
+  return modulos;
+}
+
+async function importarLuaBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const arquivos = (await listarArquivosRecursivos(diretorio, [".lua"]))
+    .filter((arquivo) => !/(^|[\\/])(spec|specs|test|tests)([\\/]|$)/i.test(arquivo))
+    .filter((arquivo) => !/[_-](spec|test)\.lua$/i.test(arquivo));
+  const modulos: ModuloImportado[] = [];
+
+  for (const arquivo of arquivos) {
+    const texto = await readFile(arquivo, "utf8");
+    const relacao = path.relative(diretorio, arquivo);
+    const contextoSegmentos = inferirContextoPorArquivo(relacao, { preservarUltimo: true });
+    const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+    const tasks: TarefaImportada[] = [];
+
+    for (const simbolo of extrairSimbolosLua(texto)) {
+      const nomeBase = simbolo.simbolo.split(".").at(-1) ?? simbolo.simbolo;
+      const input = simbolo.parametros.map((parametro) => ({
+        nome: normalizarNomeCampoImportado(parametro.nome),
+        tipo: "Json",
+        obrigatorio: parametro.obrigatorio,
+      }));
+      const output = /\breturn\b/.test(texto)
+        ? [{ nome: "resultado", tipo: "Json", obrigatorio: false }]
+        : [];
+      tasks.push({
+        nome: paraSnakeCase(nomeBase),
+        resumo: `Task importada automaticamente de ${relacao}#${simbolo.simbolo}.`,
+        input,
+        output,
+        errors: [],
+        effects: descreverEfeitosPorHeuristica(texto),
+        impl: { lua: caminhoImplLua(diretorio, arquivo, simbolo.simbolo) },
+        origemArquivo: relacao,
+        origemSimbolo: simbolo.simbolo,
       });
     }
 
@@ -3392,6 +3457,8 @@ export async function importarProjetoLegado(
     modulos = await importarPythonBase(base, namespace, "nenhum");
   } else if (fonte === "dart") {
     modulos = await importarDartBase(base, namespace);
+  } else if (fonte === "lua") {
+    modulos = await importarLuaBase(base, namespace);
   } else if (fonte === "dotnet") {
     modulos = await importarDotnetBase(base, namespace);
   } else if (fonte === "java") {

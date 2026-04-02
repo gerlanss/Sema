@@ -744,6 +744,8 @@ function normalizarOrigemUse(valor: string): UseAst["origem"] | undefined {
       return "py";
     case "dart":
       return "dart";
+    case "lua":
+      return "lua";
     case "cs":
     case "csharp":
     case "dotnet":

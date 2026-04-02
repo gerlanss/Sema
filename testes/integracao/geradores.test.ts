@@ -6,6 +6,7 @@ import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { compilarCodigo, compilarProjeto, temErros } from "../../pacotes/nucleo/dist/index.js";
 import { gerarDart } from "../../pacotes/gerador-dart/dist/index.js";
+import { gerarLua } from "../../pacotes/gerador-lua/dist/index.js";
 import { gerarTypeScript } from "../../pacotes/gerador-typescript/dist/index.js";
 import { gerarPython } from "../../pacotes/gerador-python/dist/index.js";
 
@@ -111,13 +112,16 @@ test("geradores produzem artefatos para o exemplo de calculadora", async () => {
   const arquivosTs = gerarTypeScript(resultado.ir!);
   const arquivosPy = gerarPython(resultado.ir!);
   const arquivosDart = gerarDart(resultado.ir!);
+  const arquivosLua = gerarLua(resultado.ir!);
 
   assert.ok(arquivosTs.some((arquivo) => arquivo.caminhoRelativo.endsWith(".ts")));
   assert.ok(arquivosPy.some((arquivo) => arquivo.caminhoRelativo.endsWith(".py")));
   assert.ok(arquivosDart.some((arquivo) => arquivo.caminhoRelativo.endsWith(".dart")));
+  assert.ok(arquivosLua.some((arquivo) => arquivo.caminhoRelativo.endsWith(".lua")));
   assert.ok(arquivosTs[0]?.conteudo.includes("executar_somar"));
   assert.ok(arquivosPy[0]?.conteudo.includes("def executar_somar"));
   assert.ok(arquivosDart[0]?.conteudo.includes("Arquivo gerado automaticamente pela Sema"));
+  assert.ok(arquivosLua[0]?.conteudo.includes("Arquivo gerado automaticamente pela Sema"));
 });
 
 test("geradores refletem interoperabilidade externa e alvo Dart", () => {
@@ -126,6 +130,7 @@ module exemplo.interop {
   use ts app.gateway.pagamentos
   use py servicos.conciliacao
   use dart app.mobile.pagamentos
+  use lua app.runtime.pagamentos
 
   task consultar {
     input {
@@ -158,10 +163,12 @@ module exemplo.interop {
   const arquivosTs = gerarTypeScript(resultado.ir!);
   const arquivosPy = gerarPython(resultado.ir!);
   const arquivosDart = gerarDart(resultado.ir!);
+  const arquivosLua = gerarLua(resultado.ir!);
 
   assert.ok(arquivosTs[0]?.conteudo.includes("Interop externo ts: app.gateway.pagamentos"));
   assert.ok(arquivosPy[0]?.conteudo.includes("Interop externo py: servicos.conciliacao"));
   assert.ok(arquivosDart[0]?.conteudo.includes("Interop externo dart: app.mobile.pagamentos"));
+  assert.ok(arquivosLua[0]?.conteudo.includes("Interop externo lua: app.runtime.pagamentos"));
 });
 
 test("geradores refletem vinculacao explicita de implementacao externa", () => {
@@ -178,6 +185,7 @@ module exemplo.impl {
       ts: app.gateway.pagamentos.processar
       py: servicos.pagamentos.processar
       dart: app.mobile.pagamentos.processar
+      lua: app.runtime.pagamentos.processar
     }
     guarantees {
       protocolo existe
@@ -203,12 +211,14 @@ module exemplo.impl {
   const arquivosTs = gerarTypeScript(resultado.ir!);
   const arquivosPy = gerarPython(resultado.ir!);
   const arquivosDart = gerarDart(resultado.ir!);
+  const arquivosLua = gerarLua(resultado.ir!);
 
   assert.ok(arquivosTs[0]?.conteudo.includes("Implementacoes externas vinculadas"));
   assert.ok(arquivosTs[0]?.conteudo.includes('origem: "ts", caminho: "app.gateway.pagamentos.processar", resolucaoImpl: "app.gateway.pagamentos.processar", statusImpl: "nao_verificado"'));
   assert.ok(arquivosPy[0]?.conteudo.includes("Implementacao externa vinculada: origem=py caminho=servicos.pagamentos.processar status=nao_verificado"));
   assert.ok(arquivosPy[0]?.conteudo.includes('"impl": ['));
   assert.ok(arquivosDart[0]?.conteudo.includes("impl=ts:app.gateway.pagamentos.processar[nao_verificado], py:servicos.pagamentos.processar[nao_verificado], dart:app.mobile.pagamentos.processar[nao_verificado]"));
+  assert.ok(arquivosLua[0]?.conteudo.includes('impl = "ts:app.gateway.pagamentos.processar[nao_verificado], py:servicos.pagamentos.processar[nao_verificado], dart:app.mobile.pagamentos.processar[nao_verificado], lua:app.runtime.pagamentos.processar[nao_verificado]"'));
 });
 
 test("geradores refletem estruturas semanticas mais ricas no exemplo de pagamento", async () => {
@@ -318,6 +328,77 @@ module exemplo.geracao.negacao {
 
   assert.ok(arquivosTs[0]?.conteudo.includes("!("));
   assert.ok(arquivosPy[0]?.conteudo.includes("not ("));
+});
+
+test("gerador Lua prepara saida valida para garantias de enum e executa o teste gerado", async () => {
+  const codigo = `
+module exemplo.lua.garantias {
+  enum StatusExecucao {
+    ABERTO,
+    FECHADO
+  }
+
+  task consultar {
+    input {
+      id: Id required
+    }
+    output {
+      status: StatusExecucao
+    }
+    guarantees {
+      status em [ABERTO, FECHADO]
+    }
+    tests {
+      caso "ok" {
+        given {
+          id: "1"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "lua-garantias.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosLua = gerarLua(resultado.ir!);
+  const arquivoLua = arquivosLua.find((arquivo) => arquivo.caminhoRelativo.endsWith(".lua") && !path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  const arquivoTesteLua = arquivosLua.find((arquivo) => path.basename(arquivo.caminhoRelativo).startsWith("test_") && arquivo.caminhoRelativo.endsWith(".lua"));
+
+  assert.ok(arquivoLua);
+  assert.ok(arquivoTesteLua);
+  assert.match(arquivoLua.conteudo, /saida\["status"\] = "ABERTO"/);
+
+  const runtimeLua = ["lua", "luajit"].find((binario) => spawnSync(binario, ["-v"], { stdio: "pipe", encoding: "utf8" }).status === 0);
+  if (!runtimeLua) {
+    return;
+  }
+
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-gerador-lua-runtime-"));
+  try {
+    const caminhoModulo = path.join(baseTemporaria, arquivoLua.caminhoRelativo);
+    const caminhoTeste = path.join(baseTemporaria, arquivoTesteLua.caminhoRelativo);
+    await mkdir(path.dirname(caminhoModulo), { recursive: true });
+    await mkdir(path.dirname(caminhoTeste), { recursive: true });
+    await writeFile(caminhoModulo, arquivoLua.conteudo, "utf8");
+    await writeFile(caminhoTeste, arquivoTesteLua.conteudo, "utf8");
+
+    const execucao = spawnSync(runtimeLua, [path.basename(caminhoTeste)], {
+      stdio: "pipe",
+      encoding: "utf8",
+      cwd: path.dirname(caminhoTeste),
+    });
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    assert.match(execucao.stdout, /ok 1 testes/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
 });
 
 test("gerador Python emite tipos compostos validos para lista, mapa, opcional e uniao", async () => {

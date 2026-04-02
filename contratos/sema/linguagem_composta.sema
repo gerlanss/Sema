@@ -1,16 +1,10 @@
 module sema.produto.linguagem_composta {
   docs {
-    resumo: "Contrato interno da Sema para endurecer literais, testes compostos e o ciclo parser -> IR -> formatador -> geradores."
-  }
-  vinculos {
-    arquivo: "pacotes/nucleo/src/parser/parser.ts"
+    resumo: "Contrato interno da Sema para endurecer literais,testes compostos e o ciclo parser ->IR ->formatador ->geradores."
   }
 
-  enum StatusEvolucao {
-    PLANEJADA,
-    MODELADA,
-    VALIDADA,
-    PUBLICADA
+  vinculos {
+    arquivo: "pacotes/nucleo/src/parser/parser.ts"
   }
 
   type SinalTesteComposto {
@@ -19,6 +13,13 @@ module sema.produto.linguagem_composta {
       objeto_aninhado: Booleano required
       mapa_aninhado: Booleano required
     }
+  }
+
+  enum StatusEvolucao {
+    PLANEJADA,
+    MODELADA,
+    VALIDADA,
+    PUBLICADA
   }
 
   task interpretar_bloco_nomeado {
@@ -50,13 +51,14 @@ module sema.produto.linguagem_composta {
     tests {
       caso "parser entende bloco nomeado livre" {
         given {
-          arquivo_semantico: "given { documento { texto: \"ok\" } }"
+          arquivo_semantico: "given { documento { texto: \\\"ok\\\" } }"
           sinais {
             bloco_nomeado: verdadeiro
             objeto_aninhado: verdadeiro
             mapa_aninhado: falso
           }
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -94,6 +96,7 @@ module sema.produto.linguagem_composta {
         given {
           arquivo_semantico: "given { documento { metadata { total: 19.9 } } }"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -127,8 +130,9 @@ module sema.produto.linguagem_composta {
     tests {
       caso "formatador nao sabota bloco livre" {
         given {
-          arquivo_semantico: "given { documento { texto: \"ok\" } }"
+          arquivo_semantico: "given { documento { texto: \\\"ok\\\" } }"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -164,6 +168,7 @@ module sema.produto.linguagem_composta {
         given {
           contrato: "task com given composto e type DocumentoEntrada"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -199,6 +204,43 @@ module sema.produto.linguagem_composta {
         given {
           contrato: "task com given composto e nested object"
         }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_teste_lua_composto {
+    input {
+      contrato: Texto required
+    }
+    output {
+      tabela_aninhada: Booleano
+      garantia_explicita: Booleano
+    }
+    impl {
+      ts: gerador_lua.src.index.gerarLua
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-lua/src/index.ts"
+      simbolo: gerador_lua.src.index.gerarLua
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      tabela_aninhada existe
+      garantia_explicita existe
+    }
+    tests {
+      caso "lua fecha payload composto" {
+        given {
+          contrato: "task com given composto e nested table"
+        }
+
         expect {
           sucesso: verdadeiro
         }

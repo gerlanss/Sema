@@ -8,12 +8,13 @@ import { extrairSimbolosCpp } from "./cpp-symbols.js";
 import { extrairRotasDotnet, extrairSimbolosDotnet } from "./dotnet-http.js";
 import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
 import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
+import { extrairSimbolosLua } from "./lua-symbols.js";
 import { contarIndentacaoPython, extrairRotasFlaskDecoradas, normalizarCaminhoFlask } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 
 interface SimboloResolvido {
-  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   arquivo: string;
   simbolo: string;
@@ -52,7 +53,7 @@ export interface DiagnosticoDrift {
 interface RegistroImplDrift {
   modulo: string;
   task: string;
-  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   arquivo?: string;
   simbolo?: string;
@@ -89,7 +90,7 @@ interface RegistroRecursoDrift {
 }
 
 interface SimboloCandidatoDrift {
-  origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
   arquivo: string;
   simbolo: string;
@@ -1360,6 +1361,27 @@ async function indexarDart(diretorios: string[]): Promise<{
   };
 }
 
+async function indexarLua(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+  const simbolos = new Map<string, SimboloResolvido>();
+
+  for (const diretorio of diretorios) {
+    const arquivos = (await listarArquivosRecursivos(diretorio, [".lua"]))
+      .filter((arquivo) => !/(^|[\\/])(spec|specs|test|tests)([\\/]|$)/i.test(arquivo))
+      .filter((arquivo) => !/[_-](spec|test)\.lua$/i.test(arquivo));
+
+    for (const arquivo of arquivos) {
+      const texto = await readFile(arquivo, "utf8");
+      const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+
+      for (const simbolo of extrairSimbolosLua(texto)) {
+        registrarSimboloGenerico(simbolos, "lua", basesSimbolicas, arquivo, simbolo.simbolo);
+      }
+    }
+  }
+
+  return { simbolos: [...simbolos.values()], rotas: [] };
+}
+
 function registrarSimboloGenerico(
   simbolos: Map<string, SimboloResolvido>,
   origem: SimboloResolvido["origem"],
@@ -1774,6 +1796,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const indexTs = await indexarTypeScript(contexto.diretoriosCodigo);
   const indexPy = await indexarPython(contexto.diretoriosCodigo);
   const indexDart = await indexarDart(contexto.diretoriosCodigo);
+  const indexLua = await indexarLua(contexto.diretoriosCodigo);
   const indexDotnet = await indexarDotnet(contexto.diretoriosCodigo);
   const indexJava = await indexarJava(contexto.diretoriosCodigo);
   const indexGo = await indexarGo(contexto.diretoriosCodigo);
@@ -1783,6 +1806,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     ...indexTs.simbolos,
     ...indexPy.simbolos,
     ...indexDart.simbolos,
+    ...indexLua.simbolos,
     ...indexDotnet.simbolos,
     ...indexJava.simbolos,
     ...indexGo.simbolos,
@@ -1793,6 +1817,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     ...indexTs.simbolos.map((item) => [item.caminho, item] as const),
     ...indexPy.simbolos.map((item) => [item.caminho, item] as const),
     ...indexDart.simbolos.map((item) => [item.caminho, item] as const),
+    ...indexLua.simbolos.map((item) => [item.caminho, item] as const),
     ...indexDotnet.simbolos.map((item) => [item.caminho, item] as const),
     ...indexJava.simbolos.map((item) => [item.caminho, item] as const),
     ...indexGo.simbolos.map((item) => [item.caminho, item] as const),
