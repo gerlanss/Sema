@@ -13,6 +13,9 @@ const tagIndex = args.findIndex((arg) => arg === "--tag");
 const tag = tagIndex >= 0 ? args[tagIndex + 1] : "latest";
 const nomePacote = manifestCli.name;
 const scopePacote = nomePacote.startsWith("@") ? nomePacote.split("/")[0] : undefined;
+const LINK_LOGIN_NPM = "https://docs.npmjs.com/logging-in-to-an-npm-account";
+const LINK_TOKENS_NPM = "https://docs.npmjs.com/creating-and-viewing-access-tokens";
+const LINK_ORGS_NPM = "https://docs.npmjs.com/about-organizations";
 
 function executar(comando, argumentos, cwd) {
   if (process.platform === "win32" && comando === "npm") {
@@ -49,6 +52,40 @@ function capturarSaida(comando, argumentos, cwd) {
   }
 }
 
+function imprimirGuiaAutenticacaoNpm() {
+  console.error("");
+  console.error("Links uteis:");
+  console.error(`- login npm: ${LINK_LOGIN_NPM}`);
+  console.error(`- tokens npm: ${LINK_TOKENS_NPM}`);
+  if (scopePacote) {
+    console.error(`- organizacoes e scopes: ${LINK_ORGS_NPM}`);
+  }
+
+  console.error("");
+  console.error("Comandos para autenticar e validar:");
+  console.error("- npm whoami");
+  if (scopePacote) {
+    console.error(`- npm logout --scope=${scopePacote} --registry=https://registry.npmjs.org/`);
+    console.error(`- npm login --scope=${scopePacote} --registry=https://registry.npmjs.org/`);
+  } else {
+    console.error("- npm logout --registry=https://registry.npmjs.org/");
+    console.error("- npm login --registry=https://registry.npmjs.org/");
+  }
+  console.error("- npm whoami");
+  console.error("- npm profile get");
+  if (scopePacote) {
+    console.error(`- npm access ls-packages ${scopePacote}`);
+  }
+  console.error("- npm run cli:publicar-npm");
+
+  console.error("");
+  console.error("Alternativa com token:");
+  console.error("- npm token list");
+  console.error("- npm config set //registry.npmjs.org/:_authToken <SEU_TOKEN>");
+  console.error("- npm whoami");
+  console.error("- npm run cli:publicar-npm");
+}
+
 function explicarFalhaPublicacao() {
   const versaoPublicada = capturarSaida("npm", ["view", nomePacote, "version"], raiz);
   const usuarioAtual = capturarSaida("npm", ["whoami"], raiz);
@@ -79,6 +116,7 @@ function explicarFalhaPublicacao() {
   }
   console.error("- se a conta estiver errada, rode `npm login` com o dono correto e publique de novo.");
   console.error("- se voce usa token granular, confirme que ele tem permissao de publish no pacote/scope.");
+  imprimirGuiaAutenticacaoNpm();
 }
 
 function validarPublicacaoAntesDoEnvio() {
@@ -97,6 +135,7 @@ function validarPublicacaoAntesDoEnvio() {
       console.error("- depois rode `npm login --registry=https://registry.npmjs.org/` se precisar renovar o login.");
     }
     console.error("- publique de novo so quando a conta autenticada tiver permissao no pacote/scope.");
+    imprimirGuiaAutenticacaoNpm();
     process.exit(1);
   }
 
