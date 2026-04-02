@@ -114,6 +114,15 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   assert.deepEqual(pacote.contributes.languages[0].extensions, [".sema"]);
   assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.formatarDocumento"));
   assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.reiniciarServidor"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirStarterIa"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirPromptIa"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.copiarPromptIa"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirPromptCurtoAlvoAtual"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirResumoAlvoAtual"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirDriftAlvoAtual"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.diagnosticarCli"));
+  assert.equal(pacote.contributes.viewsContainers.activitybar[0].id, "sema");
+  assert.equal(pacote.contributes.views.sema[0].id, "semaSidebar");
   assert.equal(pacote.contributes.configuration.properties["sema.cliPath"].type, "string");
   assert.equal(pacote.contributes.configuration.properties["sema.diagnosticosAoDigitar"].type, "boolean");
   assert.match(JSON.stringify(gramatica), /module|task|flow|route|state/);
@@ -128,6 +137,10 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   assert.match(extension, /LanguageClient/);
   assert.match(extension, /sema\.cliPath/);
   assert.match(extension, /cli-helpers/);
+  assert.match(extension, /createTreeView/);
+  assert.match(extension, /sema\.abrirStarterIa/);
+  assert.match(extension, /sema\.copiarPromptIa/);
+  assert.match(extension, /semaSidebar/);
   assert.match(cliHelpers, /configuracao sema\.cliPath/);
   assert.match(cliHelpers, /AppData do usuario no Windows/);
   assert.match(servidor, /createConnection/);

@@ -1,7 +1,9 @@
 # Changelog
 
-## 1.2.9
+## 1.2.10
 
+- traz de volta uma lateral `Sema` no VS Code com status do workspace, CLI e alvo atual
+- adiciona comandos de prompt e contexto no editor para `starter-ia`, `prompt-ia`, `prompt-curto`, `resumo`, `drift` e diagnostico da CLI
 - faz `sema.cliPath` virar autoridade total para a extensao, sem fallback silencioso para a CLI do proprio projeto
 - executa wrappers `.cmd` no Windows do jeito certo, evitando que a CLI instalada pelo usuario falhe e seja trocada por um candidato errado
 - prioriza a CLI instalada no usuario antes do bin local do projeto e remove a dependencia da CLI do repositorio como fallback implicito

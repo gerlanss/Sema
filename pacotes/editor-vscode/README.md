@@ -14,6 +14,8 @@ Ela nao existe para virar enfeite de sintaxe. Ela existe para deixar a camada se
 - validacao com contexto de projeto, incluindo `use` cross-module
 - formatacao de documento
 - integracao com a CLI oficial da Sema
+- lateral `Sema` com status do workspace, CLI e alvo atual
+- comandos de prompt/contexto dentro do VS Code para `starter-ia`, `prompt-ia`, `prompt-curto`, `resumo`, `drift` e diagnostico da CLI
 
 ## O que ela nao tenta fazer sozinha
 
@@ -22,6 +24,19 @@ Ela nao existe para virar enfeite de sintaxe. Ela existe para deixar a camada se
 - fazer `drift`, `contexto-ia` e verificacao de projeto so pelo editor
 
 O fluxo bom continua sendo: editor para escrever e revisar, CLI para validar, medir `drift`, gerar contexto para IA e compilar.
+
+## O que aparece no VS Code
+
+- uma secao `Sema` na Activity Bar
+- a view `Contexto` com status da CLI, alvo ativo e acoes rapidas
+- comandos na Paleta:
+  - `Sema: Abrir Starter IA`
+  - `Sema: Abrir Prompt IA`
+  - `Sema: Copiar Prompt IA`
+  - `Sema: Abrir Prompt Curto do Alvo Atual`
+  - `Sema: Abrir Resumo do Alvo Atual`
+  - `Sema: Medir Drift do Alvo Atual`
+  - `Sema: Diagnosticar CLI`
 
 ## Instale a extensao
 
