@@ -557,6 +557,24 @@ test("repo expoe entrada canonica para IA na raiz", async () => {
   assert.match(readme, /## Se voce e uma IA/);
 });
 
+test("repo expoe scorecard do FuteBot com regua acionavel", async () => {
+  const feedbackFutebot = await readFile(path.resolve("docs/feedback-futebot.md"), "utf8");
+  const scorecardFutebot = await readFile(path.resolve("docs/scorecard-futebot.md"), "utf8");
+
+  assert.match(feedbackFutebot, /FuteBot/);
+  assert.match(scorecardFutebot, /Scorecard de Avaliacao da Sema no FuteBot/);
+  assert.match(scorecardFutebot, /Roteamento Semantico da Mudanca/);
+  assert.match(scorecardFutebot, /Pinpoint de Runtime/);
+  assert.match(scorecardFutebot, /Qualidade do Drift/);
+  assert.match(scorecardFutebot, /Qualidade dos Diagnosticos/);
+  assert.match(scorecardFutebot, /Anti-Ritual/);
+  assert.match(scorecardFutebot, /Fechamento do Ciclo/);
+  assert.match(scorecardFutebot, /Caso A\. Mudanca operacional espalhada/);
+  assert.match(scorecardFutebot, /Caso B\. Mudanca de integracao externa/);
+  assert.match(scorecardFutebot, /Caso C\. Mudanca de fluxo operacional/);
+  assert.match(scorecardFutebot, /\| Area \| Nota \| Evidencia \| Dor encontrada \| Acao sugerida \|/);
+});
+
 test("cli inspeciona projeto Python sem config com mesma base a partir de raiz, sema e arquivo", async () => {
   const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-inspecionar-python-"));
 
