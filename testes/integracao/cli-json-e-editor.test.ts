@@ -120,6 +120,9 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirPromptCurtoAlvoAtual"));
   assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirResumoAlvoAtual"));
   assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.abrirDriftAlvoAtual"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.prepararContextoIaProjeto"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.gerarContextoIaAlvoAtual"));
+  assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.sincronizarEntrypointsIaProjeto"));
   assert.ok(pacote.contributes.commands.some((comando: { command: string }) => comando.command === "sema.diagnosticarCli"));
   assert.equal(pacote.contributes.viewsContainers.activitybar[0].id, "sema");
   assert.equal(pacote.contributes.views.sema[0].id, "semaSidebar");
@@ -140,7 +143,18 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   assert.match(extension, /createTreeView/);
   assert.match(extension, /sema\.abrirStarterIa/);
   assert.match(extension, /sema\.copiarPromptIa/);
+  assert.match(extension, /sema\.prepararContextoIaProjeto/);
+  assert.match(extension, /sema\.gerarContextoIaAlvoAtual/);
+  assert.match(extension, /sema\.sincronizarEntrypointsIaProjeto/);
   assert.match(extension, /semaSidebar/);
+  assert.match(extension, /contexto-ia/);
+  assert.match(extension, /sync-ai-entrypoints/);
+  assert.match(extension, /SEMA_BRIEF\.md/);
+  assert.match(extension, /SEMA_CONTEXT\.md/);
+  assert.match(extension, /starter-ia/);
+  assert.match(extension, /prompt-ia/);
+  assert.match(extension, /prepararContextoPromptIaProjeto/);
+  assert.match(extension, /Contexto IA do projeto copiado/);
   assert.match(cliHelpers, /configuracao sema\.cliPath/);
   assert.match(cliHelpers, /AppData do usuario no Windows/);
   assert.match(servidor, /createConnection/);
@@ -257,6 +271,9 @@ test("cli expoe starter e prompt de ia", () => {
   assert.match(prompt.stdout, /Modo IA-first da instalacao atual/);
   assert.match(prompt.stdout, /prompt-base-ia-sema\.md/);
   assert.match(prompt.stdout, /Trate a Sema como camada semantica e linguagem de especificacao executavel/);
+  assert.match(prompt.stdout, /1\. se o projeto expuser `SEMA_CONTEXT\.md`, comece por ele/);
+  assert.match(prompt.stdout, /2\. `SEMA_BRIEF\.md`/);
+  assert.match(prompt.stdout, /3\. `SEMA_INDEX\.json`/);
   assert.match(prompt.stdout, /use o formatador oficial da Sema como fonte unica de estilo/);
 });
 

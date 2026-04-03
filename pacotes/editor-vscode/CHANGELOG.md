@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.17
+
+- faz `Abrir Prompt IA` e `Copiar Prompt IA` usarem o `SEMA_CONTEXT.md` atualizado do projeto como fonte principal
+- regenera o contexto de projeto pela extensao antes de abrir ou copiar, em vez de depender de prompt generico solto
+- alinha o prompt-base oficial e a extensao para priorizar `SEMA_CONTEXT.md`, `SEMA_BRIEF.md` e `SEMA_INDEX.json`
+
+## 1.2.16
+
+- assume `SEMA_CONTEXT.md` como guia inicial de projeto, sem depender de contrato ativo
+- remove o ruído de `nenhum .sema ativo` e troca por escopo de projeto mais claro
+- alinha a ordem de fontes de verdade embutida no contexto para começar por `SEMA_CONTEXT.md`, `SEMA_BRIEF.md` e `SEMA_INDEX.json`
+- coloca `Preparar Contexto IA do Projeto` como fluxo principal e tira o foco do contexto por alvo na lateral
+- adiciona um comando unico para preparar o contexto IA completo do projeto e salvar tudo em `SEMA_CONTEXT.md` na raiz
+- salva um `SEMA_CONTEXT.md` explicito na raiz do projeto para a IA consultar antes de abrir codigo cru
+- sincroniza `SEMA_BRIEF.md`, `SEMA_INDEX.json` e entrypoints IA-first direto na raiz do projeto pela lateral da extensao
+- deixa a extensao resolver `baseProjeto` via CLI antes de gravar contexto, evitando salvar artefato no lugar errado
+
 ## 1.2.12
 
 - acompanha a linha publica `1.2.12` da Sema com correcao da CLI na verificacao orientada por `sema.config.json`

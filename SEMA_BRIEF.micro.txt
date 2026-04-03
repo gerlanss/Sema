@@ -2,6 +2,6 @@ PROJETO: Sema
 MODULOS: 4
 ENTRADA_IA: llms.txt -> SEMA_BRIEF.micro.txt -> SEMA_INDEX.json -> AGENTS.md
 TOP_MODULOS: app.pedidos, sema.produto.ergonomia_e_dominio, sema.produto.governanca_ia (+1)
-TOP_RISCOS: altera_persistencia, consultar_scorecard_compatibilidade:medio, converter_bloco_composto_para_ir:alto (+15)
-TOP_LACUNAS: execucao_implicita, sem_impl, sem_vinculos
-GERADO_EM: 2026-03-31T16:04:57.600Z
+TOP_RISCOS: consultar_scorecard_compatibilidade:medio, converter_bloco_composto_para_ir:alto, criar_pedido:alto (+14)
+TOP_LACUNAS: sem_impl, vinculo_quebrado
+GERADO_EM: 2026-04-03T14:23:27.362Z

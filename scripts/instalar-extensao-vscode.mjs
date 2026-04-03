@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -6,14 +6,20 @@ const raiz = process.cwd();
 const pastaVsix = path.join(raiz, ".tmp", "editor-vscode");
 
 async function main() {
+  const manifestExtensao = JSON.parse(
+    await readFile(path.join(raiz, "pacotes", "editor-vscode", "package.json"), "utf8"),
+  );
   const arquivos = await readdir(pastaVsix);
-  const vsix = arquivos
-    .filter((item) => item.endsWith(".vsix"))
-    .sort()
-    .at(-1);
+  const nomeEsperado = `${manifestExtensao.name}-${manifestExtensao.version}.vsix`;
+  const vsix = arquivos.includes(nomeEsperado)
+    ? nomeEsperado
+    : arquivos
+      .filter((item) => item.endsWith(".vsix") && item.startsWith(`${manifestExtensao.name}-`))
+      .sort()
+      .at(-1);
 
   if (!vsix) {
-    console.error("Nenhum arquivo .vsix encontrado. Rode primeiro `npm run extensao:empacotar`.");
+    console.error(`Nenhum arquivo .vsix compativel com ${manifestExtensao.name} encontrado. Rode primeiro \`npm run extensao:empacotar\`.`);
     process.exit(1);
   }
 

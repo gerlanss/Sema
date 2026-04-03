@@ -1,8 +1,8 @@
 {
   "comando": "resumo-projeto",
-  "geradoEm": "2026-03-31T16:04:57.600Z",
-  "cliVersao": "1.0.0",
-  "baseProjeto": "C:\\GitHub\\Sema",
+  "geradoEm": "2026-04-03T14:23:27.362Z",
+  "cliVersao": "1.2.12",
+  "baseProjeto": "c:\\GitHub\\Sema",
   "totalModulos": 4,
   "entradaCanonica": {
     "descricao": "Entrada canonica do repositorio para IA. O repo nao e human-first; a IA deve começar por esses artefatos antes de abrir codigo cru.",
@@ -163,12 +163,12 @@
   },
   "modulos": [
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
-      "arquivo": "C:\\GitHub\\Sema\\contratos\\pedidos.sema",
+      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "arquivo": "c:\\GitHub\\Sema\\contratos\\pedidos.sema",
       "modulo": "app.pedidos",
       "perfilCompatibilidade": "publico",
-      "scoreSemantico": 50,
-      "confiancaGeral": "baixa",
+      "scoreSemantico": 35,
+      "confiancaGeral": "media",
       "riscoOperacional": "alto",
       "faz": "governa 1 rota(s), 1 task(s) com foco em criar pedido publico",
       "tarefasPrincipais": [
@@ -189,43 +189,50 @@
         "total > 0"
       ],
       "efeitos": [
-        "auditoria pedidos",
-        "persistencia Pedido criticidade = alta"
+        "auditoria pedidos criticidade = media",
+        "db.write Pedido criticidade = alta privilegio = escrita isolamento = tenant",
+        "secret.read pedidos_api_key criticidade = media privilegio = leitura isolamento = processo"
       ],
       "erros": [],
       "entidadesAfetadas": [
         "Pedido",
-        "pedidos"
+        "pedidos",
+        "pedidos_api_key"
       ],
       "arquivosProvaveis": [],
       "simbolosRelacionados": [],
       "riscosPrincipais": [
-        "altera_persistencia",
         "criar_pedido:alto",
         "efeito_critico",
-        "vinculo_fraco"
+        "efeito_privilegiado"
       ],
       "lacunas": [
-        "execucao_implicita",
         "sem_impl",
-        "sem_vinculos"
+        "vinculo_quebrado"
       ],
       "inferido": [],
       "checksSugeridos": [
+        "confirmar proibicoes operacionais",
+        "corrigir vinculos rastreaveis",
+        "revisar auth e authz",
         "revisar efeitos operacionais",
         "rodar sema drift --json",
-        "rodar sema validar --json",
-        "verificar guarantees"
+        "rodar sema validar --json"
       ],
       "testesMinimos": [
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
-      ]
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [],
+      "consumerSurfaces": [],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": []
     },
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
-      "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\ergonomia_e_dominio.sema",
+      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "arquivo": "c:\\GitHub\\Sema\\contratos\\sema\\ergonomia_e_dominio.sema",
       "modulo": "sema.produto.ergonomia_e_dominio",
       "perfilCompatibilidade": "interno",
       "scoreSemantico": 90,
@@ -271,10 +278,10 @@
         "PerfilCompatibilidade"
       ],
       "arquivosProvaveis": [
-        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
-        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
-        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
-        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\semantico\\analisador.ts"
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\semantico\\analisador.ts"
       ],
       "simbolosRelacionados": [
         "analisarSemantica",
@@ -290,9 +297,8 @@
         "separar_validacao_regra_e_poscondicao:medio"
       ],
       "lacunas": [
-        "execucao_implicita",
         "sem_impl",
-        "sem_vinculos"
+        "vinculo_quebrado"
       ],
       "inferido": [
         "consultar_scorecard_compatibilidade:pacotes/cli/src/projeto.ts",
@@ -303,20 +309,32 @@
         "reduzir_atrito_sintatico_em_contrato_rico:pacotes/nucleo/src/formatador/index.ts"
       ],
       "checksSugeridos": [
+        "confirmar proibicoes operacionais",
+        "corrigir vinculos rastreaveis",
+        "revisar auth e authz",
         "revisar efeitos operacionais",
         "rodar sema drift --json",
-        "rodar sema validar --json",
-        "verificar guarantees"
+        "rodar sema validar --json"
       ],
       "testesMinimos": [
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [],
+      "consumerSurfaces": [],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": [
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\semantico\\analisador.ts"
       ]
     },
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
-      "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\governanca_ia.sema",
+      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "arquivo": "c:\\GitHub\\Sema\\contratos\\sema\\governanca_ia.sema",
       "modulo": "sema.produto.governanca_ia",
       "perfilCompatibilidade": "publico",
       "scoreSemantico": 90,
@@ -361,10 +379,10 @@
       ],
       "entidadesAfetadas": [],
       "arquivosProvaveis": [
-        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\drift.ts",
-        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts",
-        "C:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
-        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts"
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\drift.ts",
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts"
       ],
       "simbolosRelacionados": [
         "analisarDriftLegado",
@@ -380,9 +398,8 @@
         "padronizar_nomes_para_leitura_de_ia:medio"
       ],
       "lacunas": [
-        "execucao_implicita",
         "sem_impl",
-        "sem_vinculos"
+        "vinculo_quebrado"
       ],
       "inferido": [
         "mapear_projeto_sem_adivinhacao:pacotes/cli/src/projeto.ts",
@@ -393,20 +410,36 @@
         "webhook:confirmar_contexto_publico:/ interno / contexto-ia"
       ],
       "checksSugeridos": [
+        "confirmar proibicoes operacionais",
+        "corrigir vinculos rastreaveis",
+        "revisar auth e authz",
         "revisar efeitos operacionais",
         "rodar sema drift --json",
-        "rodar sema validar --json",
-        "verificar guarantees"
+        "rodar sema validar --json"
       ],
       "testesMinimos": [
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [
+        "/ranking"
+      ],
+      "consumerSurfaces": [
+        "router:/ranking -> c:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts"
+      ],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": [
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\drift.ts",
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\cli\\src\\projeto.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts"
       ]
     },
     {
-      "geradoEm": "2026-03-31T16:04:57.600Z",
-      "arquivo": "C:\\GitHub\\Sema\\contratos\\sema\\linguagem_composta.sema",
+      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "arquivo": "c:\\GitHub\\Sema\\contratos\\sema\\linguagem_composta.sema",
       "modulo": "sema.produto.linguagem_composta",
       "perfilCompatibilidade": "interno",
       "scoreSemantico": 90,
@@ -452,11 +485,11 @@
         "StatusEvolucao"
       ],
       "arquivosProvaveis": [
-        "C:\\GitHub\\Sema\\pacotes\\gerador-python\\src\\index.ts",
-        "C:\\GitHub\\Sema\\pacotes\\gerador-typescript\\src\\index.ts",
-        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
-        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
-        "C:\\GitHub\\Sema\\pacotes\\nucleo\\src\\parser\\parser.ts"
+        "c:\\GitHub\\Sema\\pacotes\\gerador-python\\src\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\gerador-typescript\\src\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\parser\\parser.ts"
       ],
       "simbolosRelacionados": [
         "converterParaIr",
@@ -473,9 +506,8 @@
         "interpretar_bloco_nomeado:alto"
       ],
       "lacunas": [
-        "execucao_implicita",
         "sem_impl",
-        "sem_vinculos"
+        "vinculo_quebrado"
       ],
       "inferido": [
         "converter_bloco_composto_para_ir:pacotes/nucleo/src/ir/conversor.ts",
@@ -486,15 +518,28 @@
         "sema.produto.linguagem_composta:pacotes/nucleo/src/parser/parser.ts"
       ],
       "checksSugeridos": [
+        "confirmar proibicoes operacionais",
+        "corrigir vinculos rastreaveis",
+        "revisar auth e authz",
         "revisar efeitos operacionais",
         "rodar sema drift --json",
-        "rodar sema validar --json",
-        "verificar guarantees"
+        "rodar sema validar --json"
       ],
       "testesMinimos": [
         "sema drift <arquivo> --json",
         "sema validar <arquivo> --json",
         "sema verificar <arquivo-ou-pasta> --json"
+      ],
+      "consumerFramework": "nextjs-consumer",
+      "appRoutes": [],
+      "consumerSurfaces": [],
+      "consumerBridges": [],
+      "arquivosProvaveisEditar": [
+        "c:\\GitHub\\Sema\\pacotes\\gerador-python\\src\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\gerador-typescript\\src\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\formatador\\index.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\ir\\conversor.ts",
+        "c:\\GitHub\\Sema\\pacotes\\nucleo\\src\\parser\\parser.ts"
       ]
     }
   ]

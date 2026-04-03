@@ -2,7 +2,7 @@
   "name": "sema-language-tools",
   "displayName": "Sema Language Tools",
   "description": "Extensao oficial do VS Code para a Sema, com diagnosticos semanticos, contexto de projeto e integracao com a CLI IA-first.",
-  "version": "1.2.12",
+  "version": "1.2.17",
   "publisher": "OtimiTare",
   "private": true,
   "icon": "logo.png",
@@ -50,6 +50,9 @@
     "onCommand:sema.abrirPromptCurtoAlvoAtual",
     "onCommand:sema.abrirResumoAlvoAtual",
     "onCommand:sema.abrirDriftAlvoAtual",
+    "onCommand:sema.prepararContextoIaProjeto",
+    "onCommand:sema.gerarContextoIaAlvoAtual",
+    "onCommand:sema.sincronizarEntrypointsIaProjeto",
     "onCommand:sema.diagnosticarCli",
     "onView:semaSidebar"
   ],
@@ -115,6 +118,18 @@
         "title": "Sema: Medir Drift do Alvo Atual"
       },
       {
+        "command": "sema.prepararContextoIaProjeto",
+        "title": "Sema: Preparar Contexto IA do Projeto"
+      },
+      {
+        "command": "sema.gerarContextoIaAlvoAtual",
+        "title": "Sema: Atualizar Contexto Detalhado do Alvo Atual"
+      },
+      {
+        "command": "sema.sincronizarEntrypointsIaProjeto",
+        "title": "Sema: Sincronizar EntryPoints IA do Projeto"
+      },
+      {
         "command": "sema.diagnosticarCli",
         "title": "Sema: Diagnosticar CLI"
       }
@@ -159,3 +174,4 @@
     "vscode-languageserver-textdocument": "^1.0.11"
   }
 }
+

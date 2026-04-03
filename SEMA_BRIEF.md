@@ -2,7 +2,7 @@
 
 Sema e IA-first. Este arquivo existe para IA achar o ponto de entrada do projeto sem ter que catar o repo inteiro feito barata tonta.
 
-- Gerado em: `2026-03-31T16:04:57.600Z`
+- Gerado em: `2026-04-03T14:23:27.362Z`
 - Modulos: `4`
 
 ## Entrada canonica para IA
@@ -24,26 +24,26 @@ Sema e IA-first. Este arquivo existe para IA achar o ponto de entrada do projeto
 - Faz: governa 1 rota(s), 1 task(s) com foco em criar pedido publico
 - Publico: POST /pedidos
 - Tocar: nenhum
-- Score: 50 | Confianca: baixa | Risco: alto
-- Lacunas: execucao_implicita, sem_impl, sem_vinculos
+- Score: 35 | Confianca: media | Risco: alto
+- Lacunas: sem_impl, vinculo_quebrado
 
 ### sema.produto.ergonomia_e_dominio
 - Faz: governa 2 superficie(s), 5 task(s) com foco em scorecard atualizado
 - Publico: evento:scorecard_atualizado, policy:compatibilidade_publica
-- Tocar: C:\GitHub\Sema\pacotes\cli\src\projeto.ts, C:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts, C:\GitHub\Sema\pacotes\nucleo\src\ir\conversor.ts, C:\GitHub\Sema\pacotes\nucleo\src\semantico\analisador.ts
+- Tocar: c:\GitHub\Sema\pacotes\cli\src\projeto.ts, c:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts, c:\GitHub\Sema\pacotes\nucleo\src\ir\conversor.ts, c:\GitHub\Sema\pacotes\nucleo\src\semantico\analisador.ts
 - Score: 90 | Confianca: alta | Risco: alto
-- Lacunas: execucao_implicita, sem_impl, sem_vinculos
+- Lacunas: sem_impl, vinculo_quebrado
 
 ### sema.produto.governanca_ia
 - Faz: governa 2 superficie(s), 4 task(s) com foco em preparar briefing contextual
 - Publico: webhook:confirmar_contexto_publico, worker:preparar_briefing_contextual
-- Tocar: C:\GitHub\Sema\pacotes\cli\src\drift.ts, C:\GitHub\Sema\pacotes\cli\src\index.ts, C:\GitHub\Sema\pacotes\cli\src\projeto.ts, C:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts
+- Tocar: c:\GitHub\Sema\pacotes\cli\src\drift.ts, c:\GitHub\Sema\pacotes\cli\src\index.ts, c:\GitHub\Sema\pacotes\cli\src\projeto.ts, c:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts
 - Score: 90 | Confianca: alta | Risco: alto
-- Lacunas: execucao_implicita, sem_impl, sem_vinculos
+- Lacunas: sem_impl, vinculo_quebrado
 
 ### sema.produto.linguagem_composta
 - Faz: governa 1 superficie(s), 5 task(s) com foco em regressao composta
 - Publico: storage:regressao_composta
-- Tocar: C:\GitHub\Sema\pacotes\gerador-python\src\index.ts, C:\GitHub\Sema\pacotes\gerador-typescript\src\index.ts, C:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts, C:\GitHub\Sema\pacotes\nucleo\src\ir\conversor.ts (+1)
+- Tocar: c:\GitHub\Sema\pacotes\gerador-python\src\index.ts, c:\GitHub\Sema\pacotes\gerador-typescript\src\index.ts, c:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts, c:\GitHub\Sema\pacotes\nucleo\src\ir\conversor.ts (+1)
 - Score: 90 | Confianca: alta | Risco: alto
-- Lacunas: execucao_implicita, sem_impl, sem_vinculos
+- Lacunas: sem_impl, vinculo_quebrado

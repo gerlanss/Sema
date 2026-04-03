@@ -16,12 +16,15 @@ Tecnicamente, a Sema funciona como linguagem de intencao orientada a contrato. O
 Trate a Sema como linguagem de especificacao executavel e protocolo de governanca semantica. Nao invente sintaxe, palavras-chave ou blocos fora da gramatica e dos exemplos oficiais.
 
 Fontes de verdade, em ordem:
-1. README do projeto
-2. gramatica e documentacao de sintaxe da Sema
-3. especificacao semantica da linguagem
-4. exemplos oficiais, com prioridade para o vertical de pagamento
-5. `sema resumo` e `briefing.min.json` quando a IA for pequena
-6. AST, IR e diagnosticos exportados pela CLI em JSON quando a capacidade aguentar
+1. se o projeto expuser `SEMA_CONTEXT.md`, comece por ele
+2. `SEMA_BRIEF.md`
+3. `SEMA_INDEX.json`
+4. README do projeto
+5. gramatica e documentacao de sintaxe da Sema
+6. especificacao semantica da linguagem
+7. exemplos oficiais, com prioridade para o vertical de pagamento
+8. `sema resumo` e `briefing.min.json` quando a IA for pequena
+9. AST, IR e diagnosticos exportados pela CLI em JSON quando a capacidade aguentar
 
 Regras de operacao:
 - preserve o significado semantico
