@@ -1057,6 +1057,41 @@ test("cli compila usando sema.config para scaffold NestJS sem precisar de flags 
   }
 });
 
+test("cli verificar usa framework e estruturaSaida do sema.config para scaffold NestJS", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-verificar-nest-"));
+
+  try {
+    const init = spawnSync(
+      "node",
+      [CLI, "iniciar", "--template", "nestjs"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+
+    const verificar = spawnSync(
+      "node",
+      [CLI, "verificar", "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(verificar.status, 0, verificar.stderr || verificar.stdout);
+    const json = JSON.parse(verificar.stdout);
+    assert.equal(json.comando, "verificar");
+    assert.equal(json.sucesso, true);
+    assert.equal(json.modulos[0].alvos[0].framework, "nestjs");
+    assert.equal(json.modulos[0].alvos[0].estrutura, "backend");
+    assert.equal(json.modulos[0].alvos[0].testesExecutados, false);
+    assert.equal(json.totais.testes, 0);
+
+    const contract = await readFile(path.join(baseTemporaria, ".tmp", "sema-verificar", "typescript", "pedidos", "src", "app", "pedidos.contract.ts"), "utf8");
+    const controller = await readFile(path.join(baseTemporaria, ".tmp", "sema-verificar", "typescript", "pedidos", "src", "app", "pedidos.controller.ts"), "utf8");
+    assert.match(contract, /Arquivo gerado automaticamente pela Sema/);
+    assert.match(controller, /@Controller\(\)/);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
 test("cli compila usando sema.config para scaffold FastAPI sem precisar de flags completas", async () => {
   const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-backend-fastapi-"));
 

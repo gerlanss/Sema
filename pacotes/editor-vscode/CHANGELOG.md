@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.12
+
+- acompanha a linha publica `1.2.12` da Sema com correcao da CLI na verificacao orientada por `sema.config.json`
+- mantem a extensao alinhada com os artefatos e instaladores mais recentes da release
+
 ## 1.2.11
 
 - alinha a extensao com a nova semantica de seguranca da Sema

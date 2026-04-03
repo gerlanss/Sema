@@ -83,6 +83,9 @@ interface ResumoAlvoVerificacao {
   quantidadeTestes: number;
   pastaSaida: string;
   sucesso: boolean;
+  framework: FrameworkGeracao;
+  estrutura: EstruturaSaida;
+  testesExecutados: boolean;
 }
 
 interface ResumoModuloVerificacao {
@@ -1017,6 +1020,53 @@ function executarTestesGerados(
     quantidadeTestes,
     saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
     saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : "",
+  };
+}
+
+function resolverConfiguracaoVerificacaoPorAlvo(
+  alvo: AlvoGeracao,
+  configCarregada?: Awaited<ReturnType<typeof carregarConfiguracaoProjeto>>,
+): {
+  framework: FrameworkGeracao;
+  estrutura: EstruturaSaida;
+  incompatibilidade?: string;
+} {
+  const framework = resolverFrameworkPadrao(undefined, configCarregada);
+  const incompatibilidade = validarCompatibilidadeFramework(alvo, framework);
+  const estrutura = resolverEstruturaSaidaPadrao(undefined, framework, configCarregada);
+
+  return {
+    framework,
+    estrutura,
+    incompatibilidade,
+  };
+}
+
+function executarTestesParaVerificacao(
+  alvo: AlvoGeracao,
+  baseSaida: string,
+  arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
+  framework: FrameworkGeracao,
+  silencioso = false,
+): {
+  execucao: SaidaTesteCapturada;
+  testesExecutados: boolean;
+} {
+  if (framework !== "base") {
+    return {
+      execucao: {
+        codigoSaida: 0,
+        quantidadeTestes: 0,
+        saidaPadrao: "",
+        saidaErro: "",
+      },
+      testesExecutados: false,
+    };
+  }
+
+  return {
+    execucao: executarTestesGerados(alvo, baseSaida, arquivos, silencioso),
+    testesExecutados: true,
   };
 }
 
@@ -4029,7 +4079,7 @@ function imprimirResumoVerificacao(resumos: ResumoModuloVerificacao[]): void {
       totalTestes += alvo.quantidadeTestes;
       totalAlvos += 1;
       console.log(
-        `  alvo=${alvo.alvo} status=${alvo.sucesso ? "ok" : "falhou"} arquivos=${alvo.arquivosGerados} testes=${alvo.quantidadeTestes} saida=${alvo.pastaSaida}`,
+        `  alvo=${alvo.alvo} framework=${alvo.framework} estrutura=${alvo.estrutura} status=${alvo.sucesso ? "ok" : "falhou"} arquivos=${alvo.arquivosGerados} testes=${alvo.quantidadeTestes}${alvo.testesExecutados ? "" : " (skip)"} saida=${alvo.pastaSaida}`,
       );
     }
   }
@@ -4051,6 +4101,16 @@ async function comandoVerificar(
   }
 
   const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const configuracoesAlvo = alvos.map((alvo) => ({
+    alvo,
+    ...resolverConfiguracaoVerificacaoPorAlvo(alvo, contextoProjeto.configCarregada),
+  }));
+  const incompatibilidade = configuracoesAlvo.find((item) => item.incompatibilidade);
+  if (incompatibilidade?.incompatibilidade) {
+    console.error(incompatibilidade.incompatibilidade);
+    return 1;
+  }
+
   const resumos: ResumoModuloVerificacao[] = [];
   for (const modulo of modulos) {
     const ir = garantirIr(modulo.resultado, modulo.caminho);
@@ -4060,18 +4120,21 @@ async function comandoVerificar(
       arquivoFonte: modulo.caminho,
       alvos: [],
     };
-    for (const alvo of alvos) {
+    for (const configuracaoAlvo of configuracoesAlvo) {
+      const { alvo, framework, estrutura } = configuracaoAlvo;
       const pastaAlvo = path.join(baseSaida, alvo, nomeSubpastaModulo(modulo.caminho));
-      const framework = alvo === "typescript" ? "base" : alvo === "python" ? "base" : "base";
-      const arquivos = gerarArquivosPorAlvo(ir, alvo, framework);
+      const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
       await escreverArquivos(pastaAlvo, arquivos);
-      const execucao = executarTestesGerados(alvo, pastaAlvo, arquivos);
+      const { execucao, testesExecutados } = executarTestesParaVerificacao(alvo, pastaAlvo, arquivos, framework);
       resumoModulo.alvos.push({
         alvo,
         arquivosGerados: arquivos.length,
         quantidadeTestes: execucao.quantidadeTestes,
         pastaSaida: pastaAlvo,
         sucesso: execucao.codigoSaida === 0,
+        framework,
+        estrutura,
+        testesExecutados,
       });
       if (execucao.codigoSaida !== 0) {
         imprimirResumoVerificacao([...resumos, resumoModulo]);
@@ -4107,6 +4170,22 @@ async function comandoVerificarJson(
   }
 
   const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const configuracoesAlvo = alvos.map((alvo) => ({
+    alvo,
+    ...resolverConfiguracaoVerificacaoPorAlvo(alvo, contextoProjeto.configCarregada),
+  }));
+  const incompatibilidade = configuracoesAlvo.find((item) => item.incompatibilidade);
+  if (incompatibilidade?.incompatibilidade) {
+    console.log(JSON.stringify({
+      comando: "verificar",
+      sucesso: false,
+      erro: incompatibilidade.incompatibilidade,
+      modulos: [],
+      totais: { modulos: 0, alvos: 0, arquivos: 0, testes: 0 },
+    }, null, 2));
+    return 1;
+  }
+
   const resumos: Array<ResumoModuloVerificacao & { saidaTestes?: Array<{ alvo: string; stdout: string; stderr: string }> }> = [];
   let codigoSaida = 0;
 
@@ -4119,17 +4198,21 @@ async function comandoVerificarJson(
       saidaTestes: [],
     };
 
-    for (const alvo of alvos) {
+    for (const configuracaoAlvo of configuracoesAlvo) {
+      const { alvo, framework, estrutura } = configuracaoAlvo;
       const pastaAlvo = path.join(baseSaida, alvo, nomeSubpastaModulo(modulo.caminho));
-      const arquivos = gerarArquivosPorAlvo(ir, alvo, "base");
+      const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
       await escreverArquivos(pastaAlvo, arquivos);
-      const execucao = executarTestesGerados(alvo, pastaAlvo, arquivos, true);
+      const { execucao, testesExecutados } = executarTestesParaVerificacao(alvo, pastaAlvo, arquivos, framework, true);
       resumoModulo.alvos.push({
         alvo,
         arquivosGerados: arquivos.length,
         quantidadeTestes: execucao.quantidadeTestes,
         pastaSaida: pastaAlvo,
         sucesso: execucao.codigoSaida === 0,
+        framework,
+        estrutura,
+        testesExecutados,
       });
       resumoModulo.saidaTestes.push({ alvo, stdout: execucao.saidaPadrao, stderr: execucao.saidaErro });
       if (execucao.codigoSaida !== 0) {
