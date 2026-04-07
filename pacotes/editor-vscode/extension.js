@@ -746,165 +746,173 @@ async function comandoDiagnosticarCli() {
   await abrirConteudoTemporario(conteudo, "markdown");
 }
 
-class ItemSidebarSema extends vscode.TreeItem {
-  constructor(label, options = {}) {
-    super(label, options.collapsibleState ?? vscode.TreeItemCollapsibleState.None);
-    this.description = options.description;
-    this.tooltip = options.tooltip;
-    this.command = options.command;
-    this.contextValue = options.contextValue;
-    this.iconPath = options.iconPath;
-  }
-}
-
-class ProvedorSidebarSema {
+class ProvedorWebviewSema {
   constructor() {
-    this._onDidChangeTreeData = new vscode.EventEmitter();
-    this.onDidChangeTreeData = this._onDidChangeTreeData.event;
+    this._view = undefined;
   }
 
-  refresh() {
-    this._onDidChangeTreeData.fire();
+  resolveWebviewView(webviewView, context, token) {
+    this._view = webviewView;
+    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.html = this.getHtmlCorpo();
+
+    webviewView.webview.onDidReceiveMessage((mensagem) => {
+      vscode.commands.executeCommand(mensagem.command);
+    });
+
+    this.refresh();
   }
 
-  getTreeItem(element) {
-    return element;
+  async refresh() {
+    if (!this._view) return;
+    const estadoCli = await resolverEstadoCli();
+    const workspace = obterRaizWorkspace();
+    const alvo = obterAlvoPreferencial();
+    
+    this._view.webview.postMessage({ 
+      command: 'atualizar', 
+      pronto: estadoCli?.pronto ?? false, 
+      alvo: alvo, 
+      workspace: workspace 
+    });
   }
 
-  async getChildren(element) {
-    if (!element) {
-      return [
-        new ItemSidebarSema("Projeto", {
-          collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-          contextValue: "sema.grupo.projeto",
-          iconPath: new vscode.ThemeIcon("root-folder"),
-        }),
-        new ItemSidebarSema("Contratos", {
-          collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-          contextValue: "sema.grupo.contratos",
-          iconPath: new vscode.ThemeIcon("file-code"),
-        }),
-        new ItemSidebarSema("IA", {
-          collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-          contextValue: "sema.grupo.ia",
-          iconPath: new vscode.ThemeIcon("sparkle"),
-        }),
-      ];
+  getHtmlCorpo() {
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sema Painel</title>
+  <style>
+    body {
+      font-family: var(--vscode-font-family);
+      color: var(--vscode-foreground);
+      padding: 12px;
+    }
+    .secao {
+      margin-bottom: 24px;
+    }
+    .titulo {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--vscode-descriptionForeground);
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .grade {
+      display: grid;
+      gap: 8px;
+    }
+    button {
+      background-color: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+      border: 1px solid var(--vscode-button-border, transparent);
+      padding: 8px 12px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: var(--vscode-button-secondaryHoverBackground);
+    }
+    .destaque {
+      background-color: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border: 1px solid var(--vscode-button-background);
+    }
+    .destaque:hover {
+      background-color: var(--vscode-button-hoverBackground);
+    }
+    .status-painel {
+      padding: 12px;
+      background: var(--vscode-editor-inactiveSelectionBackground);
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 5px;
+      border-left: 3px solid var(--vscode-progressBar-background);
+    }
+    .status-linha {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .status-linha:last-child {
+      margin-bottom: 0;
+    }
+    .status-valor {
+      color: var(--vscode-textPreformat-foreground);
+      font-weight: 500;
+    }
+    .icon {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="secao">
+    <div class="titulo">🚦 STATUS DO AMBIENTE</div>
+    <div class="status-painel">
+      <div class="status-linha"><span>CLI Motor:</span> <span class="status-valor" id="status-cli">Verificando...</span></div>
+      <div class="status-linha"><span>Workspace:</span> <span class="status-valor" id="status-projeto">...</span></div>
+      <div class="status-linha" style="margin-bottom:0"><span>Contrato:</span> <span class="status-valor" id="status-alvo">...</span></div>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="titulo">🎯 NAVEGACAO E GOVERNANCA</div>
+    <div class="grade">
+      <button class="destaque" onclick="enviar('sema.abrirPromptCurtoAlvoAtual')"><span class="icon">🔍</span> Inspecionar Contrato</button>
+      <button onclick="enviar('sema.abrirDriftAlvoAtual')"><span class="icon">📈</span> Medir Drift de Codigo</button>
+      <button onclick="enviar('sema.formatarDocumento')"><span class="icon">✨</span> Formatar Arquivo .sema</button>
+      <button onclick="enviar('sema.prepararContextoIaProjeto')"><span class="icon">🧠</span> Gerar Contexto IA / Sync</button>
+      <button onclick="enviar('sema.abrirResumoAlvoAtual')"><span class="icon">📝</span> Ver Resumo Executivo</button>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="titulo">🤖 AGENTES INTELIGENTES</div>
+    <div class="grade" style="grid-template-columns: 1fr 1fr;">
+      <button onclick="enviar('sema.configurarIaCursor')">Cursor</button>
+      <button onclick="enviar('sema.configurarIaWindsurf')">Windsurf</button>
+      <button onclick="enviar('sema.configurarIaClaude')">Claude Code</button>
+      <button onclick="enviar('sema.configurarIaCline')">Cline / Roo</button>
+      <button onclick="enviar('sema.configurarIaCopilot')">GH Copilot</button>
+      <button onclick="enviar('sema.configurarIaOpenCode')">OpenCode</button>
+    </div>
+    <button style="margin-top: 8px; width: 100%; justify-content: center" onclick="enviar('sema.configurarIa')"><span class="icon">⚙️</span> Update All Agents Rules</button>
+  </div>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+    
+    function enviar(comando) {
+      vscode.postMessage({ command: comando });
     }
 
-    if (element.contextValue === "sema.grupo.projeto") {
-      const estadoCli = await resolverEstadoCli();
-      const alvoAtual = obterAlvoPreferencial();
-      return [
-        new ItemSidebarSema(obterNomeWorkspace(), {
-          description: obterRaizWorkspace() ? "aberto" : "nenhum",
-          tooltip: obterRaizWorkspace() ?? "Nenhuma pasta aberta no VS Code.",
-          iconPath: new vscode.ThemeIcon("folder"),
-        }),
-        new ItemSidebarSema(estadoCli.pronto ? "CLI pronta" : "CLI indisponivel", {
-          description: estadoCli.versao ? `v${estadoCli.versao}` : (estadoCli.pronto ? "ok" : "rode Diagnosticar"),
-          tooltip: estadoCli.pronto
-            ? `CLI da Sema pronta via ${estadoCli.origem}${estadoCli.versao ? ` (${estadoCli.versao})` : ""}.`
-            : "A extensao nao conseguiu executar a CLI da Sema. Use Diagnosticar no grupo IA.",
-          iconPath: new vscode.ThemeIcon(estadoCli.pronto ? "check" : "warning"),
-        }),
-        new ItemSidebarSema(alvoAtual ? basename(alvoAtual) : "nenhum contrato ativo", {
-          description: alvoAtual ? "contrato ativo" : "abra um .sema",
-          tooltip: alvoAtual ?? "Abra um arquivo .sema para ativar o alvo.",
-          iconPath: new vscode.ThemeIcon(alvoAtual ? "file-symlink-file" : "circle-slash"),
-        }),
-      ];
-    }
-
-    if (element.contextValue === "sema.grupo.contratos") {
-      return [
-        new ItemSidebarSema("Inspecionar contrato", {
-          description: "valida estrutura do .sema",
-          tooltip: "Inspeciona o contrato .sema ativo e exibe sua estrutura.",
-          command: { command: "sema.abrirPromptCurtoAlvoAtual", title: "Inspecionar contrato" },
-          iconPath: new vscode.ThemeIcon("search"),
-        }),
-        new ItemSidebarSema("Ver drift", {
-          description: "divergencias contrato vs codigo",
-          tooltip: "Mede o drift entre o contrato .sema e a implementacao atual.",
-          command: { command: "sema.abrirDriftAlvoAtual", title: "Ver drift" },
-          iconPath: new vscode.ThemeIcon("graph"),
-        }),
-        new ItemSidebarSema("Resumo do projeto", {
-          description: "visao geral para IA",
-          tooltip: "Gera o resumo IA-first do projeto com modulos, riscos e lacunas.",
-          command: { command: "sema.abrirResumoAlvoAtual", title: "Resumo do projeto" },
-          iconPath: new vscode.ThemeIcon("list-unordered"),
-        }),
-      ];
-    }
-
-    if (element.contextValue === "sema.grupo.ia") {
-      return [
-        new ItemSidebarSema("Configurar todas as IAs", {
-          description: "Claude, Cursor, Windsurf, Cline, Copilot...",
-          tooltip: "Cria os arquivos de instrucoes Sema para todas as IAs instaladas no projeto e nas configs globais, incluindo AGENTS.md.",
-          command: { command: "sema.configurarIa", title: "Configurar todas as IAs" },
-          iconPath: new vscode.ThemeIcon("robot"),
-        }),
-        new ItemSidebarSema("Claude Code", {
-          description: "configura .claude/CLAUDE.md + MCP",
-          tooltip: "Cria .claude/CLAUDE.md com instrucoes Sema e registra o MCP no VS Code global.",
-          command: { command: "sema.configurarIaClaude", title: "Configurar Claude Code" },
-          iconPath: new vscode.ThemeIcon("robot"),
-        }),
-        new ItemSidebarSema("Cursor", {
-          description: "configura .cursor/rules + MCP",
-          tooltip: "Cria .cursor/rules/sema.mdc e registra o MCP no Cursor global.",
-          command: { command: "sema.configurarIaCursor", title: "Configurar Cursor" },
-          iconPath: new vscode.ThemeIcon("robot"),
-        }),
-        new ItemSidebarSema("Windsurf", {
-          description: "configura .windsurf/rules.md + MCP",
-          tooltip: "Cria .windsurf/rules.md e registra o MCP no Windsurf global.",
-          command: { command: "sema.configurarIaWindsurf", title: "Configurar Windsurf" },
-          iconPath: new vscode.ThemeIcon("robot"),
-        }),
-        new ItemSidebarSema("Cline", {
-          description: "configura .clinerules + MCP",
-          tooltip: "Cria .clinerules no projeto e registra o MCP no cline_mcp_settings.json global.",
-          command: { command: "sema.configurarIaCline", title: "Configurar Cline" },
-          iconPath: new vscode.ThemeIcon("robot"),
-        }),
-        new ItemSidebarSema("GitHub Copilot", {
-          description: "configura copilot-instructions.md",
-          tooltip: "Cria .github/copilot-instructions.md com instrucoes Sema.",
-          command: { command: "sema.configurarIaCopilot", title: "Configurar GitHub Copilot" },
-          iconPath: new vscode.ThemeIcon("robot"),
-        }),
-        new ItemSidebarSema("OpenCode", {
-          description: "configura .opencode/instructions.md",
-          tooltip: "Cria .opencode/instructions.md com instrucoes Sema.",
-          command: { command: "sema.configurarIaOpenCode", title: "Configurar OpenCode" },
-          iconPath: new vscode.ThemeIcon("robot"),
-        }),
-        new ItemSidebarSema("Abrir contexto IA", {
-          description: "prompt completo do projeto",
-          tooltip: "Abre o arquivo de contexto IA do projeto para usar em qualquer ferramenta.",
-          command: { command: "sema.abrirPromptIa", title: "Abrir contexto IA" },
-          iconPath: new vscode.ThemeIcon("book"),
-        }),
-        new ItemSidebarSema("Copiar contexto IA", {
-          description: "copia para area de transferencia",
-          tooltip: "Copia o contexto IA do projeto para a area de transferencia.",
-          command: { command: "sema.copiarPromptIa", title: "Copiar contexto IA" },
-          iconPath: new vscode.ThemeIcon("copy"),
-        }),
-        new ItemSidebarSema("Diagnosticar CLI", {
-          description: "verifica instalacao",
-          tooltip: "Mostra detalhes sobre como a extensao esta resolvendo o caminho da CLI da Sema.",
-          command: { command: "sema.diagnosticarCli", title: "Diagnosticar CLI" },
-          iconPath: new vscode.ThemeIcon("tools"),
-        }),
-      ];
-    }
-
-    return [];
+    window.addEventListener('message', event => {
+      const message = event.data;
+      if (message.command === 'atualizar') {
+        const cliEl = document.getElementById('status-cli');
+        cliEl.textContent = message.pronto ? 'Online & Ready' : 'Indisponivel';
+        cliEl.style.color = message.pronto ? 'var(--vscode-testing-iconPassed)' : 'var(--vscode-testing-iconFailed)';
+        
+        document.getElementById('status-projeto').textContent = message.workspace ? 'Conectado' : 'Nenhum';
+        document.getElementById('status-alvo').textContent = message.alvo ? message.alvo.split(/[\\\\/]/).pop() : 'Nenhum Ativo';
+      }
+    });
+  </script>
+</body>
+</html>`;
   }
 }
 
@@ -964,12 +972,9 @@ async function activate(context) {
   canalSaida = vscode.window.createOutputChannel("Sema");
   context.subscriptions.push(canalSaida);
 
-  provedorSidebar = new ProvedorSidebarSema();
+  provedorSidebar = new ProvedorWebviewSema();
   context.subscriptions.push(
-    vscode.window.createTreeView("semaSidebar", {
-      treeDataProvider: provedorSidebar,
-      showCollapseAll: false,
-    }),
+    vscode.window.registerWebviewViewProvider("semaSidebar", provedorSidebar)
   );
 
   context.subscriptions.push(
