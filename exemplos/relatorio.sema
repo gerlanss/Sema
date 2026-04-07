@@ -1,0 +1,93 @@
+module exemplos.relatorio {
+  docs {
+    resumo: "Geracao assincrona de relatorios com download e notificacao."
+  }
+
+  entity Relatorio {
+    fields {
+      id: Id
+      tipo: Texto
+      parametros: Objeto
+      status: Texto
+      url_download: Texto
+      solicitado_por: Id
+      criado_em: Timestamp
+      concluido_em: Timestamp
+    }
+  }
+
+  task solicitar_relatorio {
+    input {
+      tipo: Texto required
+      data_inicio: Data required
+      data_fim: Data required
+      formato: Texto
+    }
+    output {
+      relatorio_id: Id
+    }
+    rules {
+      tipo em [VENDAS, ESTOQUE, USUARIOS, FINANCEIRO]
+      data_inicio deve_ser anterior_a data_fim
+      formato em [PDF, CSV, XLSX]
+    }
+    effects {
+      persistencia Relatorio
+      evento relatorio_solicitado criticidade = baixa
+      auditoria solicitacao_relatorio
+    }
+    state ciclo_relatorio {
+      transitions {
+        PENDENTE -> EM_PROCESSAMENTO
+      }
+    }
+    guarantees {
+      relatorio_id existe
+    }
+    error {
+      tipo_invalido: "Tipo de relatorio nao suportado."
+      periodo_invalido: "Data de inicio deve ser anterior a data de fim."
+      limite_periodo: "Periodo maximo e de 12 meses."
+    }
+    tests {
+      caso "solicita relatorio de vendas" {
+        given { tipo: "VENDAS"  data_inicio: "2025-01-01"  data_fim: "2025-03-31"  formato: "PDF" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task concluir_relatorio {
+    input {
+      relatorio_id: Id required
+      url_download: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      relatorio_id deve_ser valido
+      url_download deve_ser preenchida
+    }
+    effects {
+      persistencia Relatorio
+      notificacao usuario relatorio_pronto criticidade = media
+      evento relatorio_concluido
+      auditoria conclusao_relatorio
+    }
+    state ciclo_relatorio {
+      transitions {
+        EM_PROCESSAMENTO -> CONCLUIDO
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "conclui relatorio" {
+        given { relatorio_id: "rel_1"  url_download: "https://storage/rel_1.pdf" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

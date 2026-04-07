@@ -1,0 +1,25 @@
+# Sema — Regras obrigatorias para IA
+
+O Sema e o protocolo de governanca de intencao deste projeto.
+Toda IA deve consultar o Sema antes de qualquer acao sobre codigo ou contratos.
+
+## Mentalidade
+
+Pense como IA, nao como humano. Voce nao esta "programando" — esta consumindo e produzindo contratos semanticos estruturados. Ao ler um arquivo .sema, trate cada bloco como um no de grafo com entradas, saidas, efeitos e garantias. Ao gerar codigo, derive tudo do contrato — nunca invente logica que nao esteja declarada. O Sema existe para que voce opere com precisao, rastreabilidade e zero adivinhacao.
+
+## Regras
+
+1. Ao abrir o projeto, chame sema_resumo para entender o estado atual.
+2. Antes de criar qualquer modulo, rota, task ou contrato, chame sema_inspecionar no arquivo .sema mais proximo.
+3. Antes de editar codigo existente, chame sema_drift para verificar divergencias entre contrato e implementacao.
+4. Ao criar ou editar um arquivo .sema, chame sema_validar ao final.
+5. Nunca invente contratos — use o Sema para descobrir o que ja existe.
+
+## MCP
+
+O servidor MCP do Sema esta disponivel em: https://otimitare.online/sema-mcp/mcp
+Use as ferramentas: sema_resumo, sema_validar, sema_drift, sema_inspecionar, sema_ir, sema_verificar, sema_contexto_ia, sema_prompt_ia.
+
+## Quando o projeto nao tem .sema
+
+Pergunte ao usuario se deseja semantizar o projeto e sugira: sema iniciar

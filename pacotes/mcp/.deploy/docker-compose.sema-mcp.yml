@@ -1,0 +1,11 @@
+services:
+  sema-mcp:
+    image: sema-mcp:latest
+    container_name: sema-mcp
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    environment:
+      MCP_PORT: "3010"
+    volumes:
+      - /root/sema-mcp/projetos:/projetos:ro

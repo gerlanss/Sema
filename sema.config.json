@@ -1,7 +1,7 @@
 {
   "origens": ["./contratos"],
   "saida": "./generated",
-  "alvos": ["typescript", "python", "dart"],
+  "alvos": ["typescript", "python", "dart", "javascript", "html", "css"],
   "alvoPadrao": "typescript",
   "estruturaSaida": "modulos",
   "framework": "base",
@@ -9,7 +9,10 @@
   "diretoriosSaidaPorAlvo": {
     "typescript": "./generated/typescript",
     "python": "./generated/python",
-    "dart": "./generated/dart"
+    "dart": "./generated/dart",
+    "javascript": "./generated/javascript",
+    "html": "./generated/html",
+    "css": "./generated/css"
   },
   "convencoesGeracaoPorProjeto": "base"
 }

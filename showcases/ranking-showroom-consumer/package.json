@@ -1,8 +1,8 @@
 {
-  "name": "ranking-showroom-consumer",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "next": "15.0.0"
-  }
+    "name":  "ranking-showroom-consumer",
+    "private":  true,
+    "type":  "module",
+    "dependencies":  {
+                         "next":  "15.0.0"
+                     }
 }

@@ -1,7 +1,7 @@
 {
   "comando": "resumo-projeto",
-  "geradoEm": "2026-04-03T14:23:27.362Z",
-  "cliVersao": "1.2.12",
+  "geradoEm": "2026-04-03T14:43:39.329Z",
+  "cliVersao": "1.2.17",
   "baseProjeto": "c:\\GitHub\\Sema",
   "totalModulos": 4,
   "entradaCanonica": {
@@ -163,7 +163,7 @@
   },
   "modulos": [
     {
-      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "geradoEm": "2026-04-03T14:43:39.329Z",
       "arquivo": "c:\\GitHub\\Sema\\contratos\\pedidos.sema",
       "modulo": "app.pedidos",
       "perfilCompatibilidade": "publico",
@@ -231,7 +231,7 @@
       "arquivosProvaveisEditar": []
     },
     {
-      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "geradoEm": "2026-04-03T14:43:39.329Z",
       "arquivo": "c:\\GitHub\\Sema\\contratos\\sema\\ergonomia_e_dominio.sema",
       "modulo": "sema.produto.ergonomia_e_dominio",
       "perfilCompatibilidade": "interno",
@@ -333,7 +333,7 @@
       ]
     },
     {
-      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "geradoEm": "2026-04-03T14:43:39.329Z",
       "arquivo": "c:\\GitHub\\Sema\\contratos\\sema\\governanca_ia.sema",
       "modulo": "sema.produto.governanca_ia",
       "perfilCompatibilidade": "publico",
@@ -438,7 +438,7 @@
       ]
     },
     {
-      "geradoEm": "2026-04-03T14:23:27.362Z",
+      "geradoEm": "2026-04-03T14:43:39.329Z",
       "arquivo": "c:\\GitHub\\Sema\\contratos\\sema\\linguagem_composta.sema",
       "modulo": "sema.produto.linguagem_composta",
       "perfilCompatibilidade": "interno",

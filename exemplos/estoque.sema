@@ -1,0 +1,126 @@
+module exemplos.estoque {
+  docs {
+    resumo: "Controle de estoque com reserva, entrada e saida de produtos."
+  }
+
+  entity ItemEstoque {
+    fields {
+      id: Id
+      produto_id: Id
+      quantidade: Inteiro
+      quantidade_reservada: Inteiro
+      localizacao: Texto
+    }
+  }
+
+  entity MovimentacaoEstoque {
+    fields {
+      id: Id
+      produto_id: Id
+      tipo: Texto
+      quantidade: Inteiro
+      motivo: Texto
+      realizada_em: Timestamp
+    }
+  }
+
+  task reservar_estoque {
+    input {
+      produto_id: Id required
+      quantidade: Inteiro required
+      pedido_id: Id required
+    }
+    output {
+      reserva_id: Id
+    }
+    rules {
+      quantidade > 0
+      produto_id deve_ser valido
+    }
+    effects {
+      consulta ItemEstoque por produto_id criticidade = alta
+      persistencia ItemEstoque
+      persistencia MovimentacaoEstoque
+      evento estoque_reservado criticidade = media
+      auditoria reserva_estoque
+    }
+    guarantees {
+      reserva_id existe
+      ItemEstoque.quantidade_reservada >= quantidade
+    }
+    error {
+      estoque_insuficiente: "Quantidade solicitada indisponivel em estoque."
+      produto_nao_encontrado: "Produto nao localizado no estoque."
+    }
+    tests {
+      caso "reserva com estoque disponivel" {
+        given { produto_id: "prod_1"  quantidade: 5  pedido_id: "ped_1" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "reserva sem estoque" {
+        given { produto_id: "prod_sem"  quantidade: 999  pedido_id: "ped_2" }
+        expect { sucesso: falso }
+        error { tipo: "estoque_insuficiente" }
+      }
+    }
+  }
+
+  task registrar_entrada {
+    input {
+      produto_id: Id required
+      quantidade: Inteiro required
+      motivo: Texto required
+    }
+    output {
+      movimentacao_id: Id
+    }
+    rules {
+      quantidade > 0
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia ItemEstoque
+      persistencia MovimentacaoEstoque
+      evento estoque_reposto
+      auditoria entrada_estoque
+    }
+    guarantees {
+      movimentacao_id existe
+    }
+    tests {
+      caso "entrada valida" {
+        given { produto_id: "prod_1"  quantidade: 100  motivo: "Reposicao mensal" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task liberar_reserva {
+    input {
+      reserva_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      reserva_id deve_ser valido
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia ItemEstoque
+      persistencia MovimentacaoEstoque
+      evento reserva_liberada
+      auditoria liberacao_reserva
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "libera reserva existente" {
+        given { reserva_id: "res_1"  motivo: "Pedido cancelado" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

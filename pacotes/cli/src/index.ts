@@ -17,6 +17,9 @@ import { gerarDart } from "@sema/gerador-dart";
 import { gerarLua } from "@sema/gerador-lua";
 import { gerarPython } from "@sema/gerador-python";
 import { gerarTypeScript } from "@sema/gerador-typescript";
+import { gerarJavaScript } from "@sema/gerador-javascript";
+import { gerarHtml } from "@sema/gerador-html";
+import { gerarCss } from "@sema/gerador-css";
 import {
   carregarConfiguracaoProjeto,
   carregarProjeto,
@@ -751,7 +754,7 @@ function validarCompatibilidadeFramework(alvo: AlvoGeracao, framework: Framework
   if (framework === "fastapi" && alvo !== "python") {
     return `Framework "${framework}" so pode ser usado com o alvo python.`;
   }
-  if (alvo === "dart" || alvo === "lua") {
+  if (alvo === "dart" || alvo === "lua" || alvo === "javascript" || alvo === "html" || alvo === "css") {
     return `Framework "${framework}" nao e suportado para o alvo ${alvo}.`;
   }
   return undefined;
@@ -868,6 +871,15 @@ function gerarArquivosPorAlvo(ir: IrModulo, alvo: AlvoGeracao, framework: Framew
   if (alvo === "lua") {
     return gerarLua(ir);
   }
+  if (alvo === "javascript") {
+    return gerarJavaScript(ir);
+  }
+  if (alvo === "html") {
+    return gerarHtml(ir);
+  }
+  if (alvo === "css") {
+    return gerarCss(ir);
+  }
   return gerarTypeScript(ir, { framework });
 }
 
@@ -907,6 +919,15 @@ function aplicarEstruturaSaida(
     } else if (basename === `test_${nomeBaseAntigo}.lua`) {
       novoBasename = `test_${nomeArquivo}.lua`;
       conteudo = conteudo.replace(`${nomeBaseAntigo}.lua`, `${nomeArquivo}.lua`);
+    } else if (basename === `${nomeBaseAntigo}.js`) {
+      novoBasename = `${nomeArquivo}.js`;
+    } else if (basename === `${nomeBaseAntigo}.test.js`) {
+      novoBasename = `${nomeArquivo}.test.js`;
+      conteudo = conteudo.replace(`./${nomeBaseAntigo}.js`, `./${nomeArquivo}.js`);
+    } else if (basename === `${nomeBaseAntigo}.html`) {
+      novoBasename = `${nomeArquivo}.html`;
+    } else if (basename === `${nomeBaseAntigo}.css`) {
+      novoBasename = `${nomeArquivo}.css`;
     }
 
     return {
@@ -917,7 +938,7 @@ function aplicarEstruturaSaida(
 }
 
 function contarCasosDeTesteGerados(alvo: AlvoGeracao, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): number {
-  if (alvo === "dart") {
+  if (alvo === "dart" || alvo === "html" || alvo === "css") {
     return 0;
   }
   if (alvo === "lua") {
@@ -930,6 +951,14 @@ function contarCasosDeTesteGerados(alvo: AlvoGeracao, arquivos: Array<{ caminhoR
 
   if (alvo === "typescript") {
     const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.endsWith(".test.ts"));
+    if (!arquivoTeste) {
+      return 0;
+    }
+    return (arquivoTeste.conteudo.match(/\btest\(/g) ?? []).length;
+  }
+
+  if (alvo === "javascript") {
+    const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.endsWith(".test.js"));
     if (!arquivoTeste) {
       return 0;
     }
@@ -952,16 +981,14 @@ function executarTestesGerados(
   const quantidadeTestes = contarCasosDeTesteGerados(alvo, arquivos);
   if (quantidadeTestes === 0) {
     if (!silencioso) {
-      const nomeAlvo = alvo === "typescript"
-        ? "TypeScript"
-        : alvo === "python"
-          ? "Python"
-          : alvo === "lua"
-            ? "Lua"
-            : "Dart";
-      console.log(`Nenhum teste ${nomeAlvo} foi gerado.`);
+      const nomesAlvo: Record<AlvoGeracao, string> = { typescript: "TypeScript", python: "Python", lua: "Lua", dart: "Dart", javascript: "JavaScript", html: "HTML", css: "CSS" };
+      console.log(`Nenhum teste ${nomesAlvo[alvo] ?? alvo} foi gerado.`);
     }
     return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
+  }
+
+  if (alvo === "html" || alvo === "css") {
+    return { codigoSaida: 0, quantidadeTestes: 0, saidaPadrao: "", saidaErro: "" };
   }
 
   if (alvo === "typescript") {
@@ -973,6 +1000,26 @@ function executarTestesGerados(
       return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
     }
     const execucao = spawnSync("node", ["--import", "tsx", path.join(baseSaida, arquivoTeste)], {
+      stdio: silencioso ? "pipe" : "inherit",
+      encoding: silencioso ? "utf8" : undefined,
+    });
+    return {
+      codigoSaida: execucao.status ?? 1,
+      quantidadeTestes,
+      saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
+      saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : "",
+    };
+  }
+
+  if (alvo === "javascript") {
+    const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.endsWith(".test.js"))?.caminhoRelativo;
+    if (!arquivoTeste) {
+      if (!silencioso) {
+        console.log("Nenhum teste JavaScript foi gerado.");
+      }
+      return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
+    }
+    const execucao = spawnSync("node", ["--test", path.join(baseSaida, arquivoTeste)], {
       stdio: silencioso ? "pipe" : "inherit",
       encoding: silencioso ? "utf8" : undefined,
     });

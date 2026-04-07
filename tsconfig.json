@@ -7,6 +7,10 @@
     { "path": "./pacotes/gerador-typescript" },
     { "path": "./pacotes/gerador-python" },
     { "path": "./pacotes/gerador-dart" },
-    { "path": "./pacotes/cli" }
+    { "path": "./pacotes/gerador-javascript" },
+    { "path": "./pacotes/gerador-html" },
+    { "path": "./pacotes/gerador-css" },
+    { "path": "./pacotes/cli" },
+    { "path": "./pacotes/mcp" }
   ]
 }

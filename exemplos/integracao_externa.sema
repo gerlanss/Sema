@@ -1,0 +1,94 @@
+module exemplos.integracao.externa {
+  docs {
+    resumo: "Integracao com API externa com circuit breaker e fallback."
+  }
+
+  entity ChamadaExterna {
+    fields {
+      id: Id
+      servico: Texto
+      endpoint: Texto
+      metodo: Texto
+      status_http: Inteiro
+      duracao_ms: Inteiro
+      sucesso: Booleano
+      realizada_em: Timestamp
+    }
+  }
+
+  task consultar_cep {
+    input {
+      cep: Texto required
+    }
+    output {
+      logradouro: Texto
+      bairro: Texto
+      cidade: Texto
+      estado: Texto
+    }
+    rules {
+      cep deve_ser formato_cep_valido
+    }
+    effects {
+      consulta api_cep criticidade = media
+      persistencia ChamadaExterna
+      auditoria consulta_cep
+    }
+    guarantees {
+      logradouro existe
+      cidade existe
+      estado existe
+    }
+    error {
+      cep_nao_encontrado: "CEP nao localizado."
+      servico_indisponivel: "API de CEP temporariamente indisponivel."
+      formato_invalido: "CEP deve ter 8 digitos numericos."
+    }
+    tests {
+      caso "consulta cep valido" {
+        given { cep: "01310100" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita cep invalido" {
+        given { cep: "00000000" }
+        expect { sucesso: falso }
+        error { tipo: "cep_nao_encontrado" }
+      }
+    }
+  }
+
+  task consultar_cnpj {
+    input {
+      cnpj: Texto required
+    }
+    output {
+      razao_social: Texto
+      situacao: Texto
+      atividade_principal: Texto
+    }
+    rules {
+      cnpj deve_ser formato_cnpj_valido
+      cnpj deve_ser digitos_validos
+    }
+    effects {
+      consulta api_receita criticidade = media
+      persistencia ChamadaExterna
+      auditoria consulta_cnpj
+    }
+    guarantees {
+      razao_social existe
+      situacao existe
+    }
+    error {
+      cnpj_nao_encontrado: "CNPJ nao localizado na Receita Federal."
+      servico_indisponivel: "Servico da Receita Federal indisponivel."
+      formato_invalido: "CNPJ invalido."
+    }
+    tests {
+      caso "consulta cnpj valido" {
+        given { cnpj: "11222333000181" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

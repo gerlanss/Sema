@@ -1,0 +1,94 @@
+module exemplos.exportacao {
+  docs {
+    resumo: "Exportacao de dados em multiplos formatos com controle de acesso e rastreamento."
+  }
+
+  entity ExportacaoDados {
+    fields {
+      id: Id
+      tipo: Texto
+      formato: Texto
+      filtros: Objeto
+      total_registros: Inteiro
+      url_arquivo: Texto
+      status: Texto
+      solicitado_por: Id
+      expira_em: Timestamp
+    }
+  }
+
+  task solicitar_exportacao {
+    input {
+      tipo: Texto required
+      formato: Texto required
+      filtros: Objeto
+    }
+    output {
+      exportacao_id: Id
+    }
+    rules {
+      tipo em [USUARIOS, PEDIDOS, FINANCEIRO, ESTOQUE]
+      formato em [CSV, XLSX, JSON]
+    }
+    effects {
+      persistencia ExportacaoDados
+      evento exportacao_solicitada criticidade = media
+      auditoria solicitacao_exportacao criticidade = media
+    }
+    state ciclo_exportacao {
+      transitions {
+        PENDENTE -> EM_PROCESSAMENTO
+      }
+    }
+    guarantees {
+      exportacao_id existe
+    }
+    error {
+      tipo_invalido: "Tipo de exportacao nao suportado."
+      formato_invalido: "Formato de arquivo nao suportado."
+      permissao_negada: "Sem permissao para exportar este tipo de dado."
+    }
+    tests {
+      caso "solicita exportacao de usuarios em csv" {
+        given { tipo: "USUARIOS"  formato: "CSV" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task concluir_exportacao {
+    input {
+      exportacao_id: Id required
+      url_arquivo: Texto required
+      total_registros: Inteiro required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      exportacao_id deve_ser valido
+      url_arquivo deve_ser preenchida
+      total_registros >= 0
+    }
+    effects {
+      persistencia ExportacaoDados
+      notificacao usuario exportacao_pronta criticidade = media
+      evento exportacao_concluida
+      auditoria conclusao_exportacao
+    }
+    state ciclo_exportacao {
+      transitions {
+        EM_PROCESSAMENTO -> DISPONIVEL
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "conclui exportacao" {
+        given { exportacao_id: "exp_1"  url_arquivo: "https://storage/exp_1.csv"  total_registros: 1500 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

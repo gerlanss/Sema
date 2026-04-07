@@ -1,0 +1,106 @@
+module exemplos.agendamento {
+  docs {
+    resumo: "Agendamento de tarefas recorrentes e unicas com controle de execucao."
+  }
+
+  entity Agendamento {
+    fields {
+      id: Id
+      nome: Texto
+      tipo: Texto
+      expressao_cron: Texto
+      payload: Objeto
+      ativo: Booleano
+      ultima_execucao: Timestamp
+      proxima_execucao: Timestamp
+    }
+  }
+
+  entity ExecucaoAgendamento {
+    fields {
+      id: Id
+      agendamento_id: Id
+      status: Texto
+      iniciado_em: Timestamp
+      concluido_em: Timestamp
+      erro: Texto
+    }
+  }
+
+  task criar_agendamento {
+    input {
+      nome: Texto required
+      tipo: Texto required
+      expressao_cron: Texto required
+      payload: Objeto
+    }
+    output {
+      agendamento: Agendamento
+    }
+    rules {
+      nome deve_ser preenchido
+      expressao_cron deve_ser valida
+      tipo deve_ser registrado
+    }
+    effects {
+      persistencia Agendamento
+      evento agendamento_criado criticidade = baixa
+      auditoria criacao_agendamento
+    }
+    guarantees {
+      agendamento existe
+      agendamento.ativo == verdadeiro
+    }
+    error {
+      cron_invalido: "Expressao cron invalida."
+      tipo_nao_registrado: "Tipo de agendamento nao existe."
+      nome_duplicado: "Ja existe agendamento com este nome."
+    }
+    tests {
+      caso "cria agendamento diario" {
+        given { nome: "relatorio_diario"  tipo: "gerar_relatorio"  expressao_cron: "0 8 * * *" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task executar_agendamento {
+    input {
+      agendamento_id: Id required
+    }
+    output {
+      execucao_id: Id
+    }
+    rules {
+      agendamento_id deve_ser valido
+      agendamento.ativo == verdadeiro
+    }
+    effects {
+      consulta Agendamento por agendamento_id
+      persistencia ExecucaoAgendamento
+      persistencia Agendamento
+      evento agendamento_executado criticidade = baixa
+      auditoria execucao_agendamento
+    }
+    state ciclo_execucao {
+      transitions {
+        PENDENTE -> EM_EXECUCAO
+        EM_EXECUCAO -> CONCLUIDO
+        EM_EXECUCAO -> FALHOU
+      }
+    }
+    guarantees {
+      execucao_id existe
+    }
+    error {
+      agendamento_inativo: "Agendamento esta desativado."
+      execucao_em_andamento: "Ja existe uma execucao em andamento para este agendamento."
+    }
+    tests {
+      caso "executa agendamento ativo" {
+        given { agendamento_id: "agd_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

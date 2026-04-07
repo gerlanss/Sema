@@ -1,6 +1,12 @@
+**/*.pem
+**/*.key
 **/.tmp/**
 **/.git/**
 **/.github/**
+**/.claude/**
+**/.cursor/**
+**/.windsurf/**
+**/.opencode/**
 **/node_modules/@sema/**
 **/*.map
 **/tsconfig*.json

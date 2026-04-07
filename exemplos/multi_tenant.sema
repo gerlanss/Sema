@@ -1,0 +1,140 @@
+module exemplos.multi.tenant {
+  docs {
+    resumo: "Isolamento de dados por tenant com provisionamento e controle de limites."
+  }
+
+  entity Tenant {
+    fields {
+      id: Id
+      nome: Texto
+      slug: Texto
+      plano: Texto
+      ativo: Booleano
+      criado_em: Timestamp
+    }
+  }
+
+  entity LimiteTenant {
+    fields {
+      tenant_id: Id
+      recurso: Texto
+      limite: Inteiro
+      utilizado: Inteiro
+    }
+  }
+
+  task provisionar_tenant {
+    input {
+      nome: Texto required
+      slug: Texto required
+      plano: Texto required
+      email_admin: Email required
+    }
+    output {
+      tenant: Tenant
+    }
+    rules {
+      slug deve_ser unico em Tenant.slug
+      slug deve_ser formato_slug_valido
+      plano em [FREE, PRO, ENTERPRISE]
+      email_admin deve_ser email_valido
+    }
+    effects {
+      persistencia Tenant
+      persistencia LimiteTenant
+      persistencia Usuario
+      evento tenant_provisionado criticidade = alta
+      notificacao admin boas_vindas criticidade = media
+      auditoria provisionamento_tenant criticidade = alta
+    }
+    guarantees {
+      tenant existe
+      tenant.ativo == verdadeiro
+    }
+    error {
+      slug_duplicado: "Este slug ja esta em uso."
+      plano_invalido: "Plano selecionado nao existe."
+      email_invalido: "Email do administrador invalido."
+    }
+    tests {
+      caso "provisiona tenant pro" {
+        given { nome: "Empresa X"  slug: "empresa-x"  plano: "PRO"  email_admin: "admin@x.com" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task verificar_limite {
+    input {
+      tenant_id: Id required
+      recurso: Texto required
+      quantidade: Inteiro required
+    }
+    output {
+      permitido: Booleano
+      utilizado: Inteiro
+      limite: Inteiro
+    }
+    rules {
+      tenant_id deve_ser valido
+      recurso deve_ser preenchido
+      quantidade > 0
+    }
+    effects {
+      consulta LimiteTenant por tenant_id e recurso
+      auditoria verificacao_limite
+    }
+    guarantees {
+      permitido existe
+    }
+    error {
+      tenant_nao_encontrado: "Tenant nao localizado."
+      recurso_desconhecido: "Recurso nao rastreado para este tenant."
+    }
+    tests {
+      caso "dentro do limite" {
+        given { tenant_id: "ten_1"  recurso: "usuarios"  quantidade: 5 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task suspender_tenant {
+    input {
+      tenant_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      tenant_id deve_ser valido
+      motivo deve_ser preenchido
+      tenant.ativo == verdadeiro
+    }
+    effects {
+      persistencia Tenant
+      evento tenant_suspenso criticidade = alta
+      notificacao admin suspensao_tenant criticidade = alta
+      auditoria suspensao_tenant criticidade = alta
+    }
+    state ciclo_tenant {
+      transitions {
+        ATIVO -> SUSPENSO
+      }
+    }
+    guarantees {
+      protocolo existe
+      tenant.ativo == falso
+    }
+    error {
+      tenant_ja_suspenso: "Tenant ja esta suspenso."
+    }
+    tests {
+      caso "suspende tenant ativo" {
+        given { tenant_id: "ten_1"  motivo: "Inadimplencia" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

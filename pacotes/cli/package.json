@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "1.2.17",
+  "version": "1.3.0",
   "type": "module",
   "description": "CLI da Sema para validar contratos, medir drift e governar a navegacao operacional de agentes sobre software vivo em backend e front consumer.",
   "license": "MIT",
@@ -42,8 +42,10 @@
     "@sema/gerador-lua": "file:../gerador-lua",
     "@sema/gerador-python": "file:../gerador-python",
     "@sema/gerador-typescript": "file:../gerador-typescript",
+    "@sema/gerador-javascript": "file:../gerador-javascript",
+    "@sema/gerador-html": "file:../gerador-html",
+    "@sema/gerador-css": "file:../gerador-css",
     "@sema/padroes": "file:../padroes",
     "typescript": "^5.8.3"
   }
 }
-

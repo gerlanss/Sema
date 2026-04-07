@@ -2,7 +2,7 @@
 
 Sema e IA-first. Este arquivo existe para IA achar o ponto de entrada do projeto sem ter que catar o repo inteiro feito barata tonta.
 
-- Gerado em: `2026-04-03T14:23:27.362Z`
+- Gerado em: `2026-04-03T14:43:39.329Z`
 - Modulos: `4`
 
 ## Entrada canonica para IA

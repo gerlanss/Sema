@@ -779,10 +779,15 @@ class ProvedorSidebarSema {
           contextValue: "sema.grupo.projeto",
           iconPath: new vscode.ThemeIcon("root-folder"),
         }),
-        new ItemSidebarSema("Acoes Rapidas", {
+        new ItemSidebarSema("Contratos", {
           collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-          contextValue: "sema.grupo.acoes",
-          iconPath: new vscode.ThemeIcon("rocket"),
+          contextValue: "sema.grupo.contratos",
+          iconPath: new vscode.ThemeIcon("file-code"),
+        }),
+        new ItemSidebarSema("IA", {
+          collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+          contextValue: "sema.grupo.ia",
+          iconPath: new vscode.ThemeIcon("sparkle"),
         }),
       ];
     }
@@ -791,70 +796,108 @@ class ProvedorSidebarSema {
       const estadoCli = await resolverEstadoCli();
       const alvoAtual = obterAlvoPreferencial();
       return [
-        new ItemSidebarSema(`Workspace: ${obterNomeWorkspace()}`, {
+        new ItemSidebarSema(obterNomeWorkspace(), {
           description: obterRaizWorkspace() ? "aberto" : "nenhum",
           tooltip: obterRaizWorkspace() ?? "Nenhuma pasta aberta no VS Code.",
-          iconPath: new vscode.ThemeIcon("folder-library"),
+          iconPath: new vscode.ThemeIcon("folder"),
         }),
-        new ItemSidebarSema(estadoCli.pronto ? "CLI: pronta" : "CLI: indisponivel", {
-          description: estadoCli.pronto ? estadoCli.origem ?? "detectada" : "rode Diagnosticar CLI",
+        new ItemSidebarSema(estadoCli.pronto ? "CLI pronta" : "CLI indisponivel", {
+          description: estadoCli.versao ? `v${estadoCli.versao}` : (estadoCli.pronto ? "ok" : "rode Diagnosticar"),
           tooltip: estadoCli.pronto
             ? `CLI da Sema pronta via ${estadoCli.origem}${estadoCli.versao ? ` (${estadoCli.versao})` : ""}.`
-            : "A extensao nao conseguiu executar a CLI da Sema.",
+            : "A extensao nao conseguiu executar a CLI da Sema. Use Diagnosticar no grupo IA.",
           iconPath: new vscode.ThemeIcon(estadoCli.pronto ? "check" : "warning"),
         }),
-        new ItemSidebarSema(`Alvo: ${alvoAtual ? basename(alvoAtual) : "nenhum"}`, {
-          description: alvoAtual ? "ativo" : "abra um .sema ou workspace",
-          tooltip: alvoAtual ?? "Nenhum alvo ativo ou workspace aberto.",
-          iconPath: new vscode.ThemeIcon("file"),
+        new ItemSidebarSema(alvoAtual ? basename(alvoAtual) : "nenhum contrato ativo", {
+          description: alvoAtual ? "contrato ativo" : "abra um .sema",
+          tooltip: alvoAtual ?? "Abra um arquivo .sema para ativar o alvo.",
+          iconPath: new vscode.ThemeIcon(alvoAtual ? "file-symlink-file" : "circle-slash"),
         }),
       ];
     }
 
-    if (element.contextValue === "sema.grupo.acoes") {
+    if (element.contextValue === "sema.grupo.contratos") {
       return [
-        new ItemSidebarSema("Preparar Contexto IA do Projeto", {
-          description: `grava tudo em ${NOME_ARQUIVO_CONTEXTO_IA}`,
-          command: { command: "sema.prepararContextoIaProjeto", title: "Preparar Contexto IA do Projeto" },
-          iconPath: new vscode.ThemeIcon("archive"),
+        new ItemSidebarSema("Inspecionar contrato", {
+          description: "valida estrutura do .sema",
+          tooltip: "Inspeciona o contrato .sema ativo e exibe sua estrutura.",
+          command: { command: "sema.abrirPromptCurtoAlvoAtual", title: "Inspecionar contrato" },
+          iconPath: new vscode.ThemeIcon("search"),
         }),
-        new ItemSidebarSema("Abrir Starter IA", {
-          description: "prompt de onboarding",
-          command: { command: "sema.abrirStarterIa", title: "Abrir Starter IA" },
-          iconPath: new vscode.ThemeIcon("book"),
-        }),
-        new ItemSidebarSema("Abrir Prompt IA", {
-          description: `abre ${NOME_ARQUIVO_CONTEXTO_IA} atualizado`,
-          command: { command: "sema.abrirPromptIa", title: "Abrir Prompt IA" },
-          iconPath: new vscode.ThemeIcon("sparkle"),
-        }),
-        new ItemSidebarSema("Copiar Prompt IA", {
-          description: `copia ${NOME_ARQUIVO_CONTEXTO_IA} atualizado`,
-          command: { command: "sema.copiarPromptIa", title: "Copiar Prompt IA" },
-          iconPath: new vscode.ThemeIcon("copy"),
-        }),
-        new ItemSidebarSema("Prompt Curto do Alvo Atual", {
-          description: "contexto resumido",
-          command: { command: "sema.abrirPromptCurtoAlvoAtual", title: "Abrir Prompt Curto do Alvo Atual" },
-          iconPath: new vscode.ThemeIcon("comment-discussion"),
-        }),
-        new ItemSidebarSema("Resumo do Alvo Atual", {
-          description: "micro resumo",
-          command: { command: "sema.abrirResumoAlvoAtual", title: "Abrir Resumo do Alvo Atual" },
-          iconPath: new vscode.ThemeIcon("list-unordered"),
-        }),
-        new ItemSidebarSema("Drift do Alvo Atual", {
-          description: "medicao em JSON",
-          command: { command: "sema.abrirDriftAlvoAtual", title: "Abrir Drift do Alvo Atual" },
+        new ItemSidebarSema("Ver drift", {
+          description: "divergencias contrato vs codigo",
+          tooltip: "Mede o drift entre o contrato .sema e a implementacao atual.",
+          command: { command: "sema.abrirDriftAlvoAtual", title: "Ver drift" },
           iconPath: new vscode.ThemeIcon("graph"),
         }),
-        new ItemSidebarSema("Sincronizar EntryPoints IA", {
-          description: "salva na raiz do projeto",
-          command: { command: "sema.sincronizarEntrypointsIaProjeto", title: "Sincronizar EntryPoints IA do Projeto" },
-          iconPath: new vscode.ThemeIcon("sync"),
+        new ItemSidebarSema("Resumo do projeto", {
+          description: "visao geral para IA",
+          tooltip: "Gera o resumo IA-first do projeto com modulos, riscos e lacunas.",
+          command: { command: "sema.abrirResumoAlvoAtual", title: "Resumo do projeto" },
+          iconPath: new vscode.ThemeIcon("list-unordered"),
+        }),
+      ];
+    }
+
+    if (element.contextValue === "sema.grupo.ia") {
+      return [
+        new ItemSidebarSema("Configurar todas as IAs", {
+          description: "Claude, Cursor, Windsurf, Cline, Copilot...",
+          tooltip: "Cria os arquivos de instrucoes Sema para todas as IAs instaladas no projeto e nas configs globais, incluindo AGENTS.md.",
+          command: { command: "sema.configurarIa", title: "Configurar todas as IAs" },
+          iconPath: new vscode.ThemeIcon("robot"),
+        }),
+        new ItemSidebarSema("Claude Code", {
+          description: "configura .claude/CLAUDE.md + MCP",
+          tooltip: "Cria .claude/CLAUDE.md com instrucoes Sema e registra o MCP no VS Code global.",
+          command: { command: "sema.configurarIaClaude", title: "Configurar Claude Code" },
+          iconPath: new vscode.ThemeIcon("robot"),
+        }),
+        new ItemSidebarSema("Cursor", {
+          description: "configura .cursor/rules + MCP",
+          tooltip: "Cria .cursor/rules/sema.mdc e registra o MCP no Cursor global.",
+          command: { command: "sema.configurarIaCursor", title: "Configurar Cursor" },
+          iconPath: new vscode.ThemeIcon("robot"),
+        }),
+        new ItemSidebarSema("Windsurf", {
+          description: "configura .windsurf/rules.md + MCP",
+          tooltip: "Cria .windsurf/rules.md e registra o MCP no Windsurf global.",
+          command: { command: "sema.configurarIaWindsurf", title: "Configurar Windsurf" },
+          iconPath: new vscode.ThemeIcon("robot"),
+        }),
+        new ItemSidebarSema("Cline", {
+          description: "configura .clinerules + MCP",
+          tooltip: "Cria .clinerules no projeto e registra o MCP no cline_mcp_settings.json global.",
+          command: { command: "sema.configurarIaCline", title: "Configurar Cline" },
+          iconPath: new vscode.ThemeIcon("robot"),
+        }),
+        new ItemSidebarSema("GitHub Copilot", {
+          description: "configura copilot-instructions.md",
+          tooltip: "Cria .github/copilot-instructions.md com instrucoes Sema.",
+          command: { command: "sema.configurarIaCopilot", title: "Configurar GitHub Copilot" },
+          iconPath: new vscode.ThemeIcon("robot"),
+        }),
+        new ItemSidebarSema("OpenCode", {
+          description: "configura .opencode/instructions.md",
+          tooltip: "Cria .opencode/instructions.md com instrucoes Sema.",
+          command: { command: "sema.configurarIaOpenCode", title: "Configurar OpenCode" },
+          iconPath: new vscode.ThemeIcon("robot"),
+        }),
+        new ItemSidebarSema("Abrir contexto IA", {
+          description: "prompt completo do projeto",
+          tooltip: "Abre o arquivo de contexto IA do projeto para usar em qualquer ferramenta.",
+          command: { command: "sema.abrirPromptIa", title: "Abrir contexto IA" },
+          iconPath: new vscode.ThemeIcon("book"),
+        }),
+        new ItemSidebarSema("Copiar contexto IA", {
+          description: "copia para area de transferencia",
+          tooltip: "Copia o contexto IA do projeto para a area de transferencia.",
+          command: { command: "sema.copiarPromptIa", title: "Copiar contexto IA" },
+          iconPath: new vscode.ThemeIcon("copy"),
         }),
         new ItemSidebarSema("Diagnosticar CLI", {
-          description: "ve o que a extensao tentou",
+          description: "verifica instalacao",
+          tooltip: "Mostra detalhes sobre como a extensao esta resolvendo o caminho da CLI da Sema.",
           command: { command: "sema.diagnosticarCli", title: "Diagnosticar CLI" },
           iconPath: new vscode.ThemeIcon("tools"),
         }),
@@ -944,6 +987,13 @@ async function activate(context) {
     vscode.commands.registerCommand("sema.gerarContextoIaAlvoAtual", comandoGerarContextoIaAlvoAtual),
     vscode.commands.registerCommand("sema.sincronizarEntrypointsIaProjeto", comandoSincronizarEntrypointsIaProjeto),
     vscode.commands.registerCommand("sema.diagnosticarCli", comandoDiagnosticarCli),
+    vscode.commands.registerCommand("sema.configurarIa", configurarIaNoWorkspace),
+    vscode.commands.registerCommand("sema.configurarIaClaude", () => configurarIaFerramenta("claude")),
+    vscode.commands.registerCommand("sema.configurarIaCursor", () => configurarIaFerramenta("cursor")),
+    vscode.commands.registerCommand("sema.configurarIaWindsurf", () => configurarIaFerramenta("windsurf")),
+    vscode.commands.registerCommand("sema.configurarIaCline", () => configurarIaFerramenta("cline")),
+    vscode.commands.registerCommand("sema.configurarIaCopilot", () => configurarIaFerramenta("copilot")),
+    vscode.commands.registerCommand("sema.configurarIaOpenCode", () => configurarIaFerramenta("opencode")),
   );
 
   context.subscriptions.push(
@@ -964,6 +1014,2415 @@ async function activate(context) {
   );
 
   await iniciarCliente(context);
+
+  // Notifica se o projeto nao tem configuracao de IA do Sema
+  const raiz = obterRaizWorkspace();
+  if (raiz) {
+    const { access } = require("node:fs/promises");
+    const path = require("node:path");
+    const marcador = path.join(raiz, ".claude", "CLAUDE.md");
+    try {
+      await access(marcador);
+    } catch {
+      const acao = await vscode.window.showInformationMessage(
+        "Sema: Este projeto nao tem instrucoes de IA configuradas. Deseja configurar agora?",
+        "Configurar",
+        "Ignorar"
+      );
+      if (acao === "Configurar") {
+        await configurarIaNoWorkspace();
+      }
+    }
+  }
+}
+
+const INSTRUCOES_SEMA = `# Sema — Regras obrigatorias para IA
+
+O Sema e o protocolo de governanca de intencao deste projeto.
+Toda IA deve consultar o Sema antes de qualquer acao sobre codigo ou contratos.
+
+## Regras
+
+1. Ao abrir o projeto, chame sema_resumo para entender o estado atual.
+2. Antes de criar qualquer modulo, rota, task ou contrato, chame sema_inspecionar no arquivo .sema mais proximo.
+3. Antes de editar codigo existente, chame sema_drift para verificar divergencias entre contrato e implementacao.
+4. Ao criar ou editar um arquivo .sema, chame sema_validar ao final.
+5. Nunca invente contratos — use o Sema para descobrir o que ja existe.
+6. Se qualquer ferramenta Sema retornar erro, corrija o problema antes de prosseguir — nao avance com codigo enquanto houver erros Sema pendentes.
+
+## MCP
+
+O servidor MCP do Sema roda localmente via: npx -y @semacode/mcp@latest
+Use as ferramentas: sema_resumo, sema_validar, sema_drift, sema_inspecionar, sema_ir, sema_verificar, sema_contexto_ia, sema_prompt_ia.
+
+## Contratos e exemplos
+
+- Sempre salve arquivos .sema na pasta \`contratos/\` do projeto.
+- Crie um arquivo .sema por modulo ou contexto de negocio. Exemplo: \`contratos/pedido.sema\`, \`contratos/pagamento.sema\`, \`contratos/usuario.sema\`. Nunca coloque modulos de contextos diferentes no mesmo arquivo.
+- Antes de criar qualquer arquivo .sema, leia todos os arquivos da pasta \`exemplos/\` para entender o formato correto da linguagem.
+- Nunca edite os arquivos da pasta \`exemplos/\`.
+
+## Quando o projeto nao tem .sema
+
+Pergunte ao usuario se deseja semantizar o projeto e sugira: sema iniciar
+
+## Exemplos de arquivos .sema (referencia de formato)
+
+### 1. Task simples com testes
+\`\`\`
+module exemplos.calculadora {
+  task somar {
+    input {
+      a: Numero required
+      b: Numero required
+    }
+    output {
+      resultado: Numero
+    }
+    rules {
+      a deve_ser numero_valido
+      b deve_ser numero_valido
+    }
+    effects {
+      auditoria operacao soma
+    }
+    guarantees {
+      resultado existe
+    }
+    error {
+      entrada_invalida: "Os valores precisam ser numericos."
+    }
+    tests {
+      caso "soma basica" {
+        given { a: 2  b: 3 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+\`\`\`
+
+### 2. Entity + CRUD com route
+\`\`\`
+module exemplos.crud.simples {
+  entity Produto {
+    fields {
+      id: Id
+      nome: Texto
+      preco: Decimal
+      ativo: Booleano
+    }
+  }
+
+  task criar_produto {
+    input {
+      nome: Texto required
+      preco: Decimal required
+    }
+    output {
+      produto: Produto
+    }
+    rules {
+      nome deve_ser preenchido
+      preco deve_ser positivo
+    }
+    effects {
+      persistencia Produto
+      auditoria produto_criado
+    }
+    guarantees {
+      produto existe
+    }
+    tests {
+      caso "cria produto" {
+        given { nome: "Caneca"  preco: 39.9 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  route produtos {
+    metodo: POST
+    caminho: /produtos
+    task: criar_produto
+    finalidade: cadastro_produto
+    input { nome: Texto  preco: Decimal }
+    output { produto: Produto }
+  }
+}
+\`\`\`
+
+### 3. Cadastro com validacoes e unicidade
+\`\`\`
+module exemplos.cadastro.usuario {
+  entity Usuario {
+    fields {
+      id: Id
+      nome: Texto
+      email: Email
+      ativo: Booleano
+    }
+  }
+
+  task criar_usuario {
+    input {
+      nome: Texto required
+      email: Email required
+    }
+    output {
+      usuario: Usuario
+    }
+    rules {
+      nome deve_ser preenchido
+      email deve_ser email_valido
+      email deve_ser unico em Usuario.email
+    }
+    effects {
+      persistencia Usuario
+      evento usuario_criado
+      auditoria cadastro_usuario
+    }
+    guarantees {
+      usuario existe
+      persistencia concluida
+    }
+    error {
+      email_duplicado: "Ja existe usuario com este email."
+      entrada_invalida: "Os dados informados nao atendem as regras."
+    }
+    tests {
+      caso "cria usuario valido" {
+        given { nome: "Ana"  email: "ana@empresa.com" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+\`\`\`
+
+### 4. Pagamento com state e flow
+\`\`\`
+module exemplos.pagamento {
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      pagamento: Pagamento
+      status: StatusPagamento
+    }
+    rules {
+      valor > 0
+      token deve_ser valido
+    }
+    effects {
+      consulta gateway_pagamento criticidade = alta
+      persistencia Pagamento criticidade = alta
+      evento pagamento_autorizado criticidade = media
+      auditoria pagamento criticidade = alta
+    }
+    state ciclo_pagamento {
+      transitions {
+        PENDENTE -> AUTORIZADO
+        AUTORIZADO -> PROCESSADO
+      }
+    }
+    guarantees {
+      pagamento existe
+      status em [AUTORIZADO, PROCESSADO]
+    }
+    error {
+      autorizacao_negada: "Recusado pelo gateway."
+      timeout_gateway: "Gateway nao respondeu."
+    }
+    tests {
+      caso "pagamento autorizado" {
+        given { pagamento_id: "pag_1"  valor: 199.9  token: "tok_ok" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "pagamento recusado" {
+        given { pagamento_id: "pag_err"  valor: 10  token: "tok_recusado" }
+        expect { sucesso: falso }
+        error { tipo: "autorizacao_negada" }
+      }
+    }
+  }
+
+  flow orquestracao_pagamento {
+    pagamento_id: Id
+    valor: Decimal
+    token: Texto
+    etapa autorizar usa processar_pagamento com pagamento_id = pagamento_id, valor = valor, token = token em_sucesso confirmar em_erro registrar_falha
+    etapa confirmar usa confirmar_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    etapa registrar_falha usa registrar_timeout_pagamento com pagamento_id = pagamento_id depende_de autorizar
+  }
+}
+\`\`\`
+
+### 5. Tratamento de erro com flow ramificado
+\`\`\`
+module exemplos.tratamento.erro {
+  task executar_operacao_sensivel {
+    input {
+      chave: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      chave deve_ser preenchida
+    }
+    effects {
+      consulta cofre
+      auditoria falha_operacao_sensivel
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      acesso_negado: "A chave nao tem permissao."
+      recurso_indisponivel: "Servico temporariamente indisponivel."
+    }
+    tests {
+      caso "falha por acesso negado" {
+        given { chave: "sem_permissao" }
+        expect { sucesso: falso }
+        error { tipo: "acesso_negado" }
+      }
+    }
+  }
+
+  flow resposta_segura {
+    chave: Texto
+    etapa tentar usa executar_operacao_sensivel com chave = chave em_sucesso concluir em_erro registrar_falha por_erro acesso_negado = tratar_acesso_negado, recurso_indisponivel = agendar_retentativa
+    etapa tratar_acesso_negado usa responder_acesso_negado com chave = chave depende_de tentar
+    etapa agendar_retentativa usa responder_retentativa com chave = chave depende_de tentar
+    etapa registrar_falha usa registrar_auditoria_falha com chave = chave depende_de tentar
+    etapa concluir usa registrar_sucesso com protocolo = tentar.protocolo depende_de tentar
+  }
+}
+\`\`\`
+`;
+
+const EXEMPLOS_SEMA = {
+  "calculadora.sema": `module exemplos.calculadora {
+  docs {
+    resumo: "Operacoes aritmeticas simples com garantias e testes."
+  }
+
+  task somar {
+    input {
+      a: Numero required
+      b: Numero required
+    }
+    output {
+      resultado: Numero
+    }
+    rules {
+      a deve_ser numero_valido
+      b deve_ser numero_valido
+    }
+    effects {
+      auditoria operacao soma
+    }
+    guarantees {
+      resultado existe
+    }
+    error {
+      entrada_invalida: "Os valores precisam ser numericos."
+    }
+    tests {
+      caso "soma basica" {
+        given { a: 2  b: 3 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task dividir {
+    input {
+      dividendo: Numero required
+      divisor: Numero required
+    }
+    output {
+      resultado: Numero
+    }
+    rules {
+      divisor deve_ser diferente_de_zero
+    }
+    effects {
+      auditoria operacao divisao
+    }
+    guarantees {
+      resultado existe
+    }
+    error {
+      divisor_zero: "Nao e permitido dividir por zero."
+    }
+    tests {
+      caso "divisao valida" {
+        given { dividendo: 10  divisor: 2 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "crud_simples.sema": `module exemplos.crud.simples {
+  entity Produto {
+    fields {
+      id: Id
+      nome: Texto
+      preco: Decimal
+      ativo: Booleano
+    }
+  }
+
+  task criar_produto {
+    input {
+      nome: Texto required
+      preco: Decimal required
+    }
+    output {
+      produto: Produto
+    }
+    rules {
+      nome deve_ser preenchido
+      preco deve_ser positivo
+    }
+    effects {
+      persistencia Produto
+      auditoria produto_criado
+    }
+    guarantees {
+      produto existe
+    }
+    tests {
+      caso "cria produto" {
+        given { nome: "Caneca"  preco: 39.9 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  route produtos {
+    metodo: POST
+    caminho: /produtos
+    task: criar_produto
+    finalidade: cadastro_produto
+    input { nome: Texto  preco: Decimal }
+    output { produto: Produto }
+  }
+}
+`,
+  "cadastro_usuario.sema": `module exemplos.cadastro.usuario {
+  docs {
+    resumo: "Cadastro de usuario com entidade, validacoes e persistencia declarada."
+  }
+
+  entity Usuario {
+    fields {
+      id: Id
+      nome: Texto
+      email: Email
+      ativo: Booleano
+    }
+  }
+
+  task criar_usuario {
+    input {
+      nome: Texto required
+      email: Email required
+    }
+    output {
+      usuario: Usuario
+    }
+    rules {
+      nome deve_ser preenchido
+      email deve_ser email_valido
+      email deve_ser unico em Usuario.email
+    }
+    effects {
+      persistencia Usuario
+      evento usuario_criado
+      auditoria cadastro_usuario
+    }
+    guarantees {
+      usuario existe
+      persistencia concluida
+    }
+    error {
+      email_duplicado: "Ja existe usuario com este email."
+      entrada_invalida: "Os dados informados nao atendem as regras."
+    }
+    tests {
+      caso "cria usuario valido" {
+        given { nome: "Ana"  email: "ana@empresa.com" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "pagamento.sema": `module exemplos.pagamento {
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      pagamento: Pagamento
+      status: StatusPagamento
+    }
+    rules {
+      valor > 0
+      token deve_ser valido
+    }
+    effects {
+      consulta gateway_pagamento criticidade = alta
+      persistencia Pagamento criticidade = alta
+      evento pagamento_autorizado criticidade = media
+      auditoria pagamento criticidade = alta
+    }
+    state ciclo_pagamento {
+      transitions {
+        PENDENTE -> AUTORIZADO
+        AUTORIZADO -> PROCESSADO
+      }
+    }
+    guarantees {
+      pagamento existe
+      status em [AUTORIZADO, PROCESSADO]
+    }
+    error {
+      autorizacao_negada: "Recusado pelo gateway."
+      timeout_gateway: "Gateway nao respondeu."
+    }
+    tests {
+      caso "pagamento autorizado" {
+        given { pagamento_id: "pag_1"  valor: 199.9  token: "tok_ok" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "pagamento recusado" {
+        given { pagamento_id: "pag_err"  valor: 10  token: "tok_recusado" }
+        expect { sucesso: falso }
+        error { tipo: "autorizacao_negada" }
+      }
+    }
+  }
+
+  flow orquestracao_pagamento {
+    pagamento_id: Id
+    valor: Decimal
+    token: Texto
+    etapa autorizar usa processar_pagamento com pagamento_id = pagamento_id, valor = valor, token = token em_sucesso confirmar em_erro registrar_falha
+    etapa confirmar usa confirmar_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    etapa registrar_falha usa registrar_timeout_pagamento com pagamento_id = pagamento_id depende_de autorizar
+  }
+}
+`,
+  "tratamento_erro.sema": `module exemplos.tratamento.erro {
+  task executar_operacao_sensivel {
+    input {
+      chave: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      chave deve_ser preenchida
+    }
+    effects {
+      consulta cofre
+      auditoria falha_operacao_sensivel
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      acesso_negado: "A chave nao tem permissao."
+      recurso_indisponivel: "Servico temporariamente indisponivel."
+    }
+    tests {
+      caso "falha por acesso negado" {
+        given { chave: "sem_permissao" }
+        expect { sucesso: falso }
+        error { tipo: "acesso_negado" }
+      }
+    }
+  }
+
+  flow resposta_segura {
+    chave: Texto
+    etapa tentar usa executar_operacao_sensivel com chave = chave em_sucesso concluir em_erro registrar_falha por_erro acesso_negado = tratar_acesso_negado, recurso_indisponivel = agendar_retentativa
+    etapa tratar_acesso_negado usa responder_acesso_negado com chave = chave depende_de tentar
+    etapa agendar_retentativa usa responder_retentativa com chave = chave depende_de tentar
+    etapa registrar_falha usa registrar_auditoria_falha com chave = chave depende_de tentar
+    etapa concluir usa registrar_sucesso com protocolo = tentar.protocolo depende_de tentar
+  }
+}
+`,
+  "autenticacao.sema": `module exemplos.autenticacao {
+  docs {
+    resumo: "Login, logout e renovacao de sessao com tokens."
+  }
+
+  entity Sessao {
+    fields {
+      id: Id
+      usuario_id: Id
+      token: Texto
+      refresh_token: Texto
+      expira_em: Timestamp
+      ativo: Booleano
+    }
+  }
+
+  task fazer_login {
+    input {
+      email: Email required
+      senha: Texto required
+    }
+    output {
+      token: Texto
+      refresh_token: Texto
+      expira_em: Timestamp
+    }
+    rules {
+      email deve_ser email_valido
+      senha deve_ser preenchida
+    }
+    effects {
+      consulta Usuario por email
+      persistencia Sessao
+      auditoria login_realizado
+      evento sessao_iniciada
+    }
+    state ciclo_sessao {
+      transitions {
+        INATIVA -> ATIVA
+      }
+    }
+    guarantees {
+      token existe
+      refresh_token existe
+    }
+    error {
+      credenciais_invalidas: "Email ou senha incorretos."
+      conta_bloqueada: "Esta conta foi temporariamente bloqueada."
+      conta_inativa: "Esta conta nao esta ativa."
+    }
+    tests {
+      caso "login valido" {
+        given { email: "user@app.com"  senha: "senha123" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "senha errada" {
+        given { email: "user@app.com"  senha: "errada" }
+        expect { sucesso: falso }
+        error { tipo: "credenciais_invalidas" }
+      }
+    }
+  }
+
+  task renovar_token {
+    input {
+      refresh_token: Texto required
+    }
+    output {
+      token: Texto
+      expira_em: Timestamp
+    }
+    rules {
+      refresh_token deve_ser valido
+      refresh_token deve_ser nao_expirado
+    }
+    effects {
+      consulta Sessao por refresh_token
+      persistencia Sessao
+      auditoria token_renovado
+    }
+    guarantees {
+      token existe
+    }
+    error {
+      refresh_invalido: "Token de renovacao invalido ou expirado."
+    }
+    tests {
+      caso "renova com token valido" {
+        given { refresh_token: "valid_refresh" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task fazer_logout {
+    input {
+      token: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      token deve_ser valido
+    }
+    effects {
+      persistencia Sessao
+      auditoria logout_realizado
+      evento sessao_encerrada
+    }
+    state ciclo_sessao {
+      transitions {
+        ATIVA -> INATIVA
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "logout valido" {
+        given { token: "valid_token" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "notificacao.sema": `module exemplos.notificacao {
+  docs {
+    resumo: "Envio de notificacoes por email, SMS e push com rastreamento."
+  }
+
+  entity Notificacao {
+    fields {
+      id: Id
+      destinatario_id: Id
+      canal: Texto
+      titulo: Texto
+      corpo: Texto
+      status: Texto
+      enviada_em: Timestamp
+    }
+  }
+
+  task enviar_email {
+    input {
+      destinatario: Email required
+      titulo: Texto required
+      corpo: Texto required
+      template: Texto
+    }
+    output {
+      notificacao_id: Id
+    }
+    rules {
+      destinatario deve_ser email_valido
+      titulo deve_ser preenchido
+      corpo deve_ser preenchido
+    }
+    effects {
+      consulta provedor_email criticidade = alta
+      persistencia Notificacao
+      auditoria email_enviado
+    }
+    guarantees {
+      notificacao_id existe
+    }
+    error {
+      destinatario_invalido: "Endereco de email invalido."
+      provedor_indisponivel: "Servico de email temporariamente indisponivel."
+      limite_excedido: "Limite de envios por hora atingido."
+    }
+    tests {
+      caso "envia email valido" {
+        given { destinatario: "user@app.com"  titulo: "Bem vindo"  corpo: "Ola!" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task enviar_push {
+    input {
+      device_token: Texto required
+      titulo: Texto required
+      corpo: Texto required
+      dados: Objeto
+    }
+    output {
+      notificacao_id: Id
+    }
+    rules {
+      device_token deve_ser preenchido
+      titulo deve_ser preenchido
+    }
+    effects {
+      consulta provedor_push criticidade = media
+      persistencia Notificacao
+      auditoria push_enviado
+    }
+    guarantees {
+      notificacao_id existe
+    }
+    error {
+      token_invalido: "Token de dispositivo invalido ou expirado."
+      provedor_indisponivel: "Servico push indisponivel."
+    }
+    tests {
+      caso "envia push valido" {
+        given { device_token: "tok_123"  titulo: "Alerta"  corpo: "Nova mensagem" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  flow notificar_multicanal {
+    destinatario_id: Id
+    titulo: Texto
+    corpo: Texto
+    etapa email usa enviar_email com destinatario = destinatario_id, titulo = titulo, corpo = corpo em_sucesso concluir em_erro registrar_falha_email
+    etapa push usa enviar_push com device_token = destinatario_id, titulo = titulo, corpo = corpo em_sucesso concluir em_erro registrar_falha_push
+    etapa registrar_falha_email usa registrar_falha_notificacao com canal = "email" depende_de email
+    etapa registrar_falha_push usa registrar_falha_notificacao com canal = "push" depende_de push
+    etapa concluir usa confirmar_notificacao com destinatario_id = destinatario_id depende_de email
+  }
+}
+`,
+  "estoque.sema": `module exemplos.estoque {
+  docs {
+    resumo: "Controle de estoque com reserva, entrada e saida de produtos."
+  }
+
+  entity ItemEstoque {
+    fields {
+      id: Id
+      produto_id: Id
+      quantidade: Inteiro
+      quantidade_reservada: Inteiro
+      localizacao: Texto
+    }
+  }
+
+  entity MovimentacaoEstoque {
+    fields {
+      id: Id
+      produto_id: Id
+      tipo: Texto
+      quantidade: Inteiro
+      motivo: Texto
+      realizada_em: Timestamp
+    }
+  }
+
+  task reservar_estoque {
+    input {
+      produto_id: Id required
+      quantidade: Inteiro required
+      pedido_id: Id required
+    }
+    output {
+      reserva_id: Id
+    }
+    rules {
+      quantidade > 0
+      produto_id deve_ser valido
+    }
+    effects {
+      consulta ItemEstoque por produto_id criticidade = alta
+      persistencia ItemEstoque
+      persistencia MovimentacaoEstoque
+      evento estoque_reservado criticidade = media
+      auditoria reserva_estoque
+    }
+    guarantees {
+      reserva_id existe
+      ItemEstoque.quantidade_reservada >= quantidade
+    }
+    error {
+      estoque_insuficiente: "Quantidade solicitada indisponivel em estoque."
+      produto_nao_encontrado: "Produto nao localizado no estoque."
+    }
+    tests {
+      caso "reserva com estoque disponivel" {
+        given { produto_id: "prod_1"  quantidade: 5  pedido_id: "ped_1" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "reserva sem estoque" {
+        given { produto_id: "prod_sem"  quantidade: 999  pedido_id: "ped_2" }
+        expect { sucesso: falso }
+        error { tipo: "estoque_insuficiente" }
+      }
+    }
+  }
+
+  task registrar_entrada {
+    input {
+      produto_id: Id required
+      quantidade: Inteiro required
+      motivo: Texto required
+    }
+    output {
+      movimentacao_id: Id
+    }
+    rules {
+      quantidade > 0
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia ItemEstoque
+      persistencia MovimentacaoEstoque
+      evento estoque_reposto
+      auditoria entrada_estoque
+    }
+    guarantees {
+      movimentacao_id existe
+    }
+    tests {
+      caso "entrada valida" {
+        given { produto_id: "prod_1"  quantidade: 100  motivo: "Reposicao mensal" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task liberar_reserva {
+    input {
+      reserva_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      reserva_id deve_ser valido
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia ItemEstoque
+      persistencia MovimentacaoEstoque
+      evento reserva_liberada
+      auditoria liberacao_reserva
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "libera reserva existente" {
+        given { reserva_id: "res_1"  motivo: "Pedido cancelado" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "pedido.sema": `module exemplos.pedido {
+  docs {
+    resumo: "Ciclo completo de pedido com itens, aprovacao e entrega."
+  }
+
+  entity Pedido {
+    fields {
+      id: Id
+      cliente_id: Id
+      status: Texto
+      total: Decimal
+      criado_em: Timestamp
+    }
+  }
+
+  entity ItemPedido {
+    fields {
+      id: Id
+      pedido_id: Id
+      produto_id: Id
+      quantidade: Inteiro
+      preco_unitario: Decimal
+    }
+  }
+
+  task criar_pedido {
+    input {
+      cliente_id: Id required
+      itens: Lista required
+    }
+    output {
+      pedido: Pedido
+    }
+    rules {
+      itens deve_ser nao_vazio
+      cliente_id deve_ser valido
+    }
+    effects {
+      consulta Cliente por cliente_id
+      consulta Produto por cada item.produto_id
+      persistencia Pedido
+      persistencia ItemPedido
+      evento pedido_criado criticidade = media
+      auditoria criacao_pedido
+    }
+    state ciclo_pedido {
+      transitions {
+        RASCUNHO -> AGUARDANDO_PAGAMENTO
+      }
+    }
+    guarantees {
+      pedido existe
+      pedido.total > 0
+    }
+    error {
+      cliente_invalido: "Cliente nao encontrado."
+      item_invalido: "Um ou mais produtos nao existem."
+      carrinho_vazio: "O pedido deve ter ao menos um item."
+    }
+    tests {
+      caso "cria pedido valido" {
+        given { cliente_id: "cli_1"  itens: [{produto_id: "prod_1", quantidade: 2}] }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task cancelar_pedido {
+    input {
+      pedido_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      pedido_id deve_ser valido
+      pedido.status em [AGUARDANDO_PAGAMENTO, APROVADO]
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia Pedido
+      evento pedido_cancelado criticidade = alta
+      notificacao cliente pedido_cancelado
+      auditoria cancelamento_pedido criticidade = media
+    }
+    state ciclo_pedido {
+      transitions {
+        AGUARDANDO_PAGAMENTO -> CANCELADO
+        APROVADO -> CANCELADO
+      }
+    }
+    guarantees {
+      protocolo existe
+      pedido.status == CANCELADO
+    }
+    error {
+      pedido_nao_cancelavel: "Pedido ja enviado ou entregue nao pode ser cancelado."
+    }
+    tests {
+      caso "cancela pedido pendente" {
+        given { pedido_id: "ped_1"  motivo: "Desistencia do cliente" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  flow aprovacao_pedido {
+    pedido_id: Id
+    token_pagamento: Texto
+    etapa pagar usa processar_pagamento com pedido_id = pedido_id, token = token_pagamento em_sucesso reservar em_erro cancelar_por_pagamento
+    etapa reservar usa reservar_estoque com pedido_id = pedido_id depende_de pagar em_erro cancelar_por_estoque
+    etapa cancelar_por_pagamento usa cancelar_pedido com pedido_id = pedido_id, motivo = "Pagamento recusado" depende_de pagar
+    etapa cancelar_por_estoque usa cancelar_pedido com pedido_id = pedido_id, motivo = "Estoque insuficiente" depende_de reservar
+    effects {
+      auditoria fluxo_aprovacao_pedido criticidade = alta
+    }
+  }
+}
+`,
+  "relatorio.sema": `module exemplos.relatorio {
+  docs {
+    resumo: "Geracao assincrona de relatorios com download e notificacao."
+  }
+
+  entity Relatorio {
+    fields {
+      id: Id
+      tipo: Texto
+      parametros: Objeto
+      status: Texto
+      url_download: Texto
+      solicitado_por: Id
+      criado_em: Timestamp
+      concluido_em: Timestamp
+    }
+  }
+
+  task solicitar_relatorio {
+    input {
+      tipo: Texto required
+      data_inicio: Data required
+      data_fim: Data required
+      formato: Texto
+    }
+    output {
+      relatorio_id: Id
+    }
+    rules {
+      tipo em [VENDAS, ESTOQUE, USUARIOS, FINANCEIRO]
+      data_inicio deve_ser anterior_a data_fim
+      formato em [PDF, CSV, XLSX]
+    }
+    effects {
+      persistencia Relatorio
+      evento relatorio_solicitado criticidade = baixa
+      auditoria solicitacao_relatorio
+    }
+    state ciclo_relatorio {
+      transitions {
+        PENDENTE -> EM_PROCESSAMENTO
+      }
+    }
+    guarantees {
+      relatorio_id existe
+    }
+    error {
+      tipo_invalido: "Tipo de relatorio nao suportado."
+      periodo_invalido: "Data de inicio deve ser anterior a data de fim."
+      limite_periodo: "Periodo maximo e de 12 meses."
+    }
+    tests {
+      caso "solicita relatorio de vendas" {
+        given { tipo: "VENDAS"  data_inicio: "2025-01-01"  data_fim: "2025-03-31"  formato: "PDF" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task concluir_relatorio {
+    input {
+      relatorio_id: Id required
+      url_download: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      relatorio_id deve_ser valido
+      url_download deve_ser preenchida
+    }
+    effects {
+      persistencia Relatorio
+      notificacao usuario relatorio_pronto criticidade = media
+      evento relatorio_concluido
+      auditoria conclusao_relatorio
+    }
+    state ciclo_relatorio {
+      transitions {
+        EM_PROCESSAMENTO -> CONCLUIDO
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "conclui relatorio" {
+        given { relatorio_id: "rel_1"  url_download: "https://storage/rel_1.pdf" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "upload_arquivo.sema": `module exemplos.upload.arquivo {
+  docs {
+    resumo: "Upload de arquivos com validacao de tipo, tamanho e processamento."
+  }
+
+  entity Arquivo {
+    fields {
+      id: Id
+      nome: Texto
+      tipo_mime: Texto
+      tamanho_bytes: Inteiro
+      url: Texto
+      status: Texto
+      enviado_por: Id
+      criado_em: Timestamp
+    }
+  }
+
+  task iniciar_upload {
+    input {
+      nome: Texto required
+      tipo_mime: Texto required
+      tamanho_bytes: Inteiro required
+    }
+    output {
+      upload_id: Id
+      url_upload: Texto
+    }
+    rules {
+      tipo_mime em [image/jpeg, image/png, application/pdf, text/csv]
+      tamanho_bytes <= 10485760
+      nome deve_ser preenchido
+    }
+    effects {
+      consulta storage criticidade = alta
+      persistencia Arquivo
+      auditoria upload_iniciado
+    }
+    guarantees {
+      upload_id existe
+      url_upload existe
+    }
+    error {
+      tipo_nao_permitido: "Tipo de arquivo nao aceito."
+      tamanho_excedido: "Arquivo excede o limite de 10MB."
+      storage_indisponivel: "Servico de armazenamento indisponivel."
+    }
+    tests {
+      caso "inicia upload de imagem" {
+        given { nome: "foto.jpg"  tipo_mime: "image/jpeg"  tamanho_bytes: 512000 }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita arquivo muito grande" {
+        given { nome: "video.mp4"  tipo_mime: "video/mp4"  tamanho_bytes: 20971520 }
+        expect { sucesso: falso }
+        error { tipo: "tamanho_excedido" }
+      }
+    }
+  }
+
+  task confirmar_upload {
+    input {
+      upload_id: Id required
+    }
+    output {
+      arquivo: Arquivo
+    }
+    rules {
+      upload_id deve_ser valido
+    }
+    effects {
+      consulta storage por upload_id criticidade = alta
+      persistencia Arquivo
+      evento arquivo_disponivel criticidade = baixa
+      auditoria upload_confirmado
+    }
+    state ciclo_arquivo {
+      transitions {
+        PENDENTE -> DISPONIVEL
+      }
+    }
+    guarantees {
+      arquivo existe
+      arquivo.url existe
+    }
+    tests {
+      caso "confirma upload realizado" {
+        given { upload_id: "upl_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "permissao.sema": `module exemplos.permissao {
+  docs {
+    resumo: "Controle de acesso baseado em papeis e permissoes granulares."
+  }
+
+  entity Papel {
+    fields {
+      id: Id
+      nome: Texto
+      descricao: Texto
+    }
+  }
+
+  entity Permissao {
+    fields {
+      id: Id
+      recurso: Texto
+      acao: Texto
+      descricao: Texto
+    }
+  }
+
+  task atribuir_papel {
+    input {
+      usuario_id: Id required
+      papel_id: Id required
+    }
+    output {
+      atribuicao_id: Id
+    }
+    rules {
+      usuario_id deve_ser valido
+      papel_id deve_ser valido
+    }
+    effects {
+      consulta Usuario por usuario_id
+      consulta Papel por papel_id
+      persistencia AtribuicaoPapel
+      evento papel_atribuido criticidade = media
+      auditoria atribuicao_papel criticidade = alta
+    }
+    guarantees {
+      atribuicao_id existe
+    }
+    error {
+      usuario_nao_encontrado: "Usuario nao localizado."
+      papel_nao_encontrado: "Papel nao localizado."
+      atribuicao_duplicada: "Usuario ja possui este papel."
+    }
+    tests {
+      caso "atribui papel admin" {
+        given { usuario_id: "usr_1"  papel_id: "papel_admin" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task verificar_permissao {
+    input {
+      usuario_id: Id required
+      recurso: Texto required
+      acao: Texto required
+    }
+    output {
+      autorizado: Booleano
+    }
+    rules {
+      usuario_id deve_ser valido
+      recurso deve_ser preenchido
+      acao deve_ser preenchida
+    }
+    effects {
+      consulta AtribuicaoPapel por usuario_id
+      consulta PermissaoPapel por papel_id
+      auditoria verificacao_permissao
+    }
+    guarantees {
+      autorizado existe
+    }
+    tests {
+      caso "usuario autorizado" {
+        given { usuario_id: "usr_admin"  recurso: "relatorios"  acao: "exportar" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "usuario sem permissao" {
+        given { usuario_id: "usr_basico"  recurso: "admin"  acao: "deletar" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task revogar_papel {
+    input {
+      usuario_id: Id required
+      papel_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      usuario_id deve_ser valido
+      papel_id deve_ser valido
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia AtribuicaoPapel
+      evento papel_revogado criticidade = alta
+      auditoria revogacao_papel criticidade = alta
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "revoga papel" {
+        given { usuario_id: "usr_1"  papel_id: "papel_admin"  motivo: "Saida da equipe" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "webhook.sema": `module exemplos.webhook {
+  docs {
+    resumo: "Recepcao, validacao e reenvio de eventos via webhook."
+  }
+
+  entity EventoWebhook {
+    fields {
+      id: Id
+      origem: Texto
+      tipo: Texto
+      payload: Objeto
+      status: Texto
+      tentativas: Inteiro
+      recebido_em: Timestamp
+      processado_em: Timestamp
+    }
+  }
+
+  task receber_webhook {
+    input {
+      origem: Texto required
+      tipo: Texto required
+      payload: Objeto required
+      assinatura: Texto required
+    }
+    output {
+      evento_id: Id
+    }
+    rules {
+      assinatura deve_ser valida para payload
+      origem deve_ser permitida
+      tipo deve_ser preenchido
+    }
+    effects {
+      persistencia EventoWebhook
+      evento webhook_recebido criticidade = media
+      auditoria recepcao_webhook
+    }
+    state ciclo_webhook {
+      transitions {
+        RECEBIDO -> EM_PROCESSAMENTO
+      }
+    }
+    guarantees {
+      evento_id existe
+    }
+    error {
+      assinatura_invalida: "Assinatura do webhook nao confere."
+      origem_nao_permitida: "Origem do webhook nao esta na lista de permitidos."
+    }
+    tests {
+      caso "recebe webhook valido" {
+        given { origem: "stripe"  tipo: "payment.succeeded"  payload: {}  assinatura: "sig_ok" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita assinatura invalida" {
+        given { origem: "stripe"  tipo: "payment.succeeded"  payload: {}  assinatura: "sig_errada" }
+        expect { sucesso: falso }
+        error { tipo: "assinatura_invalida" }
+      }
+    }
+  }
+
+  task reenviar_webhook {
+    input {
+      evento_id: Id required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      evento_id deve_ser valido
+      evento.tentativas < 5
+      evento.status em [FALHOU, PENDENTE]
+    }
+    effects {
+      consulta EventoWebhook por evento_id
+      persistencia EventoWebhook
+      evento webhook_reenviado
+      auditoria reenvio_webhook
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      limite_tentativas: "Numero maximo de tentativas atingido."
+      evento_ja_processado: "Este evento ja foi processado com sucesso."
+    }
+    tests {
+      caso "reenvia evento falho" {
+        given { evento_id: "evt_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "fila.sema": `module exemplos.fila {
+  docs {
+    resumo: "Processamento de jobs em fila com retentativa e dead letter."
+  }
+
+  entity Job {
+    fields {
+      id: Id
+      tipo: Texto
+      payload: Objeto
+      status: Texto
+      tentativas: Inteiro
+      max_tentativas: Inteiro
+      agendado_para: Timestamp
+      processado_em: Timestamp
+      erro: Texto
+    }
+  }
+
+  task enfileirar_job {
+    input {
+      tipo: Texto required
+      payload: Objeto required
+      agendado_para: Timestamp
+      max_tentativas: Inteiro
+    }
+    output {
+      job_id: Id
+    }
+    rules {
+      tipo deve_ser preenchido
+      max_tentativas <= 10
+    }
+    effects {
+      persistencia Job
+      evento job_enfileirado criticidade = baixa
+      auditoria enfileiramento_job
+    }
+    state ciclo_job {
+      transitions {
+        CRIADO -> PENDENTE
+      }
+    }
+    guarantees {
+      job_id existe
+    }
+    error {
+      tipo_invalido: "Tipo de job nao registrado."
+      fila_cheia: "Fila atingiu capacidade maxima."
+    }
+    tests {
+      caso "enfileira job valido" {
+        given { tipo: "envio_email"  payload: {destinatario: "a@b.com"} }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task processar_job {
+    input {
+      job_id: Id required
+    }
+    output {
+      resultado: Objeto
+    }
+    rules {
+      job_id deve_ser valido
+      job.status == PENDENTE
+    }
+    effects {
+      persistencia Job
+      evento job_processado criticidade = baixa
+      auditoria processamento_job
+    }
+    state ciclo_job {
+      transitions {
+        PENDENTE -> EM_EXECUCAO
+        EM_EXECUCAO -> CONCLUIDO
+        EM_EXECUCAO -> FALHOU
+      }
+    }
+    guarantees {
+      resultado existe
+    }
+    error {
+      job_nao_encontrado: "Job nao localizado na fila."
+      job_ja_processado: "Este job ja foi executado."
+      execucao_falhou: "Falha durante a execucao do job."
+    }
+    tests {
+      caso "processa job pendente" {
+        given { job_id: "job_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task mover_para_dead_letter {
+    input {
+      job_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      job_id deve_ser valido
+      job.tentativas >= job.max_tentativas
+    }
+    effects {
+      persistencia Job
+      evento job_dead_letter criticidade = alta
+      notificacao operacao falha_critica_job criticidade = alta
+      auditoria dead_letter criticidade = alta
+    }
+    state ciclo_job {
+      transitions {
+        FALHOU -> DEAD_LETTER
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "move job esgotado" {
+        given { job_id: "job_esgotado"  motivo: "Timeout repetido" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "auditoria.sema": `module exemplos.auditoria {
+  docs {
+    resumo: "Registro imutavel de acoes criticas com rastreabilidade completa."
+  }
+
+  entity RegistroAuditoria {
+    fields {
+      id: Id
+      ator_id: Id
+      ator_tipo: Texto
+      acao: Texto
+      recurso: Texto
+      recurso_id: Id
+      dados_antes: Objeto
+      dados_depois: Objeto
+      ip_origem: Texto
+      timestamp: Timestamp
+      contexto: Objeto
+    }
+  }
+
+  task registrar_acao {
+    input {
+      ator_id: Id required
+      acao: Texto required
+      recurso: Texto required
+      recurso_id: Id required
+      dados_antes: Objeto
+      dados_depois: Objeto
+      ip_origem: Texto
+    }
+    output {
+      auditoria_id: Id
+    }
+    rules {
+      acao deve_ser preenchida
+      recurso deve_ser preenchido
+      ator_id deve_ser valido
+    }
+    effects {
+      persistencia RegistroAuditoria criticidade = alta
+    }
+    guarantees {
+      auditoria_id existe
+      RegistroAuditoria.imutavel == verdadeiro
+    }
+    error {
+      falha_persistencia: "Nao foi possivel registrar a auditoria — operacao bloqueada."
+    }
+    tests {
+      caso "registra acao critica" {
+        given { ator_id: "usr_1"  acao: "deletar_usuario"  recurso: "Usuario"  recurso_id: "usr_2" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task consultar_historico {
+    input {
+      recurso: Texto required
+      recurso_id: Id required
+      data_inicio: Data
+      data_fim: Data
+    }
+    output {
+      registros: Lista
+      total: Inteiro
+    }
+    rules {
+      recurso deve_ser preenchido
+      recurso_id deve_ser valido
+    }
+    effects {
+      consulta RegistroAuditoria por recurso e recurso_id
+      auditoria consulta_historico
+    }
+    guarantees {
+      registros existe
+      total >= 0
+    }
+    tests {
+      caso "consulta historico de usuario" {
+        given { recurso: "Usuario"  recurso_id: "usr_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "agendamento.sema": `module exemplos.agendamento {
+  docs {
+    resumo: "Agendamento de tarefas recorrentes e unicas com controle de execucao."
+  }
+
+  entity Agendamento {
+    fields {
+      id: Id
+      nome: Texto
+      tipo: Texto
+      expressao_cron: Texto
+      payload: Objeto
+      ativo: Booleano
+      ultima_execucao: Timestamp
+      proxima_execucao: Timestamp
+    }
+  }
+
+  entity ExecucaoAgendamento {
+    fields {
+      id: Id
+      agendamento_id: Id
+      status: Texto
+      iniciado_em: Timestamp
+      concluido_em: Timestamp
+      erro: Texto
+    }
+  }
+
+  task criar_agendamento {
+    input {
+      nome: Texto required
+      tipo: Texto required
+      expressao_cron: Texto required
+      payload: Objeto
+    }
+    output {
+      agendamento: Agendamento
+    }
+    rules {
+      nome deve_ser preenchido
+      expressao_cron deve_ser valida
+      tipo deve_ser registrado
+    }
+    effects {
+      persistencia Agendamento
+      evento agendamento_criado criticidade = baixa
+      auditoria criacao_agendamento
+    }
+    guarantees {
+      agendamento existe
+      agendamento.ativo == verdadeiro
+    }
+    error {
+      cron_invalido: "Expressao cron invalida."
+      tipo_nao_registrado: "Tipo de agendamento nao existe."
+      nome_duplicado: "Ja existe agendamento com este nome."
+    }
+    tests {
+      caso "cria agendamento diario" {
+        given { nome: "relatorio_diario"  tipo: "gerar_relatorio"  expressao_cron: "0 8 * * *" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task executar_agendamento {
+    input {
+      agendamento_id: Id required
+    }
+    output {
+      execucao_id: Id
+    }
+    rules {
+      agendamento_id deve_ser valido
+      agendamento.ativo == verdadeiro
+    }
+    effects {
+      consulta Agendamento por agendamento_id
+      persistencia ExecucaoAgendamento
+      persistencia Agendamento
+      evento agendamento_executado criticidade = baixa
+      auditoria execucao_agendamento
+    }
+    state ciclo_execucao {
+      transitions {
+        PENDENTE -> EM_EXECUCAO
+        EM_EXECUCAO -> CONCLUIDO
+        EM_EXECUCAO -> FALHOU
+      }
+    }
+    guarantees {
+      execucao_id existe
+    }
+    error {
+      agendamento_inativo: "Agendamento esta desativado."
+      execucao_em_andamento: "Ja existe uma execucao em andamento para este agendamento."
+    }
+    tests {
+      caso "executa agendamento ativo" {
+        given { agendamento_id: "agd_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "integracao_externa.sema": `module exemplos.integracao.externa {
+  docs {
+    resumo: "Integracao com API externa com circuit breaker e fallback."
+  }
+
+  entity ChamadaExterna {
+    fields {
+      id: Id
+      servico: Texto
+      endpoint: Texto
+      metodo: Texto
+      status_http: Inteiro
+      duracao_ms: Inteiro
+      sucesso: Booleano
+      realizada_em: Timestamp
+    }
+  }
+
+  task consultar_cep {
+    input {
+      cep: Texto required
+    }
+    output {
+      logradouro: Texto
+      bairro: Texto
+      cidade: Texto
+      estado: Texto
+    }
+    rules {
+      cep deve_ser formato_cep_valido
+    }
+    effects {
+      consulta api_cep criticidade = media
+      persistencia ChamadaExterna
+      auditoria consulta_cep
+    }
+    guarantees {
+      logradouro existe
+      cidade existe
+      estado existe
+    }
+    error {
+      cep_nao_encontrado: "CEP nao localizado."
+      servico_indisponivel: "API de CEP temporariamente indisponivel."
+      formato_invalido: "CEP deve ter 8 digitos numericos."
+    }
+    tests {
+      caso "consulta cep valido" {
+        given { cep: "01310100" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita cep invalido" {
+        given { cep: "00000000" }
+        expect { sucesso: falso }
+        error { tipo: "cep_nao_encontrado" }
+      }
+    }
+  }
+
+  task consultar_cnpj {
+    input {
+      cnpj: Texto required
+    }
+    output {
+      razao_social: Texto
+      situacao: Texto
+      atividade_principal: Texto
+    }
+    rules {
+      cnpj deve_ser formato_cnpj_valido
+      cnpj deve_ser digitos_validos
+    }
+    effects {
+      consulta api_receita criticidade = media
+      persistencia ChamadaExterna
+      auditoria consulta_cnpj
+    }
+    guarantees {
+      razao_social existe
+      situacao existe
+    }
+    error {
+      cnpj_nao_encontrado: "CNPJ nao localizado na Receita Federal."
+      servico_indisponivel: "Servico da Receita Federal indisponivel."
+      formato_invalido: "CNPJ invalido."
+    }
+    tests {
+      caso "consulta cnpj valido" {
+        given { cnpj: "11222333000181" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "multi_tenant.sema": `module exemplos.multi.tenant {
+  docs {
+    resumo: "Isolamento de dados por tenant com provisionamento e controle de limites."
+  }
+
+  entity Tenant {
+    fields {
+      id: Id
+      nome: Texto
+      slug: Texto
+      plano: Texto
+      ativo: Booleano
+      criado_em: Timestamp
+    }
+  }
+
+  entity LimiteTenant {
+    fields {
+      tenant_id: Id
+      recurso: Texto
+      limite: Inteiro
+      utilizado: Inteiro
+    }
+  }
+
+  task provisionar_tenant {
+    input {
+      nome: Texto required
+      slug: Texto required
+      plano: Texto required
+      email_admin: Email required
+    }
+    output {
+      tenant: Tenant
+    }
+    rules {
+      slug deve_ser unico em Tenant.slug
+      slug deve_ser formato_slug_valido
+      plano em [FREE, PRO, ENTERPRISE]
+      email_admin deve_ser email_valido
+    }
+    effects {
+      persistencia Tenant
+      persistencia LimiteTenant
+      persistencia Usuario
+      evento tenant_provisionado criticidade = alta
+      notificacao admin boas_vindas criticidade = media
+      auditoria provisionamento_tenant criticidade = alta
+    }
+    guarantees {
+      tenant existe
+      tenant.ativo == verdadeiro
+    }
+    error {
+      slug_duplicado: "Este slug ja esta em uso."
+      plano_invalido: "Plano selecionado nao existe."
+      email_invalido: "Email do administrador invalido."
+    }
+    tests {
+      caso "provisiona tenant pro" {
+        given { nome: "Empresa X"  slug: "empresa-x"  plano: "PRO"  email_admin: "admin@x.com" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task verificar_limite {
+    input {
+      tenant_id: Id required
+      recurso: Texto required
+      quantidade: Inteiro required
+    }
+    output {
+      permitido: Booleano
+      utilizado: Inteiro
+      limite: Inteiro
+    }
+    rules {
+      tenant_id deve_ser valido
+      recurso deve_ser preenchido
+      quantidade > 0
+    }
+    effects {
+      consulta LimiteTenant por tenant_id e recurso
+      auditoria verificacao_limite
+    }
+    guarantees {
+      permitido existe
+    }
+    error {
+      tenant_nao_encontrado: "Tenant nao localizado."
+      recurso_desconhecido: "Recurso nao rastreado para este tenant."
+    }
+    tests {
+      caso "dentro do limite" {
+        given { tenant_id: "ten_1"  recurso: "usuarios"  quantidade: 5 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task suspender_tenant {
+    input {
+      tenant_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      tenant_id deve_ser valido
+      motivo deve_ser preenchido
+      tenant.ativo == verdadeiro
+    }
+    effects {
+      persistencia Tenant
+      evento tenant_suspenso criticidade = alta
+      notificacao admin suspensao_tenant criticidade = alta
+      auditoria suspensao_tenant criticidade = alta
+    }
+    state ciclo_tenant {
+      transitions {
+        ATIVO -> SUSPENSO
+      }
+    }
+    guarantees {
+      protocolo existe
+      tenant.ativo == falso
+    }
+    error {
+      tenant_ja_suspenso: "Tenant ja esta suspenso."
+    }
+    tests {
+      caso "suspende tenant ativo" {
+        given { tenant_id: "ten_1"  motivo: "Inadimplencia" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "exportacao.sema": `module exemplos.exportacao {
+  docs {
+    resumo: "Exportacao de dados em multiplos formatos com controle de acesso e rastreamento."
+  }
+
+  entity ExportacaoDados {
+    fields {
+      id: Id
+      tipo: Texto
+      formato: Texto
+      filtros: Objeto
+      total_registros: Inteiro
+      url_arquivo: Texto
+      status: Texto
+      solicitado_por: Id
+      expira_em: Timestamp
+    }
+  }
+
+  task solicitar_exportacao {
+    input {
+      tipo: Texto required
+      formato: Texto required
+      filtros: Objeto
+    }
+    output {
+      exportacao_id: Id
+    }
+    rules {
+      tipo em [USUARIOS, PEDIDOS, FINANCEIRO, ESTOQUE]
+      formato em [CSV, XLSX, JSON]
+    }
+    effects {
+      persistencia ExportacaoDados
+      evento exportacao_solicitada criticidade = media
+      auditoria solicitacao_exportacao criticidade = media
+    }
+    state ciclo_exportacao {
+      transitions {
+        PENDENTE -> EM_PROCESSAMENTO
+      }
+    }
+    guarantees {
+      exportacao_id existe
+    }
+    error {
+      tipo_invalido: "Tipo de exportacao nao suportado."
+      formato_invalido: "Formato de arquivo nao suportado."
+      permissao_negada: "Sem permissao para exportar este tipo de dado."
+    }
+    tests {
+      caso "solicita exportacao de usuarios em csv" {
+        given { tipo: "USUARIOS"  formato: "CSV" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task concluir_exportacao {
+    input {
+      exportacao_id: Id required
+      url_arquivo: Texto required
+      total_registros: Inteiro required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      exportacao_id deve_ser valido
+      url_arquivo deve_ser preenchida
+      total_registros >= 0
+    }
+    effects {
+      persistencia ExportacaoDados
+      notificacao usuario exportacao_pronta criticidade = media
+      evento exportacao_concluida
+      auditoria conclusao_exportacao
+    }
+    state ciclo_exportacao {
+      transitions {
+        EM_PROCESSAMENTO -> DISPONIVEL
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "conclui exportacao" {
+        given { exportacao_id: "exp_1"  url_arquivo: "https://storage/exp_1.csv"  total_registros: 1500 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+  "assinatura.sema": `module exemplos.assinatura {
+  docs {
+    resumo: "Gestao de assinaturas recorrentes com upgrade, downgrade e cancelamento."
+  }
+
+  entity Assinatura {
+    fields {
+      id: Id
+      cliente_id: Id
+      plano_id: Id
+      status: Texto
+      inicio_em: Timestamp
+      proximo_vencimento: Timestamp
+      cancelada_em: Timestamp
+    }
+  }
+
+  task criar_assinatura {
+    input {
+      cliente_id: Id required
+      plano_id: Id required
+      token_pagamento: Texto required
+    }
+    output {
+      assinatura: Assinatura
+    }
+    rules {
+      cliente_id deve_ser valido
+      plano_id deve_ser valido
+      token_pagamento deve_ser valido
+    }
+    effects {
+      consulta Cliente por cliente_id
+      consulta Plano por plano_id
+      consulta gateway_pagamento criticidade = alta
+      persistencia Assinatura
+      evento assinatura_criada criticidade = alta
+      notificacao cliente confirmacao_assinatura criticidade = media
+      auditoria criacao_assinatura criticidade = alta
+    }
+    state ciclo_assinatura {
+      transitions {
+        PENDENTE -> ATIVA
+      }
+    }
+    guarantees {
+      assinatura existe
+      assinatura.status == ATIVA
+    }
+    error {
+      pagamento_recusado: "Pagamento inicial recusado."
+      cliente_ja_assina: "Cliente ja possui assinatura ativa."
+      plano_invalido: "Plano nao disponivel para assinatura."
+    }
+    tests {
+      caso "cria assinatura pro" {
+        given { cliente_id: "cli_1"  plano_id: "plano_pro"  token_pagamento: "tok_ok" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task cancelar_assinatura {
+    input {
+      assinatura_id: Id required
+      motivo: Texto required
+      imediato: Booleano
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      assinatura_id deve_ser valido
+      assinatura.status == ATIVA
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia Assinatura
+      consulta gateway_pagamento criticidade = alta
+      evento assinatura_cancelada criticidade = alta
+      notificacao cliente confirmacao_cancelamento criticidade = media
+      auditoria cancelamento_assinatura criticidade = alta
+    }
+    state ciclo_assinatura {
+      transitions {
+        ATIVA -> CANCELADA
+        ATIVA -> PENDENTE_CANCELAMENTO
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      assinatura_ja_cancelada: "Assinatura ja foi cancelada."
+    }
+    tests {
+      caso "cancela assinatura ativa" {
+        given { assinatura_id: "asn_1"  motivo: "Nao preciso mais"  imediato: falso }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task renovar_assinatura {
+    input {
+      assinatura_id: Id required
+    }
+    output {
+      protocolo_cobranca: Id
+    }
+    rules {
+      assinatura_id deve_ser valido
+      assinatura.status == ATIVA
+      assinatura.proximo_vencimento <= hoje
+    }
+    effects {
+      consulta gateway_pagamento criticidade = alta
+      persistencia Assinatura
+      evento assinatura_renovada criticidade = media
+      auditoria renovacao_assinatura criticidade = alta
+    }
+    guarantees {
+      protocolo_cobranca existe
+    }
+    error {
+      pagamento_recusado: "Cobranca de renovacao recusada — assinatura sera suspensa."
+      assinatura_cancelada: "Nao e possivel renovar assinatura cancelada."
+    }
+    tests {
+      caso "renova assinatura no vencimento" {
+        given { assinatura_id: "asn_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+};
+
+async function criarExemplosSema(raiz) {
+  const { mkdir, writeFile: wf, access } = require("node:fs/promises");
+  const path = require("node:path");
+  const pasta = path.join(raiz, "exemplos");
+  await mkdir(pasta, { recursive: true });
+  for (const [nome, conteudo] of Object.entries(EXEMPLOS_SEMA)) {
+    const caminho = path.join(pasta, nome);
+    try { await access(caminho); } catch {
+      await wf(caminho, conteudo, "utf-8");
+    }
+  }
+}
+
+async function configurarIaNoWorkspace() {
+  const raiz = obterRaizWorkspace();
+  if (!raiz) {
+    vscode.window.showWarningMessage("Sema: Nenhuma pasta aberta.");
+    return;
+  }
+
+  const { mkdir, writeFile: wf, readFile: rf } = require("node:fs/promises");
+  const path = require("node:path");
+
+  const arquivos = [
+    // Claude Code
+    [path.join(raiz, ".claude", "CLAUDE.md"), INSTRUCOES_SEMA],
+    // Cursor
+    [path.join(raiz, ".cursor", "rules", "sema.mdc"), INSTRUCOES_SEMA],
+    // Windsurf
+    [path.join(raiz, ".windsurf", "rules.md"), INSTRUCOES_SEMA],
+    // Cline
+    [path.join(raiz, ".clinerules"), INSTRUCOES_SEMA],
+    // OpenCode
+    [path.join(raiz, ".opencode", "instructions.md"), INSTRUCOES_SEMA],
+    // GitHub Copilot
+    [path.join(raiz, ".github", "copilot-instructions.md"), INSTRUCOES_SEMA],
+    // AGENTS.md — padrao geral
+    [path.join(raiz, "AGENTS.md"), INSTRUCOES_SEMA],
+  ];
+
+  const home = require("node:os").homedir();
+  const CLINE_AUTO_APPROVE = ["sema_validar", "sema_ir", "sema_drift", "sema_resumo", "sema_prompt_ia", "sema_contexto_ia", "sema_verificar", "sema_inspecionar"];
+  const mcpConfigs = [
+    // VS Code global
+    [path.join(home, "AppData", "Roaming", "Code", "User", "mcp.json"), "vscode"],
+    // Cursor global
+    [path.join(home, ".cursor", "mcp.json"), "cursor"],
+    // Windsurf global
+    [path.join(home, ".codeium", "windsurf", "mcp_config.json"), "windsurf"],
+    // Antigravity (Gemini) global
+    [path.join(home, ".gemini", "antigravity", "mcp_config.json"), "windsurf"],
+    // Cline global
+    [path.join(home, "AppData", "Roaming", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"), "cline"],
+  ];
+
+  let criados = 0;
+
+  for (const [caminho, conteudo] of arquivos) {
+    try {
+      await mkdir(path.dirname(caminho), { recursive: true });
+      await wf(caminho, conteudo, "utf-8");
+      criados++;
+    } catch {}
+  }
+
+  for (const [caminho, tipo] of mcpConfigs) {
+    try {
+      await mkdir(path.dirname(caminho), { recursive: true });
+      let config = {};
+      try { config = JSON.parse(await rf(caminho, "utf-8")); } catch {}
+
+      if (tipo === "cline") {
+        config.mcpServers = config.mcpServers ?? {};
+        config.mcpServers.sema = { command: "npx", args: ["-y", "@semacode/mcp@latest"], autoApprove: CLINE_AUTO_APPROVE, timeout: 3600 };
+      } else if (tipo === "windsurf" || tipo === "cursor") {
+        config.mcpServers = config.mcpServers ?? {};
+        config.mcpServers.sema = { command: "npx", args: ["-y", "@semacode/mcp@latest"] };
+      } else {
+        config.servers = config.servers ?? {};
+        config.servers.sema = { type: "stdio", command: "npx", args: ["-y", "@semacode/mcp@latest"] };
+      }
+
+      await wf(caminho, JSON.stringify(config, null, "\t"), "utf-8");
+      criados++;
+    } catch {}
+  }
+
+  await criarExemplosSema(raiz);
+
+  vscode.window.showInformationMessage(
+    `Sema: IA configurada no projeto (${criados} arquivos criados/atualizados).`
+  );
+}
+
+async function configurarIaFerramenta(ferramenta) {
+  const raiz = obterRaizWorkspace();
+  if (!raiz) {
+    vscode.window.showWarningMessage("Sema: Nenhuma pasta aberta.");
+    return;
+  }
+
+  const { mkdir, writeFile: wf, readFile: rf } = require("node:fs/promises");
+  const path = require("node:path");
+  const home = require("node:os").homedir();
+
+  const MCP_STDIO = { command: "npx", args: ["-y", "@semacode/mcp@latest"] };
+  const CLINE_AUTO_APPROVE = ["sema_validar", "sema_ir", "sema_drift", "sema_resumo", "sema_prompt_ia", "sema_contexto_ia", "sema_verificar", "sema_inspecionar"];
+
+  const configs = {
+    claude: {
+      label: "Claude Code",
+      arquivos: [[path.join(raiz, ".claude", "CLAUDE.md"), INSTRUCOES_SEMA]],
+      mcp: [[path.join(home, "AppData", "Roaming", "Code", "User", "mcp.json"), "vscode"]],
+    },
+    cursor: {
+      label: "Cursor",
+      arquivos: [[path.join(raiz, ".cursor", "rules", "sema.mdc"), INSTRUCOES_SEMA]],
+      mcp: [[path.join(home, ".cursor", "mcp.json"), "cursor"]],
+    },
+    windsurf: {
+      label: "Windsurf",
+      arquivos: [[path.join(raiz, ".windsurf", "rules.md"), INSTRUCOES_SEMA]],
+      mcp: [[path.join(home, ".codeium", "windsurf", "mcp_config.json"), "windsurf"]],
+    },
+    cline: {
+      label: "Cline",
+      arquivos: [[path.join(raiz, ".clinerules"), INSTRUCOES_SEMA]],
+      mcp: [[path.join(home, "AppData", "Roaming", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"), "cline"]],
+    },
+    copilot: {
+      label: "GitHub Copilot",
+      arquivos: [[path.join(raiz, ".github", "copilot-instructions.md"), INSTRUCOES_SEMA]],
+      mcp: [],
+    },
+    opencode: {
+      label: "OpenCode",
+      arquivos: [[path.join(raiz, ".opencode", "instructions.md"), INSTRUCOES_SEMA]],
+      mcp: [],
+    },
+  };
+
+  const cfg = configs[ferramenta];
+  if (!cfg) return;
+
+  let criados = 0;
+
+  for (const [caminho, conteudo] of cfg.arquivos) {
+    try {
+      await mkdir(path.dirname(caminho), { recursive: true });
+      await wf(caminho, conteudo, "utf-8");
+      criados++;
+    } catch {}
+  }
+
+  for (const [caminho, tipo] of cfg.mcp) {
+    try {
+      await mkdir(path.dirname(caminho), { recursive: true });
+      let config = {};
+      try { config = JSON.parse(await rf(caminho, "utf-8")); } catch {}
+
+      if (tipo === "cline") {
+        config.mcpServers = config.mcpServers ?? {};
+        config.mcpServers.sema = { ...MCP_STDIO, autoApprove: CLINE_AUTO_APPROVE, timeout: 3600 };
+      } else if (tipo === "windsurf" || tipo === "cursor") {
+        config.mcpServers = config.mcpServers ?? {};
+        config.mcpServers.sema = MCP_STDIO;
+      } else {
+        config.servers = config.servers ?? {};
+        config.servers.sema = { type: "stdio", ...MCP_STDIO };
+      }
+
+      await wf(caminho, JSON.stringify(config, null, "\t"), "utf-8");
+      criados++;
+    } catch {}
+  }
+
+  await criarExemplosSema(raiz);
+
+  vscode.window.showInformationMessage(
+    `Sema: ${cfg.label} configurado (${criados} arquivo(s) criado(s)/atualizado(s)).`
+  );
 }
 
 async function deactivate() {

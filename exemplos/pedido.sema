@@ -1,0 +1,119 @@
+module exemplos.pedido {
+  docs {
+    resumo: "Ciclo completo de pedido com itens, aprovacao e entrega."
+  }
+
+  entity Pedido {
+    fields {
+      id: Id
+      cliente_id: Id
+      status: Texto
+      total: Decimal
+      criado_em: Timestamp
+    }
+  }
+
+  entity ItemPedido {
+    fields {
+      id: Id
+      pedido_id: Id
+      produto_id: Id
+      quantidade: Inteiro
+      preco_unitario: Decimal
+    }
+  }
+
+  task criar_pedido {
+    input {
+      cliente_id: Id required
+      itens: Lista required
+    }
+    output {
+      pedido: Pedido
+    }
+    rules {
+      itens deve_ser nao_vazio
+      cliente_id deve_ser valido
+    }
+    effects {
+      consulta Cliente por cliente_id
+      consulta Produto por cada item.produto_id
+      persistencia Pedido
+      persistencia ItemPedido
+      evento pedido_criado criticidade = media
+      auditoria criacao_pedido
+    }
+    state ciclo_pedido {
+      transitions {
+        RASCUNHO -> AGUARDANDO_PAGAMENTO
+      }
+    }
+    guarantees {
+      pedido existe
+      pedido.total > 0
+    }
+    error {
+      cliente_invalido: "Cliente nao encontrado."
+      item_invalido: "Um ou mais produtos nao existem."
+      carrinho_vazio: "O pedido deve ter ao menos um item."
+    }
+    tests {
+      caso "cria pedido valido" {
+        given { cliente_id: "cli_1"  itens: [{produto_id: "prod_1", quantidade: 2}] }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task cancelar_pedido {
+    input {
+      pedido_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      pedido_id deve_ser valido
+      pedido.status em [AGUARDANDO_PAGAMENTO, APROVADO]
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia Pedido
+      evento pedido_cancelado criticidade = alta
+      notificacao cliente pedido_cancelado
+      auditoria cancelamento_pedido criticidade = media
+    }
+    state ciclo_pedido {
+      transitions {
+        AGUARDANDO_PAGAMENTO -> CANCELADO
+        APROVADO -> CANCELADO
+      }
+    }
+    guarantees {
+      protocolo existe
+      pedido.status == CANCELADO
+    }
+    error {
+      pedido_nao_cancelavel: "Pedido ja enviado ou entregue nao pode ser cancelado."
+    }
+    tests {
+      caso "cancela pedido pendente" {
+        given { pedido_id: "ped_1"  motivo: "Desistencia do cliente" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  flow aprovacao_pedido {
+    pedido_id: Id
+    token_pagamento: Texto
+    etapa pagar usa processar_pagamento com pedido_id = pedido_id, token = token_pagamento em_sucesso reservar em_erro cancelar_por_pagamento
+    etapa reservar usa reservar_estoque com pedido_id = pedido_id depende_de pagar em_erro cancelar_por_estoque
+    etapa cancelar_por_pagamento usa cancelar_pedido com pedido_id = pedido_id, motivo = "Pagamento recusado" depende_de pagar
+    etapa cancelar_por_estoque usa cancelar_pedido com pedido_id = pedido_id, motivo = "Estoque insuficiente" depende_de reservar
+    effects {
+      auditoria fluxo_aprovacao_pedido criticidade = alta
+    }
+  }
+}

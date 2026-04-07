@@ -1,0 +1,125 @@
+module exemplos.autenticacao {
+  docs {
+    resumo: "Login, logout e renovacao de sessao com tokens."
+  }
+
+  entity Sessao {
+    fields {
+      id: Id
+      usuario_id: Id
+      token: Texto
+      refresh_token: Texto
+      expira_em: Timestamp
+      ativo: Booleano
+    }
+  }
+
+  task fazer_login {
+    input {
+      email: Email required
+      senha: Texto required
+    }
+    output {
+      token: Texto
+      refresh_token: Texto
+      expira_em: Timestamp
+    }
+    rules {
+      email deve_ser email_valido
+      senha deve_ser preenchida
+    }
+    effects {
+      consulta Usuario por email
+      persistencia Sessao
+      auditoria login_realizado
+      evento sessao_iniciada
+    }
+    state ciclo_sessao {
+      transitions {
+        INATIVA -> ATIVA
+      }
+    }
+    guarantees {
+      token existe
+      refresh_token existe
+    }
+    error {
+      credenciais_invalidas: "Email ou senha incorretos."
+      conta_bloqueada: "Esta conta foi temporariamente bloqueada."
+      conta_inativa: "Esta conta nao esta ativa."
+    }
+    tests {
+      caso "login valido" {
+        given { email: "user@app.com"  senha: "senha123" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "senha errada" {
+        given { email: "user@app.com"  senha: "errada" }
+        expect { sucesso: falso }
+        error { tipo: "credenciais_invalidas" }
+      }
+    }
+  }
+
+  task renovar_token {
+    input {
+      refresh_token: Texto required
+    }
+    output {
+      token: Texto
+      expira_em: Timestamp
+    }
+    rules {
+      refresh_token deve_ser valido
+      refresh_token deve_ser nao_expirado
+    }
+    effects {
+      consulta Sessao por refresh_token
+      persistencia Sessao
+      auditoria token_renovado
+    }
+    guarantees {
+      token existe
+    }
+    error {
+      refresh_invalido: "Token de renovacao invalido ou expirado."
+    }
+    tests {
+      caso "renova com token valido" {
+        given { refresh_token: "valid_refresh" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task fazer_logout {
+    input {
+      token: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      token deve_ser valido
+    }
+    effects {
+      persistencia Sessao
+      auditoria logout_realizado
+      evento sessao_encerrada
+    }
+    state ciclo_sessao {
+      transitions {
+        ATIVA -> INATIVA
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "logout valido" {
+        given { token: "valid_token" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

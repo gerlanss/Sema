@@ -1,0 +1,96 @@
+module exemplos.webhook {
+  docs {
+    resumo: "Recepcao, validacao e reenvio de eventos via webhook."
+  }
+
+  entity EventoWebhook {
+    fields {
+      id: Id
+      origem: Texto
+      tipo: Texto
+      payload: Objeto
+      status: Texto
+      tentativas: Inteiro
+      recebido_em: Timestamp
+      processado_em: Timestamp
+    }
+  }
+
+  task receber_webhook {
+    input {
+      origem: Texto required
+      tipo: Texto required
+      payload: Objeto required
+      assinatura: Texto required
+    }
+    output {
+      evento_id: Id
+    }
+    rules {
+      assinatura deve_ser valida para payload
+      origem deve_ser permitida
+      tipo deve_ser preenchido
+    }
+    effects {
+      persistencia EventoWebhook
+      evento webhook_recebido criticidade = media
+      auditoria recepcao_webhook
+    }
+    state ciclo_webhook {
+      transitions {
+        RECEBIDO -> EM_PROCESSAMENTO
+      }
+    }
+    guarantees {
+      evento_id existe
+    }
+    error {
+      assinatura_invalida: "Assinatura do webhook nao confere."
+      origem_nao_permitida: "Origem do webhook nao esta na lista de permitidos."
+    }
+    tests {
+      caso "recebe webhook valido" {
+        given { origem: "stripe"  tipo: "payment.succeeded"  payload: {}  assinatura: "sig_ok" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita assinatura invalida" {
+        given { origem: "stripe"  tipo: "payment.succeeded"  payload: {}  assinatura: "sig_errada" }
+        expect { sucesso: falso }
+        error { tipo: "assinatura_invalida" }
+      }
+    }
+  }
+
+  task reenviar_webhook {
+    input {
+      evento_id: Id required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      evento_id deve_ser valido
+      evento.tentativas < 5
+      evento.status em [FALHOU, PENDENTE]
+    }
+    effects {
+      consulta EventoWebhook por evento_id
+      persistencia EventoWebhook
+      evento webhook_reenviado
+      auditoria reenvio_webhook
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      limite_tentativas: "Numero maximo de tentativas atingido."
+      evento_ja_processado: "Este evento ja foi processado com sucesso."
+    }
+    tests {
+      caso "reenvia evento falho" {
+        given { evento_id: "evt_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

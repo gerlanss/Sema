@@ -1,0 +1,98 @@
+module exemplos.notificacao {
+  docs {
+    resumo: "Envio de notificacoes por email, SMS e push com rastreamento."
+  }
+
+  entity Notificacao {
+    fields {
+      id: Id
+      destinatario_id: Id
+      canal: Texto
+      titulo: Texto
+      corpo: Texto
+      status: Texto
+      enviada_em: Timestamp
+    }
+  }
+
+  task enviar_email {
+    input {
+      destinatario: Email required
+      titulo: Texto required
+      corpo: Texto required
+      template: Texto
+    }
+    output {
+      notificacao_id: Id
+    }
+    rules {
+      destinatario deve_ser email_valido
+      titulo deve_ser preenchido
+      corpo deve_ser preenchido
+    }
+    effects {
+      consulta provedor_email criticidade = alta
+      persistencia Notificacao
+      auditoria email_enviado
+    }
+    guarantees {
+      notificacao_id existe
+    }
+    error {
+      destinatario_invalido: "Endereco de email invalido."
+      provedor_indisponivel: "Servico de email temporariamente indisponivel."
+      limite_excedido: "Limite de envios por hora atingido."
+    }
+    tests {
+      caso "envia email valido" {
+        given { destinatario: "user@app.com"  titulo: "Bem vindo"  corpo: "Ola!" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task enviar_push {
+    input {
+      device_token: Texto required
+      titulo: Texto required
+      corpo: Texto required
+      dados: Objeto
+    }
+    output {
+      notificacao_id: Id
+    }
+    rules {
+      device_token deve_ser preenchido
+      titulo deve_ser preenchido
+    }
+    effects {
+      consulta provedor_push criticidade = media
+      persistencia Notificacao
+      auditoria push_enviado
+    }
+    guarantees {
+      notificacao_id existe
+    }
+    error {
+      token_invalido: "Token de dispositivo invalido ou expirado."
+      provedor_indisponivel: "Servico push indisponivel."
+    }
+    tests {
+      caso "envia push valido" {
+        given { device_token: "tok_123"  titulo: "Alerta"  corpo: "Nova mensagem" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  flow notificar_multicanal {
+    destinatario_id: Id
+    titulo: Texto
+    corpo: Texto
+    etapa email usa enviar_email com destinatario = destinatario_id, titulo = titulo, corpo = corpo em_sucesso concluir em_erro registrar_falha_email
+    etapa push usa enviar_push com device_token = destinatario_id, titulo = titulo, corpo = corpo em_sucesso concluir em_erro registrar_falha_push
+    etapa registrar_falha_email usa registrar_falha_notificacao com canal = "email" depende_de email
+    etapa registrar_falha_push usa registrar_falha_notificacao com canal = "push" depende_de push
+    etapa concluir usa confirmar_notificacao com destinatario_id = destinatario_id depende_de email
+  }
+}

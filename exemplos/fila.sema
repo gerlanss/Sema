@@ -1,0 +1,131 @@
+module exemplos.fila {
+  docs {
+    resumo: "Processamento de jobs em fila com retentativa e dead letter."
+  }
+
+  entity Job {
+    fields {
+      id: Id
+      tipo: Texto
+      payload: Objeto
+      status: Texto
+      tentativas: Inteiro
+      max_tentativas: Inteiro
+      agendado_para: Timestamp
+      processado_em: Timestamp
+      erro: Texto
+    }
+  }
+
+  task enfileirar_job {
+    input {
+      tipo: Texto required
+      payload: Objeto required
+      agendado_para: Timestamp
+      max_tentativas: Inteiro
+    }
+    output {
+      job_id: Id
+    }
+    rules {
+      tipo deve_ser preenchido
+      max_tentativas <= 10
+    }
+    effects {
+      persistencia Job
+      evento job_enfileirado criticidade = baixa
+      auditoria enfileiramento_job
+    }
+    state ciclo_job {
+      transitions {
+        CRIADO -> PENDENTE
+      }
+    }
+    guarantees {
+      job_id existe
+    }
+    error {
+      tipo_invalido: "Tipo de job nao registrado."
+      fila_cheia: "Fila atingiu capacidade maxima."
+    }
+    tests {
+      caso "enfileira job valido" {
+        given { tipo: "envio_email"  payload: {destinatario: "a@b.com"} }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task processar_job {
+    input {
+      job_id: Id required
+    }
+    output {
+      resultado: Objeto
+    }
+    rules {
+      job_id deve_ser valido
+      job.status == PENDENTE
+    }
+    effects {
+      persistencia Job
+      evento job_processado criticidade = baixa
+      auditoria processamento_job
+    }
+    state ciclo_job {
+      transitions {
+        PENDENTE -> EM_EXECUCAO
+        EM_EXECUCAO -> CONCLUIDO
+        EM_EXECUCAO -> FALHOU
+      }
+    }
+    guarantees {
+      resultado existe
+    }
+    error {
+      job_nao_encontrado: "Job nao localizado na fila."
+      job_ja_processado: "Este job ja foi executado."
+      execucao_falhou: "Falha durante a execucao do job."
+    }
+    tests {
+      caso "processa job pendente" {
+        given { job_id: "job_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task mover_para_dead_letter {
+    input {
+      job_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      job_id deve_ser valido
+      job.tentativas >= job.max_tentativas
+    }
+    effects {
+      persistencia Job
+      evento job_dead_letter criticidade = alta
+      notificacao operacao falha_critica_job criticidade = alta
+      auditoria dead_letter criticidade = alta
+    }
+    state ciclo_job {
+      transitions {
+        FALHOU -> DEAD_LETTER
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "move job esgotado" {
+        given { job_id: "job_esgotado"  motivo: "Timeout repetido" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

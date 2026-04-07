@@ -2,7 +2,7 @@
   "name": "sema-language-tools",
   "displayName": "Sema Language Tools",
   "description": "Extensao oficial do VS Code para a Sema, com diagnosticos semanticos, contexto de projeto e integracao com a CLI IA-first.",
-  "version": "1.2.17",
+  "version": "1.3.0",
   "publisher": "OtimiTare",
   "private": true,
   "icon": "logo.png",
@@ -42,18 +42,6 @@
   ],
   "activationEvents": [
     "onLanguage:sema",
-    "onCommand:sema.formatarDocumento",
-    "onCommand:sema.reiniciarServidor",
-    "onCommand:sema.abrirStarterIa",
-    "onCommand:sema.abrirPromptIa",
-    "onCommand:sema.copiarPromptIa",
-    "onCommand:sema.abrirPromptCurtoAlvoAtual",
-    "onCommand:sema.abrirResumoAlvoAtual",
-    "onCommand:sema.abrirDriftAlvoAtual",
-    "onCommand:sema.prepararContextoIaProjeto",
-    "onCommand:sema.gerarContextoIaAlvoAtual",
-    "onCommand:sema.sincronizarEntrypointsIaProjeto",
-    "onCommand:sema.diagnosticarCli",
     "onView:semaSidebar"
   ],
   "main": "./extension.js",
@@ -132,6 +120,34 @@
       {
         "command": "sema.diagnosticarCli",
         "title": "Sema: Diagnosticar CLI"
+      },
+      {
+        "command": "sema.configurarIa",
+        "title": "Sema: Configurar IA no Projeto"
+      },
+      {
+        "command": "sema.configurarIaClaude",
+        "title": "Sema: Configurar Claude Code"
+      },
+      {
+        "command": "sema.configurarIaCursor",
+        "title": "Sema: Configurar Cursor"
+      },
+      {
+        "command": "sema.configurarIaWindsurf",
+        "title": "Sema: Configurar Windsurf"
+      },
+      {
+        "command": "sema.configurarIaCline",
+        "title": "Sema: Configurar Cline"
+      },
+      {
+        "command": "sema.configurarIaCopilot",
+        "title": "Sema: Configurar GitHub Copilot"
+      },
+      {
+        "command": "sema.configurarIaOpenCode",
+        "title": "Sema: Configurar OpenCode"
       }
     ],
     "viewsContainers": {
@@ -174,4 +190,3 @@
     "vscode-languageserver-textdocument": "^1.0.11"
   }
 }
-

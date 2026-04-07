@@ -11,6 +11,9 @@
     { "path": "../gerador-lua" },
     { "path": "../gerador-python" },
     { "path": "../gerador-typescript" },
+    { "path": "../gerador-javascript" },
+    { "path": "../gerador-html" },
+    { "path": "../gerador-css" },
     { "path": "../padroes" }
   ],
   "include": ["src/**/*"]

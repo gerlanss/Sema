@@ -1,0 +1,149 @@
+module sema.produto.geradores_web {
+  docs {
+    resumo: "Contrato interno da Sema para os geradores JavaScript, HTML e CSS — garantindo que o ciclo IR -> geracao web funcione corretamente."
+  }
+  vinculos {
+    arquivo: "pacotes/gerador-javascript/src/index.ts"
+    arquivo: "pacotes/gerador-html/src/index.ts"
+    arquivo: "pacotes/gerador-css/src/index.ts"
+  }
+
+  task gerar_contrato_javascript {
+    input {
+      contrato: Texto required
+    }
+    output {
+      jsdoc_tipado: Booleano
+      validacoes_coerentes: Booleano
+      testes_gerados: Booleano
+    }
+    impl {
+      ts: gerador_javascript.src.index.gerarJavaScript
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-javascript/src/index.ts"
+      simbolo: gerador_javascript.src.index.gerarJavaScript
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: media
+    }
+    rules {
+      contrato deve_ser preenchido
+    }
+    effects {
+      auditoria geracao_javascript criticidade = media
+    }
+    guarantees {
+      jsdoc_tipado existe
+      validacoes_coerentes existe
+      testes_gerados existe
+    }
+    tests {
+      caso "javascript gera contrato com JSDoc e validacoes" {
+        given {
+          contrato: "task com entity Produto e task criar_produto"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_pagina_html {
+    input {
+      contrato: Texto required
+    }
+    output {
+      html_semantico: Booleano
+      formularios_derivados: Booleano
+      rotas_visuais: Booleano
+    }
+    impl {
+      ts: gerador_html.src.index.gerarHtml
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-html/src/index.ts"
+      simbolo: gerador_html.src.index.gerarHtml
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: media
+    }
+    rules {
+      contrato deve_ser preenchido
+    }
+    effects {
+      auditoria geracao_html criticidade = media
+    }
+    guarantees {
+      html_semantico existe
+      formularios_derivados existe
+      rotas_visuais existe
+    }
+    tests {
+      caso "html gera pagina semantica com formularios" {
+        given {
+          contrato: "task com entity Produto e route produtos"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_design_system_css {
+    input {
+      contrato: Texto required
+    }
+    output {
+      variaveis_css: Booleano
+      dark_mode: Booleano
+      responsividade: Booleano
+    }
+    impl {
+      ts: gerador_css.src.index.gerarCss
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-css/src/index.ts"
+      simbolo: gerador_css.src.index.gerarCss
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: media
+    }
+    rules {
+      contrato deve_ser preenchido
+    }
+    effects {
+      auditoria geracao_css criticidade = media
+    }
+    guarantees {
+      variaveis_css existe
+      dark_mode existe
+      responsividade existe
+    }
+    tests {
+      caso "css gera design system com dark mode" {
+        given {
+          contrato: "task com entity Produto e state ciclo_pagamento"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow gerar_web_completo {
+    contrato: Texto
+    etapa javascript usa gerar_contrato_javascript com contrato = contrato
+    etapa html usa gerar_pagina_html com contrato = contrato depende_de javascript
+    etapa css usa gerar_design_system_css com contrato = contrato depende_de html
+    effects {
+      auditoria geracao_web_completa criticidade = media
+    }
+  }
+}

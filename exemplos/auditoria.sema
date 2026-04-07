@@ -1,0 +1,88 @@
+module exemplos.auditoria {
+  docs {
+    resumo: "Registro imutavel de acoes criticas com rastreabilidade completa."
+  }
+
+  entity RegistroAuditoria {
+    fields {
+      id: Id
+      ator_id: Id
+      ator_tipo: Texto
+      acao: Texto
+      recurso: Texto
+      recurso_id: Id
+      dados_antes: Objeto
+      dados_depois: Objeto
+      ip_origem: Texto
+      timestamp: Timestamp
+      contexto: Objeto
+    }
+  }
+
+  task registrar_acao {
+    input {
+      ator_id: Id required
+      acao: Texto required
+      recurso: Texto required
+      recurso_id: Id required
+      dados_antes: Objeto
+      dados_depois: Objeto
+      ip_origem: Texto
+    }
+    output {
+      auditoria_id: Id
+    }
+    rules {
+      acao deve_ser preenchida
+      recurso deve_ser preenchido
+      ator_id deve_ser valido
+    }
+    effects {
+      persistencia RegistroAuditoria criticidade = alta
+    }
+    guarantees {
+      auditoria_id existe
+      RegistroAuditoria.imutavel == verdadeiro
+    }
+    error {
+      falha_persistencia: "Nao foi possivel registrar a auditoria — operacao bloqueada."
+    }
+    tests {
+      caso "registra acao critica" {
+        given { ator_id: "usr_1"  acao: "deletar_usuario"  recurso: "Usuario"  recurso_id: "usr_2" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task consultar_historico {
+    input {
+      recurso: Texto required
+      recurso_id: Id required
+      data_inicio: Data
+      data_fim: Data
+    }
+    output {
+      registros: Lista
+      total: Inteiro
+    }
+    rules {
+      recurso deve_ser preenchido
+      recurso_id deve_ser valido
+    }
+    effects {
+      consulta RegistroAuditoria por recurso e recurso_id
+      auditoria consulta_historico
+    }
+    guarantees {
+      registros existe
+      total >= 0
+    }
+    tests {
+      caso "consulta historico de usuario" {
+        given { recurso: "Usuario"  recurso_id: "usr_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

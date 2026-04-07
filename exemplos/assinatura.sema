@@ -1,0 +1,136 @@
+module exemplos.assinatura {
+  docs {
+    resumo: "Gestao de assinaturas recorrentes com upgrade, downgrade e cancelamento."
+  }
+
+  entity Assinatura {
+    fields {
+      id: Id
+      cliente_id: Id
+      plano_id: Id
+      status: Texto
+      inicio_em: Timestamp
+      proximo_vencimento: Timestamp
+      cancelada_em: Timestamp
+    }
+  }
+
+  task criar_assinatura {
+    input {
+      cliente_id: Id required
+      plano_id: Id required
+      token_pagamento: Texto required
+    }
+    output {
+      assinatura: Assinatura
+    }
+    rules {
+      cliente_id deve_ser valido
+      plano_id deve_ser valido
+      token_pagamento deve_ser valido
+    }
+    effects {
+      consulta Cliente por cliente_id
+      consulta Plano por plano_id
+      consulta gateway_pagamento criticidade = alta
+      persistencia Assinatura
+      evento assinatura_criada criticidade = alta
+      notificacao cliente confirmacao_assinatura criticidade = media
+      auditoria criacao_assinatura criticidade = alta
+    }
+    state ciclo_assinatura {
+      transitions {
+        PENDENTE -> ATIVA
+      }
+    }
+    guarantees {
+      assinatura existe
+      assinatura.status == ATIVA
+    }
+    error {
+      pagamento_recusado: "Pagamento inicial recusado."
+      cliente_ja_assina: "Cliente ja possui assinatura ativa."
+      plano_invalido: "Plano nao disponivel para assinatura."
+    }
+    tests {
+      caso "cria assinatura pro" {
+        given { cliente_id: "cli_1"  plano_id: "plano_pro"  token_pagamento: "tok_ok" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task cancelar_assinatura {
+    input {
+      assinatura_id: Id required
+      motivo: Texto required
+      imediato: Booleano
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      assinatura_id deve_ser valido
+      assinatura.status == ATIVA
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia Assinatura
+      consulta gateway_pagamento criticidade = alta
+      evento assinatura_cancelada criticidade = alta
+      notificacao cliente confirmacao_cancelamento criticidade = media
+      auditoria cancelamento_assinatura criticidade = alta
+    }
+    state ciclo_assinatura {
+      transitions {
+        ATIVA -> CANCELADA
+        ATIVA -> PENDENTE_CANCELAMENTO
+      }
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      assinatura_ja_cancelada: "Assinatura ja foi cancelada."
+    }
+    tests {
+      caso "cancela assinatura ativa" {
+        given { assinatura_id: "asn_1"  motivo: "Nao preciso mais"  imediato: falso }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task renovar_assinatura {
+    input {
+      assinatura_id: Id required
+    }
+    output {
+      protocolo_cobranca: Id
+    }
+    rules {
+      assinatura_id deve_ser valido
+      assinatura.status == ATIVA
+      assinatura.proximo_vencimento <= hoje
+    }
+    effects {
+      consulta gateway_pagamento criticidade = alta
+      persistencia Assinatura
+      evento assinatura_renovada criticidade = media
+      auditoria renovacao_assinatura criticidade = alta
+    }
+    guarantees {
+      protocolo_cobranca existe
+    }
+    error {
+      pagamento_recusado: "Cobranca de renovacao recusada — assinatura sera suspensa."
+      assinatura_cancelada: "Nao e possivel renovar assinatura cancelada."
+    }
+    tests {
+      caso "renova assinatura no vencimento" {
+        given { assinatura_id: "asn_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

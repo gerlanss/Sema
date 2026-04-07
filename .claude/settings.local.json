@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sema --version)",
+      "Bash(npx sema:*)",
+      "Bash(node cli/index.js --version)",
+      "Bash(sema audit:*)",
+      "Bash(sema drift:*)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('score:', j.score, '\\\\ntasks:', j.total_tasks, '\\\\nlacunas:', j.lacunas?.length\\)\")",
+      "Bash(node -e \"const j=require\\('/tmp/drift_out.json'\\); console.log\\('score:', j.score, '\\\\ntotal_tasks:', j.total_tasks, '\\\\nlacunas:', j.lacunas?.length\\)\")"
+    ]
+  }
+}

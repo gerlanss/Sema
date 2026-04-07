@@ -110,8 +110,11 @@ export function normalizarFrameworkGeracao(valor?: string): FrameworkGeracao {
 }
 
 function normalizarAlvo(valor?: string): AlvoGeracao | undefined {
-  if (valor === "typescript" || valor === "python" || valor === "dart" || valor === "lua") {
+  if (valor === "typescript" || valor === "python" || valor === "dart" || valor === "lua" || valor === "javascript" || valor === "html" || valor === "css") {
     return valor;
+  }
+  if (valor === "js") {
+    return "javascript";
   }
   return undefined;
 }

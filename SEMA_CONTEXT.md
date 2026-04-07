@@ -4,7 +4,7 @@ Este arquivo e a entrada explicita e obrigatoria para IA neste projeto.
 Toda IA deve comecar por aqui antes de abrir codigo cru ou tentar mexer no projeto.
 Se a IA ignorar este arquivo, ela ja esta comecando errado.
 
-- Gerado em: `2026-04-03T14:23:27.873Z`
+- Gerado em: `2026-04-03T14:43:40.129Z`
 - Escopo: `projeto`
 - Base do projeto: `c:\GitHub\Sema`
 
@@ -33,7 +33,7 @@ ENTRADA_IA: llms.txt -> SEMA_BRIEF.micro.txt -> SEMA_INDEX.json -> AGENTS.md
 TOP_MODULOS: app.pedidos, sema.produto.ergonomia_e_dominio, sema.produto.governanca_ia (+1)
 TOP_RISCOS: consultar_scorecard_compatibilidade:medio, converter_bloco_composto_para_ir:alto, criar_pedido:alto (+14)
 TOP_LACUNAS: sem_impl, vinculo_quebrado
-GERADO_EM: 2026-04-03T14:23:25.741Z
+GERADO_EM: 2026-04-03T14:43:37.390Z
 ```
 
 ## Prompt curto do projeto
@@ -61,7 +61,7 @@ TOP_MODULOS: app.pedidos, sema.produto.ergonomia_e_dominio, sema.produto.governa
 TOP_RISCOS: consultar_scorecard_compatibilidade:medio, converter_bloco_composto_para_ir:alto, criar_pedido:alto, efeito_critico, efeito_privilegiado, explicitar_variacao_e_compatibilidade:medio (+11)
 TOP_LACUNAS: sem_impl, vinculo_quebrado
 TOP_ARQUIVOS: c:\GitHub\Sema\pacotes\cli\src\drift.ts, c:\GitHub\Sema\pacotes\cli\src\index.ts, c:\GitHub\Sema\pacotes\cli\src\projeto.ts, c:\GitHub\Sema\pacotes\gerador-python\src\index.ts, c:\GitHub\Sema\pacotes\gerador-typescript\src\index.ts, c:\GitHub\Sema\pacotes\nucleo\src\formatador\index.ts (+3)
-GERADO_EM: 2026-04-03T14:23:25.866Z
+GERADO_EM: 2026-04-03T14:43:37.431Z
 ```
 
 ## Starter IA

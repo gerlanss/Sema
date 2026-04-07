@@ -113,7 +113,7 @@ sema sync-ai-entrypoints --json
 - `resumo` com modos `micro`, `curto` e `medio` para IA de capacidade diferente
 - `prompt-curto` para colar contexto compacto em IA gratuita ou com janela curta
 - `contexto-ia` com `ast.json`, `ir.json`, `drift.json`, `briefing.json`, `briefing.min.json` e resumos locais
-- scaffold e geracao para TypeScript, Python e Dart
+- scaffold e geracao para TypeScript, Python, Dart, JavaScript, HTML e CSS
 - scaffold backend para NestJS e FastAPI
 - importacao incremental de legado
 

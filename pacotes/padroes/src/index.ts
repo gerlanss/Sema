@@ -1,4 +1,4 @@
-export type AlvoGeracao = "typescript" | "python" | "dart" | "lua";
+export type AlvoGeracao = "typescript" | "python" | "dart" | "lua" | "javascript" | "html" | "css";
 export type FrameworkGeracao = "base" | "nestjs" | "fastapi";
 
 export interface ArquivoGerado {
@@ -191,4 +191,61 @@ export function mapearTipoParaLua(tipo: string): string {
     Vazio: "nil",
   };
   return tabela[limpo] ?? limpo;
+}
+
+export function mapearTipoParaJavaScript(tipo: string): string {
+  const limpo = tipo.trim();
+  if (/^Opcional<.+>$/.test(limpo)) {
+    return `${mapearTipoParaJavaScript(limpo.slice("Opcional<".length, -1))}|null`;
+  }
+
+  const uniao = dividirTipoNoNivelRaiz(limpo, "|");
+  if (uniao.length > 1) {
+    return uniao.map((item) => mapearTipoParaJavaScript(item)).join("|");
+  }
+
+  if (/^Lista<.+>$/.test(limpo)) {
+    return `Array.<${mapearTipoParaJavaScript(limpo.slice("Lista<".length, -1))}>`;
+  }
+
+  if (/^Mapa<.+>$/.test(limpo)) {
+    const partesMapa = dividirTipoNoNivelRaiz(limpo.slice("Mapa<".length, -1), ",");
+    const chave = mapearTipoParaJavaScript(partesMapa[0] ?? "Texto");
+    const valor = mapearTipoParaJavaScript(partesMapa[1] ?? "Json");
+    return `Object.<${chave}, ${valor}>`;
+  }
+
+  const tabela: Record<string, string> = {
+    Texto: "string",
+    Numero: "number",
+    Inteiro: "number",
+    Decimal: "number",
+    Booleano: "boolean",
+    Data: "string",
+    DataHora: "string",
+    Id: "string",
+    Email: "string",
+    Url: "string",
+    Json: "Object",
+    Vazio: "void",
+  };
+  return tabela[limpo] ?? limpo;
+}
+
+export function mapearTipoParaInputHtml(tipo: string): string {
+  const tabela: Record<string, string> = {
+    Texto: "text",
+    Numero: "number",
+    Inteiro: "number",
+    Decimal: "number",
+    Booleano: "checkbox",
+    Data: "date",
+    DataHora: "datetime-local",
+    Id: "text",
+    Email: "email",
+    Url: "url",
+    Json: "textarea",
+    Vazio: "hidden",
+  };
+  return tabela[tipo] ?? "text";
 }
