@@ -651,11 +651,12 @@ async function escreverArquivos(base: string, arquivos: Array<{ caminhoRelativo:
 }
 
 function obterOpcao(args: string[], nome: string, padrao?: string): string | undefined {
-  const indice = args.findIndex((arg) => arg === nome);
-  if (indice === -1) {
-    return padrao;
+  const nomes = [nome, ...Object.entries(ALIAS_OPCOES).filter(([, v]) => v === nome).map(([k]) => k)];
+  for (const n of nomes) {
+    const indice = args.findIndex((arg) => arg === n);
+    if (indice !== -1) return args[indice + 1] ?? padrao;
   }
-  return args[indice + 1] ?? padrao;
+  return padrao;
 }
 
 function possuiFlag(args: string[], nome: string): boolean {
@@ -664,19 +665,24 @@ function possuiFlag(args: string[], nome: string): boolean {
 
 const OPCOES_COM_VALOR = new Set([
   "--template",
-  "--alvo",
-  "--saida",
+  "--alvo", "-a",
+  "--saida", "-s",
   "--estrutura",
   "--framework",
   "--namespace",
   "--para",
 ]);
 
+const ALIAS_OPCOES: Record<string, string> = {
+  "-a": "--alvo",
+  "-s": "--saida",
+};
+
 function obterPosicionais(args: string[]): string[] {
   const posicionais: string[] = [];
   for (let indice = 0; indice < args.length; indice += 1) {
     const atual = args[indice]!;
-    if (atual.startsWith("--")) {
+    if (atual.startsWith("-")) {
       if (OPCOES_COM_VALOR.has(atual)) {
         indice += 1;
       }

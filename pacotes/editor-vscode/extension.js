@@ -757,7 +757,11 @@ class ProvedorWebviewSema {
     webviewView.webview.html = this.getHtmlCorpo();
 
     webviewView.webview.onDidReceiveMessage((mensagem) => {
-      vscode.commands.executeCommand(mensagem.command);
+      if (mensagem.command === 'sema.refreshView') {
+        this.refresh();
+      } else {
+        vscode.commands.executeCommand(mensagem.command);
+      }
     });
 
     this.refresh();
@@ -785,111 +789,180 @@ class ProvedorWebviewSema {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sema Painel</title>
   <style>
+    :root {
+      --bg-primary: var(--vscode-editor-background);
+      --bg-secondary: var(--vscode-editor-inactiveSelectionBackground);
+      --text-main: var(--vscode-foreground);
+      --text-muted: var(--vscode-descriptionForeground);
+      --accent: var(--vscode-button-background);
+      --accent-hover: var(--vscode-button-hoverBackground);
+      --accent-fg: var(--vscode-button-foreground);
+      --border: var(--vscode-widget-border);
+      --success: var(--vscode-testing-iconPassed);
+      --error: var(--vscode-testing-iconFailed);
+    }
     body {
-      font-family: var(--vscode-font-family);
-      color: var(--vscode-foreground);
-      padding: 12px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
+      padding: 16px;
+      margin: 0;
+      background: var(--bg-primary);
     }
     .secao {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .titulo {
       font-size: 11px;
       text-transform: uppercase;
-      font-weight: 600;
-      color: var(--vscode-descriptionForeground);
-      margin-bottom: 12px;
-      letter-spacing: 0.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      letter-spacing: 0.8px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .grade {
       display: grid;
-      gap: 8px;
+      gap: 10px;
     }
     button {
-      background-color: var(--vscode-button-secondaryBackground);
-      color: var(--vscode-button-secondaryForeground);
-      border: 1px solid var(--vscode-button-border, transparent);
-      padding: 8px 12px;
+      background-color: var(--bg-secondary);
+      color: var(--text-main);
+      border: 1px solid transparent;
+      padding: 10px 14px;
       text-align: left;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 8px;
-      border-radius: 4px;
+      gap: 10px;
+      border-radius: 8px;
       font-size: 13px;
-      transition: background-color 0.2s;
+      font-weight: 500;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     button:hover {
-      background-color: var(--vscode-button-secondaryHoverBackground);
+      background-color: var(--vscode-list-hoverBackground);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    button:active {
+      transform: translateY(0);
     }
     .destaque {
-      background-color: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
-      border: 1px solid var(--vscode-button-background);
+      background: linear-gradient(135deg, var(--accent), var(--vscode-textLink-activeForeground, #007acc));
+      color: var(--accent-fg);
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     .destaque:hover {
-      background-color: var(--vscode-button-hoverBackground);
+      background: linear-gradient(135deg, var(--accent-hover), var(--accent));
+      color: var(--accent-fg);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border-color: transparent;
     }
     .status-painel {
-      padding: 12px;
-      background: var(--vscode-editor-inactiveSelectionBackground);
-      border-radius: 6px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
       font-size: 12px;
-      margin-bottom: 5px;
-      border-left: 3px solid var(--vscode-progressBar-background);
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .status-painel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; bottom: 0; width: 4px;
+      background: var(--accent);
     }
     .status-linha {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      align-items: center;
     }
     .status-linha:last-child {
       margin-bottom: 0;
     }
     .status-valor {
       color: var(--vscode-textPreformat-foreground);
-      font-weight: 500;
+      font-weight: 600;
+      background: var(--bg-secondary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      max-width: 15rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: inline-block;
     }
+    .status-valor.online { color: var(--success); }
+    .status-valor.offline { color: var(--error); }
     .icon {
-      font-size: 14px;
+      font-size: 16px;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+    }
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+      opacity: 0.5;
     }
   </style>
 </head>
 <body>
-  <div class="secao">
-    <div class="titulo">🚦 STATUS DO AMBIENTE</div>
+  <div class="secao" style="animation-delay: 0s">
+    <div class="titulo">🚀 Status do Motor</div>
     <div class="status-painel">
-      <div class="status-linha"><span>CLI Motor:</span> <span class="status-valor" id="status-cli">Verificando...</span></div>
+      <div class="status-linha"><span>CLI Sema:</span> <span class="status-valor" id="status-cli">Verificando...</span></div>
       <div class="status-linha"><span>Workspace:</span> <span class="status-valor" id="status-projeto">...</span></div>
       <div class="status-linha" style="margin-bottom:0"><span>Contrato:</span> <span class="status-valor" id="status-alvo">...</span></div>
     </div>
   </div>
 
-  <div class="secao">
-    <div class="titulo">🎯 NAVEGACAO E GOVERNANCA</div>
+  <div class="secao" style="animation-delay: 0.1s">
+    <div class="titulo">🎯 Ações de Contrato</div>
     <div class="grade">
-      <button class="destaque" onclick="enviar('sema.abrirPromptCurtoAlvoAtual')"><span class="icon">🔍</span> Inspecionar Contrato</button>
-      <button onclick="enviar('sema.abrirDriftAlvoAtual')"><span class="icon">📈</span> Medir Drift de Codigo</button>
-      <button onclick="enviar('sema.formatarDocumento')"><span class="icon">✨</span> Formatar Arquivo .sema</button>
-      <button onclick="enviar('sema.prepararContextoIaProjeto')"><span class="icon">🧠</span> Gerar Contexto IA / Sync</button>
-      <button onclick="enviar('sema.abrirResumoAlvoAtual')"><span class="icon">📝</span> Ver Resumo Executivo</button>
+      <button class="destaque" onclick="enviar('sema.abrirPromptCurtoAlvoAtual')">
+        <span class="icon">🔍</span> Inspecionar Módulo
+      </button>
+      <button onclick="enviar('sema.abrirDriftAlvoAtual')">
+        <span class="icon">📈</span> Verificar Drift (Scanner)
+      </button>
+      <button onclick="enviar('sema.abrirResumoAlvoAtual')">
+        <span class="icon">📑</span> Resumo Executivo
+      </button>
+      <button onclick="enviar('sema.formatarDocumento')">
+        <span class="icon">✨</span> Auto-Formatar Módulo
+      </button>
     </div>
   </div>
 
-  <div class="secao">
-    <div class="titulo">🤖 AGENTES INTELIGENTES</div>
+  <div class="divider"></div>
+
+  <div class="secao" style="animation-delay: 0.2s">
+    <div class="titulo">🧠 Integração de IA</div>
     <div class="grade" style="grid-template-columns: 1fr 1fr;">
       <button onclick="enviar('sema.configurarIaCursor')">Cursor</button>
       <button onclick="enviar('sema.configurarIaWindsurf')">Windsurf</button>
-      <button onclick="enviar('sema.configurarIaClaude')">Claude Code</button>
-      <button onclick="enviar('sema.configurarIaCline')">Cline / Roo</button>
-      <button onclick="enviar('sema.configurarIaCopilot')">GH Copilot</button>
+      <button onclick="enviar('sema.configurarIaClaude')">Claude</button>
+      <button onclick="enviar('sema.configurarIaCline')">Cline</button>
+      <button onclick="enviar('sema.configurarIaCopilot')">Copilot</button>
       <button onclick="enviar('sema.configurarIaOpenCode')">OpenCode</button>
     </div>
-    <button style="margin-top: 8px; width: 100%; justify-content: center" onclick="enviar('sema.configurarIa')"><span class="icon">⚙️</span> Update All Agents Rules</button>
+    <button style="margin-top: 10px; width: 100%; justify-content: center; background: var(--bg-secondary); opacity: 0.9;" onclick="enviar('sema.prepararContextoIaProjeto')">
+      <span class="icon">🔄</span> Update All Context / Sync
+    </button>
   </div>
 
   <script>
@@ -903,13 +976,20 @@ class ProvedorWebviewSema {
       const message = event.data;
       if (message.command === 'atualizar') {
         const cliEl = document.getElementById('status-cli');
-        cliEl.textContent = message.pronto ? 'Online & Ready' : 'Indisponivel';
-        cliEl.style.color = message.pronto ? 'var(--vscode-testing-iconPassed)' : 'var(--vscode-testing-iconFailed)';
+        cliEl.textContent = message.pronto ? 'Online & Pronto' : 'Indisponível';
+        cliEl.className = 'status-valor ' + (message.pronto ? 'online' : 'offline');
         
         document.getElementById('status-projeto').textContent = message.workspace ? 'Conectado' : 'Nenhum';
-        document.getElementById('status-alvo').textContent = message.alvo ? message.alvo.split(/[\\\\/]/).pop() : 'Nenhum Ativo';
+        
+        const alvo = message.alvo ? message.alvo.split(/[\\\\/]/).pop() : 'Nenhum';
+        const alvoEl = document.getElementById('status-alvo');
+        alvoEl.textContent = alvo;
+        alvoEl.title = message.alvo || '';
       }
     });
+
+    // Instancia os valores iniciais
+    enviar('sema.refreshView');
   </script>
 </body>
 </html>`;
@@ -917,7 +997,7 @@ class ProvedorWebviewSema {
 }
 
 async function iniciarCliente(context) {
-  const serverModule = context.asAbsolutePath("server.js");
+  const serverModule = context.asAbsolutePath("dist/server.js");
   const serverOptions = {
     run: {
       module: serverModule,
@@ -3241,6 +3321,508 @@ const EXEMPLOS_SEMA = {
         given { assinatura_id: "asn_1" }
         expect { sucesso: verdadeiro }
       }
+    }
+  }
+}
+`,
+  "dominio_compartilhado.sema": `module exemplos.dominio.compartilhado {
+  docs {
+    resumo: "Entidades, enums e states de dominio reutilizaveis entre modulos via use."
+  }
+
+  entity Endereco {
+    fields {
+      logradouro: Texto
+      numero: Texto
+      complemento: Texto
+      bairro: Texto
+      cidade: Texto
+      estado: Texto
+      cep: Texto
+      pais: Texto
+    }
+  }
+
+  entity Dinheiro {
+    fields {
+      valor: Decimal
+      moeda: Texto
+    }
+  }
+
+  enum StatusGeral {
+    ATIVO,
+    INATIVO,
+    PENDENTE,
+    CANCELADO,
+    ARQUIVADO
+  }
+
+  enum Prioridade {
+    BAIXA,
+    MEDIA,
+    ALTA,
+    CRITICA
+  }
+
+  state ciclo_entidade {
+    fields {
+      status: StatusGeral
+      atualizado_em: Timestamp
+    }
+    invariants {
+      status existe
+    }
+    transitions {
+      PENDENTE -> ATIVO
+      ATIVO -> INATIVO
+      ATIVO -> CANCELADO
+      INATIVO -> ATIVO
+      CANCELADO -> ARQUIVADO
+    }
+  }
+}
+`,
+  "carrinho.sema": `module exemplos.web.carrinho {
+  docs {
+    resumo: "Carrinho de compras com adicao, remocao e calculo de totais."
+  }
+
+  entity Carrinho {
+    fields {
+      id: Id
+      sessao_id: Texto
+      usuario_id: Id
+      itens: Lista
+      subtotal: Decimal
+      desconto: Decimal
+      total: Decimal
+      atualizado_em: Timestamp
+    }
+  }
+
+  entity ItemCarrinho {
+    fields {
+      id: Id
+      carrinho_id: Id
+      produto_id: Id
+      nome: Texto
+      preco_unitario: Decimal
+      quantidade: Inteiro
+      subtotal: Decimal
+    }
+  }
+
+  task adicionar_item {
+    input {
+      sessao_id: Texto required
+      produto_id: Id required
+      quantidade: Inteiro required
+    }
+    output {
+      carrinho: Carrinho
+    }
+    rules {
+      quantidade > 0
+      quantidade <= 99
+      produto_id deve_ser valido
+    }
+    effects {
+      consulta Produto por produto_id
+      consulta Carrinho por sessao_id
+      persistencia Carrinho
+      persistencia ItemCarrinho
+      evento item_adicionado_carrinho criticidade = baixa
+    }
+    guarantees {
+      carrinho existe
+      carrinho.total >= 0
+    }
+    error {
+      produto_nao_encontrado: "Produto nao encontrado."
+      produto_indisponivel: "Produto fora de estoque."
+      quantidade_invalida: "Quantidade deve ser entre 1 e 99."
+    }
+    tests {
+      caso "adiciona item ao carrinho" {
+        given { sessao_id: "sess_1"  produto_id: "prod_1"  quantidade: 2 }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita quantidade zero" {
+        given { sessao_id: "sess_1"  produto_id: "prod_1"  quantidade: 0 }
+        expect { sucesso: falso }
+        error { tipo: "quantidade_invalida" }
+      }
+    }
+  }
+
+  task remover_item {
+    input {
+      sessao_id: Texto required
+      item_id: Id required
+    }
+    output {
+      carrinho: Carrinho
+    }
+    rules {
+      item_id deve_ser valido
+    }
+    effects {
+      persistencia Carrinho
+      persistencia ItemCarrinho
+      evento item_removido_carrinho criticidade = baixa
+    }
+    guarantees {
+      carrinho existe
+    }
+    error {
+      item_nao_encontrado: "Item nao encontrado no carrinho."
+    }
+    tests {
+      caso "remove item existente" {
+        given { sessao_id: "sess_1"  item_id: "item_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task aplicar_cupom {
+    input {
+      sessao_id: Texto required
+      cupom: Texto required
+    }
+    output {
+      carrinho: Carrinho
+      desconto_aplicado: Decimal
+    }
+    rules {
+      cupom deve_ser preenchido
+    }
+    effects {
+      consulta Cupom por cupom criticidade = media
+      persistencia Carrinho
+      auditoria uso_cupom
+    }
+    guarantees {
+      carrinho existe
+      desconto_aplicado >= 0
+    }
+    error {
+      cupom_invalido: "Cupom nao encontrado ou expirado."
+      cupom_ja_usado: "Este cupom ja foi utilizado."
+      carrinho_vazio: "Adicione itens antes de aplicar um cupom."
+    }
+    tests {
+      caso "aplica cupom valido" {
+        given { sessao_id: "sess_1"  cupom: "PROMO10" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  route api_carrinho_adicionar {
+    metodo: POST
+    caminho: /api/carrinho/itens
+    task: adicionar_item
+    finalidade: adicao_item_carrinho
+    input { sessao_id: Texto  produto_id: Id  quantidade: Inteiro }
+    output { carrinho: Carrinho }
+  }
+
+  route api_carrinho_cupom {
+    metodo: POST
+    caminho: /api/carrinho/cupom
+    task: aplicar_cupom
+    finalidade: aplicacao_desconto
+    input { sessao_id: Texto  cupom: Texto }
+    output { carrinho: Carrinho  desconto_aplicado: Decimal }
+  }
+}
+`,
+  "pagina_catalogo.sema": `module exemplos.web.catalogo {
+  docs {
+    resumo: "Pagina de catalogo de produtos com listagem, busca e filtros."
+  }
+
+  entity ProdutoCatalogo {
+    fields {
+      id: Id
+      nome: Texto
+      preco: Decimal
+      categoria: Texto
+      imagem_url: Texto
+      disponivel: Booleano
+    }
+  }
+
+  task buscar_produtos {
+    input {
+      termo: Texto
+      categoria: Texto
+      preco_min: Decimal
+      preco_max: Decimal
+      pagina: Inteiro
+    }
+    output {
+      produtos: Lista
+      total: Inteiro
+      paginas: Inteiro
+    }
+    rules {
+      pagina >= 1
+    }
+    effects {
+      consulta ProdutoCatalogo
+      auditoria busca_catalogo
+    }
+    guarantees {
+      produtos existe
+      total >= 0
+    }
+    tests {
+      caso "busca sem filtros" {
+        given { pagina: 1 }
+        expect { sucesso: verdadeiro }
+      }
+      caso "busca por termo" {
+        given { termo: "camisa"  pagina: 1 }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task obter_produto {
+    input {
+      produto_id: Id required
+    }
+    output {
+      produto: ProdutoCatalogo
+    }
+    rules {
+      produto_id deve_ser valido
+    }
+    effects {
+      consulta ProdutoCatalogo por produto_id
+      auditoria visualizacao_produto
+    }
+    guarantees {
+      produto existe
+    }
+    error {
+      produto_nao_encontrado: "Produto nao localizado."
+      produto_inativo: "Produto indisponivel no momento."
+    }
+    tests {
+      caso "obtem produto existente" {
+        given { produto_id: "prod_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  route api_catalogo {
+    metodo: GET
+    caminho: /api/catalogo
+    task: buscar_produtos
+    finalidade: listagem_publica
+    input { termo: Texto  categoria: Texto  pagina: Inteiro }
+    output { produtos: Lista  total: Inteiro  paginas: Inteiro }
+  }
+
+  route api_produto_detalhe {
+    metodo: GET
+    caminho: /api/catalogo/:produto_id
+    task: obter_produto
+    finalidade: detalhe_produto
+    input { produto_id: Id }
+    output { produto: ProdutoCatalogo }
+  }
+}
+`,
+  "preferencias_usuario.sema": `module exemplos.preferencias.usuario {
+  docs {
+    resumo: "Gerenciamento de preferencias, configuracoes e onboarding do usuario."
+  }
+
+  entity PreferenciasUsuario {
+    fields {
+      usuario_id: Id
+      idioma: Texto
+      tema: Texto
+      notificacoes_email: Booleano
+      notificacoes_push: Booleano
+      fuso_horario: Texto
+      onboarding_concluido: Booleano
+      atualizado_em: Timestamp
+    }
+  }
+
+  entity EtapaOnboarding {
+    fields {
+      usuario_id: Id
+      etapa: Texto
+      concluida: Booleano
+      concluida_em: Timestamp
+    }
+  }
+
+  task salvar_preferencias {
+    input {
+      usuario_id: Id required
+      idioma: Texto
+      tema: Texto
+      notificacoes_email: Booleano
+      notificacoes_push: Booleano
+      fuso_horario: Texto
+    }
+    output {
+      preferencias: PreferenciasUsuario
+    }
+    rules {
+      usuario_id deve_ser valido
+      idioma em [pt-BR, en-US, es-ES, fr-FR]
+      tema em [claro, escuro, sistema]
+    }
+    effects {
+      persistencia PreferenciasUsuario
+      evento preferencias_atualizadas criticidade = baixa
+      auditoria atualizacao_preferencias
+    }
+    guarantees {
+      preferencias existe
+    }
+    error {
+      idioma_invalido: "Idioma nao suportado."
+      tema_invalido: "Tema nao disponivel."
+    }
+    tests {
+      caso "salva preferencias validas" {
+        given { usuario_id: "usr_1"  idioma: "pt-BR"  tema: "escuro" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task concluir_etapa_onboarding {
+    input {
+      usuario_id: Id required
+      etapa: Texto required
+    }
+    output {
+      onboarding_completo: Booleano
+      proxima_etapa: Texto
+    }
+    rules {
+      usuario_id deve_ser valido
+      etapa em [perfil, preferencias, tutorial, primeiro_uso]
+    }
+    effects {
+      persistencia EtapaOnboarding
+      persistencia PreferenciasUsuario
+      evento etapa_onboarding_concluida criticidade = baixa
+      auditoria progresso_onboarding
+    }
+    guarantees {
+      onboarding_completo existe
+    }
+    error {
+      etapa_invalida: "Etapa de onboarding desconhecida."
+      etapa_ja_concluida: "Esta etapa ja foi concluida."
+    }
+    tests {
+      caso "conclui etapa perfil" {
+        given { usuario_id: "usr_1"  etapa: "perfil" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  route api_preferencias {
+    metodo: PUT
+    caminho: /api/usuarios/:usuario_id/preferencias
+    task: salvar_preferencias
+    finalidade: atualizacao_preferencias
+    input { idioma: Texto  tema: Texto  notificacoes_email: Booleano  fuso_horario: Texto }
+    output { preferencias: PreferenciasUsuario }
+  }
+}
+`,
+  "formulario_contato.sema": `module exemplos.web.contato {
+  docs {
+    resumo: "Formulario de contato com validacao, anti-spam e notificacao."
+  }
+
+  entity MensagemContato {
+    fields {
+      id: Id
+      nome: Texto
+      email: Email
+      assunto: Texto
+      mensagem: Texto
+      ip_origem: Texto
+      respondida: Booleano
+      criada_em: Timestamp
+    }
+  }
+
+  task enviar_contato {
+    input {
+      nome: Texto required
+      email: Email required
+      assunto: Texto required
+      mensagem: Texto required
+      token_captcha: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      nome deve_ser preenchido
+      email deve_ser email_valido
+      assunto deve_ser preenchido
+      mensagem deve_ser preenchida
+      mensagem.tamanho <= 2000
+      token_captcha deve_ser valido
+    }
+    effects {
+      consulta servico_captcha criticidade = alta
+      persistencia MensagemContato
+      notificacao equipe nova_mensagem_contato criticidade = media
+      notificacao remetente confirmacao_recebimento criticidade = baixa
+      auditoria envio_contato
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      captcha_invalido: "Verificacao anti-spam falhou. Tente novamente."
+      email_invalido: "Endereco de email invalido."
+      mensagem_muito_longa: "Mensagem excede o limite de 2000 caracteres."
+      limite_diario: "Limite de mensagens por dia atingido para este IP."
+    }
+    tests {
+      caso "envia contato valido" {
+        given { nome: "Maria"  email: "maria@email.com"  assunto: "Duvida"  mensagem: "Ola!"  token_captcha: "tok_ok" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita captcha invalido" {
+        given { nome: "Bot"  email: "bot@spam.com"  assunto: "Spam"  mensagem: "Compre agora"  token_captcha: "tok_invalido" }
+        expect { sucesso: falso }
+        error { tipo: "captcha_invalido" }
+      }
+    }
+  }
+
+  route api_contato {
+    metodo: POST
+    caminho: /api/contato
+    task: enviar_contato
+    finalidade: recepcao_contato
+    input { nome: Texto  email: Email  assunto: Texto  mensagem: Texto  token_captcha: Texto }
+    output { protocolo: Id }
+    error {
+      captcha_invalido: "Verificacao de seguranca falhou."
+      limite_diario: "Muitas mensagens enviadas hoje."
     }
   }
 }
