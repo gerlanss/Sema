@@ -33,6 +33,9 @@ const PACOTES_RUNTIME = [
   "gerador-typescript",
   "gerador-python",
   "gerador-dart",
+  "gerador-javascript",
+  "gerador-html",
+  "gerador-css",
 ];
 
 function executar(comando, argumentos, cwd) {
