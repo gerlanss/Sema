@@ -558,9 +558,7 @@ async function inferirFontesLegado(
       const temNext = textosPackage.some((texto) => /"next"\s*:/.test(texto ?? ""))
         || nextConfigs.length > 0
         || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/api\/.+\/route\.(?:ts|tsx|js|jsx)$/.test(relacao));
-      const temNextConsumer = textosPackage.some((texto) => /"next"\s*:/.test(texto ?? ""))
-        || nextConfigs.length > 0
-        || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/(?:(?!api\/).)*?(?:page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/.test(relacao));
+      const temNextConsumer = relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/(?:(?!api\/).)*?(?:page|layout|loading|error)\.(?:ts|tsx|js|jsx)$/.test(relacao));
       const temSuperficieReactViteConsumer = relacoesTs.some((relacao) => /^(?:src\/)?pages\/.+\.(?:ts|tsx|js|jsx)$/.test(relacao))
         || relacoesTs.some((relacao) => /^(?:src\/)?App\.(?:ts|tsx|js|jsx)$/.test(relacao))
         || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?(?:app\/)?(?:router|routes)\.(?:ts|tsx|js|jsx)$/.test(relacao));

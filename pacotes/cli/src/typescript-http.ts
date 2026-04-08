@@ -111,7 +111,7 @@ function extrairNomeExportado(statement: ts.Statement, sourceFile: ts.SourceFile
     if (!ts.isIdentifier(declaracao.name) || !declaracao.initializer) {
       continue;
     }
-    if (ts.isArrowFunction(declaracao.initializer) || ts.isFunctionExpression(declaracao.initializer)) {
+    if (ts.isArrowFunction(declaracao.initializer) || ts.isFunctionExpression(declaracao.initializer) || ts.isCallExpression(declaracao.initializer) || ts.isIdentifier(declaracao.initializer)) {
       nomes.push(declaracao.name.getText(sourceFile));
     }
   }

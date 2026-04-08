@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.7
+
+- corrige deteccao de rotas Next.js protegidas por auth guard (`withAuth`, `withSession` e similares) que antes geravam falsos positivos no `sema drift`
+- corrige `consumerFramework` retornando `null` incorretamente em projetos Next.js pure-API com auto-deteccao de fontes legado
+
 ## 1.2.17
 
 - faz `Abrir Prompt IA` e `Copiar Prompt IA` usarem o `SEMA_CONTEXT.md` atualizado do projeto como fonte principal
