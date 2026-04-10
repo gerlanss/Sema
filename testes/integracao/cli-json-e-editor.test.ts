@@ -1414,7 +1414,7 @@ test("mcp cli responde help e version sem entrar em stdio", () => {
     { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
   );
   assert.equal(ajuda.status, 0, ajuda.stderr || ajuda.stdout);
-  assert.match(ajuda.stdout, /Sema MCP v1\.5\.2/);
+  assert.match(ajuda.stdout, /Sema MCP v1\.5\.3/);
   assert.match(ajuda.stdout, /sema_drift/);
   assert.match(ajuda.stdout, /MCP_PORT/);
 
@@ -1424,7 +1424,7 @@ test("mcp cli responde help e version sem entrar em stdio", () => {
     { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
   );
   assert.equal(versao.status, 0, versao.stderr || versao.stdout);
-  assert.equal(versao.stdout.trim(), "1.5.2");
+  assert.equal(versao.stdout.trim(), "1.5.3");
 });
 
 test("cli inspeciona familias backend novas e detecta fontes corretas", async () => {

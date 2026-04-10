@@ -31,7 +31,7 @@ sema drift ./contratos-importados --json
 - `python`
 - `dart`
 
-## Persistencia na linha 1.5.2
+## Persistencia na linha 1.5.3
 
 A importacao legada agora tenta reconhecer sinais de persistencia vendor-first, incluindo:
 

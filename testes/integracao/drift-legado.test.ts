@@ -308,7 +308,7 @@ export class ClientesController {
       "utf8",
     );
 
-    const execucao = executar(["drift", "--json"], base);
+    const execucao = executar(["drift", ".", "--json"], base);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
     const json = JSON.parse(execucao.stdout);
@@ -470,6 +470,193 @@ test("cli drift resolve impls e rotas Next.js App Router sem falsos positivos de
     }
   } finally {
     await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls em JS browser-side definidos via Object.assign no prototype", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-object-assign-prototype-"));
+
+  try {
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await mkdir(path.join(base, "Gestech", "static"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["./Gestech"],
+        fontesLegado: ["typescript"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "Gestech", "static", "collaborators.js"),
+      `Object.assign(VDW0018Dashboard.prototype, {
+  async loadCollaboratorsList() {
+    return true;
+  },
+
+  applyCollaboratorFilter() {
+    return [];
+  }
+});
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "contratos", "colaboradores_dashboard.sema"),
+      `module gestech.dashboard.colaboradores {
+  task inicializar_aba_colaboradores {
+    input {
+      tab_id: Texto
+    }
+    output {
+      carregado: Booleano
+    }
+    guarantees {
+      carregado existe
+    }
+    impl {
+      ts: static.collaborators.loadCollaboratorsList
+    }
+    tests {
+      caso "ok" {
+        given { tab_id: "#collaborators" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task filtrar_colaboradores_cliente {
+    input {
+      ids_selecionados: Lista
+    }
+    output {
+      colaboradores_filtrados: Lista
+    }
+    guarantees {
+      colaboradores_filtrados existe
+    }
+    impl {
+      ts: static.collaborators.applyCollaboratorFilter
+    }
+    tests {
+      caso "ok" {
+        given { ids_selecionados: [58] }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+
+    const caminhosValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhosValidos.has("static.collaborators.loadCollaboratorsList"), true);
+    assert.equal(caminhosValidos.has("static.collaborators.applyCollaboratorFilter"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift nao ignora a propria worktree ativa quando ela e a raiz do projeto", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-drift-worktree-ativa-"));
+  const base = path.join(baseTemporaria, ".claude", "worktrees", "ativa");
+
+  try {
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await mkdir(path.join(base, "Gestech", "static"), { recursive: true });
+    await mkdir(path.join(base, "Gestech", "routes"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "contratos", "colaboradores_dashboard.sema"),
+      `module gestech.dashboard.colaboradores {
+  task carregar_colaboradores {
+    input {
+      empresa: Texto
+    }
+    output {
+      colaboradores: Lista
+    }
+    guarantees {
+      colaboradores existe
+    }
+    impl {
+      py: routes.api_collaborators.colaboradores
+    }
+    tests {
+      caso "ok" {
+        given { empresa: "todas" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task inicializar_aba_colaboradores {
+    input {
+      tab_id: Texto
+    }
+    output {
+      carregado: Booleano
+    }
+    guarantees {
+      carregado existe
+    }
+    impl {
+      ts: static.collaborators.loadCollaboratorsList
+    }
+    tests {
+      caso "ok" {
+        given { tab_id: "#collaborators" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "Gestech", "routes", "api_collaborators.py"),
+      `def colaboradores():
+    return {"colaboradores": []}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "Gestech", "static", "collaborators.js"),
+      `Object.assign(VDW0018Dashboard.prototype, {
+  async loadCollaboratorsList() {
+    return true;
+  }
+});
+`,
+      "utf8",
+    );
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+
+    const caminhosValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhosValidos.has("routes.api_collaborators.colaboradores"), true);
+    assert.equal(caminhosValidos.has("static.collaborators.loadCollaboratorsList"), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
   }
 });
 

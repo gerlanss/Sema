@@ -6,11 +6,13 @@ Sema e um protocolo de governanca de intencao para IA sobre software vivo. Ela g
 
 Ela nao tenta substituir framework, ORM, runtime, observabilidade ou banco real. O papel da Sema e dizer o que existe, o que pode mudar e como uma IA deve navegar nisso com menos improviso e mais verificacao.
 
-## Destaques da linha 1.5.2
+## Destaques da linha 1.5.3
 
 - persistencia vendor-first de primeira classe para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
 - `sema drift` com match de codigo vivo para recursos reais desses bancos
 - `sema drift` com escopo real e ignorando worktrees ou consumers laterais por padrao
+- `sema drift` agora resolve metodos JS/TS browser-side definidos via `Object.assign(...prototype...)`
+- entrada padrao da CLI agora prioriza `contratos/`, `sema/` e a pasta atual antes de cair em `exemplos`
 - `sema impacto` para mostrar o que tocar, em que ordem, antes da edicao
 - `sema renomear-semantico` para guiar renomeacao de payload, store, worker, rota e teste
 - `sema verificar` com geracao corrigida de casos inline em TypeScript e Python
@@ -66,7 +68,7 @@ sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto --json
 
 ## Persistencia vendor-first
 
-Sema 1.5.2 trata banco como superficie semantica de primeira classe, sem fingir que `postgres`, `mysql`, `sqlite`, `mongodb` e `redis` sao a mesma coisa. O contrato canonico agora aceita blocos `database` e recursos como `table`, `collection`, `document`, `keyspace`, `stream`, `relationship`, `query`, `index` e `retention`.
+Sema 1.5.3 trata banco como superficie semantica de primeira classe, sem fingir que `postgres`, `mysql`, `sqlite`, `mongodb` e `redis` sao a mesma coisa. O contrato canonico agora aceita blocos `database` e recursos como `table`, `collection`, `document`, `keyspace`, `stream`, `relationship`, `query`, `index` e `retention`.
 
 Exemplo curto:
 

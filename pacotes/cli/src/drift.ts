@@ -495,6 +495,7 @@ function resolverRaizesIgnoradasPermitidas(
   segmentosIgnorados: string[],
 ): string[] {
   return [...new Set([
+    path.resolve(contexto.baseProjeto),
     resolverRaizEscopoReal(contexto),
     ...resolverRaizesExplicitasConfiguradas(contexto),
   ])]
@@ -1557,6 +1558,110 @@ function registrarSimboloTypeScript(
   }
 }
 
+function desembrulharExpressaoTypeScript(expr: ts.Expression): ts.Expression {
+  let atual = expr;
+  while (true) {
+    if (ts.isParenthesizedExpression(atual) || ts.isAsExpression(atual) || ts.isSatisfiesExpression(atual) || ts.isTypeAssertionExpression(atual)) {
+      atual = atual.expression;
+      continue;
+    }
+    if (ts.isAwaitExpression(atual)) {
+      atual = atual.expression;
+      continue;
+    }
+    return atual;
+  }
+}
+
+function extrairNomePropriedadeTypeScript(nome: ts.PropertyName, sourceFile: ts.SourceFile): string | undefined {
+  if (ts.isIdentifier(nome) || ts.isStringLiteralLike(nome) || ts.isNumericLiteral(nome)) {
+    return nome.text;
+  }
+  if (ts.isComputedPropertyName(nome) && ts.isStringLiteralLike(nome.expression)) {
+    return nome.expression.text;
+  }
+  const texto = nome.getText(sourceFile).trim();
+  return texto.length > 0 ? texto : undefined;
+}
+
+function extrairNomeClassePrototypeTypeScript(expr: ts.Expression, sourceFile: ts.SourceFile): string | undefined {
+  const alvo = desembrulharExpressaoTypeScript(expr);
+  if (ts.isPropertyAccessExpression(alvo) && alvo.name.text === "prototype") {
+    return alvo.expression.getText(sourceFile).trim() || undefined;
+  }
+  return undefined;
+}
+
+function registrarMetodoTypeScriptProtoOuObjeto(
+  simbolos: Map<string, SimboloResolvido>,
+  basesSimbolicas: string[],
+  arquivo: string,
+  nomeMetodo: string,
+  nomeClasse?: string,
+): void {
+  if (!nomeMetodo) {
+    return;
+  }
+  if (nomeClasse) {
+    registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, nomeMetodo, nomeClasse);
+  }
+  registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, nomeMetodo);
+}
+
+function registrarMetodosObjectAssignTypeScript(
+  simbolos: Map<string, SimboloResolvido>,
+  basesSimbolicas: string[],
+  arquivo: string,
+  objeto: ts.ObjectLiteralExpression,
+  sourceFile: ts.SourceFile,
+  nomeClasse?: string,
+): void {
+  for (const propriedade of objeto.properties) {
+    if (ts.isMethodDeclaration(propriedade) && propriedade.name) {
+      const nomeMetodo = extrairNomePropriedadeTypeScript(propriedade.name, sourceFile);
+      if (nomeMetodo) {
+        registrarMetodoTypeScriptProtoOuObjeto(simbolos, basesSimbolicas, arquivo, nomeMetodo, nomeClasse);
+      }
+      continue;
+    }
+
+    if (!ts.isPropertyAssignment(propriedade)) {
+      continue;
+    }
+
+    const nomeMetodo = extrairNomePropriedadeTypeScript(propriedade.name, sourceFile);
+    const valor = desembrulharExpressaoTypeScript(propriedade.initializer);
+    if (nomeMetodo && (ts.isFunctionExpression(valor) || ts.isArrowFunction(valor))) {
+      registrarMetodoTypeScriptProtoOuObjeto(simbolos, basesSimbolicas, arquivo, nomeMetodo, nomeClasse);
+    }
+  }
+}
+
+function registrarAtribuicaoPrototypeTypeScript(
+  simbolos: Map<string, SimboloResolvido>,
+  basesSimbolicas: string[],
+  arquivo: string,
+  sourceFile: ts.SourceFile,
+  esquerda: ts.Expression,
+  direita: ts.Expression,
+): void {
+  const alvo = desembrulharExpressaoTypeScript(esquerda);
+  const valor = desembrulharExpressaoTypeScript(direita);
+  if (!ts.isPropertyAccessExpression(alvo) || !ts.isPropertyAccessExpression(alvo.expression)) {
+    return;
+  }
+  if (alvo.expression.name.text !== "prototype") {
+    return;
+  }
+  if (!ts.isFunctionExpression(valor) && !ts.isArrowFunction(valor)) {
+    return;
+  }
+
+  const nomeClasse = alvo.expression.expression.getText(sourceFile).trim();
+  const nomeMetodo = alvo.name.getText(sourceFile).trim();
+  registrarMetodoTypeScriptProtoOuObjeto(simbolos, basesSimbolicas, arquivo, nomeMetodo, nomeClasse || undefined);
+}
+
 function normalizarRelacaoConsumer(relacaoArquivo: string): string {
   return relacaoArquivo.replace(/\\/g, "/");
 }
@@ -2145,6 +2250,26 @@ async function indexarTypeScript(diretorios: string[]): Promise<{
         }
 
         if (!ts.isClassDeclaration(node) || !node.name) {
+          if (ts.isExpressionStatement(node)) {
+            const expr = desembrulharExpressaoTypeScript(node.expression);
+            if (ts.isCallExpression(expr)
+              && ts.isPropertyAccessExpression(expr.expression)
+              && ts.isIdentifier(expr.expression.expression)
+              && expr.expression.expression.text === "Object"
+              && expr.expression.name.text === "assign") {
+              const nomeClasse = expr.arguments[0]
+                ? extrairNomeClassePrototypeTypeScript(expr.arguments[0], sourceFile)
+                : undefined;
+              for (const argumento of expr.arguments.slice(1)) {
+                const valor = desembrulharExpressaoTypeScript(argumento);
+                if (ts.isObjectLiteralExpression(valor)) {
+                  registrarMetodosObjectAssignTypeScript(simbolos, basesSimbolicas, arquivo, valor, sourceFile, nomeClasse);
+                }
+              }
+            } else if (ts.isBinaryExpression(expr) && expr.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+              registrarAtribuicaoPrototypeTypeScript(simbolos, basesSimbolicas, arquivo, sourceFile, expr.left, expr.right);
+            }
+          }
           continue;
         }
 

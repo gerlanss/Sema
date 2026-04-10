@@ -126,14 +126,38 @@ function normalizarAlvo(valor?: string): AlvoGeracao | undefined {
   return undefined;
 }
 
-function resolverEntradaPadrao(
+const NOMES_ORIGEM_CONTRATO = new Set(["sema", "contratos", "contracts"]);
+
+async function resolverEntradaPadrao(
   cwd: string,
   configCarregada?: ConfiguracaoProjetoCarregada,
-): string {
+): Promise<string> {
   if (configCarregada) {
     return configCarregada.baseDiretorio;
   }
-  return path.resolve(cwd, "exemplos");
+
+  for (const nomeOrigem of NOMES_ORIGEM_CONTRATO) {
+    const origem = path.join(cwd, nomeOrigem);
+    if (await caminhoExiste(origem)) {
+      return path.resolve(origem);
+    }
+  }
+
+  try {
+    const entradas = await readdir(cwd, { withFileTypes: true });
+    if (entradas.some((entradaAtual) => entradaAtual.isFile() && entradaAtual.name.endsWith(".sema"))) {
+      return path.resolve(cwd);
+    }
+  } catch {
+    // Se o cwd nao puder ser lido, seguimos para os fallbacks.
+  }
+
+  const exemplos = path.resolve(cwd, "exemplos");
+  if (await caminhoExiste(exemplos)) {
+    return exemplos;
+  }
+
+  return path.resolve(cwd);
 }
 
 async function listarArquivosDeOrigens(origens: string[]): Promise<string[]> {
@@ -341,8 +365,6 @@ const EXTENSOES_CODIGO = [
   ".hpp",
   ".h",
 ];
-const NOMES_ORIGEM_CONTRATO = new Set(["sema", "contratos", "contracts"]);
-
 async function resolverBaseProjeto(
   entradaResolvida: string,
   configCarregada?: ConfiguracaoProjetoCarregada,
@@ -707,7 +729,7 @@ export async function carregarProjeto(
 ): Promise<ContextoProjetoCarregado> {
   const entradaBase = entrada ? path.resolve(cwd, entrada) : cwd;
   const configCarregada = await carregarConfiguracaoProjeto(entradaBase);
-  const entradaResolvida = entrada ? path.resolve(cwd, entrada) : resolverEntradaPadrao(cwd, configCarregada);
+  const entradaResolvida = entrada ? path.resolve(cwd, entrada) : await resolverEntradaPadrao(cwd, configCarregada);
   const baseProjeto = await resolverBaseProjeto(entradaResolvida, configCarregada);
   const infoEntrada = await stat(entradaResolvida);
   const origensProjeto = await resolverOrigensProjeto(baseProjeto, entradaResolvida, configCarregada);

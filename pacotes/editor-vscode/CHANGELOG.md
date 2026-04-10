@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.3
+
+- acompanha a linha publica 1.5.3 com alinhamento de docs, empacotamento e correcao do `drift` para metodos JS/TS definidos via `Object.assign(...prototype...)`
+- mantem a extensao sincronizada com o patch publico da CLI e do MCP
+
 ## 1.5.2
 
 - acompanha a linha publica 1.5.2 com correcao do `sema verificar` para payload inline, `pass` em blocos Python comentados e ordenacao segura de campos obrigatorios
