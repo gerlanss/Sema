@@ -1,6 +1,6 @@
 {
   "name": "@semacode/mcp",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "type": "module",
   "description": "Servidor MCP da Sema que expoe validacao, drift, contexto IA e fluxo vendor-first de persistencia como ferramentas para agentes.",
   "license": "MIT",

@@ -55,8 +55,11 @@ test("cli verificar suporta resumo json estavel", () => {
   assert.equal(json.comando, "verificar");
   assert.equal(json.sucesso, true);
   assert.equal(json.totais.modulos, 1);
-  assert.equal(json.modulos[0].alvos.length, 3);
-  assert.deepEqual(json.modulos[0].alvos.map((alvo: { alvo: string }) => alvo.alvo), ["typescript", "python", "dart"]);
+  assert.equal(json.modulos[0].alvos.length, 6);
+  assert.deepEqual(
+    json.modulos[0].alvos.map((alvo: { alvo: string }) => alvo.alvo),
+    ["typescript", "python", "dart", "javascript", "html", "css"],
+  );
 });
 
 test("cli formatar em modo check falha quando arquivo esta fora do formato", async () => {
@@ -1414,7 +1417,7 @@ test("mcp cli responde help e version sem entrar em stdio", () => {
     { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
   );
   assert.equal(ajuda.status, 0, ajuda.stderr || ajuda.stdout);
-  assert.match(ajuda.stdout, /Sema MCP v1\.5\.3/);
+  assert.match(ajuda.stdout, /Sema MCP v1\.5\.4/);
   assert.match(ajuda.stdout, /sema_drift/);
   assert.match(ajuda.stdout, /MCP_PORT/);
 
@@ -1424,7 +1427,7 @@ test("mcp cli responde help e version sem entrar em stdio", () => {
     { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
   );
   assert.equal(versao.status, 0, versao.stderr || versao.stdout);
-  assert.equal(versao.stdout.trim(), "1.5.3");
+  assert.equal(versao.stdout.trim(), "1.5.4");
 });
 
 test("cli inspeciona familias backend novas e detecta fontes corretas", async () => {

@@ -2,6 +2,7 @@ import path from "node:path";
 import type { ExpressaoSemantica, IrBlocoDeclarativo, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import {
   descreverEstruturaModulo,
+  extrairTiposNomeados,
   mapearTipoParaTypeScript,
   normalizarNomeModulo,
   normalizarNomeParaSimbolo,
@@ -12,21 +13,6 @@ import {
 export interface OpcoesGeracaoTypeScript {
   framework?: FrameworkGeracao;
 }
-
-const TIPOS_PRIMITIVOS_SEMA = new Set(["Texto", "Numero", "Inteiro", "Decimal", "Booleano", "Data", "DataHora", "Id", "Email", "Url", "Json", "Vazio"]);
-
-const TIPOS_TYPESCRIPT_NATIVOS = new Set([
-  "string",
-  "number",
-  "boolean",
-  "Date",
-  "unknown",
-  "void",
-  "null",
-  "undefined",
-  "any",
-  "Record<string, unknown>",
-]);
 
 function gerarInterface(nome: string, campos: IrCampo[]): string {
   const propriedades = campos.length === 0
@@ -64,8 +50,10 @@ function coletarTiposExternos(modulo: IrModulo): string[] {
   ];
 
   for (const campo of campos) {
-    if (!TIPOS_PRIMITIVOS_SEMA.has(campo.tipo) && !locais.has(campo.tipo)) {
-      referenciados.add(campo.tipo);
+    for (const tipo of extrairTiposNomeados(campo.tipo)) {
+      if (!locais.has(tipo)) {
+        referenciados.add(tipo);
+      }
     }
   }
 
@@ -509,12 +497,8 @@ function gerarNestJsDtos(modulo: IrModulo, caminhoContrato: string): string {
   const tiposReferenciados = new Set<string>();
   const registrarTipos = (campos: IrCampo[]) => {
     for (const campo of campos) {
-      const tipoMapeado = mapearTipoParaTypeScript(campo.tipo);
-      if (
-        !TIPOS_TYPESCRIPT_NATIVOS.has(tipoMapeado)
-        && /^[A-Za-z_][A-Za-z0-9_]*$/.test(tipoMapeado)
-      ) {
-        tiposReferenciados.add(tipoMapeado);
+      for (const tipo of extrairTiposNomeados(campo.tipo)) {
+        tiposReferenciados.add(tipo);
       }
     }
   };

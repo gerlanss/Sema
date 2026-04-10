@@ -72,6 +72,7 @@ export default assert;
           module: "commonjs",
           moduleResolution: "node",
           strict: true,
+          allowImportingTsExtensions: true,
           skipLibCheck: true,
           esModuleInterop: true,
           experimentalDecorators: true,
@@ -85,7 +86,7 @@ export default assert;
             "node:assert/strict": ["./stubs/node-assert-strict.d.ts"],
           },
         },
-        include: ["src/**/*.ts", "test/**/*.ts", "globals.d.ts"],
+        include: ["*.ts", "src/**/*.ts", "test/**/*.ts", "globals.d.ts"],
       }, null, 2),
       "utf8",
     );
@@ -414,6 +415,157 @@ module exemplo.geracao.python_composto {
     await writeFile(caminhoArquivo, arquivoPy.conteudo, "utf8");
 
     const compilacao = spawnSync("python", ["-m", "py_compile", caminhoArquivo], {
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+    assert.equal(compilacao.status, 0, compilacao.stderr || compilacao.stdout);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("gerador TypeScript emite tipos compostos validos para arrays, mapa, opcional e aliases externos", async () => {
+  const codigoCompartilhado = `
+module base.compartilhado {
+  type PedidoResumo {
+    fields {
+      id: Id required
+      status: Texto
+    }
+  }
+}
+`;
+
+  const codigo = `
+module exemplo.geracao.typescript_composto {
+  use base.compartilhado
+
+  type UsuarioRef {
+    fields {
+      id: Id required
+      nome: Texto
+    }
+  }
+
+  type PromocaoItem {
+    fields {
+      sku: Texto required
+      quantidade: Inteiro required
+    }
+  }
+
+  task montar_payload {
+    input {
+      titulos: Lista<Texto> optional
+      codigos: Texto[] optional
+      metadata: Mapa<Texto, Decimal> optional
+      dono: Opcional<UsuarioRef>
+      itens: PromocaoItem[] required
+      externos: PedidoResumo[] optional
+      variacao: Texto | Inteiro
+    }
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          itens: "sku-1"
+          variacao: 1
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+
+  const projeto = compilarProjeto([
+    { caminho: "base_compartilhado.sema", codigo: codigoCompartilhado },
+    { caminho: "typescript_composto.sema", codigo },
+  ]);
+  const resultado = projeto.modulos.find((modulo) => modulo.caminho === "typescript_composto.sema");
+  assert.ok(resultado);
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosTs = gerarTypeScript(resultado.ir!);
+  const arquivoTs = arquivosTs.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_typescript_composto.ts");
+  assert.ok(arquivoTs);
+  assert.match(arquivoTs.conteudo, /titulos\?: string\[\];/);
+  assert.match(arquivoTs.conteudo, /codigos\?: string\[\];/);
+  assert.match(arquivoTs.conteudo, /metadata\?: Record<string, number>;/);
+  assert.match(arquivoTs.conteudo, /dono\?: UsuarioRef \| null;/);
+  assert.match(arquivoTs.conteudo, /itens: PromocaoItem\[\];/);
+  assert.match(arquivoTs.conteudo, /externos\?: PedidoResumo\[\];/);
+  assert.match(arquivoTs.conteudo, /variacao\?: string \| number;/);
+  assert.match(arquivoTs.conteudo, /export type PedidoResumo = any;/);
+  assert.doesNotMatch(arquivoTs.conteudo, /export type Texto\[\] = any;/);
+  assert.doesNotMatch(arquivoTs.conteudo, /export type PromocaoItem\[\] = any;/);
+  assert.doesNotMatch(arquivoTs.conteudo, /export type Lista<Texto> = any;/);
+  assert.doesNotMatch(arquivoTs.conteudo, /export type Mapa<Texto, Decimal> = any;/);
+  assert.doesNotMatch(arquivoTs.conteudo, /export type Opcional<UsuarioRef> = any;/);
+
+  const compilacao = await compilarTypeScriptEstritoTemporario(arquivosTs);
+  assert.equal(compilacao.status, 0, compilacao.stderr || compilacao.stdout);
+});
+
+test("gerador Python aceita sintaxe [] sem inventar classes invalidas", async () => {
+  const codigo = `
+module exemplo.geracao.python_array {
+  type PromocaoItem {
+    fields {
+      sku: Texto required
+    }
+  }
+
+  task listar {
+    input {
+      termo: Texto
+    }
+    output {
+      itens: PromocaoItem[]
+      rotulos: Texto[]
+    }
+    guarantees {
+      itens existe
+    }
+    tests {
+      caso "ok" {
+        given { termo: "tv" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "python_array.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosPy = gerarPython(resultado.ir!);
+  const arquivoPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_python_array.py");
+  assert.ok(arquivoPy);
+  assert.match(arquivoPy.conteudo, /itens: list\[PromocaoItem\] \| None = None/);
+  assert.match(arquivoPy.conteudo, /rotulos: list\[str\] \| None = None/);
+  assert.doesNotMatch(arquivoPy.conteudo, /class PromocaoItem\[\]/);
+  assert.doesNotMatch(arquivoPy.conteudo, /class Texto\[\]/);
+
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-gerador-python-array-"));
+  try {
+    for (const arquivo of arquivosPy) {
+      const caminhoArquivo = path.join(baseTemporaria, arquivo.caminhoRelativo);
+      await mkdir(path.dirname(caminhoArquivo), { recursive: true });
+      await writeFile(caminhoArquivo, arquivo.conteudo, "utf8");
+    }
+
+    const compilacao = spawnSync("python", ["-m", "py_compile", path.join(baseTemporaria, "exemplo_geracao_python_array.py")], {
       stdio: "pipe",
       encoding: "utf8",
     });

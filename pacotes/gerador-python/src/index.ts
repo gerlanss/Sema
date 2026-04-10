@@ -2,6 +2,7 @@ import path from "node:path";
 import type { ExpressaoSemantica, IrBlocoDeclarativo, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import {
   descreverEstruturaModulo,
+  extrairTiposNomeados,
   mapearTipoParaPython,
   normalizarNomeModulo,
   normalizarNomeParaSimbolo,
@@ -11,63 +12,6 @@ import {
 
 export interface OpcoesGeracaoPython {
   framework?: FrameworkGeracao;
-}
-
-const TIPOS_PRIMITIVOS_SEMA = new Set(["Texto", "Numero", "Inteiro", "Decimal", "Booleano", "Data", "DataHora", "Id", "Email", "Url", "Json", "Vazio"]);
-
-function dividirTipoNoNivelRaiz(valor: string, separador: "|" | ","): string[] {
-  const partes: string[] = [];
-  let atual = "";
-  let profundidade = 0;
-
-  for (const caractere of valor) {
-    if (caractere === "<") {
-      profundidade += 1;
-      atual += caractere;
-      continue;
-    }
-    if (caractere === ">") {
-      profundidade = Math.max(0, profundidade - 1);
-      atual += caractere;
-      continue;
-    }
-    if (caractere === separador && profundidade === 0) {
-      if (atual.trim()) {
-        partes.push(atual.trim());
-      }
-      atual = "";
-      continue;
-    }
-    atual += caractere;
-  }
-
-  if (atual.trim()) {
-    partes.push(atual.trim());
-  }
-
-  return partes;
-}
-
-function coletarFolhasTipoPython(tipo: string): string[] {
-  const limpo = tipo.trim();
-  if (!limpo) {
-    return [];
-  }
-  if (/^Opcional<.+>$/.test(limpo)) {
-    return coletarFolhasTipoPython(limpo.slice("Opcional<".length, -1));
-  }
-  const uniao = dividirTipoNoNivelRaiz(limpo, "|");
-  if (uniao.length > 1) {
-    return uniao.flatMap((item) => coletarFolhasTipoPython(item));
-  }
-  if (/^Lista<.+>$/.test(limpo)) {
-    return coletarFolhasTipoPython(limpo.slice("Lista<".length, -1));
-  }
-  if (/^Mapa<.+>$/.test(limpo)) {
-    return dividirTipoNoNivelRaiz(limpo.slice("Mapa<".length, -1), ",")
-      .flatMap((item) => coletarFolhasTipoPython(item));
-  }
-  return [limpo];
 }
 
 function mapearCampoParaPython(campo: IrCampo): string {
@@ -137,8 +81,8 @@ function coletarTiposExternos(modulo: IrModulo): string[] {
   ];
 
   for (const campo of campos) {
-    for (const tipo of coletarFolhasTipoPython(campo.tipo)) {
-      if (!TIPOS_PRIMITIVOS_SEMA.has(tipo) && !locais.has(tipo)) {
+    for (const tipo of extrairTiposNomeados(campo.tipo)) {
+      if (!locais.has(tipo)) {
         referenciados.add(tipo);
       }
     }

@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.5.3
+## 1.5.4
 
-- acompanha a linha publica 1.5.3 com alinhamento de docs, empacotamento e correcao do `drift` para metodos JS/TS definidos via `Object.assign(...prototype...)`
+- acompanha a linha publica 1.5.4 com alinhamento de docs, empacotamento e correcao do `drift` para metodos JS/TS definidos via `Object.assign(...prototype...)`
 - mantem a extensao sincronizada com o patch publico da CLI e do MCP
 
 ## 1.5.2
