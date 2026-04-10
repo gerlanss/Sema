@@ -864,6 +864,7 @@ test("cli drift ignora worktrees e consumidores laterais por padrao e inclui qua
 
   try {
     await mkdir(path.join(base, "src", "app", "pedidos"), { recursive: true });
+    await mkdir(path.join(base, "src", "app", "ranking"), { recursive: true });
     await mkdir(path.join(base, "contratos"), { recursive: true });
     await mkdir(path.join(base, ".claude", "worktrees", "friendly", "src", "app", "externo"), { recursive: true });
     await mkdir(path.join(base, "showcases", "ranking", "src", "app", "externo"), { recursive: true });
@@ -892,6 +893,15 @@ test("cli drift ignora worktrees e consumidores laterais por padrao e inclui qua
       path.join(base, "src", "app", "pedidos", "page.tsx"),
       `export default function PedidosPage() {
   return <main>Pedidos</main>;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "app", "ranking", "page.tsx"),
+      `export default function RankingPage() {
+  return <main>Ranking</main>;
 }
 `,
       "utf8",
@@ -938,6 +948,7 @@ test("cli drift ignora worktrees e consumidores laterais por padrao e inclui qua
     assert.equal(padrao.status, 0, padrao.stderr || padrao.stdout);
     const jsonPadrao = JSON.parse(padrao.stdout);
     assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]pedidos[\\/]page\.tsx$/i.test(surface.arquivo)), true);
+    assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]ranking[\\/]page\.tsx$/i.test(surface.arquivo)), false);
     assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])\.claude[\\/]worktrees[\\/]/i.test(surface.arquivo)), false);
     assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])showcases[\\/]/i.test(surface.arquivo)), false);
 
@@ -948,6 +959,88 @@ test("cli drift ignora worktrees e consumidores laterais por padrao e inclui qua
     assert.equal(jsonAmplo.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])showcases[\\/]/i.test(surface.arquivo)), true);
   } finally {
     await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift em escopo de modulo nao deixa o prefixo do projeto poluir consumer surfaces", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "gestech-drift-escopo-"));
+  const base = path.join(baseTemporaria, "gestech-fixture");
+
+  try {
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await mkdir(path.join(base, "Gestech", "routes"), { recursive: true });
+    await mkdir(path.join(base, "Ferramentas", "src", "app", "whatsapp"), { recursive: true });
+    await mkdir(path.join(base, "Ferramentas", "src", "app", "ranking"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["./Gestech", "./Ferramentas"],
+        fontesLegado: ["python", "nextjs-consumer"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "Gestech", "routes", "api_collaborators_whatsapp.py"),
+      `from flask import Blueprint, jsonify
+
+bp = Blueprint("whatsapp", __name__)
+
+@bp.get("/whatsapp")
+def list_whatsapp_contacts():
+    return jsonify({"ok": True})
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "Ferramentas", "src", "app", "whatsapp", "page.tsx"),
+      `export default function WhatsAppPage() {
+  return <main>WhatsApp</main>;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "Ferramentas", "src", "app", "ranking", "page.tsx"),
+      `export default function RankingPage() {
+  return <main>Ranking</main>;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "contratos", "colaboradores_whatsapp.sema"),
+      `module gestech.colaboradores.whatsapp {
+  task listar_contatos_whatsapp {
+    output {
+      ok: Booleano
+    }
+    impl {
+      py: routes.api_collaborators_whatsapp.list_whatsapp_contacts
+    }
+    guarantees {
+      ok existe
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = executar(["drift", "--escopo", "modulo", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]whatsapp[\\/]page\.tsx$/i.test(surface.arquivo)), true);
+    assert.equal(json.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]ranking[\\/]page\.tsx$/i.test(surface.arquivo)), false);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
   }
 });
 
@@ -1137,6 +1230,98 @@ export async function sincronizarPedidos() {
     assert.equal(persistencia.compatibilidade, "nativo");
     assert.equal(persistencia.colunas.includes("ranking_geral"), true);
     assert.equal(persistencia.repositorios.some((arquivo: string) => /pedidos\.repository\.ts$/i.test(arquivo)), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift explicita persistencia local em arquivo sem fingir banco relacional", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-persistencia-arquivo-"));
+
+  try {
+    await mkdir(path.join(base, "Gestech", "repositories"), { recursive: true });
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["./Gestech"],
+        fontesLegado: ["python"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "Gestech", "repositories", "collaborator_whatsapp_store.py"),
+      `import json
+from pathlib import Path
+
+_DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "collaborators_whatsapp.json"
+
+def _empty_store():
+    return {
+        "version": 1,
+        "contacts": {},
+        "campaigns": [],
+        "deliveries": [],
+        "worker_status": {},
+    }
+
+def upsert_contact_config():
+    payload = _empty_store()
+    _DATA_FILE.write_text(json.dumps(payload), encoding="utf-8")
+    return payload
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "contratos", "colaboradores_whatsapp.sema"),
+      `module gestech.colaboradores.whatsapp {
+  entity ContatoWhatsAppColaborador {
+    fields {
+      id: Id
+    }
+  }
+
+  task salvar_contato_whatsapp {
+    output {
+      ok: Booleano
+    }
+    impl {
+      py: repositories.collaborator_whatsapp_store.upsert_contact_config
+    }
+    vinculos {
+      arquivo: "Gestech/repositories/collaborator_whatsapp_store.py"
+      simbolo: repositories.collaborator_whatsapp_store.upsert_contact_config
+    }
+    effects {
+      persistencia ContatoWhatsAppColaborador criticidade = alta
+    }
+    guarantees {
+      ok existe
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    const persistencia = json.persistencia_real.find((item: { task: string; alvo: string }) =>
+      item.task === "salvar_contato_whatsapp" && item.alvo === "ContatoWhatsAppColaborador");
+    assert.ok(persistencia);
+    assert.equal(persistencia.engine, "arquivo");
+    assert.equal(persistencia.categoriaPersistencia, "local_arquivo");
+    assert.equal(["materializado", "parcial"].includes(persistencia.status), true);
+    assert.equal(persistencia.arquivos.some((arquivo: string) => /collaborator_whatsapp_store\.py$/i.test(arquivo)), true);
+    assert.equal(persistencia.repositorios.some((arquivo: string) => /collaborator_whatsapp_store\.py$/i.test(arquivo)), true);
+    assert.equal(persistencia.colunas.includes("contacts"), true);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

@@ -90,8 +90,9 @@ interface RegistroRotaDivergente {
   motivo: string;
 }
 
-type OrigemRecursoDrift = "firebase" | EngineBanco;
-type TipoRecursoDrift = "colecao" | TipoRecursoPersistencia;
+type OrigemRecursoDrift = "firebase" | EngineBanco | "arquivo";
+type TipoRecursoDrift = "colecao" | TipoRecursoPersistencia | "arquivo_local";
+type CategoriaPersistenciaDrift = "relacional" | "documental" | "chave_valor" | "local_arquivo" | "desconhecida";
 
 interface RecursoResolvido {
   origem: OrigemRecursoDrift;
@@ -121,14 +122,16 @@ interface RecursoEsperadoDrift {
 }
 
 interface RegistroColunaPersistenciaDrift {
-  engine: EngineBanco;
+  origem: OrigemRecursoDrift;
+  categoriaPersistencia: CategoriaPersistenciaDrift;
   recurso: string;
   coluna: string;
   arquivo: string;
 }
 
 interface RegistroRepositorioPersistenciaDrift {
-  engine: EngineBanco;
+  origem: OrigemRecursoDrift;
+  categoriaPersistencia: CategoriaPersistenciaDrift;
   recurso: string;
   arquivo: string;
 }
@@ -177,6 +180,7 @@ export interface RegistroPersistenciaRealDrift {
   task: string;
   alvo: string;
   engine: OrigemRecursoDrift | "desconhecido";
+  categoriaPersistencia: CategoriaPersistenciaDrift;
   tipo: TipoRecursoDrift;
   status: "materializado" | "parcial" | "divergente";
   arquivos: string[];
@@ -323,6 +327,7 @@ const TERMOS_ESCopo_IGNORADOS = new Set([
   "data",
   "drift",
   "flow",
+  "int",
   "module",
   "modulo",
   "publico",
@@ -384,20 +389,32 @@ function quebrarTermosEscopo(valor: string): string[] {
     .filter((item) => item.length >= 3 && !TERMOS_ESCopo_IGNORADOS.has(item));
 }
 
+function quebrarTermosModuloEscopo(nomeModulo: string): string[] {
+  const segmentos = nomeModulo
+    .split(".")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const relevantes = segmentos.length > 1 ? segmentos.slice(1) : segmentos;
+  return relevantes.flatMap((segmento) => quebrarTermosEscopo(segmento));
+}
+
 function extrairTermosEscopoDrift(contexto: ContextoProjetoCarregado, escopo: EscopoDriftReal): string[] {
   if (escopo === "projeto") {
     return [];
   }
 
   const termos = new Set<string>();
-  termos.add(paraIdentificadorModulo(path.basename(contexto.entradaResolvida, path.extname(contexto.entradaResolvida))));
+  const termosRaizProjeto = new Set(quebrarTermosEscopo(path.basename(contexto.baseProjeto)));
+  if (escopo === "arquivo" || path.extname(contexto.entradaResolvida)) {
+    termos.add(paraIdentificadorModulo(path.basename(contexto.entradaResolvida, path.extname(contexto.entradaResolvida))));
+  }
 
   for (const modulo of contexto.modulosSelecionados) {
     const ir = modulo.resultado.ir;
     if (!ir) {
       continue;
     }
-    for (const termo of quebrarTermosEscopo(ir.nome)) {
+    for (const termo of quebrarTermosModuloEscopo(ir.nome)) {
       termos.add(termo);
     }
     for (const task of ir.tasks) {
@@ -417,7 +434,27 @@ function extrairTermosEscopoDrift(contexto: ContextoProjetoCarregado, escopo: Es
     }
   }
 
-  return [...termos].filter(Boolean).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return [...termos]
+    .filter((termo) => Boolean(termo) && !termosRaizProjeto.has(termo))
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function categorizarPersistenciaPorOrigem(origem?: OrigemRecursoDrift): CategoriaPersistenciaDrift {
+  switch (origem) {
+    case "postgres":
+    case "mysql":
+    case "sqlite":
+      return "relacional";
+    case "mongodb":
+    case "firebase":
+      return "documental";
+    case "redis":
+      return "chave_valor";
+    case "arquivo":
+      return "local_arquivo";
+    default:
+      return "desconhecida";
+  }
 }
 
 function caminhoTemSegmentoIgnorado(arquivo: string, segmentos: string[]): boolean {
@@ -513,17 +550,139 @@ function textoCombinaEscopo(texto: string, termos: string[]): boolean {
   return termos.some((termo) => normalizado.includes(termo));
 }
 
+interface ContextoRelevanciaConsumerDrift {
+  arquivosAncora: string[];
+  rotasAncora: string[];
+}
+
+function construirContextoRelevanciaConsumer(
+  contexto: ContextoProjetoCarregado,
+  tasksResumo: ResumoTaskDrift[],
+  vinculosValidos: RegistroVinculoDrift[],
+): ContextoRelevanciaConsumerDrift {
+  const arquivosAncora = new Set<string>();
+  const rotasAncora = new Set<string>();
+
+  for (const modulo of contexto.modulosSelecionados) {
+    const ir = modulo.resultado.ir;
+    if (!ir) {
+      continue;
+    }
+    for (const route of ir.routes) {
+      if (route.caminho) {
+        rotasAncora.add(normalizarCaminhoRota(route.caminho));
+      }
+    }
+  }
+
+  for (const task of tasksResumo) {
+    for (const arquivo of [...task.arquivosReferenciados, ...task.arquivosProvaveisEditar]) {
+      arquivosAncora.add(arquivo);
+    }
+  }
+
+  for (const vinculo of vinculosValidos) {
+    if (vinculo.arquivo) {
+      arquivosAncora.add(vinculo.arquivo);
+    }
+    if (vinculo.tipo === "superficie" || vinculo.tipo === "rota") {
+      rotasAncora.add(normalizarCaminhoRota(vinculo.valor));
+    }
+  }
+
+  return {
+    arquivosAncora: [...arquivosAncora].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    rotasAncora: [...rotasAncora].sort((a, b) => a.localeCompare(b, "pt-BR")),
+  };
+}
+
+function pontuarTextoEscopo(texto: string, termos: string[]): number {
+  if (termos.length === 0) {
+    return 0;
+  }
+  const normalizado = paraIdentificadorModulo(texto);
+  const segmentos = new Set(normalizado.split("_").filter(Boolean));
+  let score = 0;
+  for (const termo of termos) {
+    if (segmentos.has(termo)) {
+      score += 4;
+      continue;
+    }
+    if (normalizado.includes(termo)) {
+      score += 2;
+    }
+  }
+  return Math.min(score, 8);
+}
+
+function pontuarProximidadeArquivoConsumer(arquivo: string, arquivosAncora: string[]): number {
+  if (arquivosAncora.length === 0) {
+    return 0;
+  }
+
+  const alvo = normalizarFragmentoArquivo(arquivo);
+  const diretorioAlvo = path.posix.dirname(alvo);
+  let scoreMaximo = 0;
+
+  for (const ancora of arquivosAncora) {
+    const ancoraNormalizada = normalizarFragmentoArquivo(ancora);
+    const diretorioAncora = path.posix.dirname(ancoraNormalizada);
+
+    if (alvo === ancoraNormalizada) {
+      return 8;
+    }
+    if (diretorioAlvo === diretorioAncora) {
+      scoreMaximo = Math.max(scoreMaximo, 6);
+      continue;
+    }
+
+    const ultimoDiretorioAlvo = diretorioAlvo.split("/").filter(Boolean).at(-1);
+    const ultimoDiretorioAncora = diretorioAncora.split("/").filter(Boolean).at(-1);
+    if (ultimoDiretorioAlvo && ultimoDiretorioAlvo === ultimoDiretorioAncora) {
+      scoreMaximo = Math.max(scoreMaximo, 4);
+    }
+  }
+
+  return scoreMaximo;
+}
+
+function pontuarProximidadeRotaConsumer(rota: string, rotasAncora: string[]): number {
+  if (rotasAncora.length === 0) {
+    return 0;
+  }
+
+  const rotaNormalizada = normalizarCaminhoRota(rota);
+  const segmentosRota = rotaNormalizada.split("/").filter(Boolean);
+  let scoreMaximo = 0;
+
+  for (const ancora of rotasAncora) {
+    const rotaAncora = normalizarCaminhoRota(ancora);
+    if (rotaNormalizada === rotaAncora) {
+      return 8;
+    }
+
+    const segmentosAncora = rotaAncora.split("/").filter(Boolean);
+    if (segmentosRota[0] && segmentosRota[0] === segmentosAncora[0]) {
+      scoreMaximo = Math.max(scoreMaximo, 4);
+    }
+  }
+
+  return scoreMaximo;
+}
+
 function filtrarConsumerSurfacesPorEscopo(
   consumerSurfaces: RegistroConsumerSurfaceDrift[],
   consumerBridges: RegistroConsumerBridgeDrift[],
   contexto: ContextoProjetoCarregado,
   configuracao: ConfiguracaoEscopoDriftAplicada,
+  relevancia?: ContextoRelevanciaConsumerDrift,
 ): {
   consumerSurfaces: RegistroConsumerSurfaceDrift[];
   consumerBridges: RegistroConsumerBridgeDrift[];
 } {
   const raizesWorktreePermitidas = resolverRaizesIgnoradasPermitidas(contexto, DIRETORIOS_WORKTREE);
   const raizesConsumidorPermitidas = resolverRaizesIgnoradasPermitidas(contexto, DIRETORIOS_CONSUMIDOR_LATERAL);
+  const limiar = configuracao.escopo === "arquivo" ? 5 : 4;
   const manterSurface = (surface: RegistroConsumerSurfaceDrift) => {
     if (configuracao.ignorarWorktrees
       && caminhoIgnoradoForaDoEscopoReal(surface.arquivo, DIRETORIOS_WORKTREE, raizesWorktreePermitidas)) {
@@ -533,11 +692,14 @@ function filtrarConsumerSurfacesPorEscopo(
       && caminhoIgnoradoForaDoEscopoReal(surface.arquivo, DIRETORIOS_CONSUMIDOR_LATERAL, raizesConsumidorPermitidas)) {
       return false;
     }
-    const combinaEscopo = textoCombinaEscopo(`${surface.rota} ${surface.arquivo} ${surface.tipoArquivo}`, configuracao.termosEscopo);
-    if (!configuracao.ignorarConsumidoresLaterais) {
-      return combinaEscopo || configuracao.escopo === "projeto";
+    if (configuracao.escopo === "projeto") {
+      return true;
     }
-    return configuracao.escopo === "projeto" ? true : combinaEscopo;
+
+    const score = pontuarTextoEscopo(`${surface.rota} ${surface.arquivo} ${surface.tipoArquivo}`, configuracao.termosEscopo)
+      + pontuarProximidadeArquivoConsumer(surface.arquivo, relevancia?.arquivosAncora ?? [])
+      + pontuarProximidadeRotaConsumer(surface.rota, relevancia?.rotasAncora ?? []);
+    return score >= limiar;
   };
 
   const manterBridge = (bridge: RegistroConsumerBridgeDrift) => {
@@ -549,11 +711,13 @@ function filtrarConsumerSurfacesPorEscopo(
       && caminhoIgnoradoForaDoEscopoReal(bridge.arquivo, DIRETORIOS_CONSUMIDOR_LATERAL, raizesConsumidorPermitidas)) {
       return false;
     }
-    const combinaEscopo = textoCombinaEscopo(`${bridge.caminho} ${bridge.arquivo} ${bridge.simbolo}`, configuracao.termosEscopo);
-    if (!configuracao.ignorarConsumidoresLaterais) {
-      return combinaEscopo || configuracao.escopo === "projeto";
+    if (configuracao.escopo === "projeto") {
+      return true;
     }
-    return configuracao.escopo === "projeto" ? true : combinaEscopo;
+
+    const score = pontuarTextoEscopo(`${bridge.caminho} ${bridge.arquivo} ${bridge.simbolo}`, configuracao.termosEscopo)
+      + pontuarProximidadeArquivoConsumer(bridge.arquivo, relevancia?.arquivosAncora ?? []);
+    return score >= limiar;
   };
 
   return {
@@ -907,6 +1071,33 @@ function extrairRecursosRedis(arquivo: string, codigo: string): RecursoResolvido
   return [...recursos.values()];
 }
 
+function extrairRecursosArquivoLocal(arquivo: string, codigo: string): RecursoResolvido[] {
+  const recursos = new Map<string, RecursoResolvido>();
+  const contextoArquivoLocal = /\b(?:json|jsonl|ndjson)\b/i.test(codigo)
+    || /\b(?:read_text|write_text|readFile(?:Sync)?|writeFile(?:Sync)?|open)\b/i.test(codigo)
+    || /\.(?:json|jsonl|ndjson|db|sqlite|sqlite3)\b/i.test(codigo)
+    || /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(normalizarFragmentoArquivo(arquivo));
+  if (!contextoArquivoLocal) {
+    return [];
+  }
+
+  for (const match of codigo.matchAll(/["'`]([^"'`]+\.(?:json|jsonl|ndjson|db|sqlite|sqlite3))["'`]/gi)) {
+    const literal = match[1] ?? "";
+    const nomeBase = path.basename(literal, path.extname(literal));
+    registrarRecursoDrift(recursos, "arquivo", "arquivo_local", nomeBase, arquivo);
+  }
+
+  const nomeArquivo = path.basename(arquivo).replace(/\.(?:ts|tsx|js|jsx|mjs|cjs|py|dart|cs|java|go|rs|cpp|cc|cxx|hpp|h)$/i, "");
+  const nomeStore = nomeArquivo
+    .replace(/(?:[_.-]?(?:repository|repositories|repo|store|storage|persistencia|persistence))$/i, "")
+    .trim();
+  if (nomeStore && /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(nomeArquivo)) {
+    registrarRecursoDrift(recursos, "arquivo", "arquivo_local", nomeStore, arquivo);
+  }
+
+  return [...recursos.values()];
+}
+
 function extrairRecursosPersistenciaCodigoVivo(arquivo: string, codigo: string): RecursoResolvido[] {
   const recursos = new Map<string, RecursoResolvido>();
 
@@ -920,6 +1111,9 @@ function extrairRecursosPersistenciaCodigoVivo(arquivo: string, codigo: string):
     registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
   }
   for (const recurso of extrairRecursosRedis(arquivo, codigo)) {
+    registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+  }
+  for (const recurso of extrairRecursosArquivoLocal(arquivo, codigo)) {
     registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
   }
 
@@ -2403,7 +2597,11 @@ async function indexarPersistenciaDeclarativa(diretorios: string[]): Promise<{ r
   const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
-    const arquivos = await listarArquivosRecursivos(diretorio, [".sql", ".psql", ".ddl", ".prisma"]);
+    const arquivos = await listarArquivosRecursivos(diretorio, [
+      ".sql", ".psql", ".ddl", ".prisma",
+      ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+      ".py", ".dart", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h",
+    ]);
 
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
@@ -2420,12 +2618,12 @@ async function indexarPersistenciaDeclarativa(diretorios: string[]): Promise<{ r
 }
 
 function normalizarOrigemParaEngine(origem?: OrigemRecursoDrift): EngineBanco | undefined {
-  return origem && origem !== "firebase" ? origem : undefined;
+  return origem && origem !== "firebase" && origem !== "arquivo" ? origem : undefined;
 }
 
 function registrarColunaPersistenciaDrift(
   colunas: Map<string, RegistroColunaPersistenciaDrift>,
-  engine: EngineBanco,
+  origem: OrigemRecursoDrift,
   recurso: string,
   coluna: string,
   arquivo: string,
@@ -2435,10 +2633,11 @@ function registrarColunaPersistenciaDrift(
   if (!recursoNormalizado || !colunaNormalizada || recursoEhIgnorado(colunaNormalizada)) {
     return;
   }
-  const chave = `${engine}:${normalizarNomeRecursoDrift(recursoNormalizado)}:${normalizarNomeRecursoDrift(colunaNormalizada)}:${arquivo}`;
+  const chave = `${origem}:${normalizarNomeRecursoDrift(recursoNormalizado)}:${normalizarNomeRecursoDrift(colunaNormalizada)}:${arquivo}`;
   if (!colunas.has(chave)) {
     colunas.set(chave, {
-      engine,
+      origem,
+      categoriaPersistencia: categorizarPersistenciaPorOrigem(origem),
       recurso: recursoNormalizado,
       coluna: colunaNormalizada,
       arquivo,
@@ -2448,7 +2647,7 @@ function registrarColunaPersistenciaDrift(
 
 function registrarRepositorioPersistenciaDrift(
   repositorios: Map<string, RegistroRepositorioPersistenciaDrift>,
-  engine: EngineBanco,
+  origem: OrigemRecursoDrift,
   recurso: string,
   arquivo: string,
 ): void {
@@ -2456,10 +2655,11 @@ function registrarRepositorioPersistenciaDrift(
   if (!recursoNormalizado) {
     return;
   }
-  const chave = `${engine}:${normalizarNomeRecursoDrift(recursoNormalizado)}:${arquivo}`;
+  const chave = `${origem}:${normalizarNomeRecursoDrift(recursoNormalizado)}:${arquivo}`;
   if (!repositorios.has(chave)) {
     repositorios.set(chave, {
-      engine,
+      origem,
+      categoriaPersistencia: categorizarPersistenciaPorOrigem(origem),
       recurso: recursoNormalizado,
       arquivo,
     });
@@ -2591,6 +2791,33 @@ function extrairCamposRedisDetalhados(arquivo: string, codigo: string): Registro
   return [...colunas.values()];
 }
 
+function extrairCamposArquivoLocalDetalhados(arquivo: string, codigo: string): RegistroColunaPersistenciaDrift[] {
+  const colunas = new Map<string, RegistroColunaPersistenciaDrift>();
+  const recursos = extrairRecursosArquivoLocal(arquivo, codigo);
+  if (recursos.length === 0) {
+    return [];
+  }
+
+  const registrarCampo = (recurso: string, trecho: string) => {
+    for (const match of trecho.matchAll(/["'`]?([A-Za-z_][\w$-]*)["'`]?\s*:/g)) {
+      registrarColunaPersistenciaDrift(colunas, "arquivo", recurso, match[1]!, arquivo);
+    }
+  };
+
+  const blocos = [
+    ...codigo.matchAll(/\b(?:_empty_store|empty_store|default_store)\b[\s\S]{0,1000}?return\s*\{([\s\S]*?)\n\s*\}/g),
+    ...codigo.matchAll(/\bstore\s*=\s*\{([\s\S]*?)\n\s*\}/g),
+  ];
+
+  for (const recurso of recursos) {
+    for (const bloco of blocos) {
+      registrarCampo(recurso.nome, bloco[1] ?? "");
+    }
+  }
+
+  return [...colunas.values()];
+}
+
 function registrarRepositoriosPorRecursos(
   repositorios: Map<string, RegistroRepositorioPersistenciaDrift>,
   arquivo: string,
@@ -2599,17 +2826,14 @@ function registrarRepositoriosPorRecursos(
 ): void {
   const contextoRepositorio = /(?:repository|repositories|repositorio|repositorios|repo|dao|store|queries|persistence|persistencia)/i.test(arquivo)
     || /\b(?:Repository|Repositories|Dao|Store)\b/.test(codigo);
-  const contextoAcesso = /\b(?:select|insert|update|delete|aggregate|findOne|findMany|findUnique|findFirst|prisma\.|db\.collection|createClient|hset|hget|xadd|xread)\b/i.test(codigo);
+  const contextoAcesso = /\b(?:select|insert|update|delete|aggregate|findOne|findMany|findUnique|findFirst|prisma\.|db\.collection|createClient|hset|hget|xadd|xread|json\.(?:load|loads|dump|dumps)|JSON\.(?:parse|stringify)|read_text|write_text|readFile(?:Sync)?|writeFile(?:Sync)?|open)\b/i.test(codigo)
+    || /\.(?:json|jsonl|ndjson|db|sqlite|sqlite3)\b/i.test(codigo);
   if (!contextoRepositorio && !contextoAcesso) {
     return;
   }
 
   for (const recurso of recursos) {
-    const engine = normalizarOrigemParaEngine(recurso.origem);
-    if (!engine) {
-      continue;
-    }
-    registrarRepositorioPersistenciaDrift(repositorios, engine, recurso.nome, arquivo);
+    registrarRepositorioPersistenciaDrift(repositorios, recurso.origem, recurso.nome, arquivo);
   }
 }
 
@@ -2636,16 +2860,19 @@ async function indexarPersistenciaDetalhada(
         : extrairRecursosPersistenciaCodigoVivo(arquivo, codigo);
 
       for (const coluna of extrairColunasSqlDetalhadas(arquivo, codigo)) {
-        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+        registrarColunaPersistenciaDrift(colunas, coluna.origem, coluna.recurso, coluna.coluna, coluna.arquivo);
       }
       for (const coluna of extrairColunasPrismaDetalhadas(arquivo, codigo)) {
-        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+        registrarColunaPersistenciaDrift(colunas, coluna.origem, coluna.recurso, coluna.coluna, coluna.arquivo);
       }
       for (const coluna of extrairCamposMongoDetalhados(arquivo, codigo)) {
-        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+        registrarColunaPersistenciaDrift(colunas, coluna.origem, coluna.recurso, coluna.coluna, coluna.arquivo);
       }
       for (const coluna of extrairCamposRedisDetalhados(arquivo, codigo)) {
-        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+        registrarColunaPersistenciaDrift(colunas, coluna.origem, coluna.recurso, coluna.coluna, coluna.arquivo);
+      }
+      for (const coluna of extrairCamposArquivoLocalDetalhados(arquivo, codigo)) {
+        registrarColunaPersistenciaDrift(colunas, coluna.origem, coluna.recurso, coluna.coluna, coluna.arquivo);
       }
 
       registrarRepositoriosPorRecursos(repositorios, arquivo, codigo, recursos);
@@ -2666,6 +2893,76 @@ function recursoDetalhadoCombina(
     esperado.nomes.some((nome) => variantesNomeRecursoDrift(nome).includes(variante)));
 }
 
+function deduplicarRecursosResolvidos(recursos: RecursoResolvido[]): RecursoResolvido[] {
+  return [...new Map(recursos.map((recurso) =>
+    [`${recurso.origem}:${recurso.tipo}:${recurso.nome}:${recurso.arquivo}:${recurso.simbolo ?? ""}`, recurso] as const)).values()];
+}
+
+function normalizarArquivoDeclaradoDrift(valor: string): string {
+  return normalizarFragmentoArquivo(valor);
+}
+
+function arquivoCombinaDeclaradoDrift(arquivoReal: string, arquivoDeclarado: string): boolean {
+  const real = normalizarArquivoDeclaradoDrift(arquivoReal);
+  const declarado = normalizarArquivoDeclaradoDrift(arquivoDeclarado);
+  return real === declarado || real.endsWith(declarado) || declarado.endsWith(real);
+}
+
+function coletarArquivosPreferidosPersistenciaTask(task: IrTask): Set<string> {
+  const arquivos = new Set<string>();
+  for (const vinculo of task.vinculos) {
+    if (vinculo.arquivo) {
+      arquivos.add(vinculo.arquivo);
+    }
+    if (vinculo.tipo === "arquivo" && vinculo.valor) {
+      arquivos.add(vinculo.valor);
+    }
+  }
+  return arquivos;
+}
+
+function resolverPersistenciaLocalPorTask(
+  mapaRecursos: Map<string, RecursoResolvido[]>,
+  task: IrTask,
+  ir: IrModulo,
+  esperado: RecursoEsperadoDrift,
+): RecursoResolvido[] {
+  const todosRecursos = deduplicarRecursosResolvidos([...mapaRecursos.values()].flat());
+  const arquivosPreferidos = [...coletarArquivosPreferidosPersistenciaTask(task)];
+  const candidatosPorArquivo = arquivosPreferidos.length > 0
+    ? todosRecursos.filter((recurso) =>
+      recurso.origem === "arquivo"
+      && arquivosPreferidos.some((arquivo) => arquivoCombinaDeclaradoDrift(recurso.arquivo, arquivo)))
+    : [];
+  if (candidatosPorArquivo.length > 0) {
+    return candidatosPorArquivo;
+  }
+
+  const termos = new Set([
+    ...quebrarTermosEscopo(ir.nome),
+    ...quebrarTermosEscopo(task.nome),
+    ...quebrarTermosEscopo(esperado.alvo),
+  ]);
+  if (termos.size === 0) {
+    return [];
+  }
+
+  return todosRecursos.filter((recurso) =>
+    recurso.origem === "arquivo"
+    && [...termos].some((termo) =>
+      variantesNomeRecursoDrift(recurso.nome).some((variacao) => variacao.includes(termo))));
+}
+
+function detalhePersistenciaCombinaOrigem(
+  origemDetalhe: OrigemRecursoDrift,
+  recursoReal?: RecursoResolvido,
+): boolean {
+  if (!recursoReal) {
+    return true;
+  }
+  return origemDetalhe === recursoReal.origem;
+}
+
 function localizarCompatibilidadePersistencia(
   bancos: IrBancoDados[],
   esperado: RecursoEsperadoDrift,
@@ -2681,6 +2978,14 @@ function localizarCompatibilidadePersistencia(
       if (!recursoPersistenciaCombinaAlvo(recurso, esperado.alvo)) {
         continue;
       }
+      if (recursoReal?.origem === "arquivo") {
+        return {
+          engine: "arquivo",
+          compatibilidade: "adaptado",
+          motivoCompatibilidade: `Persistencia local/arquivo detectada no codigo vivo em vez do engine ${banco.engine}.`,
+          tipo: recursoReal.tipo,
+        };
+      }
       const engine = banco.engine ?? normalizarOrigemParaEngine(recursoReal?.origem);
       const compatibilidade = engine
         ? recurso.compatibilidade.find((item) => item.engine === engine) ?? recurso.compatibilidade[0]
@@ -2692,6 +2997,15 @@ function localizarCompatibilidadePersistencia(
         tipo: (recurso.resourceKind as TipoRecursoDrift) ?? recursoReal?.tipo ?? esperado.tiposAceitos[0] ?? "query",
       };
     }
+  }
+
+  if (recursoReal?.origem === "arquivo") {
+    return {
+      engine: "arquivo",
+      compatibilidade: "desconhecida",
+      motivoCompatibilidade: "Persistencia local/arquivo detectada sem database vendor-first declarado.",
+      tipo: recursoReal.tipo,
+    };
   }
 
   return {
@@ -2724,19 +3038,38 @@ export async function analisarPersistenciaReal(
         const correspondencias = esperado.nomes.flatMap((nome) =>
           variantesNomeRecursoDrift(nome).flatMap((variante) =>
             (mapa.get(variante) ?? []).filter((recurso) => recursoResolvidoCombinaEsperado(recurso, esperado))));
-        const recursosReais = [...new Map(correspondencias.map((recurso) =>
-          [`${recurso.origem}:${recurso.tipo}:${recurso.nome}:${recurso.arquivo}`, recurso] as const)).values()];
+        let recursosReais = deduplicarRecursosResolvidos(correspondencias);
+        const arquivosPreferidos = [...coletarArquivosPreferidosPersistenciaTask(task)];
+        if (recursosReais.length === 0) {
+          recursosReais = resolverPersistenciaLocalPorTask(mapa, task, ir, esperado);
+        }
         const compatibilidade = localizarCompatibilidadePersistencia(ir.databases, esperado, recursosReais[0]);
-        const colunas = [...new Set(detalhes.colunas
+        let colunas = [...new Set(detalhes.colunas
           .filter((coluna) =>
-            (!normalizarOrigemParaEngine(recursosReais[0]?.origem) || coluna.engine === normalizarOrigemParaEngine(recursosReais[0]?.origem))
+            detalhePersistenciaCombinaOrigem(coluna.origem, recursosReais[0])
             && recursoDetalhadoCombina(coluna.recurso, esperado))
           .map((coluna) => coluna.coluna))].sort((a, b) => a.localeCompare(b, "pt-BR"));
-        const repositorios = [...new Set(detalhes.repositorios
+        let repositorios = [...new Set(detalhes.repositorios
           .filter((repositorio) =>
-            (!normalizarOrigemParaEngine(recursosReais[0]?.origem) || repositorio.engine === normalizarOrigemParaEngine(recursosReais[0]?.origem))
+            detalhePersistenciaCombinaOrigem(repositorio.origem, recursosReais[0])
             && recursoDetalhadoCombina(repositorio.recurso, esperado))
           .map((repositorio) => repositorio.arquivo))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+        if (recursosReais.some((recurso) => recurso.origem === "arquivo") && arquivosPreferidos.length > 0) {
+          if (colunas.length === 0) {
+            colunas = [...new Set(detalhes.colunas
+              .filter((coluna) =>
+                coluna.origem === "arquivo"
+                && arquivosPreferidos.some((arquivo) => arquivoCombinaDeclaradoDrift(coluna.arquivo, arquivo)))
+              .map((coluna) => coluna.coluna))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+          }
+          if (repositorios.length === 0) {
+            repositorios = [...new Set(detalhes.repositorios
+              .filter((repositorio) =>
+                repositorio.origem === "arquivo"
+                && arquivosPreferidos.some((arquivo) => arquivoCombinaDeclaradoDrift(repositorio.arquivo, arquivo)))
+              .map((repositorio) => repositorio.arquivo))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+          }
+        }
         const arquivos = [...new Set(recursosReais.map((recurso) => recurso.arquivo))].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
         registros.push({
@@ -2744,6 +3077,7 @@ export async function analisarPersistenciaReal(
           task: task.nome,
           alvo: esperado.alvo,
           engine: compatibilidade.engine,
+          categoriaPersistencia: categorizarPersistenciaPorOrigem((compatibilidade.engine === "desconhecido" ? undefined : compatibilidade.engine) as OrigemRecursoDrift | undefined),
           tipo: compatibilidade.tipo,
           status: recursosReais.length === 0
             ? "divergente"
@@ -3026,6 +3360,15 @@ function recursoPersistenciaCombinaAlvo(recurso: IrRecursoPersistencia, alvo: st
     variantesNomeRecursoDrift(nome).some((variacao) => alvoVariantes.has(variacao)));
 }
 
+function taskSugerePersistenciaSemBanco(task: IrTask): boolean {
+  return task.vinculos.some((vinculo) =>
+    /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(
+      `${vinculo.valor} ${vinculo.arquivo ?? ""} ${vinculo.simbolo ?? ""}`,
+    ))
+    || task.implementacoesExternas.some((impl) =>
+      /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(impl.caminho));
+}
+
 function extrairRecursosEsperados(task: IrTask, ir: IrModulo): RecursoEsperadoDrift[] {
   const esperados = new Map<string, RecursoEsperadoDrift>();
   const registrar = (esperado: RecursoEsperadoDrift) => {
@@ -3049,7 +3392,26 @@ function extrairRecursosEsperados(task: IrTask, ir: IrModulo): RecursoEsperadoDr
 
   const efeitosPersistencia = task.efeitosEstruturados.filter((efeito) =>
     ["persistencia", "db.read", "db.write"].includes(efeito.categoria) && Boolean(efeito.alvo));
-  if (efeitosPersistencia.length === 0 || ir.databases.length === 0) {
+  if (efeitosPersistencia.length === 0) {
+    return [...esperados.values()];
+  }
+
+  if (ir.databases.length === 0) {
+    const sugerePersistenciaLocal = taskSugerePersistenciaSemBanco(task);
+    for (const efeito of efeitosPersistencia) {
+      if (efeito.categoria !== "persistencia" || !sugerePersistenciaLocal) {
+        continue;
+      }
+      if ([...esperados.values()].some((item) => item.alvo === efeito.alvo)) {
+        continue;
+      }
+      registrar({
+        categoria: "persistencia",
+        alvo: efeito.alvo,
+        tiposAceitos: ["table", "collection", "document", "keyspace", "stream", "view", "query", "index", "arquivo_local"],
+        nomes: [efeito.alvo],
+      });
+    }
     return [...esperados.values()];
   }
 
@@ -3398,7 +3760,10 @@ export async function analisarDriftLegado(
       });
 
       for (const recursoEsperado of extrairRecursosEsperados(task, ir)) {
-        const resolvido = resolverRecursoEsperado(mapaRecursos, recursoEsperado, arquivosReferenciados);
+        let resolvido = resolverRecursoEsperado(mapaRecursos, recursoEsperado, arquivosReferenciados);
+        if (!resolvido) {
+          resolvido = resolverPersistenciaLocalPorTask(mapaRecursos, task, ir, recursoEsperado)[0];
+        }
         const registro: RegistroRecursoDrift = {
           modulo: ir.nome,
           task: task.nome,
@@ -3741,6 +4106,7 @@ export async function analisarDriftLegado(
     }
   }
 
+  const relevanciaConsumer = construirContextoRelevanciaConsumer(contexto, tasksResumo, vinculosValidos);
   const consumersFiltrados = filtrarConsumerSurfacesPorEscopo(
     [...indexTs.consumerSurfaces, ...indexDart.consumerSurfaces].sort((a, b) =>
       a.rota.localeCompare(b.rota, "pt-BR")
@@ -3762,6 +4128,7 @@ export async function analisarDriftLegado(
       || a.arquivo.localeCompare(b.arquivo, "pt-BR")),
     contexto,
     configuracaoEscopo,
+    relevanciaConsumer,
   );
   const consumerSurfaces = consumersFiltrados.consumerSurfaces;
   const consumerBridges = consumersFiltrados.consumerBridges;

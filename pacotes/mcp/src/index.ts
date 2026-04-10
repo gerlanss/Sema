@@ -31,6 +31,48 @@ function resolverSema(): { cmd: string; prefixArgs: string[] } {
 const { cmd: SEMA_CMD, prefixArgs: SEMA_PREFIX } = resolverSema();
 const VERSAO_MCP = pacoteMcp.version;
 
+function ajudaMcp(): string {
+  return [
+    `Sema MCP v${VERSAO_MCP}`,
+    "",
+    "Uso:",
+    "  sema-mcp                 inicia em modo stdio",
+    "  sema-mcp --help          mostra esta ajuda",
+    "  sema-mcp --version       mostra a versao instalada",
+    "",
+    "Modos:",
+    "  stdio (padrao): integra com Claude Code, VS Code, Cursor e apps MCP locais",
+    "  http: defina MCP_PORT para expor /mcp (Streamable HTTP) e /sse (legado)",
+    "",
+    "Variaveis de ambiente:",
+    "  MCP_PORT                 porta para modo HTTP",
+    "",
+    "Ferramentas expostas:",
+    "  sema_validar",
+    "  sema_ir",
+    "  sema_drift",
+    "  sema_impacto",
+    "  sema_renomear_semantico",
+    "  sema_resumo",
+    "  sema_prompt_ia",
+    "  sema_contexto_ia",
+    "  sema_verificar",
+    "  sema_inspecionar",
+  ].join("\n");
+}
+
+function tratarArgsCliMcp(args: string[]): boolean {
+  if (args.includes("--help") || args.includes("-h")) {
+    process.stdout.write(`${ajudaMcp()}\n`);
+    return true;
+  }
+  if (args.includes("--version") || args.includes("-v")) {
+    process.stdout.write(`${VERSAO_MCP}\n`);
+    return true;
+  }
+  return false;
+}
+
 function resolverCwd(cwd?: string): string {
   if (!cwd) return process.cwd();
   try {
@@ -57,25 +99,27 @@ function chamarSema(args: string[], cwd?: string): string {
 }
 
 function registrarFerramentas(s: McpServer): void {
-  s.tool(
+  const server = s as any;
+
+  server.tool(
     "sema_validar",
     "Valida um arquivo .sema e retorna diagnosticos de erro ou sucesso.",
     { arquivo: z.string().describe("Caminho absoluto ou relativo para o arquivo .sema") },
-    async ({ arquivo }) => ({
+    async ({ arquivo }: { arquivo: string }) => ({
       content: [{ type: "text", text: chamarSema(["validar", arquivo]) }],
     })
   );
 
-  s.tool(
+  server.tool(
     "sema_ir",
     "Compila um arquivo .sema e retorna a representacao intermediaria (IR) em JSON.",
     { arquivo: z.string().describe("Caminho para o arquivo .sema") },
-    async ({ arquivo }) => ({
+    async ({ arquivo }: { arquivo: string }) => ({
       content: [{ type: "text", text: chamarSema(["ir", arquivo, "--json"]) }],
     })
   );
 
-  s.tool(
+  server.tool(
     "sema_drift",
     "Analisa o drift entre o contrato .sema e o codigo do projeto. Retorna divergencias encontradas.",
     {
@@ -85,7 +129,13 @@ function registrarFerramentas(s: McpServer): void {
       incluir_worktrees: z.boolean().optional().describe("Incluir worktrees e clones laterais"),
       incluir_consumidores_laterais: z.boolean().optional().describe("Incluir consumers laterais e showcases"),
     },
-    async ({ projeto, json, escopo, incluir_worktrees, incluir_consumidores_laterais }) => {
+    async ({ projeto, json, escopo, incluir_worktrees, incluir_consumidores_laterais }: {
+      projeto?: string;
+      json?: boolean;
+      escopo?: "arquivo" | "modulo" | "projeto";
+      incluir_worktrees?: boolean;
+      incluir_consumidores_laterais?: boolean;
+    }) => {
       const args = [
         "drift",
         ...(projeto ? [projeto] : []),
@@ -98,7 +148,7 @@ function registrarFerramentas(s: McpServer): void {
     }
   );
 
-  s.tool(
+  server.tool(
     "sema_impacto",
     "Gera um impact map semantico: mostra o que tocar, o que validar e quais arquivos serao afetados por uma mudanca.",
     {
@@ -110,7 +160,15 @@ function registrarFerramentas(s: McpServer): void {
       incluir_consumidores_laterais: z.boolean().optional().describe("Incluir consumers laterais e showcases"),
       json: z.boolean().optional().describe("Retornar saida em JSON"),
     },
-    async ({ projeto, alvo, mudanca, escopo, incluir_worktrees, incluir_consumidores_laterais, json }) => {
+    async ({ projeto, alvo, mudanca, escopo, incluir_worktrees, incluir_consumidores_laterais, json }: {
+      projeto?: string;
+      alvo: string;
+      mudanca?: string;
+      escopo?: "arquivo" | "modulo" | "projeto";
+      incluir_worktrees?: boolean;
+      incluir_consumidores_laterais?: boolean;
+      json?: boolean;
+    }) => {
       const args = [
         "impacto",
         ...(projeto ? [projeto] : []),
@@ -125,7 +183,7 @@ function registrarFerramentas(s: McpServer): void {
     }
   );
 
-  s.tool(
+  server.tool(
     "sema_renomear_semantico",
     "Assiste a renomeacao de um token semantico e sugere os pontos de contrato, codigo, persistencia e teste que precisam mudar.",
     {
@@ -137,7 +195,15 @@ function registrarFerramentas(s: McpServer): void {
       incluir_consumidores_laterais: z.boolean().optional().describe("Incluir consumers laterais e showcases"),
       json: z.boolean().optional().describe("Retornar saida em JSON"),
     },
-    async ({ projeto, de, para, escopo, incluir_worktrees, incluir_consumidores_laterais, json }) => {
+    async ({ projeto, de, para, escopo, incluir_worktrees, incluir_consumidores_laterais, json }: {
+      projeto?: string;
+      de: string;
+      para: string;
+      escopo?: "arquivo" | "modulo" | "projeto";
+      incluir_worktrees?: boolean;
+      incluir_consumidores_laterais?: boolean;
+      json?: boolean;
+    }) => {
       const args = [
         "renomear-semantico",
         ...(projeto ? [projeto] : []),
@@ -152,58 +218,62 @@ function registrarFerramentas(s: McpServer): void {
     }
   );
 
-  s.tool(
+  server.tool(
     "sema_resumo",
     "Gera um resumo IA-first do projeto Sema com modulos, riscos e lacunas.",
     {
       projeto: z.string().optional().describe("Caminho do projeto (padrao: diretorio atual)"),
       tamanho: z.enum(["micro", "curto", "medio"]).optional().describe("Tamanho do resumo (padrao: curto)"),
     },
-    async ({ projeto, tamanho }) => {
+    async ({ projeto, tamanho }: { projeto?: string; tamanho?: "micro" | "curto" | "medio" }) => {
       const args = ["resumo", ...(tamanho ? [`--tamanho=${tamanho}`] : [])];
       return { content: [{ type: "text", text: chamarSema(args, projeto) }] };
     }
   );
 
-  s.tool(
+  server.tool(
     "sema_prompt_ia",
     "Gera o prompt-curto IA-first do projeto para briefar um agente sobre o estado atual.",
     { projeto: z.string().optional().describe("Caminho do projeto") },
-    async ({ projeto }) => ({
+    async ({ projeto }: { projeto?: string }) => ({
       content: [{ type: "text", text: chamarSema(["prompt-curto"], projeto) }],
     })
   );
 
-  s.tool(
+  server.tool(
     "sema_contexto_ia",
     "Gera o pacote completo de contexto IA para um modulo ou projeto (briefing, drift, IR, artefatos).",
     { arquivo: z.string().describe("Caminho para o arquivo .sema do modulo") },
-    async ({ arquivo }) => ({
+    async ({ arquivo }: { arquivo: string }) => ({
       content: [{ type: "text", text: chamarSema(["contexto-ia", arquivo]) }],
     })
   );
 
-  s.tool(
+  server.tool(
     "sema_verificar",
     "Verifica todos os alvos de geracao de um projeto Sema (compila, gera e testa cada alvo).",
     {
       projeto: z.string().describe("Caminho do projeto a verificar"),
       saida: z.string().optional().describe("Pasta de saida dos artefatos gerados"),
     },
-    async ({ projeto, saida }) => {
+    async ({ projeto, saida }: { projeto: string; saida?: string }) => {
       const args = ["verificar", projeto, ...(saida ? ["--saida", saida] : [])];
       return { content: [{ type: "text", text: chamarSema(args, projeto) }] };
     }
   );
 
-  s.tool(
+  server.tool(
     "sema_inspecionar",
     "Inspeciona um arquivo .sema e mostra detalhes do modulo: rotas, tarefas, eventos, politicas.",
     { arquivo: z.string().describe("Caminho para o arquivo .sema") },
-    async ({ arquivo }) => ({
+    async ({ arquivo }: { arquivo: string }) => ({
       content: [{ type: "text", text: chamarSema(["inspecionar", arquivo]) }],
     })
   );
+}
+
+if (tratarArgsCliMcp(process.argv.slice(2))) {
+  process.exit(0);
 }
 
 const porta = process.env["MCP_PORT"] ? parseInt(process.env["MCP_PORT"]) : null;

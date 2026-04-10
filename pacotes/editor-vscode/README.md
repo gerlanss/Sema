@@ -14,7 +14,7 @@ Ela cobre escrita, validacao e navegacao da camada semantica no editor enquanto 
 - comandos para abrir `starter-ia`, `prompt-ia`, `prompt-curto`, `resumo` e `drift`
 - lateral `Sema` com status do workspace e da CLI
 
-## Novidades na linha 1.5.0
+## Novidades na linha 1.5.1
 
 - snippets para `database`, `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
 - exemplos embutidos de persistencia gerados no workspace:

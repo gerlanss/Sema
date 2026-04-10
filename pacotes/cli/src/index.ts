@@ -2,7 +2,8 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import pacoteCli from "../package.json" with { type: "json" };
 import {
   compilarCodigo,
@@ -133,6 +134,34 @@ interface DescobertaDocsIa {
   origemInstalacao: string;
   baseDetectada: string | null;
   documentos: Array<{ nome: string; caminho: string }>;
+}
+
+interface ItemDependenciaComando {
+  nome: string;
+  ok: boolean;
+  detalhe?: string;
+  obrigatoria: boolean;
+}
+
+interface DependenciaComandoDoctor {
+  comando: string;
+  itens: ItemDependenciaComando[];
+}
+
+interface PreflightVerificacao {
+  ok: boolean;
+  dependencias: DependenciaComandoDoctor[];
+  faltando: Array<{
+    comando: string;
+    nome: string;
+    detalhe?: string;
+  }>;
+}
+
+interface ExecucaoComandoExterno {
+  comando: string;
+  argumentosBase: string[];
+  rotulo: string;
 }
 
 type TamanhoResumoIa = "micro" | "curto" | "medio";
@@ -540,6 +569,7 @@ Comandos uteis da CLI para esse fluxo:
 
 const DIRETORIO_CLI_ATUAL = path.dirname(fileURLToPath(import.meta.url));
 const VERSAO_CLI = pacoteCli.version;
+const requireRuntimeCli = createRequire(import.meta.url);
 const ARQUIVOS_CANONICOS_IA_RAIZ = [
   "llms.txt",
   "SEMA_BRIEF.md",
@@ -557,6 +587,17 @@ const DOCUMENTOS_SUPORTE_IA = [
   "docs/sintaxe.md",
   "docs/cli.md",
 ] as const;
+
+function resolverImportadorNodeOpcional(especificador: string): string | undefined {
+  try {
+    return requireRuntimeCli.resolve(especificador);
+  } catch {
+    return undefined;
+  }
+}
+
+const TSX_IMPORTADOR_CLI = resolverImportadorNodeOpcional("tsx");
+const TSX_EXECUTOR_CLI = resolverImportadorNodeOpcional("tsx/cli");
 
 function obterArgumentos(): { comando?: Comando; resto: string[] } {
   const [, , comando, ...resto] = process.argv;
@@ -751,27 +792,206 @@ function comandoDisponivel(comando: string, argumentos: string[] = ["--version"]
   return (execucao.status ?? 1) === 0;
 }
 
-async function comandoDoctor(): Promise<number> {
-  const checks = [
-    { nome: "node", ok: comandoDisponivel("node") },
-    { nome: "npm", ok: comandoDisponivel("npm") },
-    { nome: "python", ok: comandoDisponivel("python") || comandoDisponivel("py") },
-    { nome: "dotnet", ok: comandoDisponivel("dotnet") },
-    { nome: "go", ok: comandoDisponivel("go") },
-    { nome: "cargo", ok: comandoDisponivel("cargo") },
-    { nome: "java", ok: comandoDisponivel("java") },
-    { nome: "code", ok: comandoDisponivel("code", ["--version"]) },
+function resolverExecucaoPython(): ExecucaoComandoExterno | undefined {
+  if (comandoDisponivel("python")) {
+    return { comando: "python", argumentosBase: [], rotulo: "python" };
+  }
+  if (comandoDisponivel("py")) {
+    return { comando: "py", argumentosBase: [], rotulo: "py" };
+  }
+  return undefined;
+}
+
+function resolverExecucaoPytest(): ExecucaoComandoExterno | undefined {
+  if (comandoDisponivel("pytest")) {
+    return { comando: "pytest", argumentosBase: [], rotulo: "pytest" };
+  }
+
+  const python = resolverExecucaoPython();
+  if (python && comandoDisponivel(python.comando, [...python.argumentosBase, "-m", "pytest", "--version"])) {
+    return {
+      comando: python.comando,
+      argumentosBase: [...python.argumentosBase, "-m", "pytest"],
+      rotulo: `${python.rotulo} -m pytest`,
+    };
+  }
+
+  return undefined;
+}
+
+function criarItemDependencia(
+  nome: string,
+  ok: boolean,
+  detalhe: string | undefined,
+  obrigatoria = true,
+): ItemDependenciaComando {
+  return { nome, ok, detalhe, obrigatoria };
+}
+
+function coletarDependenciasDoctor(): DependenciaComandoDoctor[] {
+  const python = resolverExecucaoPython();
+  const pytest = resolverExecucaoPytest();
+  return [
+    {
+      comando: "base",
+      itens: [
+        criarItemDependencia("node", comandoDisponivel("node"), "runtime principal da CLI"),
+        criarItemDependencia("npm", comandoDisponivel("npm"), "instalacao, pack e publish"),
+        criarItemDependencia("python", Boolean(python), python?.rotulo ? `resolvido via ${python.rotulo}` : "python ou py"),
+        criarItemDependencia("dotnet", comandoDisponivel("dotnet"), "ecosistema ASP.NET", false),
+        criarItemDependencia("go", comandoDisponivel("go"), "ecosistema Go", false),
+        criarItemDependencia("cargo", comandoDisponivel("cargo"), "ecosistema Rust", false),
+        criarItemDependencia("java", comandoDisponivel("java"), "ecosistema Java/Spring", false),
+        criarItemDependencia("code", comandoDisponivel("code", ["--version"]), "VS Code / extensao", false),
+      ],
+    },
+    {
+      comando: "verificar/typescript",
+      itens: [
+        criarItemDependencia("node", comandoDisponivel("node"), "execucao do runner TypeScript"),
+        criarItemDependencia(
+          "tsx",
+          Boolean(TSX_EXECUTOR_CLI ?? TSX_IMPORTADOR_CLI),
+          TSX_EXECUTOR_CLI
+            ? `runner resolvido em ${TSX_EXECUTOR_CLI}`
+            : TSX_IMPORTADOR_CLI
+              ? `importador resolvido em ${TSX_IMPORTADOR_CLI}`
+              : "tsx nao foi encontrado junto da CLI",
+        ),
+      ],
+    },
+    {
+      comando: "verificar/javascript",
+      itens: [
+        criarItemDependencia("node", comandoDisponivel("node"), "node --test"),
+      ],
+    },
+    {
+      comando: "verificar/python",
+      itens: [
+        criarItemDependencia("python", Boolean(python), python?.rotulo ? `resolvido via ${python.rotulo}` : "python ou py"),
+        criarItemDependencia("pytest", Boolean(pytest), pytest?.rotulo ? `runner resolvido via ${pytest.rotulo}` : "instale pytest ou exponha python -m pytest"),
+      ],
+    },
+    {
+      comando: "verificar/lua",
+      itens: [
+        criarItemDependencia("lua", comandoDisponivel("lua", ["-v"]), "runner de testes Lua"),
+      ],
+    },
   ];
+}
+
+function avaliarPreflightVerificacao(
+  configuracoesAlvo: Array<{ alvo: AlvoGeracao; framework: FrameworkGeracao }>,
+): PreflightVerificacao {
+  const dependencias: DependenciaComandoDoctor[] = [];
+  const faltando: PreflightVerificacao["faltando"] = [];
+
+  const registrar = (comando: string, itens: ItemDependenciaComando[]) => {
+    dependencias.push({ comando, itens });
+    for (const item of itens) {
+      if (item.obrigatoria && !item.ok) {
+        faltando.push({
+          comando,
+          nome: item.nome,
+          detalhe: item.detalhe,
+        });
+      }
+    }
+  };
+
+  registrar("base", [
+    criarItemDependencia("node", comandoDisponivel("node"), "runtime principal da CLI"),
+    criarItemDependencia("npm", comandoDisponivel("npm"), "instalacao e empacotamento"),
+  ]);
+
+  for (const configuracao of configuracoesAlvo) {
+    if (configuracao.framework !== "base") {
+      continue;
+    }
+
+    if (configuracao.alvo === "typescript") {
+      registrar("verificar/typescript", [
+        criarItemDependencia("node", comandoDisponivel("node"), "execucao do runner TypeScript"),
+        criarItemDependencia(
+          "tsx",
+          Boolean(TSX_EXECUTOR_CLI ?? TSX_IMPORTADOR_CLI),
+          TSX_EXECUTOR_CLI
+            ? `runner resolvido em ${TSX_EXECUTOR_CLI}`
+            : TSX_IMPORTADOR_CLI
+              ? `importador resolvido em ${TSX_IMPORTADOR_CLI}`
+              : "tsx nao foi encontrado junto da CLI",
+        ),
+      ]);
+      continue;
+    }
+
+    if (configuracao.alvo === "javascript") {
+      registrar("verificar/javascript", [
+        criarItemDependencia("node", comandoDisponivel("node"), "node --test"),
+      ]);
+      continue;
+    }
+
+    if (configuracao.alvo === "python") {
+      const python = resolverExecucaoPython();
+      const pytest = resolverExecucaoPytest();
+      registrar("verificar/python", [
+        criarItemDependencia("python", Boolean(python), python?.rotulo ? `resolvido via ${python.rotulo}` : "python ou py"),
+        criarItemDependencia("pytest", Boolean(pytest), pytest?.rotulo ? `runner resolvido via ${pytest.rotulo}` : "instale pytest ou exponha python -m pytest"),
+      ]);
+      continue;
+    }
+
+    if (configuracao.alvo === "lua") {
+      registrar("verificar/lua", [
+        criarItemDependencia("lua", comandoDisponivel("lua", ["-v"]), "runner de testes Lua"),
+      ]);
+    }
+  }
+
+  return {
+    ok: faltando.length === 0,
+    dependencias,
+    faltando,
+  };
+}
+
+function imprimirDependenciasDoctor(dependencias: DependenciaComandoDoctor[]): void {
+  for (const dependencia of dependencias) {
+    console.log(`\n[${dependencia.comando}]`);
+    for (const item of dependencia.itens) {
+      const sufixo = item.detalhe ? ` (${item.detalhe})` : "";
+      console.log(`- ${item.nome}: ${item.ok ? "ok" : item.obrigatoria ? "faltando" : "ausente"}${sufixo}`);
+    }
+  }
+}
+
+function imprimirPreflightVerificacao(preflight: PreflightVerificacao): void {
+  console.error(renderizarCaixaAscii([
+    "Preflight de verificacao falhou",
+    "a CLI sabe o que falta antes de gerar e testar",
+  ]));
+  for (const item of preflight.faltando) {
+    const detalhe = item.detalhe ? ` (${item.detalhe})` : "";
+    console.error(`- ${item.comando}: ${item.nome} faltando${detalhe}`);
+  }
+  console.error("Rode `sema doctor` para ver as dependencias por comando.");
+}
+
+async function comandoDoctor(): Promise<number> {
+  const dependencias = coletarDependenciasDoctor();
 
   console.log(renderizarCaixaAscii([
     "Sema doctor",
-    "checa a toolchain minima para validar, gerar e operar a CLI",
+    "checa a toolchain minima e as dependencias reais por comando",
   ]));
-  for (const check of checks) {
-    console.log(`- ${check.nome}: ${check.ok ? "ok" : "ausente"}`);
-  }
+  imprimirDependenciasDoctor(dependencias);
 
-  const obrigatorios = checks.filter((check) => ["node", "npm"].includes(check.nome));
+  const obrigatorios = dependencias
+    .find((dependencia) => dependencia.comando === "base")
+    ?.itens.filter((item) => item.obrigatoria) ?? [];
   return obrigatorios.every((check) => check.ok) ? 0 : 1;
 }
 
@@ -1030,8 +1250,17 @@ function executarTestesGerados(
       }
       return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
     }
-    const execucao = spawnSync("node", ["--import", "tsx", path.join(baseSaida, arquivoTeste)], {
+    if (!TSX_EXECUTOR_CLI) {
+      return {
+        codigoSaida: 1,
+        quantidadeTestes,
+        saidaPadrao: "",
+        saidaErro: "Nao foi possivel localizar o runner tsx junto da CLI para executar testes TypeScript.",
+      };
+    }
+    const execucao = spawnSync("node", [TSX_EXECUTOR_CLI, arquivoTeste], {
       stdio: silencioso ? "pipe" : "inherit",
+      cwd: baseSaida,
       encoding: silencioso ? "utf8" : undefined,
     });
     return {
@@ -1070,6 +1299,14 @@ function executarTestesGerados(
       }
       return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
     }
+    if (!comandoDisponivel("lua", ["-v"])) {
+      return {
+        codigoSaida: 1,
+        quantidadeTestes,
+        saidaPadrao: "",
+        saidaErro: "Nao foi possivel localizar o runner lua para executar os testes gerados.",
+      };
+    }
     const execucao = spawnSync("lua", [arquivoTeste], {
       stdio: silencioso ? "pipe" : "inherit",
       cwd: baseSaida,
@@ -1091,10 +1328,20 @@ function executarTestesGerados(
     }
     return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
   }
-  const execucao = spawnSync("pytest", [arquivoTeste], {
+  const pytest = resolverExecucaoPytest();
+  if (!pytest) {
+    return {
+      codigoSaida: 1,
+      quantidadeTestes,
+      saidaPadrao: "",
+      saidaErro: "Nao foi possivel localizar pytest. Instale pytest ou exponha python -m pytest.",
+    };
+  }
+  const execucao = spawnSync(pytest.comando, [...pytest.argumentosBase, arquivoTeste], {
     stdio: silencioso ? "pipe" : "inherit",
     cwd: baseSaida,
     encoding: silencioso ? "utf8" : undefined,
+    shell: process.platform === "win32" && pytest.comando === "pytest",
   });
   return {
     codigoSaida: execucao.status ?? 1,
@@ -3542,7 +3789,7 @@ async function comandoDrift(entrada: string | undefined, args: string[], emJson:
   if (persistenciaDivergente.length > 0) {
     console.log("- Persistencia que pede revisao:");
     for (const item of persistenciaDivergente.slice(0, 8)) {
-      console.log(`  - ${item.modulo}.${item.task} :: ${item.alvo} :: ${item.status} :: compat=${item.compatibilidade}`);
+      console.log(`  - ${item.modulo}.${item.task} :: ${item.alvo} :: ${item.status} :: categoria=${item.categoriaPersistencia} :: compat=${item.compatibilidade}`);
     }
   }
 
@@ -4303,6 +4550,12 @@ async function comandoVerificar(
     return 1;
   }
 
+  const preflight = avaliarPreflightVerificacao(configuracoesAlvo);
+  if (!preflight.ok) {
+    imprimirPreflightVerificacao(preflight);
+    return 1;
+  }
+
   const resumos: ResumoModuloVerificacao[] = [];
   for (const modulo of modulos) {
     const ir = garantirIr(modulo.resultado, modulo.caminho);
@@ -4372,6 +4625,19 @@ async function comandoVerificarJson(
       comando: "verificar",
       sucesso: false,
       erro: incompatibilidade.incompatibilidade,
+      modulos: [],
+      totais: { modulos: 0, alvos: 0, arquivos: 0, testes: 0 },
+    }, null, 2));
+    return 1;
+  }
+
+  const preflight = avaliarPreflightVerificacao(configuracoesAlvo);
+  if (!preflight.ok) {
+    console.log(JSON.stringify({
+      comando: "verificar",
+      sucesso: false,
+      erro: "Dependencias obrigatorias ausentes para executar a verificacao.",
+      preflight,
       modulos: [],
       totais: { modulos: 0, alvos: 0, arquivos: 0, testes: 0 },
     }, null, 2));

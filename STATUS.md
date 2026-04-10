@@ -4,13 +4,13 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Quadro-resumo
 
-- Ultima atualizacao: 2026-04-09
+- Ultima atualizacao: 2026-04-10
 - Ultimo commit de referencia: `6b38c68`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: linha publica `1.5.0` alinhada para release estavel com persistencia vendor-first, drift com escopo real, impact map, renomeacao semantica assistida e documentacao consolidada
+- Estagio atual: linha publica `1.5.1` alinhada para release estavel com persistencia vendor-first, drift com escopo real, impact map, renomeacao semantica assistida e documentacao consolidada
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA sobre software vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `1.5.0`, alinhada entre CLI, MCP, pacotes internos, extensao do VS Code, instaladores e documentacao
+- Linha publica de release: `1.5.1`, alinhada entre CLI, MCP, pacotes internos, extensao do VS Code, instaladores e documentacao
 - Pacote npm publico da CLI: `@semacode/cli`
 - Pacote npm publico do MCP: `@semacode/mcp`
 - Principais areas concluidas:
@@ -187,7 +187,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Alinhar release publica `1.2.10` entre CLI, pacotes, extensao, README e instaladores
 - `[x]` Entregar persistencia vendor-first como superficie canonica para cinco bancos suportados
 - `[x]` Atualizar `drift.ts` para rastrear recursos vivos reais de Postgres, MySQL, SQLite, MongoDB e Redis
-- `[x]` Alinhar release `1.5.0` entre CLI, MCP, extensao, instaladores, docs e scripts de publicacao
+- `[x]` Alinhar release `1.5.1` entre CLI, MCP, extensao, instaladores, docs e scripts de publicacao
 - `[x]` Consolidar a documentacao publica e remover docs historicos defasados
 
 ## Fundacao do Projeto

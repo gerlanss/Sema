@@ -1,6 +1,6 @@
 module sema.produto.persistencia_vendor_first {
   docs {
-    resumo: "Contrato interno da Sema para tratar PostgreSQL, MySQL, SQLite, MongoDB e Redis como bancos de primeira classe no parser, semantico, IR, formatador, drift e adocao, cruzando contrato, banco real, colunas, repositorios e compatibilidade por engine."
+    resumo: "Contrato interno da Sema para tratar PostgreSQL, MySQL, SQLite, MongoDB e Redis como bancos de primeira classe no parser, semantico, IR, formatador, drift e adocao, cruzando contrato, banco real, colunas, repositorios, compatibilidade por engine e persistencia local em arquivo quando o runtime ainda nao usa banco."
   }
 
   vinculos {
@@ -350,6 +350,8 @@ module sema.produto.persistencia_vendor_first {
       colunas_reais_mapeadas: Booleano
       repositorios_concretos_mapeados: Booleano
       compatibilidade_materializada: Booleano
+      categoria_persistencia_emitida: Booleano
+      persistencia_local_detectada: Booleano
     }
     authz {
       escopo: sema.persistencia.cruzar
@@ -367,6 +369,8 @@ module sema.produto.persistencia_vendor_first {
         colunas_reais_mapeadas: interno
         repositorios_concretos_mapeados: interno
         compatibilidade_materializada: interno
+        categoria_persistencia_emitida: interno
+        persistencia_local_detectada: interno
       }
     }
     audit {
@@ -391,6 +395,8 @@ module sema.produto.persistencia_vendor_first {
       colunas_reais_mapeadas existe
       repositorios_concretos_mapeados existe
       compatibilidade_materializada existe
+      categoria_persistencia_emitida existe
+      persistencia_local_detectada existe
     }
     tests {
       caso "persistencia cruza coluna real e compatibilidade do engine" {
@@ -398,6 +404,17 @@ module sema.produto.persistencia_vendor_first {
           contrato_persistencia: "database principal { engine: postgres table pedidos { entity: Pedido } }"
           codigo_vivo: "src/repositorios/pedidos.repository.ts"
           engine_alvo: "postgres"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+      caso "persistencia local em arquivo aparece sem fingir postgres" {
+        given {
+          contrato_persistencia: "task salvar_contato { effects { persistencia ContatoWhatsAppColaborador } }"
+          codigo_vivo: "repositories/collaborator_whatsapp_store.py"
+          engine_alvo: "arquivo"
         }
 
         expect {

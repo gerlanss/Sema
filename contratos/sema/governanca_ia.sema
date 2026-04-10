@@ -102,6 +102,8 @@ module sema.produto.governanca_ia {
       ambiguidades_explicitas: Booleano
       escopo_aplicado: Booleano
       ruido_lateral_reduzido: Booleano
+      consumer_surfaces_priorizadas: Booleano
+      persistencia_local_classificada: Booleano
     }
     authz {
       escopo: sema.drift.executar
@@ -123,6 +125,8 @@ module sema.produto.governanca_ia {
         ambiguidades_explicitas: interno
         escopo_aplicado: interno
         ruido_lateral_reduzido: interno
+        consumer_surfaces_priorizadas: interno
+        persistencia_local_classificada: interno
       }
     }
     audit {
@@ -152,6 +156,8 @@ module sema.produto.governanca_ia {
       ambiguidades_explicitas existe
       escopo_aplicado existe
       ruido_lateral_reduzido existe
+      consumer_surfaces_priorizadas existe
+      persistencia_local_classificada existe
     }
     error {
       simbolo_ambiguo {

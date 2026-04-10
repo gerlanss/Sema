@@ -25,6 +25,7 @@ import {
 } from "./futebot-fixture.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
+const MCP = path.resolve("pacotes/mcp/dist/index.js");
 const require = createRequire(import.meta.url);
 const { carregarProjetoParaDocumento } = require(path.resolve("pacotes/editor-vscode/project-loader.js"));
 
@@ -1332,6 +1333,98 @@ test("cli doctor checa toolchain sem explodir", () => {
   assert.match(execucao.stdout, /Sema doctor/);
   assert.match(execucao.stdout, /node: ok/);
   assert.match(execucao.stdout, /npm: ok/);
+  assert.match(execucao.stdout, /\[verificar\/typescript\]/);
+  assert.match(execucao.stdout, /tsx: ok/);
+});
+
+test("cli verificar em json falha cedo com preflight explicito quando faltam dependencias do alvo", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-verificar-preflight-"));
+
+  try {
+    await mkdir(path.join(baseTemporaria, "contratos"), { recursive: true });
+    await writeFile(
+      path.join(baseTemporaria, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        saida: "./generated",
+        alvos: ["python"],
+        framework: "base",
+        estruturaSaida: "modulos",
+      }, null, 2),
+      "utf8",
+    );
+    await writeFile(
+      path.join(baseTemporaria, "contratos", "saude.sema"),
+      `module app.saude {
+  task checar_saude {
+    input {
+      origem: Texto
+    }
+    output {
+      ok: Booleano
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "ok" {
+        given { origem: "local" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const pathSomenteNode = path.dirname(process.execPath);
+    const execucao = spawnSync(
+      "node",
+      [CLI, "verificar", baseTemporaria, "--json"],
+      {
+        stdio: "pipe",
+        encoding: "utf8",
+        cwd: path.resolve("."),
+        env: {
+          ...process.env,
+          PATH: pathSomenteNode,
+          Path: pathSomenteNode,
+        },
+      },
+    );
+
+    assert.equal(execucao.status, 1, execucao.stderr || execucao.stdout);
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.comando, "verificar");
+    assert.equal(json.sucesso, false);
+    assert.equal(Array.isArray(json.preflight?.faltando), true);
+    assert.equal(json.preflight.dependencias.some((item: { comando: string }) => item.comando === "verificar/python"), true);
+    assert.equal(json.preflight.faltando.some((item: { comando: string; nome: string }) =>
+      item.comando === "verificar/python" && ["python", "pytest"].includes(item.nome)), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("mcp cli responde help e version sem entrar em stdio", () => {
+  const ajuda = spawnSync(
+    "node",
+    [MCP, "--help"],
+    { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+  );
+  assert.equal(ajuda.status, 0, ajuda.stderr || ajuda.stdout);
+  assert.match(ajuda.stdout, /Sema MCP v1\.5\.1/);
+  assert.match(ajuda.stdout, /sema_drift/);
+  assert.match(ajuda.stdout, /MCP_PORT/);
+
+  const versao = spawnSync(
+    "node",
+    [MCP, "--version"],
+    { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+  );
+  assert.equal(versao.status, 0, versao.stderr || versao.stdout);
+  assert.equal(versao.stdout.trim(), "1.5.1");
 });
 
 test("cli inspeciona familias backend novas e detecta fontes corretas", async () => {

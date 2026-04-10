@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.1
+
+- acompanha a linha publica 1.5.1 com `sema-mcp --help/--version`, `doctor` com preflight por comando e `drift` menos barulhento para IA
+- melhora o `drift` para classificar persistencia local em arquivo sem fingir banco relacional
+
 ## 1.5.0
 
 - adiciona onboarding do MCP sem `@latest` travado nos templates de IA e da extensao
