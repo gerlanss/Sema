@@ -129,31 +129,165 @@ function valorPadraoTypeScript(tipo: string, nomeCampo: string): string {
   }
 }
 
-function formatarLiteralTesteTypeScript(valor: string, tipoDeclarado?: string): string | number | boolean {
-  if (["Texto", "Id", "Email", "Url"].includes(tipoDeclarado ?? "")) {
-    return valor;
+function removerAspasExternas(valor: string): string {
+  const texto = valor.trim();
+  if (
+    (texto.startsWith("\"") && texto.endsWith("\""))
+    || (texto.startsWith("'") && texto.endsWith("'"))
+  ) {
+    return texto.slice(1, -1);
   }
-  if (["Numero", "Inteiro", "Decimal"].includes(tipoDeclarado ?? "") && /^-?\d+(?:\.\d+)?$/.test(valor)) {
-    return Number(valor);
+  return texto;
+}
+
+function dividirLiteralNoNivelRaiz(valor: string, separador: "," | ":"): string[] {
+  const partes: string[] = [];
+  let atual = "";
+  let profundidadeAngular = 0;
+  let profundidadeLista = 0;
+  let profundidadeMapa = 0;
+  let aspas: "\"" | "'" | null = null;
+
+  for (let indice = 0; indice < valor.length; indice += 1) {
+    const caractere = valor[indice]!;
+    const anterior = indice > 0 ? valor[indice - 1] : "";
+
+    if (aspas) {
+      atual += caractere;
+      if (caractere === aspas && anterior !== "\\") {
+        aspas = null;
+      }
+      continue;
+    }
+
+    if (caractere === "\"" || caractere === "'") {
+      aspas = caractere;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "<") {
+      profundidadeAngular += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === ">") {
+      profundidadeAngular = Math.max(0, profundidadeAngular - 1);
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "[") {
+      profundidadeLista += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "]") {
+      profundidadeLista = Math.max(0, profundidadeLista - 1);
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "{") {
+      profundidadeMapa += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "}") {
+      profundidadeMapa = Math.max(0, profundidadeMapa - 1);
+      atual += caractere;
+      continue;
+    }
+
+    if (
+      caractere === separador
+      && profundidadeAngular === 0
+      && profundidadeLista === 0
+      && profundidadeMapa === 0
+    ) {
+      if (atual.trim()) {
+        partes.push(atual.trim());
+      }
+      atual = "";
+      continue;
+    }
+
+    atual += caractere;
+  }
+
+  if (atual.trim()) {
+    partes.push(atual.trim());
+  }
+
+  return partes;
+}
+
+function resolverTipoItemTeste(tipoDeclarado?: string): string | undefined {
+  const tipo = (tipoDeclarado ?? "").trim();
+  if (!tipo) {
+    return undefined;
+  }
+  if (tipo.endsWith("[]")) {
+    return tipo.slice(0, -2).trim();
+  }
+  const lista = tipo.match(/^Lista<(.+)>$/);
+  if (lista?.[1]) {
+    return lista[1].trim();
+  }
+  return undefined;
+}
+
+function formatarLiteralTesteTypeScript(valor: string, tipoDeclarado?: string): unknown {
+  const bruto = valor.trim();
+  if (bruto.startsWith("[") && bruto.endsWith("]")) {
+    const interior = bruto.slice(1, -1).trim();
+    const tipoItem = resolverTipoItemTeste(tipoDeclarado);
+    if (!interior) {
+      return [];
+    }
+    return dividirLiteralNoNivelRaiz(interior, ",").map((item) => formatarLiteralTesteTypeScript(item, tipoItem));
+  }
+  if (bruto.startsWith("{") && bruto.endsWith("}")) {
+    const interior = bruto.slice(1, -1).trim();
+    if (!interior) {
+      return {};
+    }
+    const literal: Record<string, unknown> = {};
+    for (const par of dividirLiteralNoNivelRaiz(interior, ",")) {
+      const [chaveBruta, ...valorBruto] = dividirLiteralNoNivelRaiz(par, ":");
+      if (!chaveBruta || valorBruto.length === 0) {
+        continue;
+      }
+      literal[removerAspasExternas(chaveBruta)] = formatarLiteralTesteTypeScript(valorBruto.join(":"));
+    }
+    return literal;
+  }
+
+  const texto = removerAspasExternas(bruto);
+  if (["Texto", "Id", "Email", "Url"].includes(tipoDeclarado ?? "")) {
+    return texto;
+  }
+  if (["Numero", "Inteiro", "Decimal"].includes(tipoDeclarado ?? "") && /^-?\d+(?:\.\d+)?$/.test(texto)) {
+    return Number(texto);
   }
   if ((tipoDeclarado ?? "") === "Booleano") {
-    if (valor === "verdadeiro") {
+    if (texto === "verdadeiro") {
       return true;
     }
-    if (valor === "falso") {
+    if (texto === "falso") {
       return false;
     }
   }
-  if (/^-?\d+(?:\.\d+)?$/.test(valor)) {
-    return Number(valor);
+  if (/^-?\d+(?:\.\d+)?$/.test(texto)) {
+    return Number(texto);
   }
-  if (valor === "verdadeiro") {
+  if (texto === "verdadeiro") {
     return true;
   }
-  if (valor === "falso") {
+  if (texto === "falso") {
     return false;
   }
-  return valor;
+  if (texto === "nulo") {
+    return null;
+  }
+  return texto;
 }
 
 function converterBlocoTesteParaValorTypeScript(
@@ -360,20 +494,35 @@ function gerarTask(task: IrTask): string {
     }
   }
   const erros = [...errosMapeados.entries()];
-  const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
-  const cenariosErro = task.tests
-    .filter((caso) => caso.error && caso.error.campos.length > 0)
-    .map((caso) => ({
-      nome: caso.nome,
-      entrada: converterBlocoTesteParaValorTypeScript(caso.given, tiposEntrada),
-      tipoErro: caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo,
-    }))
-    .filter((caso) => caso.tipoErro);
+  const erroAutenticacao = erros.find(([nomeErro]) => nomeErro.includes("autentic"))?.[0];
+  const erroAutorizacao = erros.find(([nomeErro]) => nomeErro.includes("acesso_negado") || nomeErro.includes("autoriz"))?.[0];
   return `
 ${gerarInterface(`${task.nome}Entrada`, task.input)}
 ${gerarInterface(`${task.nome}Saida`, task.output)}
 export type ${task.nome}Erro = ${erros.length === 0 ? "never" : erros.map(([erro]) => `"${erro}"`).join(" | ")};
 ${erros.map(([nomeErro, mensagem]) => `export class ${task.nome}_${nomeErro}Erro extends Error {\n  readonly codigo = "${nomeErro}";\n  constructor() {\n    super(${JSON.stringify(mensagem)});\n    this.name = "${task.nome}_${nomeErro}Erro";\n  }\n}\n`).join("\n")}
+export interface ${task.nome}ContextoExecucao {
+  autenticado?: boolean;
+  autorizado?: boolean;
+  erroEsperado?: ${task.nome}Erro | null;
+}
+
+function normalizar_contexto_${nomeSimbolo}(contexto: ${task.nome}ContextoExecucao = {}): Required<${task.nome}ContextoExecucao> {
+  return {
+    autenticado: contexto.autenticado ?? true,
+    autorizado: contexto.autorizado ?? true,
+    erroEsperado: contexto.erroEsperado ?? null,
+  };
+}
+
+function criar_erro_${nomeSimbolo}(codigo: ${task.nome}Erro): Error {
+  switch (codigo) {
+${erros.map(([nomeErro]) => `    case "${nomeErro}":\n      return new ${task.nome}_${nomeErro}Erro();`).join("\n")}
+    default:
+      return new Error(\`Erro sintetico nao mapeado para ${task.nome}: \${codigo as string}\`);
+  }
+}
+
 ${gerarMetadadosTask(task)}
 
 export function validar_${nomeSimbolo}(entrada: ${task.nome}Entrada): void {
@@ -382,9 +531,15 @@ ${gerarValidacoes(task)}
 
 ${gerarFuncaoGarantias(task)}
 
-export async function executar_${nomeSimbolo}(entrada: ${task.nome}Entrada): Promise<${task.nome}Saida> {
+export async function executar_${nomeSimbolo}(entrada: ${task.nome}Entrada, contexto: ${task.nome}ContextoExecucao = {}): Promise<${task.nome}Saida> {
+  const contextoExecucao = normalizar_contexto_${nomeSimbolo}(contexto);
+  const erroEsperado = contextoExecucao.erroEsperado as ${task.nome}Erro | null;
+${erroAutenticacao ? `  if (contextoExecucao.erroEsperado === "${erroAutenticacao}" || (${JSON.stringify(task.auth.modo ?? "")} === "obrigatorio" && !contextoExecucao.autenticado)) {\n    throw new ${task.nome}_${erroAutenticacao}Erro();\n  }` : ""}
+${erroAutorizacao ? `  if (contextoExecucao.erroEsperado === "${erroAutorizacao}" || (${task.authz.explicita ? "!contextoExecucao.autorizado" : "false"})) {\n    throw new ${task.nome}_${erroAutorizacao}Erro();\n  }` : ""}
+  if (erroEsperado${erroAutenticacao || erroAutorizacao ? ` && ![${[erroAutenticacao, erroAutorizacao].filter(Boolean).map((erro) => JSON.stringify(erro)).join(", ")}].includes(erroEsperado)` : ""}) {
+    throw criar_erro_${nomeSimbolo}(erroEsperado);
+  }
   validar_${nomeSimbolo}(entrada);
-${cenariosErro.map((caso) => `  if (JSON.stringify(entrada) === JSON.stringify(${JSON.stringify(caso.entrada)})) throw new ${task.nome}_${caso.tipoErro}Erro();`).join("\n")}
 ${task.stateContract ? `  // Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n  // Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
 ${task.implementacoesExternas.length > 0 ? `  // Implementacoes externas vinculadas:\n${task.implementacoesExternas.map((impl) => `  // - ${impl.origem}: ${impl.caminho} [${impl.statusImpl ?? "nao_verificado"}]`).join("\n")}` : ""}
   // Efeitos declarados:
@@ -422,10 +577,19 @@ function gerarTestes(modulo: IrModulo): string {
       const entrada = converterBlocoTesteParaValorTypeScript(caso.given, tiposEntrada);
       const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
       if (tipoErro) {
+        const contextoLinhas = [`erroEsperado: ${JSON.stringify(tipoErro)}`];
+        if (tipoErro.includes("autentic")) {
+          contextoLinhas.push("autenticado: false", "autorizado: false");
+        } else if (tipoErro.includes("acesso_negado") || tipoErro.includes("autoriz")) {
+          contextoLinhas.push("autenticado: true", "autorizado: false");
+        }
         linhas.push(`
 test("${task.nome} :: ${caso.nome}", async () => {
   const entrada = ${JSON.stringify(entrada, null, 2)};
-  await assert.rejects(() => ${nomeFuncao}(entrada as any), ${task.nome}_${tipoErro}Erro);
+  const contexto = {
+    ${contextoLinhas.join(",\n    ")}
+  } as const;
+  await assert.rejects(() => ${nomeFuncao}(entrada as any, contexto), ${task.nome}_${tipoErro}Erro);
 });
 `);
         continue;

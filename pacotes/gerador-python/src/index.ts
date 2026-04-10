@@ -167,31 +167,166 @@ function valorPadraoPython(campo: IrCampo): string {
   }
 }
 
-function formatarLiteralTestePython(valor: string, tipoDeclarado?: string): string {
-  if (["Texto", "Id", "Email", "Url"].includes(tipoDeclarado ?? "")) {
-    return JSON.stringify(valor);
+function removerAspasExternas(valor: string): string {
+  const texto = valor.trim();
+  if (
+    (texto.startsWith("\"") && texto.endsWith("\""))
+    || (texto.startsWith("'") && texto.endsWith("'"))
+  ) {
+    return texto.slice(1, -1);
   }
-  if (["Numero", "Inteiro", "Decimal"].includes(tipoDeclarado ?? "") && /^-?\d+(?:\.\d+)?$/.test(valor)) {
-    return valor;
+  return texto;
+}
+
+function dividirLiteralNoNivelRaiz(valor: string, separador: "," | ":"): string[] {
+  const partes: string[] = [];
+  let atual = "";
+  let profundidadeAngular = 0;
+  let profundidadeLista = 0;
+  let profundidadeMapa = 0;
+  let aspas: "\"" | "'" | null = null;
+
+  for (let indice = 0; indice < valor.length; indice += 1) {
+    const caractere = valor[indice]!;
+    const anterior = indice > 0 ? valor[indice - 1] : "";
+
+    if (aspas) {
+      atual += caractere;
+      if (caractere === aspas && anterior !== "\\") {
+        aspas = null;
+      }
+      continue;
+    }
+
+    if (caractere === "\"" || caractere === "'") {
+      aspas = caractere;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "<") {
+      profundidadeAngular += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === ">") {
+      profundidadeAngular = Math.max(0, profundidadeAngular - 1);
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "[") {
+      profundidadeLista += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "]") {
+      profundidadeLista = Math.max(0, profundidadeLista - 1);
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "{") {
+      profundidadeMapa += 1;
+      atual += caractere;
+      continue;
+    }
+    if (caractere === "}") {
+      profundidadeMapa = Math.max(0, profundidadeMapa - 1);
+      atual += caractere;
+      continue;
+    }
+
+    if (
+      caractere === separador
+      && profundidadeAngular === 0
+      && profundidadeLista === 0
+      && profundidadeMapa === 0
+    ) {
+      if (atual.trim()) {
+        partes.push(atual.trim());
+      }
+      atual = "";
+      continue;
+    }
+
+    atual += caractere;
+  }
+
+  if (atual.trim()) {
+    partes.push(atual.trim());
+  }
+
+  return partes;
+}
+
+function resolverTipoItemTeste(tipoDeclarado?: string): string | undefined {
+  const tipo = (tipoDeclarado ?? "").trim();
+  if (!tipo) {
+    return undefined;
+  }
+  if (tipo.endsWith("[]")) {
+    return tipo.slice(0, -2).trim();
+  }
+  const lista = tipo.match(/^Lista<(.+)>$/);
+  if (lista?.[1]) {
+    return lista[1].trim();
+  }
+  return undefined;
+}
+
+function formatarLiteralTestePython(valor: string, tipoDeclarado?: string): string {
+  const bruto = valor.trim();
+  if (bruto.startsWith("[") && bruto.endsWith("]")) {
+    const interior = bruto.slice(1, -1).trim();
+    const tipoItem = resolverTipoItemTeste(tipoDeclarado);
+    if (!interior) {
+      return "[]";
+    }
+    return `[${dividirLiteralNoNivelRaiz(interior, ",").map((item) => formatarLiteralTestePython(item, tipoItem)).join(", ")}]`;
+  }
+  if (bruto.startsWith("{") && bruto.endsWith("}")) {
+    const interior = bruto.slice(1, -1).trim();
+    if (!interior) {
+      return "{}";
+    }
+    const pares = dividirLiteralNoNivelRaiz(interior, ",")
+      .map((par) => {
+        const [chaveBruta, ...valorBruto] = dividirLiteralNoNivelRaiz(par, ":");
+        if (!chaveBruta || valorBruto.length === 0) {
+          return "";
+        }
+        return `${JSON.stringify(removerAspasExternas(chaveBruta))}: ${formatarLiteralTestePython(valorBruto.join(":"))}`;
+      })
+      .filter(Boolean);
+    return `{${pares.join(", ")}}`;
+  }
+
+  const texto = removerAspasExternas(bruto);
+  if (["Texto", "Id", "Email", "Url"].includes(tipoDeclarado ?? "")) {
+    return JSON.stringify(texto);
+  }
+  if (["Numero", "Inteiro", "Decimal"].includes(tipoDeclarado ?? "") && /^-?\d+(?:\.\d+)?$/.test(texto)) {
+    return texto;
   }
   if ((tipoDeclarado ?? "") === "Booleano") {
-    if (valor === "verdadeiro") {
+    if (texto === "verdadeiro") {
       return "True";
     }
-    if (valor === "falso") {
+    if (texto === "falso") {
       return "False";
     }
   }
-  if (/^-?\d+(?:\.\d+)?$/.test(valor)) {
-    return valor;
+  if (/^-?\d+(?:\.\d+)?$/.test(texto)) {
+    return texto;
   }
-  if (valor === "verdadeiro") {
+  if (texto === "verdadeiro") {
     return "True";
   }
-  if (valor === "falso") {
+  if (texto === "falso") {
     return "False";
   }
-  return JSON.stringify(valor);
+  if (texto === "nulo") {
+    return "None";
+  }
+  return JSON.stringify(texto);
 }
 
 function gerarMapaLiteralPython(campos: Array<{ nome: string; valor: string }>): string {
@@ -425,16 +560,8 @@ function gerarTask(task: IrTask, tiposCompostos: Map<string, Map<string, string>
   }
   const erros = [...errosMapeados.entries()];
   const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
-  const cenariosErro = task.tests
-    .filter((caso) => caso.error && caso.error.campos.length > 0)
-    .map((caso) => ({
-      entrada: `${task.nome}Entrada(${[
-        ...caso.given.campos.map((campo) => `${campo.nome}=${formatarLiteralTestePython(campo.tipo, tiposEntrada.get(campo.nome))}`),
-        ...caso.given.blocos.map((subbloco) => `${subbloco.nome}=${gerarLiteralBlocoTestePython(subbloco.conteudo, tiposCompostos, undefined, tiposEntrada.get(subbloco.nome))}`),
-      ].join(", ")})`,
-      tipoErro: caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo,
-    }))
-    .filter((caso) => caso.tipoErro);
+  const erroAutenticacao = erros.find(([nomeErro]) => nomeErro.includes("autentic"))?.[0];
+  const erroAutorizacao = erros.find(([nomeErro]) => nomeErro.includes("acesso_negado") || nomeErro.includes("autoriz"))?.[0];
   const validacoes = [
     ...task.input
       .filter((campo) => campo.modificadores.includes("required"))
@@ -467,6 +594,17 @@ function gerarTask(task: IrTask, tiposCompostos: Map<string, Map<string, string>
 ${gerarDataclass(`${task.nome}Entrada`, task.input)}
 ${gerarDataclass(`${task.nome}Saida`, task.output)}
 ${erros.map(([nomeErro, mensagem]) => `\nclass ${task.nome}_${nomeErro}Erro(Exception):\n    codigo = "${nomeErro}"\n\n    def __init__(self) -> None:\n        super().__init__(${JSON.stringify(mensagem)})\n`).join("\n")}
+
+def normalizar_contexto_${nome}(contexto: dict[str, object] | None = None) -> dict[str, object]:
+    contexto_normalizado: dict[str, object] = dict(contexto or {})
+    contexto_normalizado.setdefault("autenticado", True)
+    contexto_normalizado.setdefault("autorizado", True)
+    contexto_normalizado.setdefault("erro_esperado", None)
+    return contexto_normalizado
+
+def criar_erro_${nome}(codigo: str) -> Exception:
+${finalizarBlocoPython(erros.map(([nomeErro]) => `    if codigo == "${nomeErro}":\n        return ${task.nome}_${nomeErro}Erro()`).concat(`    return Exception(f"Erro sintetico nao mapeado para ${task.nome}: {codigo}")`))}
+
 ${gerarMetadadosTask(task)}
 
 def validar_${nome}(entrada: ${task.nome}Entrada) -> None:
@@ -474,9 +612,13 @@ ${finalizarBlocoPython(validacoes)}
 
 ${gerarFuncaoGarantias(task)}
 
-def executar_${nome}(entrada: ${task.nome}Entrada) -> ${task.nome}Saida:
+def executar_${nome}(entrada: ${task.nome}Entrada, contexto: dict[str, object] | None = None) -> ${task.nome}Saida:
+    contexto_execucao = normalizar_contexto_${nome}(contexto)
+${erroAutenticacao ? `    if contexto_execucao["erro_esperado"] == "${erroAutenticacao}" or (${JSON.stringify(task.auth.modo ?? "")} == "obrigatorio" and not bool(contexto_execucao["autenticado"])):\n        raise ${task.nome}_${erroAutenticacao}Erro()` : ""}
+${erroAutorizacao ? `    if contexto_execucao["erro_esperado"] == "${erroAutorizacao}" or (${task.authz.explicita ? "not bool(contexto_execucao[\"autorizado\"])" : "False"}):\n        raise ${task.nome}_${erroAutorizacao}Erro()` : ""}
+    if contexto_execucao["erro_esperado"] is not None${erroAutenticacao ? ` and contexto_execucao["erro_esperado"] != "${erroAutenticacao}"` : ""}${erroAutorizacao ? ` and contexto_execucao["erro_esperado"] != "${erroAutorizacao}"` : ""}:
+        raise criar_erro_${nome}(str(contexto_execucao["erro_esperado"]))
     validar_${nome}(entrada)
-${cenariosErro.map((caso) => `    if entrada == ${caso.entrada}:\n        raise ${task.nome}_${caso.tipoErro}Erro()`).join("\n")}
 ${task.stateContract ? `    # Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n    # Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
 ${implementacoes}
 ${efeitos}
@@ -498,7 +640,13 @@ function gerarTestes(modulo: IrModulo): string {
       ].join(", ");
       const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
       if (tipoErro) {
-        linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    with pytest.raises(${task.nome}_${tipoErro}Erro):\n        ${nomeFuncao}(entrada)\n`);
+        const contextoLinhas = [`"erro_esperado": ${JSON.stringify(tipoErro)}`];
+        if (tipoErro.includes("autentic")) {
+          contextoLinhas.push('"autenticado": False', '"autorizado": False');
+        } else if (tipoErro.includes("acesso_negado") || tipoErro.includes("autoriz")) {
+          contextoLinhas.push('"autenticado": True', '"autorizado": False');
+        }
+        linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    contexto = { ${contextoLinhas.join(", ")} }\n    with pytest.raises(${task.nome}_${tipoErro}Erro):\n        ${nomeFuncao}(entrada, contexto)\n`);
         continue;
       }
       linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    resultado = ${nomeFuncao}(entrada)\n    assert resultado is not None\n`);

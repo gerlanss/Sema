@@ -248,6 +248,58 @@ module exemplo.inline.payload {
   assert.ok(arquivoTeste?.conteudo.includes('"ativo": true'));
 });
 
+async function executarTestesTypeScriptGeradosTemporario(
+  arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
+): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-run-ts-"));
+
+  try {
+    const testes: string[] = [];
+    for (const arquivo of arquivos) {
+      const destino = path.join(base, arquivo.caminhoRelativo);
+      await mkdir(path.dirname(destino), { recursive: true });
+      await writeFile(destino, arquivo.conteudo, "utf8");
+      if (arquivo.caminhoRelativo.endsWith(".test.ts")) {
+        testes.push(destino);
+      }
+    }
+
+    return spawnSync(
+      process.execPath,
+      ["--import", "tsx", "--test", ...testes],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+}
+
+async function executarTestesPythonGeradosTemporario(
+  arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
+): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-run-py-"));
+
+  try {
+    const testes: string[] = [];
+    for (const arquivo of arquivos) {
+      const destino = path.join(base, arquivo.caminhoRelativo);
+      await mkdir(path.dirname(destino), { recursive: true });
+      await writeFile(destino, arquivo.conteudo, "utf8");
+      if (arquivo.caminhoRelativo.startsWith("test_") && arquivo.caminhoRelativo.endsWith(".py")) {
+        testes.push(arquivo.caminhoRelativo);
+      }
+    }
+
+    return spawnSync(
+      "python",
+      ["-m", "pytest", ...testes],
+      { stdio: "pipe", encoding: "utf8", cwd: base },
+    );
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+}
+
 test("geradores refletem estruturas semanticas mais ricas no exemplo de pagamento", async () => {
   const caminho = path.resolve("exemplos/pagamento.sema");
   const codigo = await readFile(caminho, "utf8");
@@ -732,11 +784,98 @@ module exemplo.geracao.aninhado {
   const arquivosPy = gerarPython(resultado.ir!);
   const codigoPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_aninhado.py")?.conteudo ?? "";
   const testesPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "test_exemplo_geracao_aninhado.py")?.conteudo ?? "";
-  assert.match(codigoPy, /if entrada == processar_checkoutEntrada\([^)]*documento=DocumentoEntrada\(/);
+  assert.match(codigoPy, /def normalizar_contexto_processar_checkout/);
+  assert.match(codigoPy, /def criar_erro_processar_checkout/);
+  assert.match(testesPy, /contexto = \{ "erro_esperado": "checkout_invalido" \}/);
   assert.match(testesPy, /documento=DocumentoEntrada\(/);
   assert.match(testesPy, /"cliente": \{/);
   assert.match(testesPy, /"vip": True/);
   assert.match(testesPy, /"total": 19\.9/);
+});
+
+test("geradores executam testes tipados com auth e listas em TypeScript e Python", async () => {
+  const codigo = `
+module exemplo.geracao.execucao_tipada {
+  task verificar_execucao {
+    input {
+      loja: Inteiro required
+      produtos: Texto[] required
+    }
+    output {
+      protocolo: Id
+    }
+    auth {
+      modo: obrigatorio
+    }
+    rules {
+      loja em [1, 2, 3]
+    }
+    guarantees {
+      protocolo existe
+    }
+    error {
+      autenticacao_obrigatoria: "Autenticacao obrigatoria."
+      loja_invalida: "Loja invalida."
+    }
+    tests {
+      caso "ok" {
+        given {
+          loja: 1
+          produtos: "[AA34626]"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+      caso "loja invalida" {
+        given {
+          loja: 9
+          produtos: "[AA34626]"
+        }
+        error {
+          tipo: "loja_invalida"
+        }
+        expect {
+          sucesso: falso
+        }
+      }
+      caso "auth obrigatoria" {
+        given {
+          loja: 1
+          produtos: "[AA34626]"
+        }
+        error {
+          tipo: "autenticacao_obrigatoria"
+        }
+        expect {
+          sucesso: falso
+        }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "execucao_tipada.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosTs = gerarTypeScript(resultado.ir!);
+  const arquivosPy = gerarPython(resultado.ir!);
+  const testeTs = arquivosTs.find((arquivo) => arquivo.caminhoRelativo.endsWith(".test.ts"));
+  const testePy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo.startsWith("test_"));
+  assert.ok(testeTs);
+  assert.ok(testePy);
+  assert.match(testeTs!.conteudo, /"produtos": \[\s*"AA34626"\s*\]/);
+  assert.match(testePy!.conteudo, /produtos=\["AA34626"\]/);
+  assert.match(testeTs!.conteudo, /erroEsperado: "loja_invalida"/);
+  assert.match(testePy!.conteudo, /"erro_esperado": "autenticacao_obrigatoria"/);
+
+  const execucaoTs = await executarTestesTypeScriptGeradosTemporario(arquivosTs);
+  assert.equal(execucaoTs.status, 0, execucaoTs.stderr || execucaoTs.stdout);
+
+  const execucaoPy = await executarTestesPythonGeradosTemporario(arquivosPy);
+  assert.equal(execucaoPy.status, 0, execucaoPy.stderr || execucaoPy.stdout);
 });
 
 test("geradores carregam invariantes de entity e type para codigo gerado", () => {
