@@ -1,10 +1,16 @@
 # Changelog
 
+## 1.5.0
+
+- adiciona onboarding do MCP sem `@latest` travado nos templates de IA e da extensao
+- acompanha a linha publica 1.5.0 com `drift` em escopo real, `impacto` e `renomear-semantico`
+- mantem exemplos vendor-first para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
+
 ## 1.4.0
 
 - adiciona snippets e exemplos embutidos para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
 - atualiza highlight e hover da extensao para os blocos de persistencia vendor-first
-- alinha a extensao com a linha publica 1.4.0 da Sema e com a nova documentacao de release
+- alinha a extensao com a linha publica 1.4.0 da Sema e com a documentacao da release
 
 ## 1.3.7
 

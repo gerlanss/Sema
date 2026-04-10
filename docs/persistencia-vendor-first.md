@@ -1,6 +1,6 @@
 # Persistencia Vendor-First
 
-Sema 1.4.0 trata banco como superficie semantica de primeira classe. Isso significa assumir diferencas reais entre engines e coloca-las no contrato, no semantico, no IR, no drift e na extensao.
+Sema 1.5.0 trata banco como superficie semantica de primeira classe. Isso significa assumir diferencas reais entre engines e coloca-las no contrato, no semantico, no IR, no drift, no impact map, na renomeacao assistida e na extensao.
 
 ## Engines publicas
 

@@ -81,9 +81,73 @@ function registrarFerramentas(s: McpServer): void {
     {
       projeto: z.string().optional().describe("Caminho do projeto (padrao: diretorio atual)"),
       json: z.boolean().optional().describe("Retornar saida em JSON"),
+      escopo: z.enum(["arquivo", "modulo", "projeto"]).optional().describe("Escopo real da analise"),
+      incluir_worktrees: z.boolean().optional().describe("Incluir worktrees e clones laterais"),
+      incluir_consumidores_laterais: z.boolean().optional().describe("Incluir consumers laterais e showcases"),
     },
-    async ({ projeto, json }) => {
-      const args = ["drift", ...(projeto ? [projeto] : []), ...(json ? ["--json"] : [])];
+    async ({ projeto, json, escopo, incluir_worktrees, incluir_consumidores_laterais }) => {
+      const args = [
+        "drift",
+        ...(projeto ? [projeto] : []),
+        ...(escopo ? ["--escopo", escopo] : []),
+        ...(incluir_worktrees ? ["--incluir-worktrees"] : []),
+        ...(incluir_consumidores_laterais ? ["--incluir-consumidores-laterais"] : []),
+        ...(json ? ["--json"] : []),
+      ];
+      return { content: [{ type: "text", text: chamarSema(args, projeto) }] };
+    }
+  );
+
+  s.tool(
+    "sema_impacto",
+    "Gera um impact map semantico: mostra o que tocar, o que validar e quais arquivos serao afetados por uma mudanca.",
+    {
+      projeto: z.string().optional().describe("Caminho do projeto ou contrato alvo"),
+      alvo: z.string().describe("Token ou conceito semantico que esta mudando"),
+      mudanca: z.string().optional().describe("Descricao curta da mudanca"),
+      escopo: z.enum(["arquivo", "modulo", "projeto"]).optional().describe("Escopo real da analise"),
+      incluir_worktrees: z.boolean().optional().describe("Incluir worktrees e clones laterais"),
+      incluir_consumidores_laterais: z.boolean().optional().describe("Incluir consumers laterais e showcases"),
+      json: z.boolean().optional().describe("Retornar saida em JSON"),
+    },
+    async ({ projeto, alvo, mudanca, escopo, incluir_worktrees, incluir_consumidores_laterais, json }) => {
+      const args = [
+        "impacto",
+        ...(projeto ? [projeto] : []),
+        "--alvo", alvo,
+        ...(mudanca ? ["--mudanca", mudanca] : []),
+        ...(escopo ? ["--escopo", escopo] : []),
+        ...(incluir_worktrees ? ["--incluir-worktrees"] : []),
+        ...(incluir_consumidores_laterais ? ["--incluir-consumidores-laterais"] : []),
+        ...(json ? ["--json"] : []),
+      ];
+      return { content: [{ type: "text", text: chamarSema(args, projeto) }] };
+    }
+  );
+
+  s.tool(
+    "sema_renomear_semantico",
+    "Assiste a renomeacao de um token semantico e sugere os pontos de contrato, codigo, persistencia e teste que precisam mudar.",
+    {
+      projeto: z.string().optional().describe("Caminho do projeto ou contrato alvo"),
+      de: z.string().describe("Nome semantico atual"),
+      para: z.string().describe("Nome semantico novo"),
+      escopo: z.enum(["arquivo", "modulo", "projeto"]).optional().describe("Escopo real da analise"),
+      incluir_worktrees: z.boolean().optional().describe("Incluir worktrees e clones laterais"),
+      incluir_consumidores_laterais: z.boolean().optional().describe("Incluir consumers laterais e showcases"),
+      json: z.boolean().optional().describe("Retornar saida em JSON"),
+    },
+    async ({ projeto, de, para, escopo, incluir_worktrees, incluir_consumidores_laterais, json }) => {
+      const args = [
+        "renomear-semantico",
+        ...(projeto ? [projeto] : []),
+        "--de", de,
+        "--para", para,
+        ...(escopo ? ["--escopo", escopo] : []),
+        ...(incluir_worktrees ? ["--incluir-worktrees"] : []),
+        ...(incluir_consumidores_laterais ? ["--incluir-consumidores-laterais"] : []),
+        ...(json ? ["--json"] : []),
+      ];
       return { content: [{ type: "text", text: chamarSema(args, projeto) }] };
     }
   );

@@ -6,10 +6,13 @@ Sema e um protocolo de governanca de intencao para IA sobre software vivo. Ela g
 
 Ela nao tenta substituir framework, ORM, runtime, observabilidade ou banco real. O papel da Sema e dizer o que existe, o que pode mudar e como uma IA deve navegar nisso com menos improviso e mais verificacao.
 
-## Destaques da linha 1.4.0
+## Destaques da linha 1.5.0
 
 - persistencia vendor-first de primeira classe para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
 - `sema drift` com match de codigo vivo para recursos reais desses bancos
+- `sema drift` com escopo real e ignorando worktrees ou consumers laterais por padrao
+- `sema impacto` para mostrar o que tocar, em que ordem, antes da edicao
+- `sema renomear-semantico` para guiar renomeacao de payload, store, worker, rota e teste
 - importacao legada que infere blocos `database` e recursos canonicamente
 - extensao VS Code com snippets e exemplos separados para cada engine
 - CLI, MCP, instaladores e docs alinhados na mesma versao publica
@@ -38,8 +41,8 @@ VS Code:
 
 Instaladores:
 
-- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.4.0/install-sema.sh | bash`
-- Windows PowerShell: baixe `install-sema.ps1` da tag `v1.4.0` e rode `.\install-sema.ps1 -WithVSCode -WithMcp`
+- Linux/macOS: `curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash`
+- Windows PowerShell: baixe `install-sema.ps1` da branch `main` e rode `.\install-sema.ps1 -WithVSCode -WithMcp`
 
 ## Comeco rapido
 
@@ -55,13 +58,14 @@ Fluxo tipico em projeto vivo:
 
 ```bash
 sema inspecionar . --json
-sema drift contratos/pedidos.sema --json
+sema drift contratos/pedidos.sema --escopo modulo --json
+sema impacto contratos/pedidos.sema --alvo pedido_id --mudanca "trocar pedido_id por pedido_uuid" --json
 sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto --json
 ```
 
 ## Persistencia vendor-first
 
-Sema 1.4.0 trata banco como superficie semantica de primeira classe, sem fingir que `postgres`, `mysql`, `sqlite`, `mongodb` e `redis` sao a mesma coisa. O contrato canonico agora aceita blocos `database` e recursos como `table`, `collection`, `document`, `keyspace`, `stream`, `relationship`, `query`, `index` e `retention`.
+Sema 1.5.0 trata banco como superficie semantica de primeira classe, sem fingir que `postgres`, `mysql`, `sqlite`, `mongodb` e `redis` sao a mesma coisa. O contrato canonico agora aceita blocos `database` e recursos como `table`, `collection`, `document`, `keyspace`, `stream`, `relationship`, `query`, `index` e `retention`.
 
 Exemplo curto:
 

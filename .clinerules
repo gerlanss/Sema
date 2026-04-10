@@ -18,8 +18,8 @@ Pense como IA, nao como humano. Voce nao esta "programando" — esta consumindo 
 
 ## MCP
 
-O servidor MCP do Sema roda localmente via: npx -y @semacode/mcp@latest
-Use as ferramentas: sema_resumo, sema_validar, sema_drift, sema_inspecionar, sema_ir, sema_verificar, sema_contexto_ia, sema_prompt_ia.
+O servidor MCP do Sema roda localmente via: npx -y @semacode/mcp
+Use as ferramentas: sema_resumo, sema_validar, sema_drift, sema_impacto, sema_renomear_semantico, sema_inspecionar, sema_ir, sema_verificar, sema_contexto_ia, sema_prompt_ia.
 
 ## Contratos e exemplos
 

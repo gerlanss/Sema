@@ -1,12 +1,13 @@
 module sema.produto.persistencia_vendor_first {
   docs {
-    resumo: "Contrato interno da Sema para tratar PostgreSQL, MySQL, SQLite, MongoDB e Redis como bancos de primeira classe no parser, semantico, IR, formatador e adocao."
+    resumo: "Contrato interno da Sema para tratar PostgreSQL, MySQL, SQLite, MongoDB e Redis como bancos de primeira classe no parser, semantico, IR, formatador, drift e adocao, cruzando contrato, banco real, colunas, repositorios e compatibilidade por engine."
   }
 
   vinculos {
     arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
     arquivo: "pacotes/nucleo/src/ir/conversor.ts"
     arquivo: "pacotes/nucleo/src/formatador/index.ts"
+    arquivo: "pacotes/cli/src/drift.ts"
     arquivo: "pacotes/cli/src/importador.ts"
     arquivo: "pacotes/cli/src/projeto.ts"
   }
@@ -114,6 +115,30 @@ module sema.produto.persistencia_vendor_first {
       incompatibilidades_reais_detectadas: Booleano
       status: StatusPersistenciaVendor
     }
+    authz {
+      escopo: sema.persistencia.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_persistencia: interno
+        engine_alvo: interno
+      }
+      output {
+        diagnosticos_emitidos: interno
+        incompatibilidades_reais_detectadas: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: sema.persistencia.validada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
     impl {
       ts: nucleo.src.semantico.analisador.analisarSemantica
     }
@@ -152,6 +177,29 @@ module sema.produto.persistencia_vendor_first {
       secao_databases_preservada: Booleano
       compatibilidade_calculada: Booleano
       status: StatusPersistenciaVendor
+    }
+    authz {
+      escopo: sema.persistencia.converter
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_persistencia: interno
+      }
+      output {
+        secao_databases_preservada: interno
+        compatibilidade_calculada: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: sema.persistencia.convertida
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
     }
     impl {
       ts: nucleo.src.ir.conversor.converterParaIr
@@ -292,11 +340,79 @@ module sema.produto.persistencia_vendor_first {
     }
   }
 
+  task cruzar_persistencia_com_banco_real {
+    input {
+      contrato_persistencia: Texto required
+      codigo_vivo: Texto required
+      engine_alvo: Texto required
+    }
+    output {
+      colunas_reais_mapeadas: Booleano
+      repositorios_concretos_mapeados: Booleano
+      compatibilidade_materializada: Booleano
+    }
+    authz {
+      escopo: sema.persistencia.cruzar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_persistencia: interno
+        codigo_vivo: interno
+        engine_alvo: interno
+      }
+      output {
+        colunas_reais_mapeadas: interno
+        repositorios_concretos_mapeados: interno
+        compatibilidade_materializada: interno
+      }
+    }
+    audit {
+      evento: sema.persistencia.cruzada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: cli.src.drift.analisarPersistenciaReal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      simbolo: cli.src.drift.analisarPersistenciaReal
+    }
+    execucao {
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      colunas_reais_mapeadas existe
+      repositorios_concretos_mapeados existe
+      compatibilidade_materializada existe
+    }
+    tests {
+      caso "persistencia cruza coluna real e compatibilidade do engine" {
+        given {
+          contrato_persistencia: "database principal { engine: postgres table pedidos { entity: Pedido } }"
+          codigo_vivo: "src/repositorios/pedidos.repository.ts"
+          engine_alvo: "postgres"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
   flow publicar_persistencia_vendor_first {
     contrato_persistencia: Texto
     etapa validar usa validar_compatibilidade_vendor_first com contrato_persistencia = contrato_persistencia, engine_alvo = postgres
     etapa converter usa converter_persistencia_para_ir_canonico com contrato_persistencia = contrato_persistencia depende_de validar
-    etapa formatar usa formatar_database_vendor_first com contrato_persistencia = contrato_persistencia depende_de converter
+    etapa cruzar usa cruzar_persistencia_com_banco_real com contrato_persistencia = contrato_persistencia, codigo_vivo = contrato_persistencia, engine_alvo = postgres depende_de converter
+    etapa formatar usa formatar_database_vendor_first com contrato_persistencia = contrato_persistencia depende_de cruzar
     effects {
       auditoria persistencia_vendor_first criticidade = alta
       persistencia scorecard_bancos criticidade = media

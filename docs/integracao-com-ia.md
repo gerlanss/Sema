@@ -53,6 +53,12 @@ Depois configure:
 }
 ```
 
+Ferramentas mais uteis no fluxo de mudanca:
+
+- `sema_drift` para medir coerencia viva
+- `sema_impacto` para dizer o que tocar
+- `sema_renomear_semantico` para guiar troca de nomes sem misturar payload antigo e novo
+
 ## Regras praticas
 
 - trate `.sema` e IR como fonte de verdade semantica

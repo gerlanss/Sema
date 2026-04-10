@@ -859,6 +859,289 @@ model Pedido {
   }
 });
 
+test("cli drift ignora worktrees e consumidores laterais por padrao e inclui quando o escopo pede", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-worktrees-"));
+
+  try {
+    await mkdir(path.join(base, "src", "app", "pedidos"), { recursive: true });
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await mkdir(path.join(base, ".claude", "worktrees", "friendly", "src", "app", "externo"), { recursive: true });
+    await mkdir(path.join(base, "showcases", "ranking", "src", "app", "externo"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["."],
+        fontesLegado: ["nextjs-consumer", "typescript"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "pedidos_service.ts"),
+      `export async function abrirPreview() {
+  return { ok: true };
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "app", "pedidos", "page.tsx"),
+      `export default function PedidosPage() {
+  return <main>Pedidos</main>;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, ".claude", "worktrees", "friendly", "src", "app", "externo", "page.tsx"),
+      `export default function ExternoPage() {
+  return <main>Externo</main>;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "showcases", "ranking", "src", "app", "externo", "page.tsx"),
+      `export default function ShowcasePage() {
+  return <main>Showcase</main>;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "contratos", "pedidos.sema"),
+      `module app.pedidos {
+  task abrir_preview {
+    output {
+      ok: Booleano
+    }
+    impl {
+      ts: src.pedidos_service.abrirPreview
+    }
+    guarantees {
+      ok existe
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const padrao = executar(["drift", "--json"], base);
+    assert.equal(padrao.status, 0, padrao.stderr || padrao.stdout);
+    const jsonPadrao = JSON.parse(padrao.stdout);
+    assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]pedidos[\\/]page\.tsx$/i.test(surface.arquivo)), true);
+    assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])\.claude[\\/]worktrees[\\/]/i.test(surface.arquivo)), false);
+    assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])showcases[\\/]/i.test(surface.arquivo)), false);
+
+    const amplo = executar(["drift", "--escopo", "projeto", "--incluir-worktrees", "--incluir-consumidores-laterais", "--json"], base);
+    assert.equal(amplo.status, 0, amplo.stderr || amplo.stdout);
+    const jsonAmplo = JSON.parse(amplo.stdout);
+    assert.equal(jsonAmplo.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])\.claude[\\/]worktrees[\\/]/i.test(surface.arquivo)), true);
+    assert.equal(jsonAmplo.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])showcases[\\/]/i.test(surface.arquivo)), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli impacto e renomeacao semantica apontam contrato, repositorio, UI e testes", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-impacto-"));
+
+  try {
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await mkdir(path.join(base, "src", "repositories"), { recursive: true });
+    await mkdir(path.join(base, "src", "workers"), { recursive: true });
+    await mkdir(path.join(base, "src", "pages"), { recursive: true });
+    await mkdir(path.join(base, "src", "__tests__"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["./src"],
+        fontesLegado: ["react-vite-consumer", "typescript"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "contratos", "campanhas.sema"),
+      `module app.campanhas {
+  task gerar_preview {
+    input {
+      classificacao_atual: Texto required
+    }
+    output {
+      classificacao_atual: Texto
+    }
+    impl {
+      ts: src.workers.preview_worker.gerarPreview
+    }
+    guarantees {
+      classificacao_atual existe
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "workers", "preview_worker.ts"),
+      `export async function gerarPreview() {
+  return { classificacao_atual: "A" };
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "repositories", "campanhas.repository.ts"),
+      `export async function salvarCampanha() {
+  return { classificacao_atual: "A" };
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "pages", "preview.tsx"),
+      `export function PreviewPage() {
+  return <div>{'classificacao_atual'}</div>;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "__tests__", "preview.spec.ts"),
+      `test("preview", () => {
+  expect("classificacao_atual").toBe("classificacao_atual");
+});
+`,
+      "utf8",
+    );
+
+    const impacto = executar(["impacto", "--alvo", "classificacao_atual", "--mudanca", "trocar classificacao_atual por ranking_geral e ranking_loja", "--json"], base);
+    assert.equal(impacto.status, 0, impacto.stderr || impacto.stdout);
+    const jsonImpacto = JSON.parse(impacto.stdout);
+    assert.equal(jsonImpacto.arquivos.some((arquivo: { tipo: string }) => arquivo.tipo === "contrato"), true);
+    assert.equal(jsonImpacto.arquivos.some((arquivo: { tipo: string }) => arquivo.tipo === "repositorio"), true);
+    assert.equal(jsonImpacto.arquivos.some((arquivo: { tipo: string }) => arquivo.tipo === "ui"), true);
+    assert.equal(jsonImpacto.arquivos.some((arquivo: { tipo: string }) => arquivo.tipo === "teste"), true);
+
+    const renomeacao = executar(["renomear-semantico", "--de", "classificacao_atual", "--para", "ranking_geral", "--json"], base);
+    assert.equal(renomeacao.status, 0, renomeacao.stderr || renomeacao.stdout);
+    const jsonRenomeacao = JSON.parse(renomeacao.stdout);
+    assert.equal(jsonRenomeacao.sugestoes.some((item: { atual: string; sugerido: string }) => item.atual === "classificacao_atual" && item.sugerido === "ranking_geral"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift materializa persistencia real com colunas, repositorio e compatibilidade por engine", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-persistencia-real-"));
+
+  try {
+    await mkdir(path.join(base, "src", "repositories"), { recursive: true });
+    await mkdir(path.join(base, "db"), { recursive: true });
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({
+        origens: ["./contratos"],
+        diretoriosCodigo: ["./src", "./db"],
+        fontesLegado: ["typescript"],
+        modoAdocao: "incremental",
+      }, null, 2),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "db", "schema.sql"),
+      `create table pedidos (
+  id uuid primary key,
+  status text not null,
+  ranking_geral integer
+);
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "repositories", "pedidos.repository.ts"),
+      `export async function salvarPedido() {
+  const sql = "insert into pedidos (id, status, ranking_geral) values ($1, $2, $3)";
+  return sql;
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "src", "pedidos_service.ts"),
+      `import { salvarPedido } from "./repositories/pedidos.repository";
+
+export async function sincronizarPedidos() {
+  return salvarPedido();
+}
+`,
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(base, "contratos", "pedidos.sema"),
+      `module app.pedidos {
+  database principal_postgres {
+    engine: postgres
+    table pedidos {
+      table: pedidos
+    }
+  }
+
+  task sincronizar_pedidos {
+    output {
+      ok: Booleano
+    }
+    effects {
+      persistencia pedidos criticidade = alta
+    }
+    impl {
+      ts: src.pedidos_service.sincronizarPedidos
+    }
+    guarantees {
+      ok existe
+    }
+  }
+}
+`,
+      "utf8",
+    );
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    const persistencia = json.persistencia_real.find((item: { task: string; alvo: string }) => item.task === "sincronizar_pedidos" && item.alvo === "pedidos");
+    assert.ok(persistencia);
+    assert.equal(persistencia.status, "materializado");
+    assert.equal(persistencia.compatibilidade, "nativo");
+    assert.equal(persistencia.colunas.includes("ranking_geral"), true);
+    assert.equal(persistencia.repositorios.some((arquivo: string) => /pedidos\.repository\.ts$/i.test(arquivo)), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
 test("cli drift resolve bridge Dart consumidor sem gambiarra ad hoc", async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-dart-"));
 

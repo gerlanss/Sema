@@ -32,7 +32,12 @@ import {
 } from "./projeto.js";
 import type { EstruturaSaida } from "./tipos.js";
 import { importarProjetoLegado, resumoImportacao, type FonteImportacao } from "./importador.js";
-import { analisarDriftLegado } from "./drift.js";
+import {
+  analisarDriftLegado,
+  assistirRenomeacaoSemantica,
+  gerarMapaImpactoSemantico,
+  type OpcoesDriftLegado,
+} from "./drift.js";
 
 type Comando =
   | "iniciar"
@@ -46,6 +51,8 @@ type Comando =
   | "verificar"
   | "inspecionar"
   | "drift"
+  | "impacto"
+  | "renomear-semantico"
   | "importar"
   | "doctor"
   | "formatar"
@@ -259,7 +266,9 @@ Comandos essenciais:
 - resumo compacto por capacidade: \`sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]\`
 - prompt curto para IA pequena: \`sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]\`
 - descoberta do projeto: \`sema inspecionar [arquivo-ou-pasta] --json\`
-- auditoria do contrato vivo: \`sema drift <arquivo-ou-pasta> [--json]\`
+- auditoria do contrato vivo: \`sema drift <arquivo-ou-pasta> [--escopo <arquivo|modulo|projeto>] [--json]\`
+- mapa de impacto: \`sema impacto <arquivo-ou-pasta> --alvo <token> [--mudanca <descricao>] [--json]\`
+- renomeacao assistida: \`sema renomear-semantico <arquivo-ou-pasta> --de <nome-atual> --para <nome-novo> [--json]\`
 - contexto completo do modulo: \`sema contexto-ia <arquivo.sema>\`
 - estrutura sintatica: \`sema ast <arquivo.sema> --json\`
 - estrutura semantica: \`sema ir <arquivo.sema> --json\`
@@ -589,14 +598,15 @@ function ajuda(): string {
       "[2] Editar projeto que ja usa Sema",
       "sema inspecionar . --json",
       "sema resumo <arquivo-ou-pasta> --micro --para mudanca",
-      "sema drift <arquivo-ou-pasta> --json",
+      "sema drift <arquivo-ou-pasta> --escopo modulo --json",
+      "sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca <descricao> --json",
       "sema contexto-ia <arquivo.sema> --saida ./.tmp/contexto --json",
       "",
       "[3] Adotar Sema em projeto que ainda nao usa",
       "sema importar <fonte> <diretorio> --saida <diretorio> --json",
       "sema formatar <arquivo-ou-pasta>",
       "sema validar <arquivo-ou-pasta> --json",
-      "sema drift <arquivo-ou-pasta> --json",
+      "sema drift <arquivo-ou-pasta> --escopo modulo --json",
     ]),
     "",
     renderizarSecaoAscii("IA por capacidade", [
@@ -607,7 +617,9 @@ function ajuda(): string {
     "",
     renderizarSecaoAscii("Comandos principais", [
       "descoberta: sema inspecionar [arquivo-ou-pasta] [--json]",
-      "auditoria: sema drift <arquivo-ou-pasta> [--json]",
+      "auditoria: sema drift <arquivo-ou-pasta> [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]",
+      "impacto: sema impacto <arquivo-ou-pasta> --alvo <token> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--json]",
+      "renomeacao: sema renomear-semantico <arquivo-ou-pasta> --de <nome-atual> --para <nome-novo> [--escopo <arquivo|modulo|projeto>] [--json]",
       "importacao: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]",
       "validacao: sema validar <arquivo-ou-pasta> [--json]",
       "diagnostico: sema diagnosticos <arquivo.sema> [--json]",
@@ -667,10 +679,13 @@ function possuiFlag(args: string[], nome: string): boolean {
 const OPCOES_COM_VALOR = new Set([
   "--template",
   "--alvo", "-a",
+  "--escopo",
   "--saida", "-s",
   "--estrutura",
   "--framework",
   "--namespace",
+  "--mudanca",
+  "--de",
   "--para",
 ]);
 
@@ -692,6 +707,15 @@ function obterPosicionais(args: string[]): string[] {
     posicionais.push(atual);
   }
   return posicionais;
+}
+
+function resolverOpcoesDriftCli(args: string[]): OpcoesDriftLegado {
+  const escopo = obterOpcao(args, "--escopo");
+  return {
+    escopo: escopo === "arquivo" || escopo === "modulo" || escopo === "projeto" ? escopo : undefined,
+    ignorarWorktrees: !possuiFlag(args, "--incluir-worktrees"),
+    ignorarConsumidoresLaterais: !possuiFlag(args, "--incluir-consumidores-laterais"),
+  };
 }
 
 function normalizarTamanhoResumo(args: string[]): TamanhoResumoIa {
@@ -3461,9 +3485,9 @@ async function comandoInspecionar(entrada: string | undefined, emJson: boolean, 
   return 0;
 }
 
-async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = process.cwd()): Promise<number> {
+async function comandoDrift(entrada: string | undefined, args: string[], emJson: boolean, cwd = process.cwd()): Promise<number> {
   const contextoProjeto = await carregarProjeto(entrada, cwd);
-  const resultado = await analisarDriftLegado(contextoProjeto);
+  const resultado = await analisarDriftLegado(contextoProjeto, resolverOpcoesDriftCli(args));
 
   if (emJson) {
     console.log(JSON.stringify(resultado, null, 2));
@@ -3471,6 +3495,9 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
   }
 
   console.log("Drift entre Sema e codigo legado");
+  console.log(`- Escopo aplicado: ${resultado.escopo_aplicado.escopo}`);
+  console.log(`- Ignorar worktrees: ${resultado.escopo_aplicado.ignorarWorktrees ? "sim" : "nao"}`);
+  console.log(`- Ignorar consumidores laterais: ${resultado.escopo_aplicado.ignorarConsumidoresLaterais ? "sim" : "nao"}`);
   console.log(`- Modulos analisados: ${resultado.modulos.length}`);
   console.log(`- Tasks analisadas: ${resultado.tasks.length}`);
   console.log(`- Impl validos: ${resultado.impls_validos.length}`);
@@ -3480,6 +3507,7 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
   console.log(`- Rotas divergentes: ${resultado.rotas_divergentes.length}`);
   console.log(`- Recursos vivos validos: ${resultado.recursos_validos.length}`);
   console.log(`- Recursos vivos divergentes: ${resultado.recursos_divergentes.length}`);
+  console.log(`- Persistencia real mapeada: ${resultado.persistencia_real.length}`);
   console.log(`- Score medio: ${resultado.resumo_operacional.scoreMedio}`);
   console.log(`- Confianca geral: ${resultado.resumo_operacional.confiancaGeral}`);
 
@@ -3507,6 +3535,14 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
     console.log("- Recursos divergentes:");
     for (const recurso of resultado.recursos_divergentes) {
       console.log(`  - ${recurso.modulo}.${recurso.task} :: ${recurso.categoria} ${recurso.alvo}`);
+    }
+  }
+
+  const persistenciaDivergente = resultado.persistencia_real.filter((item) => item.status !== "materializado");
+  if (persistenciaDivergente.length > 0) {
+    console.log("- Persistencia que pede revisao:");
+    for (const item of persistenciaDivergente.slice(0, 8)) {
+      console.log(`  - ${item.modulo}.${item.task} :: ${item.alvo} :: ${item.status} :: compat=${item.compatibilidade}`);
     }
   }
 
@@ -3547,6 +3583,104 @@ async function comandoDrift(entrada: string | undefined, emJson: boolean, cwd = 
 
   if (resultado.diagnosticos.length === 0) {
     console.log("Nenhum drift relevante encontrado.");
+  }
+
+  return resultado.sucesso ? 0 : 1;
+}
+
+async function comandoImpacto(
+  entrada: string | undefined,
+  args: string[],
+  emJson: boolean,
+  cwd = process.cwd(),
+): Promise<number> {
+  const alvoSemantico = obterOpcao(args, "--alvo");
+  if (!alvoSemantico) {
+    console.error("Uso: sema impacto <arquivo-ou-pasta> --alvo <token-semântico> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]");
+    return 1;
+  }
+
+  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const resultado = await gerarMapaImpactoSemantico(
+    contextoProjeto,
+    alvoSemantico,
+    obterOpcao(args, "--mudanca", `avaliar impacto de ${alvoSemantico}`)!,
+    resolverOpcoesDriftCli(args),
+  );
+
+  if (emJson) {
+    console.log(JSON.stringify(resultado, null, 2));
+    return resultado.sucesso ? 0 : 1;
+  }
+
+  console.log("Impact map semantico");
+  console.log(`- Escopo: ${resultado.escopo}`);
+  console.log(`- Alvo: ${resultado.alvoSemantico}`);
+  console.log(`- Mudanca: ${resultado.mudancaProposta}`);
+  console.log(`- Arquivos impactados: ${resultado.arquivos.length}`);
+  console.log(`- Tasks afetadas: ${resultado.tasksAfetadas.length}`);
+  console.log(`- Rotas afetadas: ${resultado.routesAfetadas.length}`);
+  console.log(`- Superficies afetadas: ${resultado.superficiesAfetadas.length}`);
+  console.log(`- Persistencia afetada: ${resultado.persistenciaAfetada.length}`);
+
+  if (resultado.arquivos.length > 0) {
+    console.log("- Arquivos prioritarios:");
+    for (const arquivo of resultado.arquivos.slice(0, 10)) {
+      console.log(`  - [${arquivo.prioridade}] ${arquivo.tipo} :: ${arquivo.arquivo}`);
+    }
+  }
+
+  console.log("- Ordem operacional:");
+  for (const passo of resultado.ordemOperacional) {
+    console.log(`  - ${passo}`);
+  }
+
+  return resultado.sucesso ? 0 : 1;
+}
+
+async function comandoRenomearSemantico(
+  entrada: string | undefined,
+  args: string[],
+  emJson: boolean,
+  cwd = process.cwd(),
+): Promise<number> {
+  const nomeAtual = obterOpcao(args, "--de");
+  const nomeNovo = obterOpcao(args, "--para");
+  if (!nomeAtual || !nomeNovo) {
+    console.error("Uso: sema renomear-semantico <arquivo-ou-pasta> --de <nome-atual> --para <nome-novo> [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]");
+    return 1;
+  }
+
+  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const resultado = await assistirRenomeacaoSemantica(
+    contextoProjeto,
+    nomeAtual,
+    nomeNovo,
+    resolverOpcoesDriftCli(args),
+  );
+
+  if (emJson) {
+    console.log(JSON.stringify(resultado, null, 2));
+    return resultado.sucesso ? 0 : 1;
+  }
+
+  console.log("Renomeacao semantica assistida");
+  console.log(`- Escopo: ${resultado.escopo}`);
+  console.log(`- De: ${resultado.de}`);
+  console.log(`- Para: ${resultado.para}`);
+  console.log(`- Arquivos afetados: ${resultado.arquivos.length}`);
+  console.log(`- Sugestoes: ${resultado.sugestoes.length}`);
+
+  if (resultado.sugestoes.length > 0) {
+    console.log("- Primeiras sugestoes:");
+    for (const sugestao of resultado.sugestoes.slice(0, 12)) {
+      console.log(`  - ${sugestao.arquivo}:${sugestao.linha} :: ${sugestao.atual} -> ${sugestao.sugerido}`);
+    }
+  }
+
+  console.log("- Ordem operacional:");
+  for (const passo of resultado.ordemOperacional) {
+    console.log(`  - ${passo}`);
   }
 
   return resultado.sucesso ? 0 : 1;
@@ -4388,7 +4522,13 @@ async function principal(): Promise<void> {
       codigoSaida = await comandoInspecionar(posicionais[0], possuiFlag(resto, "--json"), cwd);
       break;
     case "drift":
-      codigoSaida = await comandoDrift(posicionais[0], possuiFlag(resto, "--json"), cwd);
+      codigoSaida = await comandoDrift(posicionais[0], resto, possuiFlag(resto, "--json"), cwd);
+      break;
+    case "impacto":
+      codigoSaida = await comandoImpacto(posicionais[0], resto, possuiFlag(resto, "--json"), cwd);
+      break;
+    case "renomear-semantico":
+      codigoSaida = await comandoRenomearSemantico(posicionais[0], resto, possuiFlag(resto, "--json"), cwd);
       break;
     case "importar":
       {

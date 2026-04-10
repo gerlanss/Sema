@@ -51,18 +51,18 @@ npx -y @semacode/mcp
 Linux ou macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.4.0/install-sema.sh | bash
-curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/v1.4.0/install-sema.sh | bash -s -- --with-vscode --with-mcp
+curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.sh | bash -s -- --with-vscode --with-mcp
 ```
 
 Windows PowerShell:
 
 ```powershell
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/gerlanss/Sema/v1.4.0/install-sema.ps1 -OutFile install-sema.ps1
-.\install-sema.ps1 -WithVSCode -WithMcp -Version 1.4.0
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/gerlanss/Sema/main/install-sema.ps1 -OutFile install-sema.ps1
+.\install-sema.ps1 -WithVSCode -WithMcp
 ```
 
-Se quiser outra tag, troque `v1.4.0` pelo release desejado.
+Se quiser uma tag especifica, troque `main` pela versao desejada.
 
 ## Extensao VS Code
 
@@ -96,7 +96,8 @@ sema verificar contratos --saida ./.tmp/verificacao
 ```bash
 sema inspecionar . --json
 sema resumo contratos/pedidos.sema --micro --para onboarding
-sema drift contratos/pedidos.sema --json
+sema drift contratos/pedidos.sema --escopo modulo --json
+sema impacto contratos/pedidos.sema --alvo pedido_id --mudanca "trocar pedido_id por pedido_uuid" --json
 sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto --json
 ```
 

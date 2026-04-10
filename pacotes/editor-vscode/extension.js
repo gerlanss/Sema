@@ -1137,8 +1137,8 @@ Toda IA deve consultar o Sema antes de qualquer acao sobre codigo ou contratos.
 
 ## MCP
 
-O servidor MCP do Sema roda localmente via: npx -y @semacode/mcp@latest
-Use as ferramentas: sema_resumo, sema_validar, sema_drift, sema_inspecionar, sema_ir, sema_verificar, sema_contexto_ia, sema_prompt_ia.
+O servidor MCP do Sema roda localmente via: npx -y @semacode/mcp
+Use as ferramentas: sema_resumo, sema_validar, sema_drift, sema_impacto, sema_renomear_semantico, sema_inspecionar, sema_ir, sema_verificar, sema_contexto_ia, sema_prompt_ia.
 
 ## Contratos e exemplos
 
@@ -3989,7 +3989,7 @@ async function configurarIaNoWorkspace() {
   ];
 
   const home = require("node:os").homedir();
-  const CLINE_AUTO_APPROVE = ["sema_validar", "sema_ir", "sema_drift", "sema_resumo", "sema_prompt_ia", "sema_contexto_ia", "sema_verificar", "sema_inspecionar"];
+  const CLINE_AUTO_APPROVE = ["sema_validar", "sema_ir", "sema_drift", "sema_impacto", "sema_renomear_semantico", "sema_resumo", "sema_prompt_ia", "sema_contexto_ia", "sema_verificar", "sema_inspecionar"];
   const mcpConfigs = [
     // VS Code global
     [path.join(home, "AppData", "Roaming", "Code", "User", "mcp.json"), "vscode"],
@@ -4021,13 +4021,13 @@ async function configurarIaNoWorkspace() {
 
       if (tipo === "cline") {
         config.mcpServers = config.mcpServers ?? {};
-        config.mcpServers.sema = { command: "npx", args: ["-y", "@semacode/mcp@latest"], autoApprove: CLINE_AUTO_APPROVE, timeout: 3600 };
+        config.mcpServers.sema = { command: "npx", args: ["-y", "@semacode/mcp"], autoApprove: CLINE_AUTO_APPROVE, timeout: 3600 };
       } else if (tipo === "windsurf" || tipo === "cursor") {
         config.mcpServers = config.mcpServers ?? {};
-        config.mcpServers.sema = { command: "npx", args: ["-y", "@semacode/mcp@latest"] };
+        config.mcpServers.sema = { command: "npx", args: ["-y", "@semacode/mcp"] };
       } else {
         config.servers = config.servers ?? {};
-        config.servers.sema = { type: "stdio", command: "npx", args: ["-y", "@semacode/mcp@latest"] };
+        config.servers.sema = { type: "stdio", command: "npx", args: ["-y", "@semacode/mcp"] };
       }
 
       await wf(caminho, JSON.stringify(config, null, "\t"), "utf-8");
@@ -4053,8 +4053,8 @@ async function configurarIaFerramenta(ferramenta) {
   const path = require("node:path");
   const home = require("node:os").homedir();
 
-  const MCP_STDIO = { command: "npx", args: ["-y", "@semacode/mcp@latest"] };
-  const CLINE_AUTO_APPROVE = ["sema_validar", "sema_ir", "sema_drift", "sema_resumo", "sema_prompt_ia", "sema_contexto_ia", "sema_verificar", "sema_inspecionar"];
+  const MCP_STDIO = { command: "npx", args: ["-y", "@semacode/mcp"] };
+  const CLINE_AUTO_APPROVE = ["sema_validar", "sema_ir", "sema_drift", "sema_impacto", "sema_renomear_semantico", "sema_resumo", "sema_prompt_ia", "sema_contexto_ia", "sema_verificar", "sema_inspecionar"];
 
   const configs = {
     claude: {

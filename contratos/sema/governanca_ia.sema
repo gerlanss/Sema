@@ -1,6 +1,6 @@
 module sema.produto.governanca_ia {
   docs {
-    resumo: "Contrato interno da Sema para projeto, drift e leitura orientada a IA sem adivinhacao frouxa."
+    resumo: "Contrato interno da Sema para projeto, drift com escopo real, impact map, renomeacao semantica assistida e leitura orientada a IA sem adivinhacao frouxa."
   }
 
   vinculos {
@@ -92,11 +92,16 @@ module sema.produto.governanca_ia {
     input {
       contrato_alvo: Texto required
       codigo_vivo: Texto required
+      escopo_real: Texto required
+      ignorar_worktrees: Booleano required
+      ignorar_consumidores_laterais: Booleano required
     }
     output {
       impls_resolvidas: Booleano
       rotas_resolvidas: Booleano
       ambiguidades_explicitas: Booleano
+      escopo_aplicado: Booleano
+      ruido_lateral_reduzido: Booleano
     }
     authz {
       escopo: sema.drift.executar
@@ -108,11 +113,16 @@ module sema.produto.governanca_ia {
       input {
         contrato_alvo: interno
         codigo_vivo: interno
+        escopo_real: interno
+        ignorar_worktrees: interno
+        ignorar_consumidores_laterais: interno
       }
       output {
         impls_resolvidas: interno
         rotas_resolvidas: interno
         ambiguidades_explicitas: interno
+        escopo_aplicado: interno
+        ruido_lateral_reduzido: interno
       }
     }
     audit {
@@ -140,6 +150,8 @@ module sema.produto.governanca_ia {
       impls_resolvidas existe
       rotas_resolvidas existe
       ambiguidades_explicitas existe
+      escopo_aplicado existe
+      ruido_lateral_reduzido existe
     }
     error {
       simbolo_ambiguo {
@@ -156,6 +168,147 @@ module sema.produto.governanca_ia {
         given {
           contrato_alvo: "contratos/sema/*.sema"
           codigo_vivo: "pacotes/**/*.ts"
+          escopo_real: "modulo"
+          ignorar_worktrees: verdadeiro
+          ignorar_consumidores_laterais: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task mapear_impacto_semantico {
+    input {
+      contrato_alvo: Texto required
+      alvo_semantico: Texto required
+      mudanca_proposta: Texto required
+    }
+    output {
+      arquivos_afetados: Booleano
+      superfices_afetadas: Booleano
+      ordem_operacional_emitida: Booleano
+    }
+    authz {
+      escopo: sema.impacto.mapear
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        alvo_semantico: interno
+        mudanca_proposta: interno
+      }
+      output {
+        arquivos_afetados: interno
+        superfices_afetadas: interno
+        ordem_operacional_emitida: interno
+      }
+    }
+    audit {
+      evento: sema.impacto.mapeado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: cli.src.drift.gerarMapaImpactoSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.drift.gerarMapaImpactoSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      arquivos_afetados existe
+      superfices_afetadas existe
+      ordem_operacional_emitida existe
+    }
+    tests {
+      caso "mudanca semantica vira plano acionavel" {
+        given {
+          contrato_alvo: "contratos/colaboradores_whatsapp.sema"
+          alvo_semantico: "ranking_geral"
+          mudanca_proposta: "substituir classificacao_atual por ranking_geral e ranking_loja"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task assistir_renomeacao_semantica {
+    input {
+      contrato_alvo: Texto required
+      nome_atual: Texto required
+      nome_novo: Texto required
+    }
+    output {
+      contrato_reescrito: Booleano
+      codigo_relacionado_mapeado: Booleano
+      testes_afetados_sugeridos: Booleano
+    }
+    authz {
+      escopo: sema.renomeacao.executar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        nome_atual: interno
+        nome_novo: interno
+      }
+      output {
+        contrato_reescrito: interno
+        codigo_relacionado_mapeado: interno
+        testes_afetados_sugeridos: interno
+      }
+    }
+    audit {
+      evento: sema.renomeacao.assistida
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: cli.src.drift.assistirRenomeacaoSemantica
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.drift.assistirRenomeacaoSemantica
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      contrato_reescrito existe
+      codigo_relacionado_mapeado existe
+      testes_afetados_sugeridos existe
+    }
+    tests {
+      caso "renomeacao guiada evita quebra lateral" {
+        given {
+          contrato_alvo: "contratos/colaboradores_whatsapp.sema"
+          nome_atual: "classificacao_atual"
+          nome_novo: "ranking_geral"
         }
 
         expect {
@@ -211,14 +364,32 @@ module sema.produto.governanca_ia {
     codigo_vivo: Texto
     etapa mapear usa mapear_projeto_sem_adivinhacao com entrada = entrada, explicito = verdadeiro
     etapa normalizar usa normalizar_saida_sem_ruido com estrutura_desejada = modulos depende_de mapear
-    etapa drift usa medir_drift_contra_codigo_vivo com contrato_alvo = entrada, codigo_vivo = codigo_vivo depende_de normalizar
-    etapa leitura usa padronizar_nomes_para_leitura_de_ia com contrato_atual = entrada, sinonimos_em_excesso = falso depende_de drift
+    etapa drift usa medir_drift_contra_codigo_vivo com contrato_alvo = entrada, codigo_vivo = codigo_vivo, escopo_real = modulo, ignorar_worktrees = verdadeiro, ignorar_consumidores_laterais = verdadeiro depende_de normalizar
+    etapa impacto usa mapear_impacto_semantico com contrato_alvo = entrada, alvo_semantico = entrada, mudanca_proposta = manter coerencia entre contrato e codigo vivo depende_de drift
+    etapa leitura usa padronizar_nomes_para_leitura_de_ia com contrato_atual = entrada, sinonimos_em_excesso = falso depende_de impacto
     effects {
       auditoria contexto_ia criticidade = alta
       persistencia mapa_projeto criticidade = media
     }
     vinculos {
       simbolo: cli.src.index.comandoContextoIa
+    }
+  }
+
+  flow conduzir_mudanca_semantica_real {
+    contrato_alvo: Texto
+    codigo_vivo: Texto
+    nome_atual: Texto
+    nome_novo: Texto
+    etapa drift usa medir_drift_contra_codigo_vivo com contrato_alvo = contrato_alvo, codigo_vivo = codigo_vivo, escopo_real = modulo, ignorar_worktrees = verdadeiro, ignorar_consumidores_laterais = verdadeiro
+    etapa impacto usa mapear_impacto_semantico com contrato_alvo = contrato_alvo, alvo_semantico = nome_atual, mudanca_proposta = nome_novo depende_de drift
+    etapa renomear usa assistir_renomeacao_semantica com contrato_alvo = contrato_alvo, nome_atual = nome_atual, nome_novo = nome_novo depende_de impacto
+    effects {
+      auditoria mudanca_semantica criticidade = alta
+      persistencia mapa_impacto criticidade = media
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
     }
   }
 

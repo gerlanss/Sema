@@ -19,6 +19,8 @@ npx -y @semacode/mcp
 - `sema_validar`
 - `sema_ir`
 - `sema_drift`
+- `sema_impacto`
+- `sema_renomear_semantico`
 - `sema_resumo`
 - `sema_prompt_ia`
 - `sema_contexto_ia`

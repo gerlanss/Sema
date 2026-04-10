@@ -3,6 +3,7 @@ import path from "node:path";
 import ts from "typescript";
 import type {
   EngineBanco,
+  IrBancoDados,
   IrFlow,
   IrModulo,
   IrRecursoPersistencia,
@@ -51,6 +52,14 @@ interface RegistroConsumerBridgeDrift {
   caminho: string;
   arquivo: string;
   simbolo: string;
+}
+
+export type EscopoDriftReal = "arquivo" | "modulo" | "projeto";
+
+export interface OpcoesDriftLegado {
+  escopo?: EscopoDriftReal;
+  ignorarWorktrees?: boolean;
+  ignorarConsumidoresLaterais?: boolean;
 }
 
 export interface DiagnosticoDrift {
@@ -111,6 +120,19 @@ interface RecursoEsperadoDrift {
   nomes: string[];
 }
 
+interface RegistroColunaPersistenciaDrift {
+  engine: EngineBanco;
+  recurso: string;
+  coluna: string;
+  arquivo: string;
+}
+
+interface RegistroRepositorioPersistenciaDrift {
+  engine: EngineBanco;
+  recurso: string;
+  arquivo: string;
+}
+
 interface SimboloCandidatoDrift {
   origem: "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
   caminho: string;
@@ -150,9 +172,75 @@ interface RegistroVinculoDrift {
   confianca: NivelConfiancaSemantica;
 }
 
+export interface RegistroPersistenciaRealDrift {
+  modulo: string;
+  task: string;
+  alvo: string;
+  engine: OrigemRecursoDrift | "desconhecido";
+  tipo: TipoRecursoDrift;
+  status: "materializado" | "parcial" | "divergente";
+  arquivos: string[];
+  colunas: string[];
+  repositorios: string[];
+  compatibilidade: "nativo" | "adaptado" | "parcial" | "invalido" | "desconhecida";
+  motivoCompatibilidade?: string;
+}
+
+export interface ConfiguracaoEscopoDriftAplicada {
+  escopo: EscopoDriftReal;
+  ignorarWorktrees: boolean;
+  ignorarConsumidoresLaterais: boolean;
+  termosEscopo: string[];
+}
+
+export interface RegistroImpactoSemanticoArquivo {
+  arquivo: string;
+  tipo: "contrato" | "persistencia" | "repositorio" | "rota" | "worker" | "ui" | "teste" | "codigo";
+  prioridade: "alta" | "media" | "baixa";
+  linhas: number[];
+  motivos: string[];
+}
+
+export interface ResultadoImpactoSemantico {
+  comando: "impacto";
+  sucesso: boolean;
+  escopo: EscopoDriftReal;
+  alvoSemantico: string;
+  mudancaProposta: string;
+  contratosAfetados: string[];
+  tasksAfetadas: string[];
+  routesAfetadas: string[];
+  superficiesAfetadas: string[];
+  persistenciaAfetada: string[];
+  arquivos: RegistroImpactoSemanticoArquivo[];
+  ordemOperacional: string[];
+  validacoes: string[];
+}
+
+export interface SugestaoRenomeacaoSemantica {
+  arquivo: string;
+  linha: number;
+  atual: string;
+  sugerido: string;
+  contexto: string;
+}
+
+export interface ResultadoRenomeacaoSemantica {
+  comando: "renomear-semantico";
+  sucesso: boolean;
+  escopo: EscopoDriftReal;
+  de: string;
+  para: string;
+  arquivos: RegistroImpactoSemanticoArquivo[];
+  sugestoes: SugestaoRenomeacaoSemantica[];
+  ordemOperacional: string[];
+  validacoes: string[];
+}
+
 export interface ResultadoDrift {
   comando: "drift";
   sucesso: boolean;
+  escopo_aplicado: ConfiguracaoEscopoDriftAplicada;
   consumerFramework: ConsumerFramework | null;
   appRoutes: string[];
   consumerSurfaces: RegistroConsumerSurfaceDrift[];
@@ -171,6 +259,7 @@ export interface ResultadoDrift {
   rotas_divergentes: RegistroRotaDivergente[];
   recursos_validos: RegistroRecursoDrift[];
   recursos_divergentes: RegistroRecursoDrift[];
+  persistencia_real: RegistroPersistenciaRealDrift[];
   resumo_operacional: {
     scoreMedio: number;
     confiancaGeral: NivelConfiancaSemantica;
@@ -183,7 +272,7 @@ export interface ResultadoDrift {
   diagnosticos: DiagnosticoDrift[];
 }
 
-const DIRETORIOS_IGNORADOS = new Set([
+const DIRETORIOS_IGNORADOS_BASE = new Set([
   ".git",
   ".hg",
   ".svn",
@@ -201,8 +290,276 @@ const DIRETORIOS_IGNORADOS = new Set([
   "generated",
 ]);
 
+const DIRETORIOS_WORKTREE = [
+  ".claude",
+  "worktrees",
+];
+
+const DIRETORIOS_CONSUMIDOR_LATERAL = [
+  "showcase",
+  "showcases",
+  "storybook",
+  "stories",
+  "playground",
+  "sandbox",
+  "fixture",
+  "fixtures",
+  "demo",
+  "demos",
+  "sample",
+  "samples",
+  "mini-web",
+];
+
+const TERMOS_ESCopo_IGNORADOS = new Set([
+  "api",
+  "app",
+  "apps",
+  "base",
+  "codigo",
+  "config",
+  "controller",
+  "controllers",
+  "data",
+  "drift",
+  "flow",
+  "module",
+  "modulo",
+  "publico",
+  "route",
+  "routes",
+  "schema",
+  "sema",
+  "service",
+  "services",
+  "src",
+  "task",
+  "tasks",
+  "tests",
+  "ui",
+  "web",
+]);
+
+let diretoriosIgnoradosAtivos = new Set(DIRETORIOS_IGNORADOS_BASE);
+
 function normalizarFragmentoArquivo(valor: string): string {
   return valor.replace(/\\/g, "/").replace(/^\.?\//, "").trim().toLowerCase();
+}
+
+function normalizarEscopoDrift(valor?: string): EscopoDriftReal {
+  if (valor === "arquivo" || valor === "modulo" || valor === "projeto") {
+    return valor;
+  }
+  return "modulo";
+}
+
+function resolverOpcoesDrift(opcoes?: OpcoesDriftLegado): Required<OpcoesDriftLegado> {
+  return {
+    escopo: normalizarEscopoDrift(opcoes?.escopo),
+    ignorarWorktrees: opcoes?.ignorarWorktrees !== false,
+    ignorarConsumidoresLaterais: opcoes?.ignorarConsumidoresLaterais !== false,
+  };
+}
+
+function resolverDiretoriosIgnoradosAtivos(opcoes?: OpcoesDriftLegado): Set<string> {
+  const resolvidas = resolverOpcoesDrift(opcoes);
+  const diretorios = new Set(DIRETORIOS_IGNORADOS_BASE);
+  if (resolvidas.ignorarWorktrees) {
+    for (const diretorio of DIRETORIOS_WORKTREE) {
+      diretorios.add(diretorio);
+    }
+  }
+  if (resolvidas.ignorarConsumidoresLaterais) {
+    for (const diretorio of DIRETORIOS_CONSUMIDOR_LATERAL) {
+      diretorios.add(diretorio);
+    }
+  }
+  return diretorios;
+}
+
+function quebrarTermosEscopo(valor: string): string[] {
+  return paraIdentificadorModulo(valor)
+    .split("_")
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 3 && !TERMOS_ESCopo_IGNORADOS.has(item));
+}
+
+function extrairTermosEscopoDrift(contexto: ContextoProjetoCarregado, escopo: EscopoDriftReal): string[] {
+  if (escopo === "projeto") {
+    return [];
+  }
+
+  const termos = new Set<string>();
+  termos.add(paraIdentificadorModulo(path.basename(contexto.entradaResolvida, path.extname(contexto.entradaResolvida))));
+
+  for (const modulo of contexto.modulosSelecionados) {
+    const ir = modulo.resultado.ir;
+    if (!ir) {
+      continue;
+    }
+    for (const termo of quebrarTermosEscopo(ir.nome)) {
+      termos.add(termo);
+    }
+    for (const task of ir.tasks) {
+      for (const termo of quebrarTermosEscopo(task.nome)) {
+        termos.add(termo);
+      }
+    }
+    for (const route of ir.routes) {
+      for (const termo of quebrarTermosEscopo(route.nome)) {
+        termos.add(termo);
+      }
+      if (route.caminho) {
+        for (const termo of quebrarTermosEscopo(route.caminho)) {
+          termos.add(termo);
+        }
+      }
+    }
+  }
+
+  return [...termos].filter(Boolean).sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function caminhoTemSegmentoIgnorado(arquivo: string, segmentos: string[]): boolean {
+  const partes = normalizarFragmentoArquivo(arquivo).split("/").filter(Boolean);
+  return partes.some((parte) => segmentos.includes(parte));
+}
+
+function normalizarCaminhoComparacao(caminhoArquivo: string): string {
+  return path.resolve(caminhoArquivo).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+}
+
+function caminhoEstaDentroDe(base: string, alvo: string): boolean {
+  const baseNormalizada = normalizarCaminhoComparacao(base);
+  const alvoNormalizado = normalizarCaminhoComparacao(alvo);
+  return alvoNormalizado === baseNormalizada || alvoNormalizado.startsWith(`${baseNormalizada}/`);
+}
+
+function resolverRaizEscopoReal(contexto: ContextoProjetoCarregado): string {
+  const entrada = path.resolve(contexto.entradaResolvida);
+  return path.extname(entrada) ? path.dirname(entrada) : entrada;
+}
+
+function resolverRaizesExplicitasConfiguradas(contexto: ContextoProjetoCarregado): string[] {
+  const configCarregada = contexto.configCarregada;
+  if (!configCarregada) {
+    return [];
+  }
+
+  const origensDeclaradas = configCarregada.config.origens ?? (configCarregada.config.origem ? [configCarregada.config.origem] : []);
+  return [...new Set([
+    ...(configCarregada.config.diretoriosCodigo ?? []).map((diretorio) => path.resolve(configCarregada.baseDiretorio, diretorio)),
+    ...origensDeclaradas.map((origem) => path.resolve(configCarregada.baseDiretorio, origem)),
+  ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function resolverRaizesIgnoradasPermitidas(
+  contexto: ContextoProjetoCarregado,
+  segmentosIgnorados: string[],
+): string[] {
+  return [...new Set([
+    resolverRaizEscopoReal(contexto),
+    ...resolverRaizesExplicitasConfiguradas(contexto),
+  ])]
+    .filter((raiz) => caminhoTemSegmentoIgnorado(raiz, segmentosIgnorados))
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function caminhoIgnoradoForaDoEscopoReal(
+  caminhoArquivo: string,
+  segmentosIgnorados: string[],
+  raizesPermitidas: string[],
+): boolean {
+  if (!caminhoTemSegmentoIgnorado(caminhoArquivo, segmentosIgnorados)) {
+    return false;
+  }
+  if (raizesPermitidas.length === 0) {
+    return true;
+  }
+  return !raizesPermitidas.some((raiz) => caminhoEstaDentroDe(raiz, caminhoArquivo));
+}
+
+function filtrarCaminhosEscopoReal(
+  caminhos: string[],
+  contexto: ContextoProjetoCarregado,
+  configuracao: Pick<ConfiguracaoEscopoDriftAplicada, "ignorarWorktrees" | "ignorarConsumidoresLaterais">,
+): string[] {
+  const raizesWorktreePermitidas = resolverRaizesIgnoradasPermitidas(contexto, DIRETORIOS_WORKTREE);
+  const raizesConsumidorPermitidas = resolverRaizesIgnoradasPermitidas(contexto, DIRETORIOS_CONSUMIDOR_LATERAL);
+  return caminhos.filter((caminho) => {
+    if (configuracao.ignorarWorktrees && caminhoIgnoradoForaDoEscopoReal(caminho, DIRETORIOS_WORKTREE, raizesWorktreePermitidas)) {
+      return false;
+    }
+    if (configuracao.ignorarConsumidoresLaterais
+      && caminhoIgnoradoForaDoEscopoReal(caminho, DIRETORIOS_CONSUMIDOR_LATERAL, raizesConsumidorPermitidas)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function resolverDiretoriosCodigoEscopoReal(
+  contexto: ContextoProjetoCarregado,
+  configuracao: Pick<ConfiguracaoEscopoDriftAplicada, "ignorarWorktrees" | "ignorarConsumidoresLaterais">,
+): string[] {
+  return filtrarCaminhosEscopoReal(contexto.diretoriosCodigo, contexto, configuracao);
+}
+
+function textoCombinaEscopo(texto: string, termos: string[]): boolean {
+  if (termos.length === 0) {
+    return true;
+  }
+  const normalizado = paraIdentificadorModulo(texto);
+  return termos.some((termo) => normalizado.includes(termo));
+}
+
+function filtrarConsumerSurfacesPorEscopo(
+  consumerSurfaces: RegistroConsumerSurfaceDrift[],
+  consumerBridges: RegistroConsumerBridgeDrift[],
+  contexto: ContextoProjetoCarregado,
+  configuracao: ConfiguracaoEscopoDriftAplicada,
+): {
+  consumerSurfaces: RegistroConsumerSurfaceDrift[];
+  consumerBridges: RegistroConsumerBridgeDrift[];
+} {
+  const raizesWorktreePermitidas = resolverRaizesIgnoradasPermitidas(contexto, DIRETORIOS_WORKTREE);
+  const raizesConsumidorPermitidas = resolverRaizesIgnoradasPermitidas(contexto, DIRETORIOS_CONSUMIDOR_LATERAL);
+  const manterSurface = (surface: RegistroConsumerSurfaceDrift) => {
+    if (configuracao.ignorarWorktrees
+      && caminhoIgnoradoForaDoEscopoReal(surface.arquivo, DIRETORIOS_WORKTREE, raizesWorktreePermitidas)) {
+      return false;
+    }
+    if (configuracao.ignorarConsumidoresLaterais
+      && caminhoIgnoradoForaDoEscopoReal(surface.arquivo, DIRETORIOS_CONSUMIDOR_LATERAL, raizesConsumidorPermitidas)) {
+      return false;
+    }
+    const combinaEscopo = textoCombinaEscopo(`${surface.rota} ${surface.arquivo} ${surface.tipoArquivo}`, configuracao.termosEscopo);
+    if (!configuracao.ignorarConsumidoresLaterais) {
+      return combinaEscopo || configuracao.escopo === "projeto";
+    }
+    return configuracao.escopo === "projeto" ? true : combinaEscopo;
+  };
+
+  const manterBridge = (bridge: RegistroConsumerBridgeDrift) => {
+    if (configuracao.ignorarWorktrees
+      && caminhoIgnoradoForaDoEscopoReal(bridge.arquivo, DIRETORIOS_WORKTREE, raizesWorktreePermitidas)) {
+      return false;
+    }
+    if (configuracao.ignorarConsumidoresLaterais
+      && caminhoIgnoradoForaDoEscopoReal(bridge.arquivo, DIRETORIOS_CONSUMIDOR_LATERAL, raizesConsumidorPermitidas)) {
+      return false;
+    }
+    const combinaEscopo = textoCombinaEscopo(`${bridge.caminho} ${bridge.arquivo} ${bridge.simbolo}`, configuracao.termosEscopo);
+    if (!configuracao.ignorarConsumidoresLaterais) {
+      return combinaEscopo || configuracao.escopo === "projeto";
+    }
+    return configuracao.escopo === "projeto" ? true : combinaEscopo;
+  };
+
+  return {
+    consumerSurfaces: consumerSurfaces.filter(manterSurface),
+    consumerBridges: consumerBridges.filter(manterBridge),
+  };
 }
 
 const NOMES_RECURSO_IGNORADOS = new Set([
@@ -854,14 +1211,35 @@ function resumirOperacional(resultado: Omit<ResultadoDrift, "comando" | "sucesso
     ? Math.round(resultado.tasks.reduce((total, task) => total + task.scoreSemantico, 0) / resultado.tasks.length)
     : 0;
   const confiancaGeral: NivelConfiancaSemantica = scoreMedio >= 80 ? "alta" : scoreMedio >= 55 ? "media" : "baixa";
-  const riscosPrincipais = [...new Set(resultado.tasks.filter((task) => task.riscoOperacional !== "baixo").map((task) => `${task.task}:${task.riscoOperacional}`))];
-  const oQueTocar = [...new Set(resultado.tasks.flatMap((task) => task.arquivosProvaveisEditar))].slice(0, 20);
-  const oQueValidar = [...new Set(resultado.tasks.flatMap((task) => task.checksSugeridos))];
-  const oQueEstaFrouxo = [...new Set(resultado.tasks.flatMap((task) => task.lacunas))];
+  const riscosPrincipais = [...new Set([
+    ...resultado.tasks.filter((task) => task.riscoOperacional !== "baixo").map((task) => `${task.task}:${task.riscoOperacional}`),
+    ...resultado.persistencia_real
+      .filter((item) => item.status !== "materializado")
+      .map((item) => `${item.task}:${item.alvo}:persistencia_${item.status}`),
+  ])];
+  const oQueTocar = [...new Set([
+    ...resultado.tasks.flatMap((task) => task.arquivosProvaveisEditar),
+    ...resultado.persistencia_real.flatMap((item) => [...item.arquivos, ...item.repositorios]),
+  ])].slice(0, 20);
+  const oQueValidar = [...new Set([
+    ...resultado.tasks.flatMap((task) => task.checksSugeridos),
+    ...resultado.persistencia_real
+      .filter((item) => item.status !== "materializado")
+      .map((item) => `validar persistencia real de ${item.task} em ${item.alvo}`),
+  ])];
+  const oQueEstaFrouxo = [...new Set([
+    ...resultado.tasks.flatMap((task) => task.lacunas),
+    ...resultado.persistencia_real
+      .filter((item) => item.status !== "materializado" || item.compatibilidade === "desconhecida" || item.compatibilidade === "invalido")
+      .map((item) => `persistencia:${item.alvo}:${item.status}:${item.compatibilidade}`),
+  ])];
   const oQueFoiInferido = [
     ...new Set([
       ...resultado.impls_quebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.caminho) ?? []),
       ...resultado.vinculos_quebrados.filter((vinculo) => vinculo.status === "parcial").map((vinculo) => `${vinculo.dono}:${vinculo.valor}`),
+      ...resultado.persistencia_real
+        .filter((item) => item.compatibilidade === "desconhecida")
+        .map((item) => `${item.task}:${item.alvo}:compatibilidade_nao_confirmada`),
     ]),
   ];
 
@@ -937,7 +1315,7 @@ async function listarArquivosRecursivos(diretorio: string, extensoes: string[]):
 
   const encontrados: string[] = [];
   for (const entrada of entradas) {
-    if (DIRETORIOS_IGNORADOS.has(entrada.name)) {
+    if (diretoriosIgnoradosAtivos.has(entrada.name.toLowerCase())) {
       continue;
     }
     const caminhoAtual = path.join(diretorio, entrada.name);
@@ -2041,6 +2419,353 @@ async function indexarPersistenciaDeclarativa(diretorios: string[]): Promise<{ r
   return { recursos: [...recursos.values()] };
 }
 
+function normalizarOrigemParaEngine(origem?: OrigemRecursoDrift): EngineBanco | undefined {
+  return origem && origem !== "firebase" ? origem : undefined;
+}
+
+function registrarColunaPersistenciaDrift(
+  colunas: Map<string, RegistroColunaPersistenciaDrift>,
+  engine: EngineBanco,
+  recurso: string,
+  coluna: string,
+  arquivo: string,
+): void {
+  const recursoNormalizado = fecharPrefixoRecurso(limparLiteralRecurso(recurso));
+  const colunaNormalizada = fecharPrefixoRecurso(limparLiteralRecurso(coluna));
+  if (!recursoNormalizado || !colunaNormalizada || recursoEhIgnorado(colunaNormalizada)) {
+    return;
+  }
+  const chave = `${engine}:${normalizarNomeRecursoDrift(recursoNormalizado)}:${normalizarNomeRecursoDrift(colunaNormalizada)}:${arquivo}`;
+  if (!colunas.has(chave)) {
+    colunas.set(chave, {
+      engine,
+      recurso: recursoNormalizado,
+      coluna: colunaNormalizada,
+      arquivo,
+    });
+  }
+}
+
+function registrarRepositorioPersistenciaDrift(
+  repositorios: Map<string, RegistroRepositorioPersistenciaDrift>,
+  engine: EngineBanco,
+  recurso: string,
+  arquivo: string,
+): void {
+  const recursoNormalizado = fecharPrefixoRecurso(limparLiteralRecurso(recurso));
+  if (!recursoNormalizado) {
+    return;
+  }
+  const chave = `${engine}:${normalizarNomeRecursoDrift(recursoNormalizado)}:${arquivo}`;
+  if (!repositorios.has(chave)) {
+    repositorios.set(chave, {
+      engine,
+      recurso: recursoNormalizado,
+      arquivo,
+    });
+  }
+}
+
+function extrairColunasSqlDetalhadas(arquivo: string, codigo: string): RegistroColunaPersistenciaDrift[] {
+  const colunas = new Map<string, RegistroColunaPersistenciaDrift>();
+  const motores = inferirMotoresRelacionais(codigo, arquivo);
+  if (motores.length === 0) {
+    return [];
+  }
+
+  const registrarParaMotores = (recurso: string, coluna: string) => {
+    for (const motor of motores) {
+      registrarColunaPersistenciaDrift(colunas, motor, recurso, coluna, arquivo);
+    }
+  };
+
+  for (const match of codigo.matchAll(/\bcreate\s+table\s+(?:if\s+not\s+exists\s+)?["'`]?([A-Za-z_][\w$.-]*)["'`]?\s*\(([\s\S]*?)\)\s*;?/gi)) {
+    const tabela = match[1]!;
+    const corpo = match[2] ?? "";
+    for (const linha of corpo.split(/\r?\n|,/)) {
+      const trecho = linha.trim();
+      if (!trecho || /^(?:constraint|primary|foreign|unique|check|key|index)\b/i.test(trecho)) {
+        continue;
+      }
+      const coluna = trecho.match(/^["'`]?([A-Za-z_][\w$.-]*)["'`]?/i)?.[1];
+      if (coluna) {
+        registrarParaMotores(tabela, coluna);
+      }
+    }
+  }
+
+  for (const match of codigo.matchAll(/\binsert\s+into\s+["'`]?([A-Za-z_][\w$.-]*)["'`]?\s*\(([^)]+)\)/gi)) {
+    for (const coluna of (match[2] ?? "").split(",").map((item) => item.trim())) {
+      registrarParaMotores(match[1]!, coluna);
+    }
+  }
+
+  for (const match of codigo.matchAll(/\bupdate\s+["'`]?([A-Za-z_][\w$.-]*)["'`]?\s+set\s+([\s\S]*?)(?:\bwhere\b|;|$)/gi)) {
+    for (const coluna of (match[2] ?? "").split(",").map((item) => item.split("=")[0]?.trim() ?? "")) {
+      registrarParaMotores(match[1]!, coluna);
+    }
+  }
+
+  for (const match of codigo.matchAll(/\bselect\s+([\s\S]*?)\s+from\s+["'`]?([A-Za-z_][\w$.-]*)["'`]?/gi)) {
+    const tabela = match[2]!;
+    const lista = (match[1] ?? "").trim();
+    if (!lista || lista === "*") {
+      continue;
+    }
+    for (const coluna of lista.split(",").map((item) => item.trim().split(/\s+as\s+/i)[0] ?? "")) {
+      const nome = coluna.split(".").at(-1) ?? coluna;
+      registrarParaMotores(tabela, nome);
+    }
+  }
+
+  return [...colunas.values()];
+}
+
+function extrairColunasPrismaDetalhadas(arquivo: string, codigo: string): RegistroColunaPersistenciaDrift[] {
+  const colunas = new Map<string, RegistroColunaPersistenciaDrift>();
+  const provider = codigo.match(/\bprovider\s*=\s*["'`](postgresql|mysql|sqlite)["'`]/i)?.[1]?.toLowerCase();
+  const engine = provider === "postgresql"
+    ? "postgres"
+    : provider === "mysql"
+      ? "mysql"
+      : provider === "sqlite"
+        ? "sqlite"
+        : undefined;
+  if (!engine) {
+    return [];
+  }
+
+  for (const match of codigo.matchAll(/\bmodel\s+([A-Za-z_]\w*)\s*\{([\s\S]*?)\n\}/g)) {
+    const nomeModelo = match[1]!;
+    const corpo = match[2] ?? "";
+    const tabela = corpo.match(/@@map\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/)?.[1] ?? nomeModelo;
+    for (const linha of corpo.split(/\r?\n/)) {
+      const limpa = linha.trim();
+      if (!limpa || limpa.startsWith("@@") || limpa.startsWith("//")) {
+        continue;
+      }
+      const coluna = limpa.match(/^([A-Za-z_]\w*)\s+/)?.[1];
+      const colunaMapeada = limpa.match(/@map\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/)?.[1];
+      if (coluna) {
+        registrarColunaPersistenciaDrift(colunas, engine, tabela, colunaMapeada ?? coluna, arquivo);
+      }
+    }
+  }
+
+  return [...colunas.values()];
+}
+
+function extrairCamposMongoDetalhados(arquivo: string, codigo: string): RegistroColunaPersistenciaDrift[] {
+  const colunas = new Map<string, RegistroColunaPersistenciaDrift>();
+  const colecoes = extrairRecursosMongoDb(arquivo, codigo).filter((item) => item.tipo === "collection");
+  if (colecoes.length === 0) {
+    return [];
+  }
+
+  const registrarCampoMongo = (colecao: string, trecho: string) => {
+    for (const match of trecho.matchAll(/([A-Za-z_][\w$]*)\s*:/g)) {
+      registrarColunaPersistenciaDrift(colunas, "mongodb", colecao, match[1]!, arquivo);
+    }
+  };
+
+  for (const schema of codigo.matchAll(/\bnew\s+Schema\s*\(\s*\{([\s\S]*?)\}\s*\)/g)) {
+    for (const colecao of colecoes) {
+      registrarCampoMongo(colecao.nome, schema[1] ?? "");
+    }
+  }
+
+  for (const trecho of codigo.matchAll(/\b(?:find(?:One)?|update(?:One|Many)?|insertOne|insertMany)\s*\(\s*\{([\s\S]*?)\}\s*(?:,|\))/g)) {
+    for (const colecao of colecoes) {
+      registrarCampoMongo(colecao.nome, trecho[1] ?? "");
+    }
+  }
+
+  return [...colunas.values()];
+}
+
+function extrairCamposRedisDetalhados(arquivo: string, codigo: string): RegistroColunaPersistenciaDrift[] {
+  const colunas = new Map<string, RegistroColunaPersistenciaDrift>();
+  for (const match of codigo.matchAll(/\bh(?:set|get|del|exists)\s*\(\s*["'`]([^"'`]+)["'`]\s*,\s*["'`]([^"'`]+)["'`]/gi)) {
+    registrarColunaPersistenciaDrift(colunas, "redis", match[1]!, match[2]!, arquivo);
+  }
+  return [...colunas.values()];
+}
+
+function registrarRepositoriosPorRecursos(
+  repositorios: Map<string, RegistroRepositorioPersistenciaDrift>,
+  arquivo: string,
+  codigo: string,
+  recursos: RecursoResolvido[],
+): void {
+  const contextoRepositorio = /(?:repository|repositories|repositorio|repositorios|repo|dao|store|queries|persistence|persistencia)/i.test(arquivo)
+    || /\b(?:Repository|Repositories|Dao|Store)\b/.test(codigo);
+  const contextoAcesso = /\b(?:select|insert|update|delete|aggregate|findOne|findMany|findUnique|findFirst|prisma\.|db\.collection|createClient|hset|hget|xadd|xread)\b/i.test(codigo);
+  if (!contextoRepositorio && !contextoAcesso) {
+    return;
+  }
+
+  for (const recurso of recursos) {
+    const engine = normalizarOrigemParaEngine(recurso.origem);
+    if (!engine) {
+      continue;
+    }
+    registrarRepositorioPersistenciaDrift(repositorios, engine, recurso.nome, arquivo);
+  }
+}
+
+async function indexarPersistenciaDetalhada(
+  diretorios: string[],
+): Promise<{
+  colunas: RegistroColunaPersistenciaDrift[];
+  repositorios: RegistroRepositorioPersistenciaDrift[];
+}> {
+  const colunas = new Map<string, RegistroColunaPersistenciaDrift>();
+  const repositorios = new Map<string, RegistroRepositorioPersistenciaDrift>();
+
+  for (const diretorio of diretorios) {
+    const arquivos = await listarArquivosRecursivos(diretorio, [
+      ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+      ".py", ".dart", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h",
+      ".sql", ".psql", ".ddl", ".prisma",
+    ]);
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const recursos = arquivo.endsWith(".prisma")
+        ? extrairRecursosPrisma(arquivo, codigo)
+        : extrairRecursosPersistenciaCodigoVivo(arquivo, codigo);
+
+      for (const coluna of extrairColunasSqlDetalhadas(arquivo, codigo)) {
+        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+      }
+      for (const coluna of extrairColunasPrismaDetalhadas(arquivo, codigo)) {
+        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+      }
+      for (const coluna of extrairCamposMongoDetalhados(arquivo, codigo)) {
+        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+      }
+      for (const coluna of extrairCamposRedisDetalhados(arquivo, codigo)) {
+        registrarColunaPersistenciaDrift(colunas, coluna.engine, coluna.recurso, coluna.coluna, coluna.arquivo);
+      }
+
+      registrarRepositoriosPorRecursos(repositorios, arquivo, codigo, recursos);
+    }
+  }
+
+  return {
+    colunas: [...colunas.values()],
+    repositorios: [...repositorios.values()],
+  };
+}
+
+function recursoDetalhadoCombina(
+  recurso: string,
+  esperado: RecursoEsperadoDrift,
+): boolean {
+  return variantesNomeRecursoDrift(recurso).some((variante) =>
+    esperado.nomes.some((nome) => variantesNomeRecursoDrift(nome).includes(variante)));
+}
+
+function localizarCompatibilidadePersistencia(
+  bancos: IrBancoDados[],
+  esperado: RecursoEsperadoDrift,
+  recursoReal?: RecursoResolvido,
+): {
+  engine: OrigemRecursoDrift | "desconhecido";
+  compatibilidade: RegistroPersistenciaRealDrift["compatibilidade"];
+  motivoCompatibilidade?: string;
+  tipo: TipoRecursoDrift;
+} {
+  for (const banco of bancos) {
+    for (const recurso of banco.resources) {
+      if (!recursoPersistenciaCombinaAlvo(recurso, esperado.alvo)) {
+        continue;
+      }
+      const engine = banco.engine ?? normalizarOrigemParaEngine(recursoReal?.origem);
+      const compatibilidade = engine
+        ? recurso.compatibilidade.find((item) => item.engine === engine) ?? recurso.compatibilidade[0]
+        : recurso.compatibilidade[0];
+      return {
+        engine: (engine ?? recursoReal?.origem ?? "desconhecido") as OrigemRecursoDrift | "desconhecido",
+        compatibilidade: compatibilidade?.status ?? "desconhecida",
+        motivoCompatibilidade: compatibilidade?.motivo,
+        tipo: (recurso.resourceKind as TipoRecursoDrift) ?? recursoReal?.tipo ?? esperado.tiposAceitos[0] ?? "query",
+      };
+    }
+  }
+
+  return {
+    engine: recursoReal?.origem ?? esperado.origem ?? "desconhecido",
+    compatibilidade: "desconhecida",
+    tipo: recursoReal?.tipo ?? esperado.tiposAceitos[0] ?? "query",
+  };
+}
+
+export async function analisarPersistenciaReal(
+  contexto: ContextoProjetoCarregado,
+  mapaRecursos?: Map<string, RecursoResolvido[]>,
+  detalhesPersistencia?: Awaited<ReturnType<typeof indexarPersistenciaDetalhada>>,
+  opcoes?: OpcoesDriftLegado,
+): Promise<RegistroPersistenciaRealDrift[]> {
+  const opcoesResolvidas = resolverOpcoesDrift(opcoes);
+  const diretoriosCodigoAtivos = resolverDiretoriosCodigoEscopoReal(contexto, opcoesResolvidas);
+  const mapa = mapaRecursos ?? construirMapaRecursos((await indexarPersistenciaDeclarativa(diretoriosCodigoAtivos)).recursos);
+  const detalhes = detalhesPersistencia ?? await indexarPersistenciaDetalhada(diretoriosCodigoAtivos);
+  const registros: RegistroPersistenciaRealDrift[] = [];
+
+  for (const item of contexto.modulosSelecionados) {
+    const ir = item.resultado.ir;
+    if (!ir) {
+      continue;
+    }
+
+    for (const task of ir.tasks) {
+      for (const esperado of extrairRecursosEsperados(task, ir)) {
+        const correspondencias = esperado.nomes.flatMap((nome) =>
+          variantesNomeRecursoDrift(nome).flatMap((variante) =>
+            (mapa.get(variante) ?? []).filter((recurso) => recursoResolvidoCombinaEsperado(recurso, esperado))));
+        const recursosReais = [...new Map(correspondencias.map((recurso) =>
+          [`${recurso.origem}:${recurso.tipo}:${recurso.nome}:${recurso.arquivo}`, recurso] as const)).values()];
+        const compatibilidade = localizarCompatibilidadePersistencia(ir.databases, esperado, recursosReais[0]);
+        const colunas = [...new Set(detalhes.colunas
+          .filter((coluna) =>
+            (!normalizarOrigemParaEngine(recursosReais[0]?.origem) || coluna.engine === normalizarOrigemParaEngine(recursosReais[0]?.origem))
+            && recursoDetalhadoCombina(coluna.recurso, esperado))
+          .map((coluna) => coluna.coluna))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+        const repositorios = [...new Set(detalhes.repositorios
+          .filter((repositorio) =>
+            (!normalizarOrigemParaEngine(recursosReais[0]?.origem) || repositorio.engine === normalizarOrigemParaEngine(recursosReais[0]?.origem))
+            && recursoDetalhadoCombina(repositorio.recurso, esperado))
+          .map((repositorio) => repositorio.arquivo))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+        const arquivos = [...new Set(recursosReais.map((recurso) => recurso.arquivo))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+        registros.push({
+          modulo: ir.nome,
+          task: task.nome,
+          alvo: esperado.alvo,
+          engine: compatibilidade.engine,
+          tipo: compatibilidade.tipo,
+          status: recursosReais.length === 0
+            ? "divergente"
+            : colunas.length > 0 || repositorios.length > 0
+              ? "materializado"
+              : "parcial",
+          arquivos,
+          colunas,
+          repositorios,
+          compatibilidade: compatibilidade.compatibilidade,
+          motivoCompatibilidade: compatibilidade.motivoCompatibilidade,
+        });
+      }
+    }
+  }
+
+  return registros.sort((a, b) =>
+    a.modulo.localeCompare(b.modulo, "pt-BR")
+    || a.task.localeCompare(b.task, "pt-BR")
+    || a.alvo.localeCompare(b.alvo, "pt-BR"));
+}
+
 function normalizarCaminhoRota(caminho?: string): string {
   if (!caminho) {
     return "/";
@@ -2412,16 +3137,32 @@ function coletarVinculosIr(ir: IrModulo): Array<{ donoTipo: RegistroVinculoDrift
   ];
 }
 
-export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): Promise<ResultadoDrift> {
-  const indexTs = await indexarTypeScript(contexto.diretoriosCodigo);
-  const indexPy = await indexarPython(contexto.diretoriosCodigo);
-  const indexDart = await indexarDart(contexto.diretoriosCodigo);
-  const indexDotnet = await indexarDotnet(contexto.diretoriosCodigo);
-  const indexJava = await indexarJava(contexto.diretoriosCodigo);
-  const indexGo = await indexarGo(contexto.diretoriosCodigo);
-  const indexRust = await indexarRust(contexto.diretoriosCodigo);
-  const indexPersistencia = await indexarPersistenciaDeclarativa(contexto.diretoriosCodigo);
-  const indexCpp = await indexarCpp(contexto.diretoriosCodigo);
+export async function analisarDriftLegado(
+  contexto: ContextoProjetoCarregado,
+  opcoes?: OpcoesDriftLegado,
+): Promise<ResultadoDrift> {
+  const opcoesResolvidas = resolverOpcoesDrift(opcoes);
+  const configuracaoEscopo: ConfiguracaoEscopoDriftAplicada = {
+    escopo: opcoesResolvidas.escopo,
+    ignorarWorktrees: opcoesResolvidas.ignorarWorktrees,
+    ignorarConsumidoresLaterais: opcoesResolvidas.ignorarConsumidoresLaterais,
+    termosEscopo: extrairTermosEscopoDrift(contexto, opcoesResolvidas.escopo),
+  };
+  const diretoriosIgnoradosAnteriores = diretoriosIgnoradosAtivos;
+  diretoriosIgnoradosAtivos = resolverDiretoriosIgnoradosAtivos(opcoesResolvidas);
+
+  try {
+  const diretoriosCodigoAtivos = resolverDiretoriosCodigoEscopoReal(contexto, configuracaoEscopo);
+  const indexTs = await indexarTypeScript(diretoriosCodigoAtivos);
+  const indexPy = await indexarPython(diretoriosCodigoAtivos);
+  const indexDart = await indexarDart(diretoriosCodigoAtivos);
+  const indexDotnet = await indexarDotnet(diretoriosCodigoAtivos);
+  const indexJava = await indexarJava(diretoriosCodigoAtivos);
+  const indexGo = await indexarGo(diretoriosCodigoAtivos);
+  const indexRust = await indexarRust(diretoriosCodigoAtivos);
+  const indexPersistencia = await indexarPersistenciaDeclarativa(diretoriosCodigoAtivos);
+  const detalhesPersistencia = await indexarPersistenciaDetalhada(diretoriosCodigoAtivos);
+  const indexCpp = await indexarCpp(diretoriosCodigoAtivos);
   const todosSimbolos = [
     ...indexTs.simbolos,
     ...indexPy.simbolos,
@@ -3000,31 +3741,60 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     }
   }
 
-  const consumerSurfaces = [...indexTs.consumerSurfaces, ...indexDart.consumerSurfaces].sort((a, b) =>
-    a.rota.localeCompare(b.rota, "pt-BR")
-    || a.tipoArquivo.localeCompare(b.tipoArquivo, "pt-BR")
-    || a.arquivo.localeCompare(b.arquivo, "pt-BR"));
-  const consumerBridges = [...new Map(
-    [...indexTs.simbolos, ...indexDart.simbolos]
-      .filter((simbolo) => simboloEhBridgeConsumer(simbolo.caminho, simbolo.arquivo))
-      .map((simbolo) => [
-        `${simbolo.caminho}:${simbolo.arquivo}:${simbolo.simbolo}`,
-        {
-          caminho: simbolo.caminho,
-          arquivo: simbolo.arquivo,
-          simbolo: simbolo.simbolo,
-        },
-      ] as const),
-  ).values()].sort((a, b) =>
-    a.caminho.localeCompare(b.caminho, "pt-BR")
-    || a.arquivo.localeCompare(b.arquivo, "pt-BR"));
+  const consumersFiltrados = filtrarConsumerSurfacesPorEscopo(
+    [...indexTs.consumerSurfaces, ...indexDart.consumerSurfaces].sort((a, b) =>
+      a.rota.localeCompare(b.rota, "pt-BR")
+      || a.tipoArquivo.localeCompare(b.tipoArquivo, "pt-BR")
+      || a.arquivo.localeCompare(b.arquivo, "pt-BR")),
+    [...new Map(
+      [...indexTs.simbolos, ...indexDart.simbolos]
+        .filter((simbolo) => simboloEhBridgeConsumer(simbolo.caminho, simbolo.arquivo))
+        .map((simbolo) => [
+          `${simbolo.caminho}:${simbolo.arquivo}:${simbolo.simbolo}`,
+          {
+            caminho: simbolo.caminho,
+            arquivo: simbolo.arquivo,
+            simbolo: simbolo.simbolo,
+          },
+        ] as const),
+    ).values()].sort((a, b) =>
+      a.caminho.localeCompare(b.caminho, "pt-BR")
+      || a.arquivo.localeCompare(b.arquivo, "pt-BR")),
+    contexto,
+    configuracaoEscopo,
+  );
+  const consumerSurfaces = consumersFiltrados.consumerSurfaces;
+  const consumerBridges = consumersFiltrados.consumerBridges;
   const appRoutes = [...new Set(consumerSurfaces.map((surface) => surface.rota))]
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
   const consumerFramework = inferirConsumerFrameworkPrincipal(contexto.fontesLegado, consumerSurfaces, consumerBridges);
+  const persistenciaReal = await analisarPersistenciaReal(contexto, mapaRecursos, detalhesPersistencia, opcoesResolvidas);
+  for (const item of persistenciaReal) {
+    if (item.status === "divergente") {
+      diagnosticos.push({
+        tipo: "recurso_divergente",
+        modulo: item.modulo,
+        task: item.task,
+        mensagem: `Persistencia real para "${item.alvo}" ainda nao foi materializada no codigo vivo.`,
+      });
+    } else if (item.compatibilidade === "invalido") {
+      diagnosticos.push({
+        tipo: "recurso_divergente",
+        modulo: item.modulo,
+        task: item.task,
+        mensagem: `Persistencia real para "${item.alvo}" conflita com a compatibilidade declarada do engine ${item.engine}.`,
+      });
+    }
+  }
 
   const payloadBase: ResultadoDrift = {
     comando: "drift",
-    sucesso: implsQuebrados.length === 0 && rotasDivergentes.length === 0 && recursosDivergentes.length === 0 && vinculosQuebrados.length === 0,
+    sucesso: implsQuebrados.length === 0
+      && rotasDivergentes.length === 0
+      && recursosDivergentes.length === 0
+      && vinculosQuebrados.length === 0
+      && persistenciaReal.every((item) => item.status !== "divergente" && item.compatibilidade !== "invalido"),
+    escopo_aplicado: configuracaoEscopo,
     consumerFramework,
     appRoutes,
     consumerSurfaces,
@@ -3043,6 +3813,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     rotas_divergentes: rotasDivergentes,
     recursos_validos: recursosValidos,
     recursos_divergentes: recursosDivergentes,
+    persistencia_real: persistenciaReal,
     diagnosticos,
     resumo_operacional: {
       scoreMedio: 0,
@@ -3059,5 +3830,337 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   return {
     ...payloadBase,
     resumo_operacional: resumoOperacional,
+  };
+  } finally {
+    diretoriosIgnoradosAtivos = diretoriosIgnoradosAnteriores;
+  }
+}
+
+const EXTENSOES_BUSCA_IMPACTO = [
+  ".sema",
+  ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+  ".py", ".dart", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h",
+  ".sql", ".psql", ".ddl", ".prisma", ".json",
+];
+
+function construirVariantesSemanticas(valor: string): string[] {
+  const bruto = valor.trim();
+  const partes = paraIdentificadorModulo(valor).split("_").filter(Boolean);
+  if (!bruto && partes.length === 0) {
+    return [];
+  }
+  const camel = partes.length > 0
+    ? `${partes[0]}${partes.slice(1).map((item) => item[0]?.toUpperCase() + item.slice(1)).join("")}`
+    : bruto;
+  const pascal = partes.length > 0
+    ? partes.map((item) => item[0]?.toUpperCase() + item.slice(1)).join("")
+    : bruto;
+  return [...new Set([
+    bruto,
+    partes.join("_"),
+    partes.join("-"),
+    partes.join("."),
+    camel,
+    pascal,
+  ].filter(Boolean))];
+}
+
+function classificarArquivoImpacto(arquivo: string): RegistroImpactoSemanticoArquivo["tipo"] {
+  const normalizado = normalizarFragmentoArquivo(arquivo);
+  if (normalizado.endsWith(".sema")) {
+    return "contrato";
+  }
+  if (/\.(sql|psql|ddl|prisma)$/i.test(normalizado) || /(?:^|\/)(?:db|database|migrations?|schemas?)\//i.test(normalizado)) {
+    return "persistencia";
+  }
+  if (/(?:^|\/)(?:repositorio|repositorios|repository|repositories|repo|dao|store)\//i.test(normalizado) || /(repository|repositorio|dao|store)/i.test(path.basename(normalizado))) {
+    return "repositorio";
+  }
+  if (/(?:^|\/)(?:routes?|controllers?|api)\//i.test(normalizado) || /(controller|route)/i.test(path.basename(normalizado))) {
+    return "rota";
+  }
+  if (/(?:^|\/)(?:workers?|jobs?|queues?|cron)\//i.test(normalizado) || /(worker|job|queue|cron)/i.test(path.basename(normalizado))) {
+    return "worker";
+  }
+  if (/(?:^|\/)(?:pages|screens|components|views|app)\//i.test(normalizado)) {
+    return "ui";
+  }
+  if (/(?:^|\/)(?:tests?|specs?|__tests__)\//i.test(normalizado) || /\.(spec|test)\./i.test(normalizado)) {
+    return "teste";
+  }
+  return "codigo";
+}
+
+function prioridadeArquivoImpacto(tipo: RegistroImpactoSemanticoArquivo["tipo"]): RegistroImpactoSemanticoArquivo["prioridade"] {
+  switch (tipo) {
+    case "contrato":
+    case "persistencia":
+    case "repositorio":
+    case "rota":
+      return "alta";
+    case "worker":
+    case "codigo":
+      return "media";
+    default:
+      return "baixa";
+  }
+}
+
+function textoIrCombinaTermos(texto: string, termos: string[]): boolean {
+  return textoCombinaEscopo(texto, termos);
+}
+
+function registrarArquivoImpactado(
+  mapa: Map<string, RegistroImpactoSemanticoArquivo>,
+  arquivo: string,
+  linhas: number[],
+  motivos: string[],
+): void {
+  const tipo = classificarArquivoImpacto(arquivo);
+  const atual = mapa.get(arquivo);
+  if (atual) {
+    atual.linhas = [...new Set([...atual.linhas, ...linhas])].sort((a, b) => a - b);
+    atual.motivos = [...new Set([...atual.motivos, ...motivos])];
+    if (prioridadeArquivoImpacto(tipo) === "alta") {
+      atual.prioridade = "alta";
+    } else if (prioridadeArquivoImpacto(tipo) === "media" && atual.prioridade === "baixa") {
+      atual.prioridade = "media";
+    }
+    return;
+  }
+
+  mapa.set(arquivo, {
+    arquivo,
+    tipo,
+    prioridade: prioridadeArquivoImpacto(tipo),
+    linhas: [...new Set(linhas)].sort((a, b) => a - b),
+    motivos: [...new Set(motivos)],
+  });
+}
+
+async function listarArquivosImpacto(
+  contexto: ContextoProjetoCarregado,
+  opcoes?: OpcoesDriftLegado,
+): Promise<string[]> {
+  const opcoesResolvidas = resolverOpcoesDrift(opcoes);
+  const arquivos = new Set<string>(filtrarCaminhosEscopoReal(contexto.arquivosProjeto, contexto, opcoesResolvidas));
+  for (const diretorio of resolverDiretoriosCodigoEscopoReal(contexto, opcoesResolvidas)) {
+    for (const arquivo of await listarArquivosRecursivos(diretorio, EXTENSOES_BUSCA_IMPACTO)) {
+      arquivos.add(arquivo);
+    }
+  }
+  return [...arquivos].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function extrairLinhasComVariantes(codigo: string, variantes: string[]): number[] {
+  const linhas: number[] = [];
+  const texto = codigo.split(/\r?\n/);
+  for (let indice = 0; indice < texto.length; indice += 1) {
+    if (variantes.some((variante) => variante && texto[indice]!.includes(variante))) {
+      linhas.push(indice + 1);
+    }
+  }
+  return linhas;
+}
+
+function serializarTaskParaImpacto(task: IrTask): string {
+  return JSON.stringify({
+    nome: task.nome,
+    input: task.input.map((campo) => campo.nome),
+    output: task.output.map((campo) => campo.nome),
+    effects: task.effects,
+    guarantees: task.guarantees,
+    errors: task.errors,
+    resumo: task.resumoAgente,
+  });
+}
+
+function serializarRouteParaImpacto(route: IrRoute): string {
+  return JSON.stringify({
+    nome: route.nome,
+    caminho: route.caminho,
+    metodo: route.metodo,
+    task: route.task,
+    input: route.inputPublico.map((campo) => campo.nome),
+    output: route.outputPublico.map((campo) => campo.nome),
+  });
+}
+
+function serializarSuperficieParaImpacto(superficie: IrSuperficie): string {
+  return JSON.stringify({
+    tipo: superficie.tipo,
+    nome: superficie.nome,
+    task: superficie.task,
+    input: superficie.input.map((campo) => campo.nome),
+    output: superficie.output.map((campo) => campo.nome),
+  });
+}
+
+function ordenarArquivosImpacto(arquivos: RegistroImpactoSemanticoArquivo[]): RegistroImpactoSemanticoArquivo[] {
+  const ordemPrioridade = { alta: 0, media: 1, baixa: 2 } as const;
+  return [...arquivos].sort((a, b) =>
+    ordemPrioridade[a.prioridade] - ordemPrioridade[b.prioridade]
+    || a.tipo.localeCompare(b.tipo, "pt-BR")
+    || a.arquivo.localeCompare(b.arquivo, "pt-BR"));
+}
+
+export async function gerarMapaImpactoSemantico(
+  contexto: ContextoProjetoCarregado,
+  alvoSemantico: string,
+  mudancaProposta: string,
+  opcoes?: OpcoesDriftLegado,
+): Promise<ResultadoImpactoSemantico> {
+  const opcoesResolvidas = resolverOpcoesDrift(opcoes);
+  const diretoriosIgnoradosAnteriores = diretoriosIgnoradosAtivos;
+  diretoriosIgnoradosAtivos = resolverDiretoriosIgnoradosAtivos(opcoesResolvidas);
+
+  try {
+    const drift = await analisarDriftLegado(contexto, opcoesResolvidas);
+    const variantes = construirVariantesSemanticas(alvoSemantico);
+    const termos = [...new Set([...quebrarTermosEscopo(alvoSemantico), ...drift.escopo_aplicado.termosEscopo])];
+    const arquivosImpactados = new Map<string, RegistroImpactoSemanticoArquivo>();
+    const arquivosBusca = await listarArquivosImpacto(contexto, opcoesResolvidas);
+
+    for (const arquivo of arquivosBusca) {
+      const codigo = await readFile(arquivo, "utf8");
+      const linhas = extrairLinhasComVariantes(codigo, variantes);
+      if (linhas.length > 0) {
+        registrarArquivoImpactado(arquivosImpactados, arquivo, linhas, ["token_semantico_encontrado"]);
+      }
+    }
+
+    const tasksAfetadas = new Set<string>();
+    const routesAfetadas = new Set<string>();
+    const superficiesAfetadas = new Set<string>();
+    const persistenciaAfetada = new Set<string>();
+
+    for (const item of contexto.modulosSelecionados) {
+      const ir = item.resultado.ir;
+      if (!ir) {
+        continue;
+      }
+      for (const task of ir.tasks) {
+        if (textoIrCombinaTermos(serializarTaskParaImpacto(task), termos)) {
+          tasksAfetadas.add(`${ir.nome}.${task.nome}`);
+        }
+      }
+      for (const route of ir.routes) {
+        if (textoIrCombinaTermos(serializarRouteParaImpacto(route), termos)) {
+          routesAfetadas.add(`${ir.nome}.${route.nome}`);
+        }
+      }
+      for (const superficie of ir.superficies) {
+        if (textoIrCombinaTermos(serializarSuperficieParaImpacto(superficie), termos)) {
+          superficiesAfetadas.add(`${ir.nome}.${superficie.tipo}.${superficie.nome}`);
+        }
+      }
+    }
+
+    for (const task of drift.tasks.filter((item) => tasksAfetadas.has(`${item.modulo}.${item.task}`))) {
+      for (const arquivo of task.arquivosProvaveisEditar) {
+        registrarArquivoImpactado(arquivosImpactados, arquivo, [], ["arquivo_relacionado_por_drift"]);
+      }
+    }
+
+    for (const item of drift.persistencia_real) {
+      if (textoIrCombinaTermos(`${item.alvo} ${item.task} ${item.colunas.join(" ")}`, termos)) {
+        persistenciaAfetada.add(`${item.task}:${item.alvo}`);
+        for (const arquivo of [...item.arquivos, ...item.repositorios]) {
+          registrarArquivoImpactado(arquivosImpactados, arquivo, [], ["persistencia_relacionada"]);
+        }
+      }
+    }
+
+    const contratosAfetados = ordenarArquivosImpacto(
+      [...arquivosImpactados.values()].filter((arquivo) => arquivo.tipo === "contrato"),
+    ).map((arquivo) => arquivo.arquivo);
+
+    return {
+      comando: "impacto",
+      sucesso: arquivosImpactados.size > 0 || tasksAfetadas.size > 0 || persistenciaAfetada.size > 0,
+      escopo: drift.escopo_aplicado.escopo,
+      alvoSemantico,
+      mudancaProposta,
+      contratosAfetados,
+      tasksAfetadas: [...tasksAfetadas].sort((a, b) => a.localeCompare(b, "pt-BR")),
+      routesAfetadas: [...routesAfetadas].sort((a, b) => a.localeCompare(b, "pt-BR")),
+      superficiesAfetadas: [...superficiesAfetadas].sort((a, b) => a.localeCompare(b, "pt-BR")),
+      persistenciaAfetada: [...persistenciaAfetada].sort((a, b) => a.localeCompare(b, "pt-BR")),
+      arquivos: ordenarArquivosImpacto([...arquivosImpactados.values()]),
+      ordemOperacional: [
+        "Atualizar contrato .sema e revisar garantias publicas primeiro.",
+        "Ajustar persistencia e repositorios concretos antes de materializacao externa.",
+        "Revisar rotas, workers e bridges depois que o contrato e o storage estiverem coerentes.",
+        "Fechar com UI/consumidores e testes alinhados ao payload final.",
+      ],
+      validacoes: [
+        "Rodar sema validar no contrato alterado.",
+        "Rodar sema drift com o mesmo escopo apos a mudanca.",
+        "Revalidar testes de payload, persistencia e superficies publicas.",
+      ],
+    };
+  } finally {
+    diretoriosIgnoradosAtivos = diretoriosIgnoradosAnteriores;
+  }
+}
+
+export async function assistirRenomeacaoSemantica(
+  contexto: ContextoProjetoCarregado,
+  nomeAtual: string,
+  nomeNovo: string,
+  opcoes?: OpcoesDriftLegado,
+): Promise<ResultadoRenomeacaoSemantica> {
+  const impacto = await gerarMapaImpactoSemantico(
+    contexto,
+    nomeAtual,
+    `renomear ${nomeAtual} para ${nomeNovo}`,
+    opcoes,
+  );
+  const variantesAntigas = construirVariantesSemanticas(nomeAtual);
+  const variantesNovas = construirVariantesSemanticas(nomeNovo);
+  const mapaSubstituicao = new Map<string, string>();
+  variantesAntigas.forEach((antiga, indice) => {
+    mapaSubstituicao.set(antiga, variantesNovas[indice] ?? nomeNovo);
+  });
+
+  const sugestoes: SugestaoRenomeacaoSemantica[] = [];
+  for (const arquivo of impacto.arquivos) {
+    const codigo = await readFile(arquivo.arquivo, "utf8");
+    const linhas = codigo.split(/\r?\n/);
+    for (let indice = 0; indice < linhas.length; indice += 1) {
+      const linha = linhas[indice]!;
+      for (const antiga of variantesAntigas) {
+        if (!antiga || !linha.includes(antiga)) {
+          continue;
+        }
+        sugestoes.push({
+          arquivo: arquivo.arquivo,
+          linha: indice + 1,
+          atual: antiga,
+          sugerido: mapaSubstituicao.get(antiga) ?? nomeNovo,
+          contexto: linha.trim().slice(0, 180),
+        });
+      }
+    }
+  }
+
+  return {
+    comando: "renomear-semantico",
+    sucesso: sugestoes.length > 0,
+    escopo: impacto.escopo,
+    de: nomeAtual,
+    para: nomeNovo,
+    arquivos: impacto.arquivos,
+    sugestoes,
+    ordemOperacional: [
+      "Renomear primeiro no contrato .sema e nos campos publicos derivados.",
+      "Ajustar repositorios, payloads e bridges que materializam o nome antigo.",
+      "Rodar sema drift e revisar sugestoes restantes antes de fechar a troca.",
+    ],
+    validacoes: [
+      "Rodar sema validar no contrato renomeado.",
+      "Rodar sema drift para confirmar que payload e superficie nao ficaram misturados.",
+      "Reexecutar testes e checar snapshots ou fixtures afetados.",
+    ],
   };
 }

@@ -58,7 +58,7 @@ sema drift ./contratos-importados --json
 
 ## Persistencia vendor-first
 
-A CLI 1.4.0 entende blocos `database` e recursos de persistencia no IR, no formatador, no semantico, na importacao e no drift. O objetivo nao e esconder diferencas entre bancos, e sim capturar essas diferencas no contrato.
+A CLI 1.5.0 entende blocos `database` e recursos de persistencia no IR, no formatador, no semantico, na importacao, no drift, no impact map e na renomeacao semantica assistida. O objetivo nao e esconder diferencas entre bancos, e sim capturar essas diferencas no contrato.
 
 Cobertura publica:
 
