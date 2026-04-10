@@ -1,59 +1,84 @@
 # @semacode/mcp
 
-Servidor MCP da Sema. Expoe os comandos da CLI como ferramentas para agentes (Claude Code, Cursor, etc.).
+`@semacode/mcp` expoe a Sema como servidor MCP para Claude Code, Cursor, VS Code, Cline e clientes compativeis.
 
-## Ferramentas disponíveis
+Ele usa a CLI da Sema como backend operacional. Instale a CLI antes ou junto:
 
-| Ferramenta | Descricao |
-|---|---|
-| `sema_validar` | Valida um arquivo `.sema` |
-| `sema_ir` | Compila e retorna a IR em JSON |
-| `sema_drift` | Analisa drift entre contrato e codigo |
-| `sema_resumo` | Resumo IA-first do projeto |
-| `sema_prompt_ia` | Prompt-curto para briefar agentes |
-| `sema_contexto_ia` | Pacote completo de contexto IA para um modulo |
-| `sema_verificar` | Verifica todos os alvos de geracao |
-| `sema_inspecionar` | Inspeciona detalhes de um modulo |
+```bash
+npm install -g @semacode/cli @semacode/mcp
+```
 
-**Pre-requisito:** `sema` instalado e disponivel no PATH (`npm install -g @semacode/cli`).
+Tambem funciona sem instalacao previa da ferramenta MCP:
+
+```bash
+npx -y @semacode/mcp
+```
+
+## Ferramentas expostas
+
+- `sema_validar`
+- `sema_ir`
+- `sema_drift`
+- `sema_resumo`
+- `sema_prompt_ia`
+- `sema_contexto_ia`
+- `sema_verificar`
+- `sema_inspecionar`
+
+Essas ferramentas acompanham a linha publica atual da Sema, incluindo persistencia vendor-first para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`.
 
 ## Configuracao no Claude Code
 
-Adicione em `~/.claude/settings.json` (ou `.claude/settings.json` no projeto):
+```json
+{
+  "mcpServers": {
+    "sema": {
+      "command": "npx",
+      "args": ["-y", "@semacode/mcp"]
+    }
+  }
+}
+```
+
+## Configuracao no Cursor, VS Code ou Cline
+
+```json
+{
+  "mcpServers": {
+    "sema": {
+      "command": "npx",
+      "args": ["-y", "@semacode/mcp"]
+    }
+  }
+}
+```
+
+## Rodando localmente pelo repo
 
 ```json
 {
   "mcpServers": {
     "sema": {
       "command": "node",
-      "args": ["/caminho/para/Sema/pacotes/mcp/dist/index.js"]
+      "args": ["C:/GitHub/Sema/pacotes/mcp/dist/index.js"]
     }
   }
 }
 ```
 
-Ou apos publicar no npm:
+## Modo stdio e modo HTTP
 
-```json
-{
-  "mcpServers": {
-    "sema": {
-      "command": "npx",
-      "args": ["-y", "@semacode/mcp"]
-    }
-  }
-}
+- padrao: `stdio`, ideal para uso local com agentes
+- remoto: defina `MCP_PORT` para expor `/mcp` e `/sse`
+
+Exemplo:
+
+```bash
+MCP_PORT=3333 npx -y @semacode/mcp
 ```
 
-## Configuracao no Cursor / VS Code (cline)
+## Observacoes
 
-```json
-{
-  "mcpServers": {
-    "sema": {
-      "command": "npx",
-      "args": ["-y", "@semacode/mcp"]
-    }
-  }
-}
-```
+- o servidor MCP resolve `sema` pelo PATH do sistema
+- `sema_verificar` usa o diretorio do projeto informado como `cwd`, evitando escrever artefatos no lugar errado
+- para reproduzibilidade, mantenha `@semacode/cli` e `@semacode/mcp` na mesma versao

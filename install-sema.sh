@@ -4,12 +4,17 @@ set -euo pipefail
 REPO="${SEMA_REPO:-gerlanss/Sema}"
 VERSION="${SEMA_VERSION:-latest}"
 PACKAGE_NAME="${SEMA_NPM_PACKAGE:-@semacode/cli}"
+MCP_PACKAGE_NAME="${SEMA_MCP_NPM_PACKAGE:-@semacode/mcp}"
 WITH_VSCODE=0
+WITH_MCP=0
 
 for arg in "$@"; do
   case "$arg" in
     --with-vscode)
       WITH_VSCODE=1
+      ;;
+    --with-mcp)
+      WITH_MCP=1
       ;;
     --version=*)
       VERSION="${arg#*=}"
@@ -58,6 +63,18 @@ download() {
 echo "Instalando CLI da Sema via npm..."
 npm install -g "$PACKAGE_SPEC"
 
+if [[ "$WITH_MCP" -eq 1 ]]; then
+  if [[ "$VERSION" == "latest" ]]; then
+    MCP_SPEC="$MCP_PACKAGE_NAME"
+  else
+    TAG_VERSION="${VERSION#v}"
+    MCP_SPEC="${MCP_PACKAGE_NAME}@${TAG_VERSION}"
+  fi
+
+  echo "Instalando MCP da Sema via npm..."
+  npm install -g "$MCP_SPEC"
+fi
+
 if [[ "$WITH_VSCODE" -eq 1 ]]; then
   if ! command -v code >/dev/null 2>&1; then
     echo "CLI do VS Code nao encontrada. Pulei a extensao." >&2
@@ -76,3 +93,6 @@ echo "  sema --help"
 echo "  sema doctor"
 echo "  sema starter-ia"
 echo "  sema resumo . --curto"
+if [[ "$WITH_MCP" -eq 1 ]]; then
+  echo "  sema-mcp"
+fi

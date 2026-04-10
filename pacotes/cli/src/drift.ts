@@ -1,7 +1,19 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
-import type { IrFlow, IrModulo, IrRoute, IrSuperficie, IrTask, IrVinculo, NivelConfiancaSemantica, NivelRiscoSemantico } from "@sema/nucleo";
+import type {
+  EngineBanco,
+  IrFlow,
+  IrModulo,
+  IrRecursoPersistencia,
+  IrRoute,
+  IrSuperficie,
+  IrTask,
+  IrVinculo,
+  NivelConfiancaSemantica,
+  NivelRiscoSemantico,
+  TipoRecursoPersistencia,
+} from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
 import type { FonteLegado } from "./tipos.js";
 import { extrairSimbolosCpp } from "./cpp-symbols.js";
@@ -69,12 +81,15 @@ interface RegistroRotaDivergente {
   motivo: string;
 }
 
+type OrigemRecursoDrift = "firebase" | EngineBanco;
+type TipoRecursoDrift = "colecao" | TipoRecursoPersistencia;
+
 interface RecursoResolvido {
-  origem: "firebase";
+  origem: OrigemRecursoDrift;
   nome: string;
   arquivo: string;
   simbolo?: string;
-  tipo: "colecao";
+  tipo: TipoRecursoDrift;
 }
 
 interface RegistroRecursoDrift {
@@ -83,9 +98,17 @@ interface RegistroRecursoDrift {
   categoria: "persistencia";
   alvo: string;
   arquivo: string;
-  origem: "firebase";
-  tipo: "colecao";
+  origem: OrigemRecursoDrift;
+  tipo: TipoRecursoDrift;
   status: "resolvido" | "divergente";
+}
+
+interface RecursoEsperadoDrift {
+  categoria: "persistencia";
+  alvo: string;
+  origem?: OrigemRecursoDrift;
+  tiposAceitos: TipoRecursoDrift[];
+  nomes: string[];
 }
 
 interface SimboloCandidatoDrift {
@@ -180,6 +203,397 @@ const DIRETORIOS_IGNORADOS = new Set([
 
 function normalizarFragmentoArquivo(valor: string): string {
   return valor.replace(/\\/g, "/").replace(/^\.?\//, "").trim().toLowerCase();
+}
+
+const NOMES_RECURSO_IGNORADOS = new Set([
+  "all",
+  "and",
+  "as",
+  "by",
+  "create",
+  "delete",
+  "from",
+  "group",
+  "inner",
+  "into",
+  "join",
+  "left",
+  "limit",
+  "offset",
+  "on",
+  "or",
+  "order",
+  "outer",
+  "returning",
+  "right",
+  "select",
+  "set",
+  "table",
+  "update",
+  "values",
+  "view",
+  "where",
+]);
+
+const OPERACOES_REDIS_KEYSPACE = [
+  "append",
+  "decr",
+  "del",
+  "expire",
+  "expireat",
+  "get",
+  "getdel",
+  "getex",
+  "getrange",
+  "hdel",
+  "hexists",
+  "hget",
+  "hgetall",
+  "hincrby",
+  "hkeys",
+  "hlen",
+  "hmget",
+  "hmset",
+  "hrandfield",
+  "hscan",
+  "hset",
+  "hsetnx",
+  "hvals",
+  "incr",
+  "incrby",
+  "lindex",
+  "llen",
+  "lpop",
+  "lpush",
+  "lrange",
+  "lrem",
+  "lset",
+  "rpop",
+  "rpush",
+  "sadd",
+  "scard",
+  "set",
+  "setex",
+  "setnx",
+  "smembers",
+  "spop",
+  "srem",
+  "ttl",
+  "type",
+  "zadd",
+  "zcard",
+  "zrange",
+  "zrem",
+];
+
+const OPERACOES_REDIS_STREAM = [
+  "xadd",
+  "xdel",
+  "xgroupcreate",
+  "xgroupdestroy",
+  "xlen",
+  "xrange",
+  "xread",
+  "xreadgroup",
+  "xrevrange",
+  "xtrim",
+];
+
+function limparLiteralRecurso(valor: string): string {
+  return valor
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/\$\{[^}]+\}/g, "")
+    .replace(/\{[^}]+\}/g, "")
+    .replace(/%[sdifjo]/gi, "")
+    .trim();
+}
+
+function fecharPrefixoRecurso(valor: string): string {
+  return valor.replace(/[:/_\-.]+$/g, "").trim();
+}
+
+function normalizarNomeRecursoDrift(valor: string): string {
+  return fecharPrefixoRecurso(limparLiteralRecurso(valor))
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/["'`]/g, "")
+    .replace(/\s+/g, "");
+}
+
+function variantesNomeRecursoDrift(valor: string): string[] {
+  const base = fecharPrefixoRecurso(limparLiteralRecurso(valor));
+  if (!base) {
+    return [];
+  }
+
+  const variantes = new Set<string>();
+  const registrar = (candidato?: string) => {
+    if (!candidato) {
+      return;
+    }
+    const normalizado = normalizarNomeRecursoDrift(candidato);
+    if (normalizado) {
+      variantes.add(normalizado);
+    }
+  };
+
+  registrar(base);
+  registrar(base.replace(/[.:/_-]+/g, "_"));
+  registrar(base.replace(/[.:/_-]+/g, ""));
+
+  const partes = base.split(/[.:/_-]+/).filter(Boolean);
+  if (partes.length > 1) {
+    registrar(partes.join("_"));
+    registrar(partes.join(""));
+  }
+
+  const singular = base.replace(/s$/i, "");
+  if (singular && singular !== base) {
+    registrar(singular);
+  } else if (!/s$/i.test(base)) {
+    registrar(`${base}s`);
+  }
+
+  return [...variantes];
+}
+
+function recursoEhIgnorado(nome: string): boolean {
+  const normalizado = normalizarNomeRecursoDrift(nome);
+  if (!normalizado || normalizado.length < 2) {
+    return true;
+  }
+  return NOMES_RECURSO_IGNORADOS.has(normalizado);
+}
+
+function registrarRecursoDrift(
+  recursos: Map<string, RecursoResolvido>,
+  origem: OrigemRecursoDrift,
+  tipo: TipoRecursoDrift,
+  nome: string,
+  arquivo: string,
+  simbolo?: string,
+): void {
+  const nomeLimpo = fecharPrefixoRecurso(limparLiteralRecurso(nome));
+  if (!nomeLimpo || recursoEhIgnorado(nomeLimpo)) {
+    return;
+  }
+
+  const chave = `${origem}:${tipo}:${normalizarNomeRecursoDrift(nomeLimpo)}:${arquivo}:${simbolo ?? ""}`;
+  if (!recursos.has(chave)) {
+    recursos.set(chave, {
+      origem,
+      nome: nomeLimpo,
+      arquivo,
+      simbolo,
+      tipo,
+    });
+  }
+}
+
+function inferirMotoresRelacionais(codigo: string, arquivo: string): EngineBanco[] {
+  const motores = new Set<EngineBanco>();
+  const caminho = normalizarFragmentoArquivo(arquivo);
+  if (
+    /\b(?:from|require)\s*\(?["'`]pg["'`]/i.test(codigo)
+    || /\bpostgres(?:ql)?\b/i.test(codigo)
+    || /\bon\s+conflict\b/i.test(codigo)
+    || /\breturning\b/i.test(codigo)
+    || /\bjsonb\b/i.test(codigo)
+    || /\bilike\b/i.test(codigo)
+    || /(?:^|\/)(?:postgres|pgsql)(?:\/|[-_.])/i.test(caminho)
+  ) {
+    motores.add("postgres");
+  }
+  if (
+    /\b(?:from|require)\s*\(?["'`](?:mysql2?(?:\/promise)?|mysql)["'`]/i.test(codigo)
+    || /\bon\s+duplicate\s+key\b/i.test(codigo)
+    || /\bauto_increment\b/i.test(codigo)
+    || /\binnodb\b/i.test(codigo)
+    || /\bunsigned\b/i.test(codigo)
+    || /(?:^|\/)mysql(?:\/|[-_.])/i.test(caminho)
+  ) {
+    motores.add("mysql");
+  }
+  if (
+    /\b(?:from|require)\s*\(?["'`](?:sqlite3|better-sqlite3|bun:sqlite|sqlite)["'`]/i.test(codigo)
+    || /\bpragma\b/i.test(codigo)
+    || /\bwithout\s+rowid\b/i.test(codigo)
+    || /\bsqlite\b/i.test(codigo)
+    || /(?:^|\/)sqlite(?:\/|[-_.])/i.test(caminho)
+  ) {
+    motores.add("sqlite");
+  }
+
+  const temSqlGenerico = /\b(?:select\b[\s\S]*?\bfrom\b|insert\s+into|update\s+[A-Za-z_][\w$.-]*\s+set|delete\s+from|create\s+(?:table|view)|alter\s+table|drop\s+(?:table|view)|join\s+[A-Za-z_][\w$.-]*)/i.test(codigo)
+    || /\.(?:from|into|table)\s*\(\s*["'`]/i.test(codigo)
+    || /\b(?:knex|db|trx)\s*\(\s*["'`][A-Za-z_][^"'`]+["'`]\s*\)/i.test(codigo)
+    || /\bprisma\.[A-Za-z_]\w*\.(?:find\w+|create|update|delete|upsert|aggregate|count)\b/i.test(codigo);
+  if (temSqlGenerico && motores.size === 0) {
+    motores.add("postgres");
+    motores.add("mysql");
+    motores.add("sqlite");
+  }
+
+  return [...motores];
+}
+
+function extrairRecursosSql(arquivo: string, codigo: string): RecursoResolvido[] {
+  const recursos = new Map<string, RecursoResolvido>();
+  const motores = inferirMotoresRelacionais(codigo, arquivo);
+  if (motores.length === 0) {
+    return [];
+  }
+
+  const registrarParaMotores = (tipo: TipoRecursoDrift, nome: string) => {
+    for (const motor of motores) {
+      registrarRecursoDrift(recursos, motor, tipo, nome, arquivo);
+    }
+  };
+
+  const registrarTextoSql = (texto: string) => {
+    if (!/\b(?:select\b[\s\S]*?\bfrom\b|insert\s+into|update\s+[A-Za-z_][\w$.-]*\s+set|delete\s+from|create\s+(?:table|view)|alter\s+table|drop\s+(?:table|view)|join\s+[A-Za-z_][\w$.-]*|create\s+(?:unique\s+)?index)\b/i.test(texto)) {
+      return;
+    }
+
+    for (const match of texto.matchAll(/\bcreate\s+(?:or\s+replace\s+)?(table|view)\s+(?:if\s+not\s+exists\s+)?["'`]?([A-Za-z_][\w$.-]*)["'`]?/gi)) {
+      registrarParaMotores(match[1]!.toLowerCase() as TipoRecursoDrift, match[2]!);
+    }
+
+    for (const match of texto.matchAll(/\bcreate\s+(?:unique\s+)?index\s+(?:if\s+not\s+exists\s+)?["'`]?([A-Za-z_][\w$.-]*)["'`]?/gi)) {
+      registrarParaMotores("index", match[1]!);
+    }
+
+    for (const match of texto.matchAll(/\b(?:insert\s+into|update|from|join|delete\s+from|truncate\s+table)\s+["'`]?([A-Za-z_][\w$.-]*)["'`]?/gi)) {
+      registrarParaMotores("table", match[1]!);
+    }
+  };
+
+  if (/\.(?:sql|psql|ddl)$/i.test(arquivo)) {
+    registrarTextoSql(codigo);
+  } else {
+    for (const literal of codigo.matchAll(/(["'`])([\s\S]*?)\1/g)) {
+      registrarTextoSql(literal[2] ?? "");
+    }
+  }
+
+  for (const match of codigo.matchAll(/\.(?:from|into|table)\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/gi)) {
+    registrarParaMotores("table", match[1]!);
+  }
+
+  for (const match of codigo.matchAll(/\b(?:knex|db|trx)\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/gi)) {
+    registrarParaMotores("table", match[1]!);
+  }
+
+  for (const match of codigo.matchAll(/\bprisma\.([A-Za-z_]\w*)\.(?:find\w+|create|update|delete|upsert|aggregate|count)\b/gi)) {
+    registrarParaMotores("table", match[1]!);
+  }
+
+  return [...recursos.values()];
+}
+
+function extrairRecursosMongoDb(arquivo: string, codigo: string): RecursoResolvido[] {
+  const recursos = new Map<string, RecursoResolvido>();
+  const contextoMongo = /\b(?:mongodb|mongoose|mongoclient|objectid)\b/i.test(codigo)
+    || /\bdb\.collection\s*\(/i.test(codigo)
+    || /(?:^|\/)mongo(?:db)?(?:\/|[-_.])/i.test(normalizarFragmentoArquivo(arquivo));
+  if (!contextoMongo) {
+    return [];
+  }
+
+  for (const match of codigo.matchAll(/\b(?:db\.)?collection\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/gi)) {
+    registrarRecursoDrift(recursos, "mongodb", "collection", match[1]!, arquivo);
+  }
+
+  for (const match of codigo.matchAll(/\bgetCollection\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/gi)) {
+    registrarRecursoDrift(recursos, "mongodb", "collection", match[1]!, arquivo);
+  }
+
+  for (const match of codigo.matchAll(/\bmongoose\.model\s*\(\s*["'`]([^"'`]+)["'`](?:\s*,[\s\S]*?,\s*["'`]([^"'`]+)["'`])?/gi)) {
+    registrarRecursoDrift(recursos, "mongodb", "document", match[1]!, arquivo);
+    if (match[2]) {
+      registrarRecursoDrift(recursos, "mongodb", "collection", match[2], arquivo);
+    }
+  }
+
+  for (const match of codigo.matchAll(/\bdb\.([A-Za-z_]\w*)\.(?:find|findOne|aggregate|insertOne|insertMany|updateOne|updateMany|deleteOne|deleteMany|countDocuments)\b/gi)) {
+    registrarRecursoDrift(recursos, "mongodb", "collection", match[1]!, arquivo);
+  }
+
+  return [...recursos.values()];
+}
+
+function extrairRecursosRedis(arquivo: string, codigo: string): RecursoResolvido[] {
+  const recursos = new Map<string, RecursoResolvido>();
+  const contextoRedis = /\b(?:from|require)\s*\(?["'`](?:redis|ioredis)["'`]/i.test(codigo)
+    || /\bcreateClient\s*\(/i.test(codigo)
+    || /\bx(?:add|read|readgroup|groupcreate|groupdestroy)\s*\(/i.test(codigo)
+    || /(?:^|\/)redis(?:\/|[-_.])/i.test(normalizarFragmentoArquivo(arquivo));
+  if (!contextoRedis) {
+    return [];
+  }
+
+  const operacoesKeyspace = OPERACOES_REDIS_KEYSPACE.join("|");
+  const operacoesStream = OPERACOES_REDIS_STREAM.join("|");
+  const padraoKeyspace = new RegExp(`\\b(?:${operacoesKeyspace})\\s*\\(\\s*['"\\\`]([^'"\\\`]+)['"\\\`]`, "gi");
+  const padraoStream = new RegExp(`\\b(?:${operacoesStream})\\s*\\(\\s*['"\\\`]([^'"\\\`]+)['"\\\`]`, "gi");
+
+  for (const match of codigo.matchAll(padraoKeyspace)) {
+    registrarRecursoDrift(recursos, "redis", "keyspace", match[1]!, arquivo);
+  }
+
+  for (const match of codigo.matchAll(padraoStream)) {
+    registrarRecursoDrift(recursos, "redis", "stream", match[1]!, arquivo);
+  }
+
+  return [...recursos.values()];
+}
+
+function extrairRecursosPersistenciaCodigoVivo(arquivo: string, codigo: string): RecursoResolvido[] {
+  const recursos = new Map<string, RecursoResolvido>();
+
+  for (const recurso of extrairColecoesFirebase(arquivo, codigo)) {
+    registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+  }
+  for (const recurso of extrairRecursosSql(arquivo, codigo)) {
+    registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+  }
+  for (const recurso of extrairRecursosMongoDb(arquivo, codigo)) {
+    registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+  }
+  for (const recurso of extrairRecursosRedis(arquivo, codigo)) {
+    registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+  }
+
+  return [...recursos.values()];
+}
+
+function extrairRecursosPrisma(arquivo: string, codigo: string): RecursoResolvido[] {
+  const recursos = new Map<string, RecursoResolvido>();
+  const provider = codigo.match(/\bprovider\s*=\s*["'`](postgresql|mysql|sqlite)["'`]/i)?.[1]?.toLowerCase();
+  const origem = provider === "postgresql"
+    ? "postgres"
+    : provider === "mysql"
+      ? "mysql"
+      : provider === "sqlite"
+        ? "sqlite"
+        : undefined;
+  if (!origem) {
+    return [];
+  }
+
+  for (const match of codigo.matchAll(/\bmodel\s+([A-Za-z_]\w*)\s*\{([\s\S]*?)\n\}/g)) {
+    const nomeModelo = match[1]!;
+    const corpo = match[2] ?? "";
+    const tabelaMapeada = corpo.match(/@@map\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/)?.[1];
+    registrarRecursoDrift(recursos, origem, "table", tabelaMapeada ?? nomeModelo, arquivo);
+    if (tabelaMapeada) {
+      registrarRecursoDrift(recursos, origem, "table", nomeModelo, arquivo);
+    }
+  }
+
+  return [...recursos.values()];
 }
 
 function escolherArquivoPorVinculo(arquivos: string[], valor: string): { arquivo?: string; confianca: NivelConfiancaSemantica; status: RegistroVinculoDrift["status"] } {
@@ -1041,8 +1455,8 @@ async function indexarTypeScript(diretorios: string[]): Promise<{
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       const relacao = path.relative(diretorio, arquivo);
 
-      for (const recurso of extrairColecoesFirebase(arquivo, codigo)) {
-        recursos.set(`${recurso.nome}:${recurso.arquivo}:${recurso.tipo}`, recurso);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
       }
 
       for (const rota of extrairRotasTypeScriptHttp(sourceFile, relacao)) {
@@ -1262,9 +1676,10 @@ function registrarRotasPython(
   }
 }
 
-async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
     const arquivos = (await listarArquivosRecursivos(diretorio, [".py"]))
@@ -1274,6 +1689,9 @@ async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloR
       const texto = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       const prefixo = texto.match(/APIRouter\s*\(\s*prefix\s*=\s*["']([^"']+)["']/)?.[1];
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, texto)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
       for (const rota of extrairRotasFlaskDecoradas(texto)) {
         rotas.push({
           origem: "flask",
@@ -1333,16 +1751,18 @@ async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloR
     }
   }
 
-  return { simbolos: [...simbolos.values()], rotas };
+  return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
 async function indexarDart(diretorios: string[]): Promise<{
   simbolos: SimboloResolvido[];
   rotas: RotaResolvida[];
+  recursos: RecursoResolvido[];
   consumerSurfaces: RegistroConsumerSurfaceDrift[];
 }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
   const consumerSurfaces = new Map<string, RegistroConsumerSurfaceDrift>();
 
   for (const diretorio of diretorios) {
@@ -1353,6 +1773,9 @@ async function indexarDart(diretorios: string[]): Promise<{
       const texto = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       const relacao = path.relative(diretorio, arquivo);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, texto)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
 
       for (const match of texto.matchAll(/(?:Future<[^\n]+>|[\w?<>.,\s]+)\s+(\w+)\(([^)]*)\)\s*(?:async\s*)?\{/g)) {
         const nome = match[1]!;
@@ -1403,6 +1826,7 @@ async function indexarDart(diretorios: string[]): Promise<{
   return {
     simbolos: [...simbolos.values()],
     rotas,
+    recursos: [...recursos.values()],
     consumerSurfaces: [...consumerSurfaces.values()].sort((a, b) =>
       a.rota.localeCompare(b.rota, "pt-BR")
       || a.tipoArquivo.localeCompare(b.tipoArquivo, "pt-BR")
@@ -1441,9 +1865,10 @@ function registrarSimboloGenerico(
   }
 }
 
-async function indexarDotnet(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+async function indexarDotnet(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
     const arquivos = (await listarArquivosRecursivos(diretorio, [".cs"]))
@@ -1452,6 +1877,9 @@ async function indexarDotnet(diretorios: string[]): Promise<{ simbolos: SimboloR
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
       for (const simbolo of extrairSimbolosDotnet(codigo)) {
         registrarSimboloGenerico(simbolos, "cs", basesSimbolicas, arquivo, simbolo.simbolo);
       }
@@ -1467,12 +1895,13 @@ async function indexarDotnet(diretorios: string[]): Promise<{ simbolos: SimboloR
     }
   }
 
-  return { simbolos: [...simbolos.values()], rotas };
+  return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-async function indexarJava(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+async function indexarJava(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
     const arquivos = (await listarArquivosRecursivos(diretorio, [".java"]))
@@ -1481,6 +1910,9 @@ async function indexarJava(diretorios: string[]): Promise<{ simbolos: SimboloRes
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
       for (const simbolo of extrairSimbolosJava(codigo)) {
         registrarSimboloGenerico(simbolos, "java", basesSimbolicas, arquivo, simbolo.simbolo);
       }
@@ -1496,12 +1928,13 @@ async function indexarJava(diretorios: string[]): Promise<{ simbolos: SimboloRes
     }
   }
 
-  return { simbolos: [...simbolos.values()], rotas };
+  return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-async function indexarGo(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+async function indexarGo(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
     const arquivos = await listarArquivosRecursivos(diretorio, [".go"]);
@@ -1509,6 +1942,9 @@ async function indexarGo(diretorios: string[]): Promise<{ simbolos: SimboloResol
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
       for (const simbolo of extrairSimbolosGo(codigo)) {
         registrarSimboloGenerico(simbolos, "go", basesSimbolicas, arquivo, simbolo.simbolo);
       }
@@ -1524,12 +1960,13 @@ async function indexarGo(diretorios: string[]): Promise<{ simbolos: SimboloResol
     }
   }
 
-  return { simbolos: [...simbolos.values()], rotas };
+  return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-async function indexarRust(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[] }> {
+async function indexarRust(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
     const arquivos = await listarArquivosRecursivos(diretorio, [".rs"]);
@@ -1537,6 +1974,9 @@ async function indexarRust(diretorios: string[]): Promise<{ simbolos: SimboloRes
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
       for (const simbolo of extrairSimbolosRust(codigo)) {
         registrarSimboloGenerico(simbolos, "rust", basesSimbolicas, arquivo, simbolo.simbolo);
       }
@@ -1552,11 +1992,12 @@ async function indexarRust(diretorios: string[]): Promise<{ simbolos: SimboloRes
     }
   }
 
-  return { simbolos: [...simbolos.values()], rotas };
+  return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-async function indexarCpp(diretorios: string[]): Promise<SimboloResolvido[]> {
+async function indexarCpp(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
+  const recursos = new Map<string, RecursoResolvido>();
 
   for (const diretorio of diretorios) {
     const arquivos = (await listarArquivosRecursivos(diretorio, [".cpp", ".cc", ".cxx", ".hpp", ".h"]))
@@ -1565,13 +2006,39 @@ async function indexarCpp(diretorios: string[]): Promise<SimboloResolvido[]> {
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
       for (const simbolo of extrairSimbolosCpp(codigo)) {
         registrarSimboloGenerico(simbolos, "cpp", basesSimbolicas, arquivo, simbolo.simbolo);
       }
     }
   }
 
-  return [...simbolos.values()];
+  return {
+    simbolos: [...simbolos.values()],
+    recursos: [...recursos.values()],
+  };
+}
+
+async function indexarPersistenciaDeclarativa(diretorios: string[]): Promise<{ recursos: RecursoResolvido[] }> {
+  const recursos = new Map<string, RecursoResolvido>();
+
+  for (const diretorio of diretorios) {
+    const arquivos = await listarArquivosRecursivos(diretorio, [".sql", ".psql", ".ddl", ".prisma"]);
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const extracoes = arquivo.endsWith(".prisma")
+        ? extrairRecursosPrisma(arquivo, codigo)
+        : extrairRecursosPersistenciaCodigoVivo(arquivo, codigo);
+      for (const recurso of extracoes) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
+    }
+  }
+
+  return { recursos: [...recursos.values()] };
 }
 
 function normalizarCaminhoRota(caminho?: string): string {
@@ -1797,17 +2264,142 @@ function taskEhBridgeFirebase(task: IrTask): boolean {
     impl.origem === "ts" && /sema_contract_bridge|collections?|apps\.worker/i.test(impl.caminho));
 }
 
-function extrairRecursosEsperados(task: IrTask): Array<{ categoria: "persistencia"; alvo: string }> {
-  if (!taskEhBridgeFirebase(task)) {
-    return [];
+function tiposAceitosParaRecursoPersistencia(recurso: IrRecursoPersistencia): TipoRecursoDrift[] {
+  switch (recurso.resourceKind) {
+    case "table":
+    case "view":
+    case "query":
+    case "index":
+    case "collection":
+    case "document":
+    case "keyspace":
+    case "stream":
+      return [recurso.resourceKind];
+    default:
+      return [];
+  }
+}
+
+function nomesRecursoPersistencia(recurso: IrRecursoPersistencia): string[] {
+  return [...new Set([
+    recurso.nome,
+    recurso.table,
+    recurso.collection,
+    recurso.entity,
+    recurso.path,
+    recurso.surface,
+  ].filter((item): item is string => Boolean(item)))];
+}
+
+function recursoPersistenciaCombinaAlvo(recurso: IrRecursoPersistencia, alvo: string): boolean {
+  const alvoVariantes = new Set(variantesNomeRecursoDrift(alvo));
+  if (alvoVariantes.size === 0) {
+    return false;
   }
 
-  return task.efeitosEstruturados
-    .filter((efeito) => efeito.categoria === "persistencia" && Boolean(efeito.alvo))
-    .map((efeito) => ({
-      categoria: "persistencia" as const,
-      alvo: efeito.alvo,
-    }));
+  return nomesRecursoPersistencia(recurso).some((nome) =>
+    variantesNomeRecursoDrift(nome).some((variacao) => alvoVariantes.has(variacao)));
+}
+
+function extrairRecursosEsperados(task: IrTask, ir: IrModulo): RecursoEsperadoDrift[] {
+  const esperados = new Map<string, RecursoEsperadoDrift>();
+  const registrar = (esperado: RecursoEsperadoDrift) => {
+    const chave = `${esperado.origem ?? "qualquer"}:${esperado.tiposAceitos.join(",")}:${esperado.nomes.join("|")}:${esperado.alvo}`;
+    if (!esperados.has(chave)) {
+      esperados.set(chave, esperado);
+    }
+  };
+
+  if (taskEhBridgeFirebase(task)) {
+    for (const efeito of task.efeitosEstruturados.filter((item) => item.categoria === "persistencia" && Boolean(item.alvo))) {
+      registrar({
+        categoria: "persistencia",
+        alvo: efeito.alvo,
+        origem: "firebase",
+        tiposAceitos: ["colecao"],
+        nomes: [efeito.alvo],
+      });
+    }
+  }
+
+  const efeitosPersistencia = task.efeitosEstruturados.filter((efeito) =>
+    ["persistencia", "db.read", "db.write"].includes(efeito.categoria) && Boolean(efeito.alvo));
+  if (efeitosPersistencia.length === 0 || ir.databases.length === 0) {
+    return [...esperados.values()];
+  }
+
+  for (const efeito of efeitosPersistencia) {
+    for (const database of ir.databases) {
+      for (const recurso of database.resources) {
+        const tiposAceitos = tiposAceitosParaRecursoPersistencia(recurso);
+        if (tiposAceitos.length === 0 || !recursoPersistenciaCombinaAlvo(recurso, efeito.alvo)) {
+          continue;
+        }
+        registrar({
+          categoria: "persistencia",
+          alvo: efeito.alvo,
+          origem: database.engine,
+          tiposAceitos,
+          nomes: nomesRecursoPersistencia(recurso),
+        });
+      }
+    }
+  }
+
+  return [...esperados.values()];
+}
+
+function construirMapaRecursos(recursos: RecursoResolvido[]): Map<string, RecursoResolvido[]> {
+  const mapa = new Map<string, RecursoResolvido[]>();
+  for (const recurso of recursos) {
+    for (const variante of variantesNomeRecursoDrift(recurso.nome)) {
+      const existentes = mapa.get(variante) ?? [];
+      if (!existentes.some((item) =>
+        item.origem === recurso.origem
+        && item.tipo === recurso.tipo
+        && item.arquivo === recurso.arquivo
+        && item.nome === recurso.nome
+        && item.simbolo === recurso.simbolo)) {
+        existentes.push(recurso);
+        mapa.set(variante, existentes);
+      }
+    }
+  }
+  return mapa;
+}
+
+function recursoResolvidoCombinaEsperado(recurso: RecursoResolvido, esperado: RecursoEsperadoDrift): boolean {
+  if (esperado.origem && recurso.origem !== esperado.origem) {
+    return false;
+  }
+  if (esperado.tiposAceitos.length > 0 && !esperado.tiposAceitos.includes(recurso.tipo)) {
+    return false;
+  }
+  const recursoVariantes = new Set(variantesNomeRecursoDrift(recurso.nome));
+  return esperado.nomes.some((nome) =>
+    variantesNomeRecursoDrift(nome).some((variante) => recursoVariantes.has(variante)));
+}
+
+function resolverRecursoEsperado(
+  mapaRecursos: Map<string, RecursoResolvido[]>,
+  esperado: RecursoEsperadoDrift,
+  arquivosPreferidos?: Set<string>,
+): RecursoResolvido | undefined {
+  const candidatos = new Map<string, RecursoResolvido>();
+  for (const nome of esperado.nomes) {
+    for (const variante of variantesNomeRecursoDrift(nome)) {
+      for (const recurso of mapaRecursos.get(variante) ?? []) {
+        if (recursoResolvidoCombinaEsperado(recurso, esperado)) {
+          candidatos.set(`${recurso.origem}:${recurso.tipo}:${recurso.nome}:${recurso.arquivo}:${recurso.simbolo ?? ""}`, recurso);
+        }
+      }
+    }
+  }
+
+  return [...candidatos.values()].sort((a, b) =>
+    Number(Boolean(arquivosPreferidos?.has(b.arquivo))) - Number(Boolean(arquivosPreferidos?.has(a.arquivo)))
+    || a.arquivo.localeCompare(b.arquivo, "pt-BR")
+    || a.nome.localeCompare(b.nome, "pt-BR"))[0];
 }
 
 function coletarVinculosIr(ir: IrModulo): Array<{ donoTipo: RegistroVinculoDrift["donoTipo"]; dono: string; vinculo: IrVinculo }> {
@@ -1828,6 +2420,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const indexJava = await indexarJava(contexto.diretoriosCodigo);
   const indexGo = await indexarGo(contexto.diretoriosCodigo);
   const indexRust = await indexarRust(contexto.diretoriosCodigo);
+  const indexPersistencia = await indexarPersistenciaDeclarativa(contexto.diretoriosCodigo);
   const indexCpp = await indexarCpp(contexto.diretoriosCodigo);
   const todosSimbolos = [
     ...indexTs.simbolos,
@@ -1837,7 +2430,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     ...indexJava.simbolos,
     ...indexGo.simbolos,
     ...indexRust.simbolos,
-    ...indexCpp,
+    ...indexCpp.simbolos,
   ];
   const mapaImpl = new Map<string, SimboloResolvido>([
     ...indexTs.simbolos.map((item) => [item.caminho, item] as const),
@@ -1847,11 +2440,20 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
     ...indexJava.simbolos.map((item) => [item.caminho, item] as const),
     ...indexGo.simbolos.map((item) => [item.caminho, item] as const),
     ...indexRust.simbolos.map((item) => [item.caminho, item] as const),
-    ...indexCpp.map((item) => [item.caminho, item] as const),
+    ...indexCpp.simbolos.map((item) => [item.caminho, item] as const),
   ]);
-  const mapaRecursos = new Map<string, RecursoResolvido>(
-    indexTs.recursos.map((item) => [item.nome, item] as const),
-  );
+  const todosRecursos = [
+    ...indexTs.recursos,
+    ...indexPy.recursos,
+    ...indexDart.recursos,
+    ...indexDotnet.recursos,
+    ...indexJava.recursos,
+    ...indexGo.recursos,
+    ...indexRust.recursos,
+    ...indexCpp.recursos,
+    ...indexPersistencia.recursos,
+  ];
+  const mapaRecursos = construirMapaRecursos(todosRecursos);
   const todasRotasIndexadas = [
     ...indexTs.rotas,
     ...indexPy.rotas,
@@ -1864,7 +2466,7 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
   const todosArquivosConhecidos = [...new Set([
     ...todosSimbolos.map((item) => item.arquivo),
     ...todasRotasIndexadas.map((item) => item.arquivo),
-    ...indexTs.recursos.map((item) => item.arquivo),
+    ...todosRecursos.map((item) => item.arquivo),
   ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   const implsValidos: RegistroImplDrift[] = [];
@@ -2054,16 +2656,16 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         checksSugeridos: [],
       });
 
-      for (const recursoEsperado of extrairRecursosEsperados(task)) {
-        const resolvido = mapaRecursos.get(recursoEsperado.alvo);
+      for (const recursoEsperado of extrairRecursosEsperados(task, ir)) {
+        const resolvido = resolverRecursoEsperado(mapaRecursos, recursoEsperado, arquivosReferenciados);
         const registro: RegistroRecursoDrift = {
           modulo: ir.nome,
           task: task.nome,
           categoria: recursoEsperado.categoria,
           alvo: recursoEsperado.alvo,
           arquivo: resolvido?.arquivo ?? "",
-          origem: "firebase",
-          tipo: "colecao",
+          origem: resolvido?.origem ?? recursoEsperado.origem ?? "firebase",
+          tipo: resolvido?.tipo ?? recursoEsperado.tiposAceitos[0] ?? "query",
           status: resolvido ? "resolvido" : "divergente",
         };
 
@@ -2072,11 +2674,12 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
           recursosValidos.push(registro);
         } else {
           recursosDivergentes.push(registro);
+          const escopo = recursoEsperado.origem ? `${recursoEsperado.origem}` : "persistencia declarada";
           diagnosticos.push({
             tipo: "recurso_divergente",
             modulo: ir.nome,
             task: task.nome,
-            mensagem: `Recurso vivo "${recursoEsperado.alvo}" nao foi encontrado nos bridges/configuracoes Firebase do codigo legado.`,
+            mensagem: `Recurso vivo "${recursoEsperado.alvo}" nao foi encontrado no codigo legado para ${escopo}.`,
           });
         }
       }
@@ -2200,7 +2803,12 @@ export async function analisarDriftLegado(contexto: ContextoProjetoCarregado): P
         registro.confianca = resolucaoArquivo.confianca;
         registro.arquivo = resolucaoArquivo.arquivo;
       } else if (recursoDeclarado) {
-        const recurso = mapaRecursos.get(recursoDeclarado);
+        const recurso = resolverRecursoEsperado(mapaRecursos, {
+          categoria: "persistencia",
+          alvo: recursoDeclarado,
+          tiposAceitos: [],
+          nomes: [recursoDeclarado],
+        });
         if (recurso) {
           registro.status = "resolvido";
           registro.confianca = "alta";

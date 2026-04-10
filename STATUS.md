@@ -4,14 +4,15 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Quadro-resumo
 
-- Ultima atualizacao: 2026-04-01
-- Ultimo commit de referencia: `15ff067`
+- Ultima atualizacao: 2026-04-09
+- Ultimo commit de referencia: `6b38c68`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: linha publica `1.2.10` alinhada para release estavel com a lateral `Sema` restaurada no VS Code, comandos de prompt/contexto no editor e distribuicao publica revisada
+- Estagio atual: linha publica `1.4.0` alinhada para release estavel com persistencia vendor-first, drift vivo para bancos reais, exemplos novos na extensao e documentacao consolidada
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
-- Posicionamento atual: protocolo de governanca de intencao para IA e backend vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `1.2.10`, alinhada entre CLI, pacotes internos e extensao do VS Code
+- Posicionamento atual: protocolo de governanca de intencao para IA sobre software vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
+- Linha publica de release: `1.4.0`, alinhada entre CLI, MCP, pacotes internos, extensao do VS Code, instaladores e documentacao
 - Pacote npm publico da CLI: `@semacode/cli`
+- Pacote npm publico do MCP: `@semacode/mcp`
 - Principais areas concluidas:
   - fundacao do monorrepo em TypeScript
   - lexer, parser, AST, diagnosticos, analise semantica e IR
@@ -46,6 +47,11 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - `sema --help` e `sema ajuda-ia` reorganizados por fluxo de uso e capacidade de IA
   - gerador Python corrigido para tipos compostos validos em `Lista<T>`, `Mapa<K,V>`, `Opcional<T>` e uniao
   - README e instaladores publicos reforcando prerequisito de Node.js/npm e instalacao inicial mais direta
+  - persistencia vendor-first como contrato canonico para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
+  - `sema drift` com rastreamento de recursos vivos reais de banco em SQL, Prisma, MongoDB e Redis
+  - `@semacode/mcp` alinhado como pacote publico de primeira classe na mesma versao da CLI
+  - extensao VS Code com snippets, hover, highlight e exemplos embutidos para os cinco bancos suportados
+  - documentacao canonica consolidada com indice novo e remocao de docs historicos defasados
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
@@ -78,6 +84,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Marco `0.7 legado incremental` fechado com importacao assistida fortalecida, `sema drift` e adocao incremental mais clara
 - `[x]` Marco `0.8 backend generico` iniciado com familias backend first-class alem do eixo TypeScript/Python
 - Foco imediato:
+  - consolidar a linha publica `1.4.x` de persistencia vendor-first
   - aprofundar criacao e edicao de backends reais
   - amadurecer orquestracao backend
   - suporte de editor mais profundo
@@ -178,6 +185,10 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Reorganizar `sema --help` e `sema ajuda-ia` por projeto novo, edicao guiada e legado sem contrato inicial
 - `[x]` Corrigir o gerador Python para tipos compostos validos em codigo gerado
 - `[x]` Alinhar release publica `1.2.10` entre CLI, pacotes, extensao, README e instaladores
+- `[x]` Entregar persistencia vendor-first como superficie canonica para cinco bancos suportados
+- `[x]` Atualizar `drift.ts` para rastrear recursos vivos reais de Postgres, MySQL, SQLite, MongoDB e Redis
+- `[x]` Alinhar release `1.4.0` entre CLI, MCP, extensao, instaladores, docs e scripts de publicacao
+- `[x]` Consolidar a documentacao publica e remover docs historicos defasados
 
 ## Fundacao do Projeto
 
@@ -314,6 +325,8 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Guias de adocao incremental para NestJS e FastAPI existentes
 - `[x]` Guia pratico de uso da Sema com NestJS + Prisma em backend critico
 - `[x]` Documentacao de CLI e instalacao atualizada para scaffold backend, `inspecionar` e `sema.config.json`
+- `[x]` Indice canonico de documentacao em `docs/README.md`
+- `[x]` Guia dedicado de persistencia vendor-first para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
 
 ## Testes e Verificacao
 
@@ -340,6 +353,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Testes cobrindo `sema.config.json` com multiplas origens e compile por projeto
 - `[x]` Testes cobrindo `sema inspecionar --json`
 - `[x]` Smokes reais opcionais para `FuteBot` e `Gestech` como benchmark de regressao
+- `[x]` Smoke de release alinhado com `sema verificar .` em vez de depender da pasta `exemplos/`
 - `[-]` A cobertura atual fecha bem o MVP base, mas ainda pode crescer para cenarios maiores no pos-Fase 4
 
 ## Proximos Passos do MVP

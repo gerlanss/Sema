@@ -93,6 +93,26 @@ interface RotaImportada {
   errors: ErroImportado[];
 }
 
+interface RecursoDatabaseImportado {
+  tipo: "table" | "query" | "collection" | "document" | "keyspace" | "stream";
+  nome: string;
+  mode?: "sql" | "documento" | "chave_valor" | "pipeline" | "stream";
+  table?: string;
+  collection?: string;
+  ttl?: string;
+  surface?: string;
+}
+
+interface DatabaseImportado {
+  nome: string;
+  resumo: string;
+  engine: "postgres" | "mysql" | "sqlite" | "mongodb" | "redis";
+  queryModel?: "sql" | "documento" | "chave_valor" | "pipeline" | "stream";
+  transactionModel?: "mvcc" | "bloqueio" | "documento" | "single_thread";
+  resources: RecursoDatabaseImportado[];
+  diagnostics?: string[];
+}
+
 interface ModuloImportado {
   nome: string;
   resumo: string;
@@ -100,6 +120,7 @@ interface ModuloImportado {
   entities: EntidadeImportada[];
   tasks: TarefaImportada[];
   routes: RotaImportada[];
+  databases?: DatabaseImportado[];
   vinculos?: VinculoImportado[];
 }
 
@@ -111,6 +132,7 @@ export interface ArquivoImportado {
   rotas: number;
   entidades: number;
   enums: number;
+  databases: number;
 }
 
 export interface ResultadoImportacao {
@@ -504,6 +526,117 @@ function descreverEfeitosPorHeuristica(codigo: string): EfeitoImportado[] {
   }
 
   return efeitos;
+}
+
+function deduplicarDatabases(databases: DatabaseImportado[]): DatabaseImportado[] {
+  const mapa = new Map<string, DatabaseImportado>();
+  for (const database of databases) {
+    const chave = `${database.engine}:${database.nome}`;
+    const existente = mapa.get(chave);
+    if (!existente) {
+      mapa.set(chave, {
+        ...database,
+        resources: [...database.resources],
+        diagnostics: [...(database.diagnostics ?? [])],
+      });
+      continue;
+    }
+
+    const recursos = new Map<string, RecursoDatabaseImportado>();
+    for (const recurso of [...existente.resources, ...database.resources]) {
+      recursos.set(`${recurso.tipo}:${recurso.nome}`, recurso);
+    }
+    existente.resources = [...recursos.values()];
+    existente.diagnostics = [...new Set([...(existente.diagnostics ?? []), ...(database.diagnostics ?? [])])];
+  }
+
+  return [...mapa.values()];
+}
+
+function inferirDatabasesPorHeuristica(codigo: string, relacao: string): DatabaseImportado[] {
+  const databases: DatabaseImportado[] = [];
+  const adicionar = (database: DatabaseImportado) => {
+    databases.push(database);
+  };
+
+  const texto = codigo.toLowerCase();
+
+  if (/(postgresql|postgres\b|node-postgres|pg\.pool|pgclient|typeorm.+postgres|sequelize.+postgres|provider\s*=\s*["']postgresql["'])/i.test(codigo)) {
+    adicionar({
+      nome: "principal_postgres",
+      resumo: `Persistencia PostgreSQL inferida automaticamente de ${relacao}.`,
+      engine: "postgres",
+      queryModel: "sql",
+      transactionModel: "mvcc",
+      resources: [
+        { tipo: "table", nome: "tabelas_relacionais", table: "legado_principal" },
+        { tipo: "query", nome: "consultas_sql", mode: "sql" },
+      ],
+      diagnostics: ["inferido_por_heuristica"],
+    });
+  }
+
+  if (/(mysql\b|mariadb|mysql2|typeorm.+mysql|sequelize.+mysql|provider\s*=\s*["']mysql["'])/i.test(codigo)) {
+    adicionar({
+      nome: "principal_mysql",
+      resumo: `Persistencia MySQL inferida automaticamente de ${relacao}.`,
+      engine: "mysql",
+      queryModel: "sql",
+      transactionModel: "bloqueio",
+      resources: [
+        { tipo: "table", nome: "tabelas_relacionais", table: "legado_principal" },
+        { tipo: "query", nome: "consultas_sql", mode: "sql" },
+      ],
+      diagnostics: ["inferido_por_heuristica"],
+    });
+  }
+
+  if (/(sqlite\b|better-sqlite3|provider\s*=\s*["']sqlite["'])/i.test(codigo)) {
+    adicionar({
+      nome: "principal_sqlite",
+      resumo: `Persistencia SQLite inferida automaticamente de ${relacao}.`,
+      engine: "sqlite",
+      queryModel: "sql",
+      transactionModel: "single_thread",
+      resources: [
+        { tipo: "table", nome: "tabelas_locais", table: "legado_local" },
+        { tipo: "query", nome: "consultas_locais", mode: "sql" },
+      ],
+      diagnostics: ["inferido_por_heuristica"],
+    });
+  }
+
+  if (/(mongodb|mongoose|mongo\.collection|mongoclient|prisma.+mongodb|provider\s*=\s*["']mongodb["'])/i.test(codigo)) {
+    adicionar({
+      nome: "principal_mongodb",
+      resumo: `Persistencia MongoDB inferida automaticamente de ${relacao}.`,
+      engine: "mongodb",
+      queryModel: "documento",
+      transactionModel: "documento",
+      resources: [
+        { tipo: "collection", nome: "colecoes_documentais", collection: "documentos" },
+        { tipo: "document", nome: "documentos_agregados", mode: /aggregate|\$match|\$group/i.test(codigo) ? "pipeline" : "documento" },
+      ],
+      diagnostics: ["inferido_por_heuristica"],
+    });
+  }
+
+  if (/(redis\b|ioredis|upstash|bullmq|xadd|xreadgroup)/i.test(codigo)) {
+    adicionar({
+      nome: "principal_redis",
+      resumo: `Persistencia Redis inferida automaticamente de ${relacao}.`,
+      engine: "redis",
+      queryModel: "chave_valor",
+      transactionModel: "single_thread",
+      resources: [
+        { tipo: "keyspace", nome: "estado_chaves", ttl: /\bttl\b|expire\(/i.test(codigo) ? "300s" : undefined },
+        { tipo: "stream", nome: "eventos_stream", surface: /bullmq|queue|worker/i.test(codigo) ? "fila" : "evento" },
+      ],
+      diagnostics: ["inferido_por_heuristica"],
+    });
+  }
+
+  return deduplicarDatabases(databases);
 }
 
 function normalizarNomeErroBruto(nome: string): string {
@@ -1877,6 +2010,64 @@ function renderizarEntidade(entity: EntidadeImportada): string[] {
   ];
 }
 
+function renderizarValorDatabase(valor?: string): string | undefined {
+  if (!valor) {
+    return undefined;
+  }
+  return /[\s/{}"]/u.test(valor)
+    ? `"${escaparTexto(valor)}"`
+    : valor;
+}
+
+function renderizarRecursoDatabase(recurso: RecursoDatabaseImportado): string[] {
+  const linhas = [`    ${recurso.tipo} ${recurso.nome} {`];
+  const mode = renderizarValorDatabase(recurso.mode);
+  const table = renderizarValorDatabase(recurso.table);
+  const collection = renderizarValorDatabase(recurso.collection);
+  const ttl = renderizarValorDatabase(recurso.ttl);
+  const surface = renderizarValorDatabase(recurso.surface);
+
+  if (mode) {
+    linhas.push(`      mode: ${mode}`);
+  }
+  if (table) {
+    linhas.push(`      table: ${table}`);
+  }
+  if (collection) {
+    linhas.push(`      collection: ${collection}`);
+  }
+  if (ttl) {
+    linhas.push(`      ttl: ${ttl}`);
+  }
+  if (surface) {
+    linhas.push(`      surface: ${surface}`);
+  }
+  linhas.push("    }");
+  linhas.push("");
+  return linhas;
+}
+
+function renderizarDatabase(database: DatabaseImportado): string[] {
+  const queryModel = renderizarValorDatabase(database.queryModel);
+  const transactionModel = renderizarValorDatabase(database.transactionModel);
+  return [
+    `  database ${database.nome} {`,
+    `    engine: ${database.engine}`,
+    ...(queryModel ? [`    query_model: ${queryModel}`] : []),
+    ...(transactionModel ? [`    transaction_model: ${transactionModel}`] : []),
+    ...(database.diagnostics?.length
+      ? [
+        "    diagnostics {",
+        ...database.diagnostics.map((diagnostico) => `      ${diagnostico}`),
+        "    }",
+      ]
+      : []),
+    ...database.resources.flatMap(renderizarRecursoDatabase),
+    "  }",
+    "",
+  ];
+}
+
 function moduloParaCodigo(modulo: ModuloImportado): string {
   const linhas = [
     `module ${modulo.nome} {`,
@@ -1885,6 +2076,7 @@ function moduloParaCodigo(modulo: ModuloImportado): string {
     "  }",
     "",
     ...renderizarVinculos(modulo.vinculos, "  "),
+    ...(modulo.databases ?? []).flatMap(renderizarDatabase),
     ...modulo.enums.flatMap(renderizarEnum),
     ...modulo.entities.flatMap(renderizarEntidade),
     ...modulo.tasks.flatMap(renderizarTask),
@@ -1924,6 +2116,7 @@ function montarArquivoImportado(modulo: ModuloImportado, namespaceBase: string, 
     rotas: modulo.routes.length,
     entidades: modulo.entities.length,
     enums: modulo.enums.length,
+    databases: modulo.databases?.length ?? 0,
   };
 }
 
@@ -2933,6 +3126,7 @@ function criarModuloImportadoSimples(
   tasks: TarefaImportada[],
   routes: RotaImportada[] = [],
   vinculos: VinculoImportado[] = [],
+  databases: DatabaseImportado[] = [],
 ): ModuloImportado {
   sincronizarRotasComTasks(routes, tasks);
   return {
@@ -2942,6 +3136,7 @@ function criarModuloImportadoSimples(
     routes: deduplicarRotas(routes),
     entities: [],
     enums: [],
+    databases: deduplicarDatabases(databases),
     vinculos: deduplicarVinculos(vinculos),
   };
 }
@@ -2960,6 +3155,7 @@ function acumularModuloImportado(
   existente.routes = deduplicarRotas([...existente.routes, ...modulo.routes]);
   existente.entities = deduplicarEntidades([...existente.entities, ...modulo.entities]);
   existente.enums = deduplicarEnums([...existente.enums, ...modulo.enums]);
+  existente.databases = deduplicarDatabases([...(existente.databases ?? []), ...(modulo.databases ?? [])]);
   existente.vinculos = deduplicarVinculos([...(existente.vinculos ?? []), ...(modulo.vinculos ?? [])]);
 }
 
@@ -3086,6 +3282,8 @@ async function importarDotnetBase(diretorio: string, namespaceBase: string): Pro
       `Rascunho Sema importado automaticamente de ${relacao}.`,
       tasks,
       routes,
+      [],
+      inferirDatabasesPorHeuristica(texto, relacao),
     ));
   }
 
@@ -3159,6 +3357,8 @@ async function importarJavaBase(diretorio: string, namespaceBase: string): Promi
       `Rascunho Sema importado automaticamente de ${relacao}.`,
       tasks,
       routes,
+      [],
+      inferirDatabasesPorHeuristica(texto, relacao),
     ));
   }
 
@@ -3230,6 +3430,8 @@ async function importarGoBase(diretorio: string, namespaceBase: string): Promise
       `Rascunho Sema importado automaticamente de ${relacao}.`,
       tasks,
       routes,
+      [],
+      inferirDatabasesPorHeuristica(texto, relacao),
     ));
   }
 
@@ -3272,6 +3474,8 @@ async function importarRustBase(diretorio: string, namespaceBase: string): Promi
       `Rascunho Sema importado automaticamente de ${relacao}.`,
       tasks,
       routes,
+      [],
+      inferirDatabasesPorHeuristica(texto, relacao),
     ));
 
     for (const rota of extrairRotasRust(texto)) {
@@ -3307,6 +3511,8 @@ async function importarRustBase(diretorio: string, namespaceBase: string): Promi
         `Rascunho Sema importado automaticamente de ${relacaoAlvo}.`,
         [task],
         [route],
+        [],
+        inferirDatabasesPorHeuristica(texto, relacao),
       ));
     }
   }
@@ -3353,6 +3559,9 @@ async function importarCppBase(diretorio: string, namespaceBase: string): Promis
       nomeModulo,
       `Rascunho Sema importado automaticamente de ${relacao}.`,
       tasks,
+      [],
+      [],
+      inferirDatabasesPorHeuristica(texto, relacao),
     ));
   }
 
@@ -3433,6 +3642,7 @@ export function resumoImportacao(resultado: ResultadoImportacao): {
   rotas: number;
   entidades: number;
   enums: number;
+  databases: number;
   diagnosticos: number;
   sucesso: boolean;
 } {
@@ -3442,6 +3652,7 @@ export function resumoImportacao(resultado: ResultadoImportacao): {
     rotas: resultado.arquivos.reduce((total, arquivo) => total + arquivo.rotas, 0),
     entidades: resultado.arquivos.reduce((total, arquivo) => total + arquivo.entidades, 0),
     enums: resultado.arquivos.reduce((total, arquivo) => total + arquivo.enums, 0),
+    databases: resultado.arquivos.reduce((total, arquivo) => total + arquivo.databases, 0),
     diagnosticos: resultado.diagnosticos.length,
     sucesso: !temErros(resultado.diagnosticos),
   };

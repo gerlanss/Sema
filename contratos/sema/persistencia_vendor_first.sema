@@ -1,0 +1,309 @@
+module sema.produto.persistencia_vendor_first {
+  docs {
+    resumo: "Contrato interno da Sema para tratar PostgreSQL, MySQL, SQLite, MongoDB e Redis como bancos de primeira classe no parser, semantico, IR, formatador e adocao."
+  }
+
+  vinculos {
+    arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+    arquivo: "pacotes/nucleo/src/ir/conversor.ts"
+    arquivo: "pacotes/nucleo/src/formatador/index.ts"
+    arquivo: "pacotes/cli/src/importador.ts"
+    arquivo: "pacotes/cli/src/projeto.ts"
+  }
+
+  database referencia_postgres {
+    engine: postgres
+    schema: public
+    consistency: forte
+    durability: alta
+    transaction_model: mvcc
+    query_model: sql
+    capabilities {
+      joins
+      views
+      foreign_keys
+    }
+    table pedidos {
+      entity: Pedido
+    }
+    relationship pedido_cliente {
+      from: Pedido
+      to: Cliente
+    }
+    query relatorio_financeiro {
+      mode: sql
+    }
+  }
+
+  database referencia_mysql {
+    engine: mysql
+    consistency: forte
+    durability: alta
+    transaction_model: bloqueio
+    query_model: sql
+    table faturamento {
+      table: faturamento
+    }
+    index faturamento_status {
+      table: faturamento
+    }
+  }
+
+  database referencia_sqlite {
+    engine: sqlite
+    consistency: snapshot
+    durability: media
+    transaction_model: single_thread
+    query_model: sql
+    table cache_local {
+      table: cache_local
+    }
+    retention limpeza_local {
+      retention: 7 d
+    }
+  }
+
+  database referencia_mongodb {
+    engine: mongodb
+    consistency: eventual
+    durability: alta
+    transaction_model: documento
+    query_model: documento
+    collection pedidos {
+      collection: pedidos
+    }
+    document pedido_snapshot {
+      entity: PedidoSnapshot
+    }
+    query pipeline_pedido {
+      mode: pipeline
+    }
+  }
+
+  database referencia_redis {
+    engine: redis
+    consistency: eventual
+    durability: media
+    transaction_model: single_thread
+    query_model: chave_valor
+    keyspace cache_pedidos {
+      ttl: 300 s
+    }
+    stream eventos_pedido {
+      surface: fila
+    }
+    retention expurgo_cache {
+      retention: 300 s
+    }
+  }
+
+  enum StatusPersistenciaVendor {
+    PLANEJADA,
+    MODELADA,
+    VALIDADA,
+    PUBLICADA
+  }
+
+  task validar_compatibilidade_vendor_first {
+    input {
+      contrato_persistencia: Texto required
+      engine_alvo: Texto required
+    }
+    output {
+      diagnosticos_emitidos: Booleano
+      incompatibilidades_reais_detectadas: Booleano
+      status: StatusPersistenciaVendor
+    }
+    impl {
+      ts: nucleo.src.semantico.analisador.analisarSemantica
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+      simbolo: nucleo.src.semantico.analisador.analisarSemantica
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      diagnosticos_emitidos existe
+      incompatibilidades_reais_detectadas existe
+      status em [PLANEJADA, MODELADA, VALIDADA, PUBLICADA]
+    }
+    tests {
+      caso "redis nao aceita table relacional" {
+        given {
+          contrato_persistencia: "database cache { engine: redis table pedidos { portavel: verdadeiro } }"
+          engine_alvo: "redis"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task converter_persistencia_para_ir_canonico {
+    input {
+      contrato_persistencia: Texto required
+    }
+    output {
+      secao_databases_preservada: Booleano
+      compatibilidade_calculada: Booleano
+      status: StatusPersistenciaVendor
+    }
+    impl {
+      ts: nucleo.src.ir.conversor.converterParaIr
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/ir/conversor.ts"
+      simbolo: nucleo.src.ir.conversor.converterParaIr
+    }
+    execucao {
+      timeout: "10s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      secao_databases_preservada existe
+      compatibilidade_calculada existe
+      status em [PLANEJADA, MODELADA, VALIDADA, PUBLICADA]
+    }
+    tests {
+      caso "ir inclui cinco engines" {
+        given {
+          contrato_persistencia: "database principal { engine: postgres } database cache { engine: redis }"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task formatar_database_vendor_first {
+    input {
+      contrato_persistencia: Texto required
+    }
+    output {
+      ordem_canonica: Booleano
+      recursos_preservados: Booleano
+    }
+    impl {
+      ts: nucleo.src.formatador.index.formatarCodigo
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/formatador/index.ts"
+      simbolo: nucleo.src.formatador.index.formatarCodigo
+    }
+    execucao {
+      timeout: "5s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      ordem_canonica existe
+      recursos_preservados existe
+    }
+    tests {
+      caso "engine sobe para o topo do bloco database" {
+        given {
+          contrato_persistencia: "database principal { adapter: prisma engine: postgres }"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task inferir_database_legado_em_adocao {
+    input {
+      projeto_legado: Texto required
+      linguagem_detectada: Texto required
+    }
+    output {
+      engines_inferidos: Booleano
+      bloco_database_emitido: Booleano
+    }
+    impl {
+      ts: cli.src.importador.importarProjetoLegado
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/importador.ts"
+      simbolo: cli.src.importador.importarProjetoLegado
+    }
+    execucao {
+      timeout: "20s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      engines_inferidos existe
+      bloco_database_emitido existe
+    }
+    tests {
+      caso "redis e mongodb sao inferidos por heuristica" {
+        given {
+          projeto_legado: "src/cache.ts e src/documentos.ts"
+          linguagem_detectada: "typescript"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task carregar_configuracao_de_persistencia {
+    input {
+      caminho_config: Texto required
+    }
+    output {
+      engines_habilitados_lidos: Booleano
+      adapters_por_engine_lidos: Booleano
+    }
+    impl {
+      ts: cli.src.projeto.carregarConfiguracaoProjeto
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/projeto.ts"
+      simbolo: cli.src.projeto.carregarConfiguracaoProjeto
+    }
+    execucao {
+      timeout: "5s"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      engines_habilitados_lidos existe
+      adapters_por_engine_lidos existe
+    }
+    tests {
+      caso "config sema aceita persistencia" {
+        given {
+          caminho_config: "sema.config.json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow publicar_persistencia_vendor_first {
+    contrato_persistencia: Texto
+    etapa validar usa validar_compatibilidade_vendor_first com contrato_persistencia = contrato_persistencia, engine_alvo = postgres
+    etapa converter usa converter_persistencia_para_ir_canonico com contrato_persistencia = contrato_persistencia depende_de validar
+    etapa formatar usa formatar_database_vendor_first com contrato_persistencia = contrato_persistencia depende_de converter
+    effects {
+      auditoria persistencia_vendor_first criticidade = alta
+      persistencia scorecard_bancos criticidade = media
+    }
+    vinculos {
+      simbolo: nucleo.src.semantico.analisador.analisarSemantica
+      simbolo: nucleo.src.ir.conversor.converterParaIr
+    }
+  }
+}

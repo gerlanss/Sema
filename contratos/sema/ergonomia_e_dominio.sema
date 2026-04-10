@@ -2,6 +2,7 @@ module sema.produto.ergonomia_e_dominio {
   docs {
     resumo: "Contrato interno da Sema para reduzir atrito sintatico, enriquecer dominio e governar compatibilidade sem virar linguagem maldita."
   }
+
   vinculos {
     arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
   }
@@ -67,6 +68,7 @@ module sema.produto.ergonomia_e_dominio {
           contrato_atual: "input e output com campos repetidos"
           repeticao_detectada: verdadeiro
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -132,6 +134,7 @@ module sema.produto.ergonomia_e_dominio {
           contrato_atual: "payload com lista, mapa e tipo composto"
           payload_json_generico: verdadeiro
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -169,8 +172,9 @@ module sema.produto.ergonomia_e_dominio {
       caso "perfil experimental para publico" {
         given {
           contrato_atual: "route publica e task interna com rollout"
-          perfil_atual: EXPERIMENTAL
+          perfil_atual: "EXPERIMENTAL"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -210,6 +214,7 @@ module sema.produto.ergonomia_e_dominio {
           contrato_atual: "guarantees misturando input e regra"
           garantias_confusas: verdadeiro
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -245,8 +250,9 @@ module sema.produto.ergonomia_e_dominio {
       caso "scorecard publico" {
         given {
           familia: "Next.js App Router"
-          perfil: PUBLICO
+          perfil: "PUBLICO"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -270,16 +276,6 @@ module sema.produto.ergonomia_e_dominio {
     }
   }
 
-  policy compatibilidade_publica {
-    task: explicitar_variacao_e_compatibilidade
-    vinculos {
-      policy: compatibilidade_publica
-    }
-    execucao {
-      criticidade_operacional: media
-    }
-  }
-
   evento scorecard_atualizado {
     task: consultar_scorecard_compatibilidade
     vinculos {
@@ -287,6 +283,16 @@ module sema.produto.ergonomia_e_dominio {
     }
     execucao {
       criticidade_operacional: baixa
+    }
+  }
+
+  policy compatibilidade_publica {
+    task: explicitar_variacao_e_compatibilidade
+    vinculos {
+      policy: compatibilidade_publica
+    }
+    execucao {
+      criticidade_operacional: media
     }
   }
 }

@@ -531,10 +531,10 @@ module exemplo.operacao {
   assert.match(arquivoPy.conteudo, /Invariante: id existe/);
 });
 
-test("cli verifica todos os exemplos em lote", () => {
+test("cli verifica o projeto inteiro em lote", () => {
   const execucao = spawnSync(
     "node",
-    ["pacotes/cli/dist/index.js", "verificar", "exemplos", "--saida", "./.tmp/verificacao-integracao"],
+    ["pacotes/cli/dist/index.js", "verificar", ".", "--saida", "./.tmp/verificacao-integracao"],
     { stdio: "pipe", encoding: "utf8" },
   );
 

@@ -140,7 +140,7 @@ test("extensao basica do VS Code declara linguagem, snippets e comando de format
   assert.match(extension, /LanguageClient/);
   assert.match(extension, /sema\.cliPath/);
   assert.match(extension, /cli-helpers/);
-  assert.match(extension, /createTreeView/);
+  assert.match(extension, /registerWebviewViewProvider/);
   assert.match(extension, /sema\.abrirStarterIa/);
   assert.match(extension, /sema\.copiarPromptIa/);
   assert.match(extension, /sema\.prepararContextoIaProjeto/);
@@ -547,32 +547,32 @@ test("repo expoe entrada canonica para IA na raiz", async () => {
   const semaIndex = JSON.parse(await readFile(path.resolve("SEMA_INDEX.json"), "utf8"));
   const readme = await readFile(path.resolve("README.md"), "utf8");
 
-  assert.match(agents, /llms\.txt/);
-  assert.match(agents, /SEMA_BRIEF\.md/);
-  assert.match(agents, /SEMA_INDEX\.json/);
+  assert.match(agents, /sema_resumo/);
+  assert.match(agents, /sema_drift/);
+  assert.match(agents, /sema_validar/);
   assert.match(llms, /not human-first|not optimized for human-first/i);
   assert.match(llmsFull, /Canonical entrypoints in the repository root/);
   assert.match(semaBrief, /Entrada canonica para IA/);
   assert.deepEqual(semaIndex.entradaCanonica.ordemLeitura, ["llms.txt", "SEMA_BRIEF.md", "SEMA_INDEX.json", "AGENTS.md", "README.md", "llms-full.txt"]);
-  assert.match(readme, /## Se voce e uma IA/);
+  assert.match(readme, /## Documentacao canonica/);
+  assert.match(readme, /persistencia vendor-first/i);
 });
 
-test("repo expoe scorecard do FuteBot com regua acionavel", async () => {
-  const feedbackFutebot = await readFile(path.resolve("docs/feedback-futebot.md"), "utf8");
-  const scorecardFutebot = await readFile(path.resolve("docs/scorecard-futebot.md"), "utf8");
+test("repo expoe scorecard e guia de persistencia vendor-first atualizados", async () => {
+  const scorecard = await readFile(path.resolve("docs/scorecard-compatibilidade.md"), "utf8");
+  const persistencia = await readFile(path.resolve("docs/persistencia-vendor-first.md"), "utf8");
 
-  assert.match(feedbackFutebot, /FuteBot/);
-  assert.match(scorecardFutebot, /Scorecard de Avaliacao da Sema no FuteBot/);
-  assert.match(scorecardFutebot, /Roteamento Semantico da Mudanca/);
-  assert.match(scorecardFutebot, /Pinpoint de Runtime/);
-  assert.match(scorecardFutebot, /Qualidade do Drift/);
-  assert.match(scorecardFutebot, /Qualidade dos Diagnosticos/);
-  assert.match(scorecardFutebot, /Anti-Ritual/);
-  assert.match(scorecardFutebot, /Fechamento do Ciclo/);
-  assert.match(scorecardFutebot, /Caso A\. Mudanca operacional espalhada/);
-  assert.match(scorecardFutebot, /Caso B\. Mudanca de integracao externa/);
-  assert.match(scorecardFutebot, /Caso C\. Mudanca de fluxo operacional/);
-  assert.match(scorecardFutebot, /\| Area \| Nota \| Evidencia \| Dor encontrada \| Acao sugerida \|/);
+  assert.match(scorecard, /Estados de compatibilidade/);
+  assert.match(scorecard, /`nativo`/);
+  assert.match(scorecard, /`adaptado`/);
+  assert.match(scorecard, /`parcial`/);
+  assert.match(scorecard, /`invalido`/);
+  assert.match(scorecard, /\| `postgres` \|/);
+  assert.match(scorecard, /\| `redis` \|/);
+  assert.match(persistencia, /Persistencia Vendor-First/);
+  assert.match(persistencia, /database principal_postgres/);
+  assert.match(persistencia, /database principal_mongodb/);
+  assert.match(persistencia, /database principal_redis/);
 });
 
 test("cli inspeciona projeto Python sem config com mesma base a partir de raiz, sema e arquivo", async () => {

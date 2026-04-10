@@ -2,6 +2,7 @@ module sema.produto.governanca_ia {
   docs {
     resumo: "Contrato interno da Sema para projeto, drift e leitura orientada a IA sem adivinhacao frouxa."
   }
+
   vinculos {
     arquivo: "pacotes/cli/src/index.ts"
     simbolo: cli.src.drift.analisarDriftLegado
@@ -42,6 +43,7 @@ module sema.produto.governanca_ia {
           entrada: "exemplos/calculadora.sema"
           explicito: verdadeiro
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -78,6 +80,7 @@ module sema.produto.governanca_ia {
         given {
           estrutura_desejada: "modulos"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -133,9 +136,14 @@ module sema.produto.governanca_ia {
       compensacao: "reanalisar contexto"
       criticidade_operacional: alta
     }
+    guarantees {
+      impls_resolvidas existe
+      rotas_resolvidas existe
+      ambiguidades_explicitas existe
+    }
     error {
       simbolo_ambiguo {
-        mensagem: "codigo vivo com simbolo candidato demais"
+        mensagem: codigo vivo com simbolo candidato demais
         categoria: infraestrutura
         recuperabilidade: temporaria
         acao_chamador: retry
@@ -143,17 +151,13 @@ module sema.produto.governanca_ia {
         requer_compensacao: falso
       }
     }
-    guarantees {
-      impls_resolvidas existe
-      rotas_resolvidas existe
-      ambiguidades_explicitas existe
-    }
     tests {
       caso "drift guia edicao real" {
         given {
           contrato_alvo: "contratos/sema/*.sema"
           codigo_vivo: "pacotes/**/*.ts"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -194,6 +198,7 @@ module sema.produto.governanca_ia {
           contrato_atual: "task, route, flow, state e tests com nomes regulares"
           sinonimos_em_excesso: falso
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -220,8 +225,8 @@ module sema.produto.governanca_ia {
   worker preparar_briefing_contextual {
     task: medir_drift_contra_codigo_vivo
     vinculos {
-      worker: contexto_ia
       arquivo: "pacotes/cli/src/index.ts"
+      worker: contexto_ia
     }
     execucao {
       retry: "fila_contexto"
@@ -252,7 +257,7 @@ module sema.produto.governanca_ia {
       motivo: obrigatorio
     }
     vinculos {
-      webhook: /interno/contexto-ia
+      webhook: "/interno/contexto-ia"
     }
     execucao {
       timeout: "15s"

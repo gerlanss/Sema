@@ -1,8 +1,8 @@
 {
   "name": "@semacode/cli",
-  "version": "1.3.7",
+  "version": "1.4.0",
   "type": "module",
-  "description": "CLI da Sema para validar contratos, medir drift e governar a navegacao operacional de agentes sobre software vivo em backend e front consumer.",
+  "description": "CLI da Sema para validar contratos, medir drift e governar a navegacao operacional de agentes sobre software vivo, incluindo persistencia vendor-first para bancos reais.",
   "license": "MIT",
   "repository": {
     "type": "git",

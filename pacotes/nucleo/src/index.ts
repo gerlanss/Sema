@@ -13,6 +13,7 @@ export * from "./lexer/lexer.js";
 export * from "./parser/parser.js";
 export * from "./semantico/analisador.js";
 export * from "./semantico/estruturas.js";
+export * from "./persistencia/contratos.js";
 export * from "./ir/modelos.js";
 export * from "./ir/conversor.js";
 export * from "./formatador/index.js";

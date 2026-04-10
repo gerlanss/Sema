@@ -38,5 +38,4 @@ Explique por que isso importa agora para o MVP.
 
 - `STATUS.md`
 - `docs/roadmap.md`
-- `docs/especificacao-inicial.md`
-
+- `docs/README.md`

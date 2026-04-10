@@ -4,10 +4,16 @@ import {
   compilarProjeto,
   lerArquivoTexto,
   listarArquivosSema,
+  type EngineBanco,
   type ResultadoCompilacaoProjetoModulo,
 } from "@sema/nucleo";
 import type { EstruturaSaida, FonteLegado, ModoAdocao } from "./tipos.js";
 import type { AlvoGeracao, FrameworkGeracao } from "@sema/padroes";
+
+export interface ConfiguracaoPersistenciaProjeto {
+  enginesHabilitados?: EngineBanco[];
+  adaptersPorEngine?: Partial<Record<EngineBanco, string>>;
+}
 
 export interface SemaConfigProjeto {
   origem?: string;
@@ -23,6 +29,7 @@ export interface SemaConfigProjeto {
   diretoriosCodigo?: string[];
   fontesLegado?: FonteLegado[];
   modoAdocao?: ModoAdocao;
+  persistencia?: ConfiguracaoPersistenciaProjeto;
 }
 
 export interface ConfiguracaoProjetoCarregada {

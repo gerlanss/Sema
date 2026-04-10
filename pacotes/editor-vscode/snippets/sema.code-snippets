@@ -56,6 +56,130 @@
     ],
     "description": "Estrutura basica de route Sema"
   },
+  "database": {
+    "prefix": "sema-database",
+    "body": [
+      "database ${1:nome_database} {",
+      "  engine: ${2:postgres}",
+      "  consistency: ${3:forte}",
+      "  durability: ${4:alta}",
+      "  transaction_model: ${5:mvcc}",
+      "  query_model: ${6:sql}",
+      "  ${0}",
+      "}"
+    ],
+    "description": "Bloco base de persistencia vendor-first"
+  },
+  "database-postgres": {
+    "prefix": "sema-database-postgres",
+    "body": [
+      "database ${1:principal_postgres} {",
+      "  engine: postgres",
+      "  schema: ${2:public}",
+      "  consistency: forte",
+      "  durability: alta",
+      "  transaction_model: mvcc",
+      "  query_model: sql",
+      "  capabilities {",
+      "    joins",
+      "    views",
+      "    foreign_keys",
+      "  }",
+      "  table ${3:pedidos} {",
+      "    entity: ${4:Pedido}",
+      "  }",
+      "  query ${5:buscar_pedidos} {",
+      "    mode: sql",
+      "  }",
+      "}"
+    ],
+    "description": "Database vendor-first para PostgreSQL"
+  },
+  "database-mysql": {
+    "prefix": "sema-database-mysql",
+    "body": [
+      "database ${1:principal_mysql} {",
+      "  engine: mysql",
+      "  consistency: forte",
+      "  durability: alta",
+      "  transaction_model: bloqueio",
+      "  query_model: sql",
+      "  table ${2:faturamento} {",
+      "    table: ${3:faturamento}",
+      "  }",
+      "  index ${4:faturamento_status} {",
+      "    table: ${3:faturamento}",
+      "  }",
+      "  query ${5:buscar_faturas} {",
+      "    mode: sql",
+      "  }",
+      "}"
+    ],
+    "description": "Database vendor-first para MySQL"
+  },
+  "database-sqlite": {
+    "prefix": "sema-database-sqlite",
+    "body": [
+      "database ${1:principal_sqlite} {",
+      "  engine: sqlite",
+      "  consistency: snapshot",
+      "  durability: media",
+      "  transaction_model: single_thread",
+      "  query_model: sql",
+      "  table ${2:cache_local} {",
+      "    table: ${3:cache_local}",
+      "  }",
+      "  retention ${4:limpeza_local} {",
+      "    retention: ${5:\"7d\"}",
+      "  }",
+      "}"
+    ],
+    "description": "Database vendor-first para SQLite"
+  },
+  "database-mongodb": {
+    "prefix": "sema-database-mongodb",
+    "body": [
+      "database ${1:principal_mongodb} {",
+      "  engine: mongodb",
+      "  consistency: eventual",
+      "  durability: alta",
+      "  transaction_model: documento",
+      "  query_model: documento",
+      "  collection ${2:pedidos} {",
+      "    collection: ${3:pedidos}",
+      "  }",
+      "  document ${4:pedido_snapshot} {",
+      "    entity: ${5:PedidoSnapshot}",
+      "  }",
+      "  query ${6:pipeline_pedido} {",
+      "    mode: pipeline",
+      "  }",
+      "}"
+    ],
+    "description": "Database vendor-first para MongoDB"
+  },
+  "database-redis": {
+    "prefix": "sema-database-redis",
+    "body": [
+      "database ${1:principal_redis} {",
+      "  engine: redis",
+      "  consistency: eventual",
+      "  durability: media",
+      "  transaction_model: single_thread",
+      "  query_model: chave_valor",
+      "  keyspace ${2:cache_pedidos} {",
+      "    ttl: ${3:\"300s\"}",
+      "  }",
+      "  stream ${4:eventos_pedido} {",
+      "    surface: ${5:fila}",
+      "  }",
+      "  retention ${6:expurgo_cache} {",
+      "    retention: ${7:\"300s\"}",
+      "  }",
+      "}"
+    ],
+    "description": "Database vendor-first para Redis"
+  },
   "security-task": {
     "prefix": "sema-security-task",
     "body": [

@@ -1,5 +1,18 @@
 import type { BlocoCasoTesteAst, BlocoGenericoAst, CampoAst, ModuloAst } from "../ast/tipos.js";
 import type { Diagnostico } from "../diagnosticos/index.js";
+import {
+  localizarCampoPersistencia,
+  matrizCompatibilidadePersistencia,
+  nomeTipoRecursoPersistencia,
+  normalizarConsistenciaPersistencia,
+  normalizarDurabilidadePersistencia,
+  normalizarEngineBanco,
+  normalizarModeloConsultaPersistencia,
+  normalizarModeloTransacaoPersistencia,
+  parsearBooleanoPersistencia,
+  TIPOS_RECURSO_PERSISTENCIA,
+  type TipoRecursoPersistencia,
+} from "../persistencia/contratos.js";
 import type { ContextoSemantico, ErroSemanticoTask } from "../semantico/analisador.js";
 import {
   contratoDadosTemSensivel,
@@ -26,7 +39,10 @@ import type {
   IrForbidden,
   IrFlow,
   IrImplementacaoTask,
+  IrBancoDados,
+  IrCompatibilidadePersistencia,
   IrModulo,
+  IrRecursoPersistencia,
   IrResumoAgente,
   IrRoute,
   IrRoutePublica,
@@ -204,6 +220,106 @@ function converterCaso(caso: BlocoCasoTesteAst): IrCasoTeste {
     when: caso.when ? converterBloco(caso.when) : undefined,
     expect: converterBloco(caso.expect),
     error: caso.error ? converterBloco(caso.error) : undefined,
+  };
+}
+
+function coletarLinhasPersistencia(bloco: BlocoGenericoAst | undefined, nome: string): string[] {
+  if (!bloco) {
+    return [];
+  }
+  return encontrarSubBloco(bloco, nome)?.linhas.map((linha) => linha.conteudo) ?? [];
+}
+
+function resolverTipoRecursoPersistencia(bloco: BlocoGenericoAst): TipoRecursoPersistencia | undefined {
+  const explicito = valorCampoCompleto(localizarCampoPersistencia(bloco, "resource_kind"));
+  if (explicito && TIPOS_RECURSO_PERSISTENCIA.has(explicito as TipoRecursoPersistencia)) {
+    return explicito as TipoRecursoPersistencia;
+  }
+  return nomeTipoRecursoPersistencia(bloco);
+}
+
+function converterCompatibilidadePersistencia(
+  compatibilidades: ReturnType<typeof matrizCompatibilidadePersistencia>,
+): IrCompatibilidadePersistencia[] {
+  return compatibilidades.map((item) => ({ ...item }));
+}
+
+function converterRecursoPersistencia(recurso: BlocoGenericoAst): IrRecursoPersistencia | undefined {
+  const resourceKind = resolverTipoRecursoPersistencia(recurso);
+  if (!resourceKind) {
+    return undefined;
+  }
+
+  const mode = valorCampoCompleto(localizarCampoPersistencia(recurso, "mode"));
+  const isolation = valorCampoCompleto(localizarCampoPersistencia(recurso, "isolation"));
+
+  return {
+    nome: recurso.nome ?? resourceKind,
+    resourceKind,
+    entity: valorCampoCompleto(localizarCampoPersistencia(recurso, "entity")),
+    collection: valorCampoCompleto(localizarCampoPersistencia(recurso, "collection")),
+    table: valorCampoCompleto(localizarCampoPersistencia(recurso, "table")),
+    consistency: normalizarConsistenciaPersistencia(valorCampoCompleto(localizarCampoPersistencia(recurso, "consistency")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(recurso, "consistency")),
+    durability: normalizarDurabilidadePersistencia(valorCampoCompleto(localizarCampoPersistencia(recurso, "durability")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(recurso, "durability")),
+    transactionModel: normalizarModeloTransacaoPersistencia(valorCampoCompleto(localizarCampoPersistencia(recurso, "transaction_model")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(recurso, "transaction_model")),
+    queryModel: normalizarModeloConsultaPersistencia(valorCampoCompleto(localizarCampoPersistencia(recurso, "query_model")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(recurso, "query_model")),
+    mode,
+    isolation,
+    strategy: valorCampoCompleto(localizarCampoPersistencia(recurso, "strategy")),
+    ttl: valorCampoCompleto(localizarCampoPersistencia(recurso, "ttl")),
+    retention: valorCampoCompleto(localizarCampoPersistencia(recurso, "retention")),
+    path: valorCampoCompleto(localizarCampoPersistencia(recurso, "path")),
+    from: valorCampoCompleto(localizarCampoPersistencia(recurso, "from")),
+    to: valorCampoCompleto(localizarCampoPersistencia(recurso, "to")),
+    surface: valorCampoCompleto(localizarCampoPersistencia(recurso, "surface")),
+    adapter: valorCampoCompleto(localizarCampoPersistencia(recurso, "adapter")),
+    portavel: parsearBooleanoPersistencia(valorCampoCompleto(localizarCampoPersistencia(recurso, "portavel"))),
+    capabilities: coletarLinhasPersistencia(recurso, "capabilities"),
+    operations: coletarLinhasPersistencia(recurso, "operations"),
+    indexing: coletarLinhasPersistencia(recurso, "indexing"),
+    guarantees: coletarLinhasPersistencia(recurso, "guarantees"),
+    diagnostics: coletarLinhasPersistencia(recurso, "diagnostics"),
+    risks: coletarLinhasPersistencia(recurso, "risks"),
+    fields: converterCampos(recurso),
+    lines: recurso.linhas.map((linha) => linha.conteudo),
+    block: converterBloco(recurso),
+    compatibilidade: converterCompatibilidadePersistencia(matrizCompatibilidadePersistencia(resourceKind, { mode, isolation })),
+  };
+}
+
+function converterDatabase(database: BlocoGenericoAst): IrBancoDados {
+  return {
+    nome: database.nome ?? "database",
+    engine: normalizarEngineBanco(valorCampoCompleto(localizarCampoPersistencia(database, "engine"))),
+    schema: valorCampoCompleto(localizarCampoPersistencia(database, "schema")),
+    database: valorCampoCompleto(localizarCampoPersistencia(database, "database")),
+    consistency: normalizarConsistenciaPersistencia(valorCampoCompleto(localizarCampoPersistencia(database, "consistency")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(database, "consistency")),
+    durability: normalizarDurabilidadePersistencia(valorCampoCompleto(localizarCampoPersistencia(database, "durability")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(database, "durability")),
+    transactionModel: normalizarModeloTransacaoPersistencia(valorCampoCompleto(localizarCampoPersistencia(database, "transaction_model")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(database, "transaction_model")),
+    queryModel: normalizarModeloConsultaPersistencia(valorCampoCompleto(localizarCampoPersistencia(database, "query_model")))
+      ?? valorCampoCompleto(localizarCampoPersistencia(database, "query_model")),
+    portavel: parsearBooleanoPersistencia(valorCampoCompleto(localizarCampoPersistencia(database, "portavel"))),
+    adapter: valorCampoCompleto(localizarCampoPersistencia(database, "adapter")),
+    capabilities: coletarLinhasPersistencia(database, "capabilities"),
+    operations: coletarLinhasPersistencia(database, "operations"),
+    indexing: coletarLinhasPersistencia(database, "indexing"),
+    guarantees: coletarLinhasPersistencia(database, "guarantees"),
+    diagnostics: coletarLinhasPersistencia(database, "diagnostics"),
+    risks: coletarLinhasPersistencia(database, "risks"),
+    fields: converterCampos(database),
+    lines: database.linhas.map((linha) => linha.conteudo),
+    block: converterBloco(database),
+    resources: database.blocos
+      .filter((bloco): bloco is BlocoGenericoAst => bloco.tipo === "bloco_generico")
+      .map(converterRecursoPersistencia)
+      .filter((item): item is IrRecursoPersistencia => Boolean(item)),
   };
 }
 
@@ -859,6 +975,8 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
       .filter((linha): linha is NonNullable<typeof linha> => Boolean(linha)),
   }));
 
+  const databases = modulo.databases.map(converterDatabase);
+
   const resumoAgenteModulo = resumirAgente({
     input: [],
     output: [],
@@ -898,6 +1016,7 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
     routes,
     superficies,
     states,
+    databases,
     resumoAgente: {
       ...resumoAgenteModulo,
       superficiesPublicas: deduplicarTexto([

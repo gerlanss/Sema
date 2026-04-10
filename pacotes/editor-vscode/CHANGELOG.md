@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0
+
+- adiciona snippets e exemplos embutidos para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
+- atualiza highlight e hover da extensao para os blocos de persistencia vendor-first
+- alinha a extensao com a linha publica 1.4.0 da Sema e com a nova documentacao de release
+
 ## 1.3.7
 
 - corrige deteccao de rotas Next.js protegidas por auth guard (`withAuth`, `withSession` e similares) que antes geravam falsos positivos no `sema drift`

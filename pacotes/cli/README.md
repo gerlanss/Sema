@@ -1,73 +1,93 @@
 # Sema CLI
 
-Sema e um Protocolo de Governanca de Intencao para IA e backend vivo.
+`@semacode/cli` e a interface publica principal da Sema.
 
-Ela nao foi desenhada para ergonomia humana como prioridade. O alvo principal e IA operando contrato, drift e contexto de sistema vivo com menos chute.
+Ela valida contratos `.sema`, mede `drift` entre contrato e codigo vivo, importa legado, gera codigo derivado, produz contexto IA-first e agora governa persistencia vendor-first para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`.
 
-Este pacote entrega a CLI oficial para:
+## Instalar
 
-- validar contratos `.sema`
-- inspecionar projeto
-- medir `drift` entre contrato e codigo vivo
-- importar legado
-- gerar resumo compacto por capacidade de IA
-- preparar contexto para IA
-
-Quando a CLI roda em projeto, a trilha IA-first recomendada fica assim:
-
-- raiz do repo: `llms.txt`, `SEMA_BRIEF.*`, `SEMA_INDEX.json`, `AGENTS.md`, `README.md`
-- modulo alvo: `resumo.micro.txt`, `briefing.min.json`, `prompt-curto.txt`, `drift.json`, `briefing.json`
-
-Isto nao existe para agradar humano. Existe para a IA achar o contexto certo sem entupir a janela com lixo.
-
-Para regenerar os entrypoints IA-first da raiz:
-
-```bash
-sema sync-ai-entrypoints --json
-```
-
-## Instalacao pelo npm registry
+Global:
 
 ```bash
 npm install -g @semacode/cli
 sema --help
+sema doctor
 ```
 
-## Instalacao via tarball da release
-
-```bash
-npm install -g ./{{TGZ_ARQUIVO}}
-```
-
-Ou direto da GitHub Release:
-
-```bash
-npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
-```
-
-## Instalacao local ao projeto
+Local ao projeto:
 
 ```bash
 npm install @semacode/cli
 npx sema --help
 ```
 
-Ou, se voce estiver testando um tarball local:
+Tarball da release:
 
 ```bash
-npm install ./{{TGZ_ARQUIVO}}
-npx sema --help
+npm install -g https://github.com/gerlanss/Sema/releases/latest/download/sema-cli-latest.tgz
 ```
 
-## Primeiro teste
+## Fluxos principais
+
+Projeto novo:
 
 ```bash
-mkdir sema-demo
-cd sema-demo
 sema iniciar
 sema validar contratos/pedidos.sema --json
-sema starter-ia
-sema resumo contratos/pedidos.sema --micro --para onboarding
+sema compilar contratos --alvo typescript --saida ./generated/typescript
+sema verificar contratos --json
 ```
 
-Repositorio: https://github.com/gerlanss/Sema
+Projeto que ja usa Sema:
+
+```bash
+sema inspecionar . --json
+sema resumo contratos/pedidos.sema --micro --para mudanca
+sema drift contratos/pedidos.sema --json
+sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto --json
+```
+
+Adocao incremental em legado:
+
+```bash
+sema importar nextjs ./app --saida ./contratos-importados --json
+sema formatar ./contratos-importados
+sema validar ./contratos-importados --json
+sema drift ./contratos-importados --json
+```
+
+## Persistencia vendor-first
+
+A CLI 1.4.0 entende blocos `database` e recursos de persistencia no IR, no formatador, no semantico, na importacao e no drift. O objetivo nao e esconder diferencas entre bancos, e sim capturar essas diferencas no contrato.
+
+Cobertura publica:
+
+- `postgres`: tabela, relacao, query SQL, schema e capacidades relacionais
+- `mysql`: tabela, indice e diferencas operacionais do engine
+- `sqlite`: armazenamento local, retencao curta e modos de transacao simples
+- `mongodb`: `collection`, `document`, pipeline e indices documentais
+- `redis`: `keyspace`, `stream`, TTL e superficies de estado/cache
+
+## Pacote publico
+
+O tarball publico da CLI inclui:
+
+- `dist/`
+- docs IA-first e docs de operacao
+- pasta `exemplos/`
+- `AGENTS.md`, `llms.txt`, `SEMA_BRIEF.*` e `SEMA_INDEX.json`
+
+## Comandos uteis
+
+- `sema validar <arquivo-ou-pasta> --json`
+- `sema drift <arquivo-ou-pasta> --json`
+- `sema resumo <arquivo-ou-pasta> --micro --para onboarding`
+- `sema prompt-curto <arquivo-ou-pasta> --curto --para mudanca`
+- `sema contexto-ia <arquivo.sema> --saida <diretorio> --json`
+- `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart|lua> --saida <diretorio>`
+- `sema verificar <arquivo-ou-pasta> --saida <diretorio>`
+
+## Links
+
+- repositorio: <https://github.com/gerlanss/Sema>
+- docs: <https://github.com/gerlanss/Sema/tree/main/docs>

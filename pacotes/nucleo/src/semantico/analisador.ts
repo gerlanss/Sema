@@ -13,6 +13,19 @@ import type {
   TypeAst,
 } from "../ast/tipos.js";
 import {
+  CAMPOS_DATABASE_SUPORTADOS,
+  CAMPOS_RECURSO_PERSISTENCIA_SUPORTADOS,
+  classificarCompatibilidadePersistencia,
+  nomeTipoRecursoPersistencia,
+  normalizarConsistenciaPersistencia,
+  normalizarDurabilidadePersistencia,
+  normalizarEngineBanco,
+  normalizarModeloConsultaPersistencia,
+  normalizarModeloTransacaoPersistencia,
+  parsearBooleanoPersistencia,
+  recursoPersistenciaPodeSerPortavel,
+} from "../persistencia/contratos.js";
+import {
   ehCategoriaEfeitoSemantico,
   ehCriticidadeEfeitoSemantico,
   extrairReferenciasDaExpressao,
@@ -44,7 +57,7 @@ import {
 
 export interface SimboloSemantico {
   nome: string;
-  categoria: "tipo" | "entity" | "enum" | "task" | "flow" | "route" | "state" | "worker" | "evento" | "fila" | "cron" | "webhook" | "cache" | "storage" | "policy";
+  categoria: "tipo" | "entity" | "enum" | "task" | "flow" | "route" | "state" | "worker" | "evento" | "fila" | "cron" | "webhook" | "cache" | "storage" | "policy" | "database";
 }
 
 export interface CampoSemantico {
@@ -473,6 +486,291 @@ function extrairPerfilCompatibilidade(
     return perfil;
   }
   return padrao;
+}
+
+function validarCamposSuportadosPersistencia(
+  bloco: BlocoGenericoAst,
+  camposSuportados: Set<string>,
+  diagnosticos: Diagnostico[],
+  contexto: string,
+  codigo: string,
+  dica: string,
+): void {
+  for (const campo of bloco.campos) {
+    if (camposSuportados.has(campo.nome)) {
+      continue;
+    }
+    diagnosticos.push(
+      criarDiagnostico(
+        codigo,
+        `Campo de persistencia "${campo.nome}" nao e suportado em ${contexto}.`,
+        "erro",
+        campo.intervalo,
+        dica,
+      ),
+    );
+  }
+}
+
+function validarBooleanoPersistencia(
+  valor: string | undefined,
+  intervalo: CampoAst["intervalo"],
+  diagnosticos: Diagnostico[],
+  codigo: string,
+  mensagem: string,
+): void {
+  if (!valor) {
+    return;
+  }
+  if (parsearBooleanoPersistencia(valor) !== undefined) {
+    return;
+  }
+  diagnosticos.push(
+    criarDiagnostico(
+      codigo,
+      mensagem,
+      "erro",
+      intervalo,
+      "Use verdadeiro/falso ou true/false.",
+    ),
+  );
+}
+
+function validarRecursoPersistencia(
+  database: BlocoGenericoAst,
+  recurso: BlocoGenericoAst,
+  diagnosticos: Diagnostico[],
+): void {
+  const engine = normalizarEngineBanco(valorCampoCompleto(localizarCampo(database, "engine")));
+  if (!engine) {
+    return;
+  }
+
+  validarCamposSuportadosPersistencia(
+    recurso,
+    CAMPOS_RECURSO_PERSISTENCIA_SUPORTADOS,
+    diagnosticos,
+    `resource "${recurso.nome ?? recurso.palavraChave}" do database "${database.nome ?? "database"}"`,
+    "SEM106",
+    "Use apenas entity, consistency, durability, transaction_model, query_model, portavel, mode, isolation, strategy, ttl, retention, path, from, to, surface, adapter, resource_kind, collection, table ou compatibilidade.",
+  );
+
+  const tipoRecurso = nomeTipoRecursoPersistencia(recurso);
+  if (!tipoRecurso) {
+    return;
+  }
+
+  const nomeRecurso = recurso.nome ?? tipoRecurso;
+  const contexto = `resource "${nomeRecurso}" do database "${database.nome ?? "database"}"`;
+  const consistency = valorCampoCompleto(localizarCampo(recurso, "consistency"));
+  const durability = valorCampoCompleto(localizarCampo(recurso, "durability"));
+  const transactionModel = valorCampoCompleto(localizarCampo(recurso, "transaction_model"));
+  const queryModel = valorCampoCompleto(localizarCampo(recurso, "query_model"));
+  const mode = valorCampoCompleto(localizarCampo(recurso, "mode"));
+  const portavel = valorCampoCompleto(localizarCampo(recurso, "portavel"));
+  const isolation = valorCampoCompleto(localizarCampo(recurso, "isolation"));
+
+  if (consistency && !normalizarConsistenciaPersistencia(consistency)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM107",
+        `${contexto} declarou consistency invalida: "${consistency}".`,
+        "erro",
+        localizarCampo(recurso, "consistency")?.intervalo,
+        "Use eventual, forte, serializable, snapshot ou causal.",
+      ),
+    );
+  }
+
+  if (durability && !normalizarDurabilidadePersistencia(durability)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM108",
+        `${contexto} declarou durability invalida: "${durability}".`,
+        "erro",
+        localizarCampo(recurso, "durability")?.intervalo,
+        "Use baixa, media ou alta.",
+      ),
+    );
+  }
+
+  if (transactionModel && !normalizarModeloTransacaoPersistencia(transactionModel)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM109",
+        `${contexto} declarou transaction_model invalido: "${transactionModel}".`,
+        "erro",
+        localizarCampo(recurso, "transaction_model")?.intervalo,
+        "Use mvcc, bloqueio, documento, otimista ou single_thread.",
+      ),
+    );
+  }
+
+  if (queryModel && !normalizarModeloConsultaPersistencia(queryModel)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM110",
+        `${contexto} declarou query_model invalido: "${queryModel}".`,
+        "erro",
+        localizarCampo(recurso, "query_model")?.intervalo,
+        "Use sql, documento, chave_valor, pipeline ou stream.",
+      ),
+    );
+  }
+
+  if (mode && !normalizarModeloConsultaPersistencia(mode)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM111",
+        `${contexto} declarou mode invalido: "${mode}".`,
+        "erro",
+        localizarCampo(recurso, "mode")?.intervalo,
+        "Use sql, documento, chave_valor, pipeline ou stream.",
+      ),
+    );
+  }
+
+  const compatibilidade = classificarCompatibilidadePersistencia(tipoRecurso, engine, { mode, isolation });
+  if (compatibilidade.status === "invalido") {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM112",
+        `${contexto} nao e compativel com o engine ${engine}.`,
+        "erro",
+        recurso.intervalo,
+        compatibilidade.motivo,
+      ),
+    );
+  }
+
+  validarBooleanoPersistencia(
+    portavel,
+    localizarCampo(recurso, "portavel")?.intervalo ?? recurso.intervalo,
+    diagnosticos,
+    "SEM113",
+    `${contexto} declarou portavel com valor invalido: "${portavel}".`,
+  );
+
+  if (parsearBooleanoPersistencia(portavel) && !recursoPersistenciaPodeSerPortavel(tipoRecurso, { mode, isolation })) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM114",
+        `${contexto} foi marcado como portavel, mas a compatibilidade entre os cinco bancos nao fecha sem perdas reais.`,
+        "aviso",
+        localizarCampo(recurso, "portavel")?.intervalo ?? recurso.intervalo,
+        "Remova portavel ou reduza o recurso para um baseline comum entre postgres, mysql, sqlite, mongodb e redis.",
+      ),
+    );
+  }
+}
+
+function validarDatabase(database: BlocoGenericoAst, diagnosticos: Diagnostico[]): void {
+  validarCamposSuportadosPersistencia(
+    database,
+    CAMPOS_DATABASE_SUPORTADOS,
+    diagnosticos,
+    `database "${database.nome ?? "database"}"`,
+    "SEM100",
+    "Use apenas engine, schema, database, consistency, durability, transaction_model, query_model, portavel, adapter, perfil ou compatibilidade.",
+  );
+
+  const campoEngine = localizarCampo(database, "engine");
+  const engineBruto = valorCampoCompleto(campoEngine);
+  if (!engineBruto) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM101",
+        `Database "${database.nome ?? "database"}" precisa declarar engine.`,
+        "erro",
+        database.intervalo,
+        "Use postgres, mysql, sqlite, mongodb ou redis.",
+      ),
+    );
+    return;
+  }
+
+  const engine = normalizarEngineBanco(engineBruto);
+  if (!engine) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM102",
+        `Database "${database.nome ?? "database"}" declarou engine invalido: "${engineBruto}".`,
+        "erro",
+        campoEngine?.intervalo ?? database.intervalo,
+        "Use postgres, mysql, sqlite, mongodb ou redis.",
+      ),
+    );
+    return;
+  }
+
+  const consistency = valorCampoCompleto(localizarCampo(database, "consistency"));
+  const durability = valorCampoCompleto(localizarCampo(database, "durability"));
+  const transactionModel = valorCampoCompleto(localizarCampo(database, "transaction_model"));
+  const queryModel = valorCampoCompleto(localizarCampo(database, "query_model"));
+  const portavel = valorCampoCompleto(localizarCampo(database, "portavel"));
+
+  if (consistency && !normalizarConsistenciaPersistencia(consistency)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM103",
+        `Database "${database.nome ?? "database"}" declarou consistency invalida: "${consistency}".`,
+        "erro",
+        localizarCampo(database, "consistency")?.intervalo,
+        "Use eventual, forte, serializable, snapshot ou causal.",
+      ),
+    );
+  }
+
+  if (durability && !normalizarDurabilidadePersistencia(durability)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM104",
+        `Database "${database.nome ?? "database"}" declarou durability invalida: "${durability}".`,
+        "erro",
+        localizarCampo(database, "durability")?.intervalo,
+        "Use baixa, media ou alta.",
+      ),
+    );
+  }
+
+  if (transactionModel && !normalizarModeloTransacaoPersistencia(transactionModel)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM105",
+        `Database "${database.nome ?? "database"}" declarou transaction_model invalido: "${transactionModel}".`,
+        "erro",
+        localizarCampo(database, "transaction_model")?.intervalo,
+        "Use mvcc, bloqueio, documento, otimista ou single_thread.",
+      ),
+    );
+  }
+
+  if (queryModel && !normalizarModeloConsultaPersistencia(queryModel)) {
+    diagnosticos.push(
+      criarDiagnostico(
+        "SEM115",
+        `Database "${database.nome ?? "database"}" declarou query_model invalido: "${queryModel}".`,
+        "erro",
+        localizarCampo(database, "query_model")?.intervalo,
+        "Use sql, documento, chave_valor, pipeline ou stream.",
+      ),
+    );
+  }
+
+  validarBooleanoPersistencia(
+    portavel,
+    localizarCampo(database, "portavel")?.intervalo ?? database.intervalo,
+    diagnosticos,
+    "SEM116",
+    `Database "${database.nome ?? "database"}" declarou portavel com valor invalido: "${portavel}".`,
+  );
+
+  for (const recurso of database.blocos) {
+    if (recurso.tipo !== "bloco_generico") {
+      continue;
+    }
+    validarRecursoPersistencia(database, recurso, diagnosticos);
+  }
 }
 
 function coletarSuperficiesModulo(modulo: ModuloAst): Array<{ tipo: SimboloSemantico["categoria"]; superficie: BlocoGenericoAst }> {
@@ -2161,7 +2459,9 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
       tasksConhecidas.add(nome);
       return;
     }
-    tiposConhecidos.add(nome);
+    if (categoria !== "database") {
+      tiposConhecidos.add(nome);
+    }
   };
 
   for (const type of modulo.types) {
@@ -2222,6 +2522,11 @@ export function criarContextoLocal(modulo: ModuloAst): ContextoSemantico {
   for (const policy of modulo.policies) {
     if (policy.nome) {
       registrar(policy.nome, "policy");
+    }
+  }
+  for (const database of modulo.databases) {
+    if (database.nome) {
+      registrar(database.nome, "database");
     }
   }
   for (const state of modulo.states) {
@@ -2505,7 +2810,9 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
       tasksConhecidas.add(nome);
       return;
     }
-    tiposConhecidos.add(nome);
+    if (categoria !== "database") {
+      tiposConhecidos.add(nome);
+    }
   };
 
   for (const type of modulo.types) {
@@ -2566,6 +2873,11 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   for (const policy of modulo.policies) {
     if (policy.nome) {
       registrar(policy.nome, "policy", policy.intervalo);
+    }
+  }
+  for (const database of modulo.databases) {
+    if (database.nome) {
+      registrar(database.nome, "database", database.intervalo);
     }
   }
   for (const state of modulo.states) {
@@ -2644,6 +2956,9 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
   for (const policy of modulo.policies) {
     validarSuperficie(policy, "policy", tasksConhecidas, tiposConhecidos, diagnosticos);
+  }
+  for (const database of modulo.databases) {
+    validarDatabase(database, diagnosticos);
   }
   validarGuardrailsSeguranca(modulo, diagnosticos);
 

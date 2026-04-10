@@ -2243,3 +2243,119 @@ module exemplo.seguranca.guardrails {
     );
   }
 });
+
+test("compilador formaliza databases vendor-first no IR", () => {
+  const codigo = `
+module exemplo.persistencia.vendor_first {
+  database principal_postgres {
+    engine: postgres
+    schema: public
+    consistency: forte
+    durability: alta
+    transaction_model: mvcc
+    query_model: sql
+    capabilities {
+      joins
+      views
+    }
+    table pedidos {
+      entity: Pedido
+    }
+    query buscar_pedidos {
+      mode: sql
+    }
+    relationship pedido_cliente {
+      from: Pedido
+      to: Cliente
+    }
+  }
+
+  database principal_mysql {
+    engine: mysql
+    query_model: sql
+    transaction_model: bloqueio
+    table faturamento {
+      table: faturamento
+    }
+  }
+
+  database principal_sqlite {
+    engine: sqlite
+    query_model: sql
+    transaction_model: single_thread
+    table cache_local {
+      table: cache_local
+    }
+  }
+
+  database principal_mongodb {
+    engine: mongodb
+    query_model: documento
+    transaction_model: documento
+    collection pedidos {
+      collection: pedidos
+    }
+    document pedido_snapshot {
+      mode: pipeline
+    }
+  }
+
+  database principal_redis {
+    engine: redis
+    query_model: chave_valor
+    transaction_model: single_thread
+    keyspace pedidos_cache {
+      ttl: "300s"
+    }
+    stream eventos_pedido {
+      surface: fila
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.deepEqual(resultado.ir?.databases.map((database) => database.engine), [
+    "postgres",
+    "mysql",
+    "sqlite",
+    "mongodb",
+    "redis",
+  ]);
+  assert.equal(resultado.ir?.databases[0]?.resources[0]?.resourceKind, "table");
+  assert.equal(resultado.ir?.databases[0]?.resources[0]?.compatibilidade.find((item) => item.engine === "postgres")?.status, "nativo");
+  assert.equal(resultado.ir?.databases[3]?.resources[0]?.resourceKind, "collection");
+  assert.equal(resultado.ir?.databases[3]?.resources[1]?.compatibilidade.find((item) => item.engine === "mongodb")?.status, "nativo");
+  assert.equal(resultado.ir?.databases[4]?.resources[0]?.resourceKind, "keyspace");
+  assert.equal(resultado.ir?.databases[4]?.resources[1]?.resourceKind, "stream");
+});
+
+test("compilador rejeita recursos de banco incompativeis e avisa sobre portabilidade falsa", () => {
+  const codigo = `
+module exemplo.persistencia.invalida {
+  database cache_redis {
+    engine: redis
+    table pedidos_cache {
+      portavel: verdadeiro
+    }
+    query relatorio_operacional {
+      mode: sql
+      portavel: verdadeiro
+    }
+  }
+
+  database docs_mongo {
+    engine: mongodb
+    transaction lote {
+      isolation: serializable
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), true);
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM112"));
+  assert.ok(resultado.diagnosticos.some((diagnostico) => diagnostico.codigo === "SEM114" && diagnostico.severidade === "aviso"));
+});

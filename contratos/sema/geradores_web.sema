@@ -1,7 +1,8 @@
 module sema.produto.geradores_web {
   docs {
-    resumo: "Contrato interno da Sema para os geradores JavaScript, HTML e CSS — garantindo que o ciclo IR -> geracao web funcione corretamente."
+    resumo: "Contrato interno da Sema para os geradores JavaScript, HTML e CSS - garantindo que o ciclo IR -> geracao web funcione corretamente."
   }
+
   vinculos {
     arquivo: "pacotes/gerador-javascript/src/index.ts"
     arquivo: "pacotes/gerador-html/src/index.ts"
@@ -17,6 +18,12 @@ module sema.produto.geradores_web {
       validacoes_coerentes: Booleano
       testes_gerados: Booleano
     }
+    rules {
+      contrato deve_ser preenchido
+    }
+    effects {
+      auditoria geracao_javascript criticidade = media
+    }
     impl {
       ts: gerador_javascript.src.index.gerarJavaScript
     }
@@ -28,12 +35,6 @@ module sema.produto.geradores_web {
       timeout: "15s"
       criticidade_operacional: media
     }
-    rules {
-      contrato deve_ser preenchido
-    }
-    effects {
-      auditoria geracao_javascript criticidade = media
-    }
     guarantees {
       jsdoc_tipado existe
       validacoes_coerentes existe
@@ -44,6 +45,7 @@ module sema.produto.geradores_web {
         given {
           contrato: "task com entity Produto e task criar_produto"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -60,6 +62,12 @@ module sema.produto.geradores_web {
       formularios_derivados: Booleano
       rotas_visuais: Booleano
     }
+    rules {
+      contrato deve_ser preenchido
+    }
+    effects {
+      auditoria geracao_html criticidade = media
+    }
     impl {
       ts: gerador_html.src.index.gerarHtml
     }
@@ -71,12 +79,6 @@ module sema.produto.geradores_web {
       timeout: "15s"
       criticidade_operacional: media
     }
-    rules {
-      contrato deve_ser preenchido
-    }
-    effects {
-      auditoria geracao_html criticidade = media
-    }
     guarantees {
       html_semantico existe
       formularios_derivados existe
@@ -87,6 +89,7 @@ module sema.produto.geradores_web {
         given {
           contrato: "task com entity Produto e route produtos"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -103,6 +106,12 @@ module sema.produto.geradores_web {
       dark_mode: Booleano
       responsividade: Booleano
     }
+    rules {
+      contrato deve_ser preenchido
+    }
+    effects {
+      auditoria geracao_css criticidade = media
+    }
     impl {
       ts: gerador_css.src.index.gerarCss
     }
@@ -114,12 +123,6 @@ module sema.produto.geradores_web {
       timeout: "15s"
       criticidade_operacional: media
     }
-    rules {
-      contrato deve_ser preenchido
-    }
-    effects {
-      auditoria geracao_css criticidade = media
-    }
     guarantees {
       variaveis_css existe
       dark_mode existe
@@ -130,6 +133,7 @@ module sema.produto.geradores_web {
         given {
           contrato: "task com entity Produto e state ciclo_pagamento"
         }
+
         expect {
           sucesso: verdadeiro
         }

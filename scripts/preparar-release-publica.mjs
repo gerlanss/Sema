@@ -4,11 +4,16 @@ import path from "node:path";
 
 const raiz = process.cwd();
 const manifestRaiz = JSON.parse(await readFile(path.join(raiz, "package.json"), "utf8"));
+const manifestMcp = JSON.parse(await readFile(path.join(raiz, "pacotes", "mcp", "package.json"), "utf8"));
 const manifestExtensao = JSON.parse(await readFile(path.join(raiz, "pacotes", "editor-vscode", "package.json"), "utf8"));
 const versao = manifestRaiz.version;
 
 if (manifestExtensao.version !== versao) {
   throw new Error(`A extensao esta em ${manifestExtensao.version}, mas a release publica esta em ${versao}.`);
+}
+
+if (manifestMcp.version !== versao) {
+  throw new Error(`O MCP esta em ${manifestMcp.version}, mas a release publica esta em ${versao}.`);
 }
 
 const pastaPacotes = path.join(raiz, ".tmp", "pacotes-publicos");
@@ -57,11 +62,11 @@ Sema e um Protocolo de Governanca de Intencao para IA sobre software vivo em bac
 
 ## Destaques
 
-- \`sema resumo\` com tamanhos \`micro\`, \`curto\` e \`medio\`
-- \`sema prompt-curto\` para IA pequena ou gratuita
-- \`contexto-ia\` com \`briefing.min.json\`, \`resumo.micro.txt\`, \`resumo.curto.txt\`, \`resumo.md\` e \`prompt-curto.txt\`
-- \`SEMA_BRIEF.*\` e \`SEMA_INDEX.json\` como entrada semantica de projeto
-- docs e onboarding explicitamente IA-first
+- persistencia vendor-first de primeira classe para \`postgres\`, \`mysql\`, \`sqlite\`, \`mongodb\` e \`redis\`
+- extensao VS Code com snippets e exemplos separados para cada engine
+- \`sema drift\` e importacao legada com leitura viva de recursos reais de banco
+- \`@semacode/mcp\` alinhado com a mesma versao publica da CLI
+- docs, instaladores e onboarding revisados para o fluxo atual
 
 ## Antes de instalar a CLI
 
@@ -84,6 +89,21 @@ sema iniciar
 sema validar contratos/pedidos.sema --json
 sema resumo contratos/pedidos.sema --micro --para onboarding
 sema doctor
+\`\`\`
+
+## Instalar o MCP da Sema
+
+Se voce usa Claude Code, Cursor, VS Code ou outro cliente MCP:
+
+\`\`\`bash
+npm install -g @semacode/mcp
+sema-mcp
+\`\`\`
+
+Ou rode sem instalar:
+
+\`\`\`bash
+npx -y @semacode/mcp
 \`\`\`
 
 Instalacao local ao projeto:
@@ -124,6 +144,7 @@ code --install-extension .\\sema-language-tools.vsix --force
 - \`sema-language-tools-latest.vsix\`
 - \`install-sema.sh\`
 - \`install-sema.ps1\`
+- MCP npm: \`@semacode/mcp@${versao}\`
 `;
 
   await writeFile(path.join(pastaRelease, "SHA256SUMS.txt"), `${checksums.join("\n")}\n`, "utf8");

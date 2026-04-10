@@ -7,6 +7,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
+import pacoteMcp from "../package.json" with { type: "json" };
 
 function resolverSema(): { cmd: string; prefixArgs: string[] } {
   if (process.platform === "win32") {
@@ -28,6 +29,7 @@ function resolverSema(): { cmd: string; prefixArgs: string[] } {
 }
 
 const { cmd: SEMA_CMD, prefixArgs: SEMA_PREFIX } = resolverSema();
+const VERSAO_MCP = pacoteMcp.version;
 
 function resolverCwd(cwd?: string): string {
   if (!cwd) return process.cwd();
@@ -126,7 +128,7 @@ function registrarFerramentas(s: McpServer): void {
     },
     async ({ projeto, saida }) => {
       const args = ["verificar", projeto, ...(saida ? ["--saida", saida] : [])];
-      return { content: [{ type: "text", text: chamarSema(args) }] };
+      return { content: [{ type: "text", text: chamarSema(args, projeto) }] };
     }
   );
 
@@ -164,7 +166,7 @@ if (porta) {
           transport.onclose = () => {
             if (transport!.sessionId) httpTransportes.delete(transport!.sessionId);
           };
-          const s = new McpServer({ name: "sema", version: "1.2.18" });
+          const s = new McpServer({ name: "sema", version: VERSAO_MCP });
           registrarFerramentas(s);
           await s.connect(transport);
         }
@@ -187,7 +189,7 @@ if (porta) {
       const sseTransport = new SSEServerTransport("/message", res);
       sseTransportes.set(sseTransport.sessionId, sseTransport);
       res.on("close", () => sseTransportes.delete(sseTransport.sessionId));
-      const s = new McpServer({ name: "sema", version: "1.2.18" });
+      const s = new McpServer({ name: "sema", version: VERSAO_MCP });
       registrarFerramentas(s);
       await s.connect(sseTransport);
       return;
@@ -209,7 +211,7 @@ if (porta) {
   });
 } else {
   // Modo stdio — uso local com Claude Code, Cursor, VS Code
-  const server = new McpServer({ name: "sema", version: "1.2.18" });
+  const server = new McpServer({ name: "sema", version: VERSAO_MCP });
   registrarFerramentas(server);
   const transport = new StdioServerTransport();
   await server.connect(transport);

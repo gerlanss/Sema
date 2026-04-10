@@ -26,8 +26,23 @@ interface ResultadoParser {
 }
 
 type PalavraBloco =
+  | "database"
   | "docs"
   | "comments"
+  | "table"
+  | "view"
+  | "query"
+  | "transaction"
+  | "index"
+  | "constraint"
+  | "relationship"
+  | "collection"
+  | "document"
+  | "keyspace"
+  | "stream"
+  | "lock"
+  | "retention"
+  | "replication"
   | "fields"
   | "invariants"
   | "transitions"
@@ -61,6 +76,70 @@ type PalavraBloco =
   | "when"
   | "given"
   | "expect";
+
+const PALAVRAS_BLOCO_NOMEADO_LIVRE = new Set<PalavraBloco>([
+  "table",
+  "view",
+  "query",
+  "transaction",
+  "index",
+  "constraint",
+  "relationship",
+  "collection",
+  "document",
+  "keyspace",
+  "stream",
+  "lock",
+  "retention",
+  "replication",
+]);
+
+function decodificarTextoLiteral(valor: string): string {
+  let resultado = "";
+
+  for (let indice = 0; indice < valor.length; indice += 1) {
+    const atual = valor[indice];
+    if (atual !== "\\") {
+      resultado += atual;
+      continue;
+    }
+
+    const proximo = valor[indice + 1];
+    if (!proximo) {
+      resultado += atual;
+      continue;
+    }
+
+    switch (proximo) {
+      case "\"":
+        resultado += "\"";
+        indice += 1;
+        break;
+      case "\\":
+        resultado += "\\";
+        indice += 1;
+        break;
+      case "n":
+        resultado += "\n";
+        indice += 1;
+        break;
+      case "r":
+        resultado += "\r";
+        indice += 1;
+        break;
+      case "t":
+        resultado += "\t";
+        indice += 1;
+        break;
+      default:
+        resultado += `${atual}${proximo}`;
+        indice += 1;
+        break;
+    }
+  }
+
+  return resultado;
+}
 
 class Parser {
   private indice = 0;
@@ -204,6 +283,7 @@ class Parser {
 
     const uses: UseAst[] = [];
     let vinculos: BlocoGenericoAst | undefined;
+    const databases: BlocoGenericoAst[] = [];
     const types: TypeAst[] = [];
     const entities: EntityAst[] = [];
     const enums: EnumAst[] = [];
@@ -256,6 +336,13 @@ class Parser {
         case "vinculos":
           if (this.iniciaBlocoSimples("vinculos")) {
             vinculos = this.parseBlocoGenerico("vinculos");
+            break;
+          }
+          extras.push(this.parseBlocoGenerico("desconhecido"));
+          break;
+        case "database":
+          if (this.iniciaBlocoComNomeObrigatorio("database")) {
+            databases.push(this.parseBlocoGenerico("database"));
             break;
           }
           extras.push(this.parseBlocoGenerico("desconhecido"));
@@ -388,6 +475,7 @@ class Parser {
       vinculos,
       docs,
       comments,
+      databases,
       types,
       entities,
       enums,
@@ -556,6 +644,17 @@ class Parser {
     return this.parseCorpoBloco("desconhecido", nome, inicioToken.intervalo.inicio);
   }
 
+  private parseBlocoNomeadoComPalavraChaveLivre(): BlocoGenericoAst {
+    const palavraChaveToken = this.avancar();
+    const nomeToken = this.avancar();
+    this.consumirValor("{", `Era esperado abrir o bloco ${palavraChaveToken.valor} ${nomeToken.valor}.`);
+    return this.parseCorpoBloco(
+      palavraChaveToken.valor as PalavraBloco,
+      nomeToken.valor,
+      palavraChaveToken.intervalo.inicio,
+    );
+  }
+
   private parseCorpoBloco(
     palavraChave: BlocoGenericoAst["palavraChave"],
     nome?: string,
@@ -579,6 +678,16 @@ class Parser {
 
       if (this.iniciaSubblocoConhecido()) {
         blocos.push(this.parseBlocoGenerico(this.atual().valor as PalavraBloco));
+        continue;
+      }
+
+      if (
+        ["identificador", "palavra_chave"].includes(this.atual().tipo)
+        && PALAVRAS_BLOCO_NOMEADO_LIVRE.has(this.atual().valor as PalavraBloco)
+        && ["identificador", "palavra_chave"].includes(this.tokens[this.indice + 1]?.tipo ?? "")
+        && this.tokens[this.indice + 2]?.valor === "{"
+      ) {
+        blocos.push(this.parseBlocoNomeadoComPalavraChaveLivre());
         continue;
       }
 
@@ -614,17 +723,34 @@ class Parser {
     const inicio = this.atual().intervalo.inicio;
     const nome = this.avancar().valor;
     this.consumirValor(":", "Era esperado ':' depois do nome do campo.");
-    const partes: string[] = [];
+    const partes: Token[] = [];
     while (this.atual().tipo !== "fim_arquivo" && this.atual().tipo !== "nova_linha" && this.atual().valor !== "}") {
-      partes.push(this.avancar().valor);
+      partes.push(this.avancar());
     }
-    const segmentos = partes.filter(Boolean);
+    const segmentos = partes.filter((token) => token.valor.length > 0);
+    const possuiTextoLiteral = segmentos.some((token) => token.tipo === "texto");
+
+    if (possuiTextoLiteral) {
+      const valorLiteral = segmentos.map((token) => token.tipo === "texto" ? decodificarTextoLiteral(token.valor) : token.valor).join(" ");
+      if (this.atual().tipo === "nova_linha") {
+        this.avancar();
+      }
+      return {
+        tipo: "campo",
+        nome,
+        valor: valorLiteral,
+        modificadores: [],
+        intervalo: { inicio, fim: this.anterior().intervalo.fim },
+      };
+    }
+
     const tipoTokens: string[] = [];
     const modificadores: string[] = [];
     let profundidadeTipo = 0;
     let iniciouModificadores = false;
 
-    for (const segmento of segmentos) {
+    for (const token of segmentos) {
+      const segmento = token.valor;
       if (!iniciouModificadores) {
         if (["<", "[", "("].includes(segmento)) {
           profundidadeTipo += 1;

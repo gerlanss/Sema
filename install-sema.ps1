@@ -1,12 +1,14 @@
 param(
   [string]$Version = "latest",
-  [switch]$WithVSCode
+  [switch]$WithVSCode,
+  [switch]$WithMcp
 )
 
 $ErrorActionPreference = "Stop"
 
 $repo = if ($env:SEMA_REPO) { $env:SEMA_REPO } else { "gerlanss/Sema" }
 $packageName = if ($env:SEMA_NPM_PACKAGE) { $env:SEMA_NPM_PACKAGE } else { "@semacode/cli" }
+$mcpPackageName = if ($env:SEMA_MCP_NPM_PACKAGE) { $env:SEMA_MCP_NPM_PACKAGE } else { "@semacode/mcp" }
 
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
   throw "npm nao encontrado. Instale Node.js LTS antes de continuar. O npm vem junto no instalador oficial: https://nodejs.org/"
@@ -25,6 +27,18 @@ try {
 
   Write-Host "Instalando CLI da Sema via npm..."
   npm install -g $packageSpec | Out-Host
+
+  if ($WithMcp) {
+    $mcpSpec = if ($Version -eq "latest") {
+      $mcpPackageName
+    } else {
+      $tagVersion = $Version.TrimStart("v")
+      "${mcpPackageName}@${tagVersion}"
+    }
+
+    Write-Host "Instalando MCP da Sema via npm..."
+    npm install -g $mcpSpec | Out-Host
+  }
 
   if ($Version -eq "latest") {
     $vsixUrl = "https://github.com/$repo/releases/latest/download/sema-language-tools-latest.vsix"
@@ -53,6 +67,9 @@ try {
   Write-Host "  sema doctor"
   Write-Host "  sema starter-ia"
   Write-Host "  sema resumo . --curto"
+  if ($WithMcp) {
+    Write-Host "  sema-mcp"
+  }
 }
 finally {
   Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue

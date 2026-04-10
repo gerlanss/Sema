@@ -4,11 +4,13 @@ import path from "node:path";
 const raiz = process.cwd();
 const manifestRaiz = JSON.parse(await readFile(path.join(raiz, "package.json"), "utf8"));
 const manifestCli = JSON.parse(await readFile(path.join(raiz, "pacotes", "cli", "package.json"), "utf8"));
+const manifestMcp = JSON.parse(await readFile(path.join(raiz, "pacotes", "mcp", "package.json"), "utf8"));
 const manifestExtensao = JSON.parse(await readFile(path.join(raiz, "pacotes", "editor-vscode", "package.json"), "utf8"));
 
 const versoes = new Map([
   ["raiz", manifestRaiz.version],
   ["cli", manifestCli.version],
+  ["mcp", manifestMcp.version],
   ["extensao", manifestExtensao.version],
 ]);
 

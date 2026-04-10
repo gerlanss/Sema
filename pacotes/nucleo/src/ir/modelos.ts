@@ -7,6 +7,16 @@ import type {
   TransicaoEstadoSemantica,
 } from "../semantico/estruturas.js";
 import type {
+  CompatibilidadePersistencia,
+  ConsistenciaPersistencia,
+  DurabilidadePersistencia,
+  EngineBanco,
+  ModeloConsultaPersistencia,
+  ModeloTransacaoPersistencia,
+  StatusCompatibilidadePersistencia,
+  TipoRecursoPersistencia,
+} from "../persistencia/contratos.js";
+import type {
   ClassificacaoDadoSemantico,
   ModoAuthSemantico,
   MotivoAuditSemantico,
@@ -311,6 +321,67 @@ export interface IrState {
   transicoes: TransicaoEstadoSemantica[];
 }
 
+export interface IrCompatibilidadePersistencia extends CompatibilidadePersistencia {
+  engine: EngineBanco;
+  status: StatusCompatibilidadePersistencia;
+}
+
+export interface IrRecursoPersistencia {
+  nome: string;
+  resourceKind: TipoRecursoPersistencia;
+  entity?: string;
+  collection?: string;
+  table?: string;
+  consistency?: ConsistenciaPersistencia | string;
+  durability?: DurabilidadePersistencia | string;
+  transactionModel?: ModeloTransacaoPersistencia | string;
+  queryModel?: ModeloConsultaPersistencia | string;
+  mode?: string;
+  isolation?: string;
+  strategy?: string;
+  ttl?: string;
+  retention?: string;
+  path?: string;
+  from?: string;
+  to?: string;
+  surface?: string;
+  adapter?: string;
+  portavel?: boolean;
+  capabilities: string[];
+  operations: string[];
+  indexing: string[];
+  guarantees: string[];
+  diagnostics: string[];
+  risks: string[];
+  fields: IrCampo[];
+  lines: string[];
+  block: IrBlocoDeclarativo;
+  compatibilidade: IrCompatibilidadePersistencia[];
+}
+
+export interface IrBancoDados {
+  nome: string;
+  engine?: EngineBanco;
+  schema?: string;
+  database?: string;
+  consistency?: ConsistenciaPersistencia | string;
+  durability?: DurabilidadePersistencia | string;
+  transactionModel?: ModeloTransacaoPersistencia | string;
+  queryModel?: ModeloConsultaPersistencia | string;
+  portavel?: boolean;
+  adapter?: string;
+  capabilities: string[];
+  operations: string[];
+  indexing: string[];
+  guarantees: string[];
+  diagnostics: string[];
+  risks: string[];
+  fields: IrCampo[];
+  lines: string[];
+  block: IrBlocoDeclarativo;
+  resources: IrRecursoPersistencia[];
+}
+
 export interface IrModulo {
   nome: string;
   uses: string[];
@@ -326,6 +397,7 @@ export interface IrModulo {
   routes: IrRoute[];
   superficies: IrSuperficie[];
   states: IrState[];
+  databases: IrBancoDados[];
   resumoAgente: IrResumoAgente;
   diagnosticos: Diagnostico[];
 }

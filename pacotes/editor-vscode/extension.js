@@ -3827,6 +3827,125 @@ const EXEMPLOS_SEMA = {
   }
 }
 `,
+  "persistencia_postgres.sema": `module exemplos.persistencia.postgres {
+  docs {
+    resumo: "Exemplo vendor-first para PostgreSQL com tabela, relacao e consulta SQL."
+  }
+
+  database principal_postgres {
+    engine: postgres
+    schema: public
+    consistency: forte
+    durability: alta
+    transaction_model: mvcc
+    query_model: sql
+    capabilities {
+      joins
+      views
+      foreign_keys
+    }
+    table pedidos {
+      entity: Pedido
+    }
+    relationship pedido_cliente {
+      from: Pedido
+      to: Cliente
+    }
+    query buscar_pedidos {
+      mode: sql
+    }
+  }
+}
+`,
+  "persistencia_mysql.sema": `module exemplos.persistencia.mysql {
+  docs {
+    resumo: "Exemplo vendor-first para MySQL com tabela operacional e indice."
+  }
+
+  database principal_mysql {
+    engine: mysql
+    consistency: forte
+    durability: alta
+    transaction_model: bloqueio
+    query_model: sql
+    table faturamento {
+      table: faturamento
+    }
+    index faturamento_status {
+      table: faturamento
+    }
+    query buscar_faturas {
+      mode: sql
+    }
+  }
+}
+`,
+  "persistencia_sqlite.sema": `module exemplos.persistencia.sqlite {
+  docs {
+    resumo: "Exemplo vendor-first para SQLite com cache local e retencao curta."
+  }
+
+  database principal_sqlite {
+    engine: sqlite
+    consistency: snapshot
+    durability: media
+    transaction_model: single_thread
+    query_model: sql
+    table cache_local {
+      table: cache_local
+    }
+    retention limpeza_local {
+      retention: "7d"
+    }
+  }
+}
+`,
+  "persistencia_mongodb.sema": `module exemplos.persistencia.mongodb {
+  docs {
+    resumo: "Exemplo vendor-first para MongoDB com colecao, documento e pipeline."
+  }
+
+  database principal_mongodb {
+    engine: mongodb
+    consistency: eventual
+    durability: alta
+    transaction_model: documento
+    query_model: documento
+    collection pedidos {
+      collection: pedidos
+    }
+    document pedido_snapshot {
+      entity: PedidoSnapshot
+    }
+    query pipeline_pedido {
+      mode: pipeline
+    }
+  }
+}
+`,
+  "persistencia_redis.sema": `module exemplos.persistencia.redis {
+  docs {
+    resumo: "Exemplo vendor-first para Redis com keyspace, stream e TTL."
+  }
+
+  database principal_redis {
+    engine: redis
+    consistency: eventual
+    durability: media
+    transaction_model: single_thread
+    query_model: chave_valor
+    keyspace cache_pedidos {
+      ttl: "300s"
+    }
+    stream eventos_pedido {
+      surface: fila
+    }
+    retention expurgo_cache {
+      retention: "300s"
+    }
+  }
+}
+`,
 };
 
 async function criarExemplosSema(raiz) {

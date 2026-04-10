@@ -544,6 +544,7 @@ const DOCUMENTOS_SUPORTE_IA = [
   "docs/integracao-com-ia.md",
   "docs/fluxo-pratico-ia-sema.md",
   "docs/como-ensinar-a-sema-para-ia.md",
+  "docs/persistencia-vendor-first.md",
   "docs/sintaxe.md",
   "docs/cli.md",
 ] as const;
@@ -1157,6 +1158,7 @@ async function descobrirDocsIa(): Promise<DescobertaDocsIa> {
     "como-ensinar-a-sema-para-ia.md",
     "prompt-base-ia-sema.md",
     "fluxo-pratico-ia-sema.md",
+    "persistencia-vendor-first.md",
   ];
 
   for (const base of candidatosBase) {

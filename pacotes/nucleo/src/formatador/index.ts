@@ -22,23 +22,24 @@ const ORDEM_BLOCOS_MODULO = new Map<string, number>([
   ["comments", 1],
   ["use", 2],
   ["vinculos", 3],
-  ["type", 4],
-  ["entity", 5],
-  ["enum", 6],
-  ["state", 7],
-  ["task", 8],
-  ["flow", 9],
-  ["route", 10],
-  ["worker", 11],
-  ["evento", 12],
-  ["fila", 13],
-  ["cron", 14],
-  ["webhook", 15],
-  ["cache", 16],
-  ["storage", 17],
-  ["policy", 18],
-  ["tests", 19],
-  ["desconhecido", 20],
+  ["database", 4],
+  ["type", 5],
+  ["entity", 6],
+  ["enum", 7],
+  ["state", 8],
+  ["task", 9],
+  ["flow", 10],
+  ["route", 11],
+  ["worker", 12],
+  ["evento", 13],
+  ["fila", 14],
+  ["cron", 15],
+  ["webhook", 16],
+  ["cache", 17],
+  ["storage", 18],
+  ["policy", 19],
+  ["tests", 20],
+  ["desconhecido", 21],
 ]);
 
 const ORDEM_SUBBLOCOS_TASK = new Map<string, number>([
@@ -177,6 +178,17 @@ const ORDEM_CAMPOS_POR_BLOCO = new Map<string, Map<string, number>>([
     ["correlacao", 2],
     ["retencao", 3],
     ["motivo", 4],
+  ])],
+  ["database", new Map<string, number>([
+    ["engine", 0],
+    ["schema", 1],
+    ["database", 2],
+    ["consistency", 3],
+    ["durability", 4],
+    ["transaction_model", 5],
+    ["query_model", 6],
+    ["portavel", 7],
+    ["adapter", 8],
   ])],
 ]);
 
@@ -431,6 +443,9 @@ function renderizarModulo(modulo: ModuloAst): string {
   }
   if (modulo.vinculos) {
     blocos.push({ chave: "vinculos", conteudo: renderizarBlocoGenerico(modulo.vinculos, 1) });
+  }
+  for (const database of modulo.databases) {
+    blocos.push({ chave: "database", conteudo: renderizarBlocoGenerico(database, 1) });
   }
   for (const type of modulo.types) {
     blocos.push({ chave: "type", conteudo: renderizarBlocoAst(type, 1) });

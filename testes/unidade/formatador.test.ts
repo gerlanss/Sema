@@ -89,6 +89,46 @@ module exemplo.idempotente {
   assert.equal(primeira.codigoFormatado, segunda.codigoFormatado);
 });
 
+test("formatador preserva strings com pontuacao e aspas escapadas em campos textuais", () => {
+  const codigo = String.raw`
+module exemplo.texto.literal {
+  docs {
+    resumo: "Contrato com virgula, parenteses (ok) e seta -> normal."
+  }
+
+  task eco {
+    input {
+      payload: Texto required
+    }
+    output {
+      payload: Texto
+    }
+    guarantees {
+      payload existe
+    }
+    tests {
+      caso "ok" {
+        given {
+          payload: "given { documento { texto: \"ok\" } }"
+        }
+        expect {
+          payload: "given { documento { texto: \"ok\" } }"
+        }
+      }
+    }
+  }
+}
+`;
+
+  const primeira = formatarCodigo(codigo, "memoria.sema");
+  const segunda = formatarCodigo(primeira.codigoFormatado ?? "", "memoria.sema");
+
+  assert.equal(temErros(primeira.diagnosticos), false);
+  assert.equal(primeira.codigoFormatado, segunda.codigoFormatado);
+  assert.ok(primeira.codigoFormatado?.includes('resumo: "Contrato com virgula, parenteses (ok) e seta -> normal."'));
+  assert.ok(primeira.codigoFormatado?.includes(String.raw`payload: "given { documento { texto: \"ok\" } }"`));
+});
+
 test("formatador preserva IR observavel do modulo", () => {
   const codigo = `
 module exemplo.ir.preservada {
@@ -295,4 +335,83 @@ module exemplo.formatado.ia {
   assert.match(resultado.codigoFormatado ?? "", /vinculos \{\n\s+arquivo: "src\/processar\.ts"\n\s+simbolo: app\.processar\.executar\n\s+\}/);
   assert.match(resultado.codigoFormatado ?? "", /execucao \{\n\s+timeout: "30s"\n\s+criticidade_operacional: alta\n\s+\}/);
   assert.match(resultado.codigoFormatado ?? "", /worker sincronizar \{/);
+});
+
+test("formatador canoniza database vendor-first e preserva IR de persistencia", () => {
+  const codigo = `
+module exemplo.database.formatado {
+  task eco {
+    output {
+      ok: Booleano
+    }
+    input {
+      payload: Texto required
+    }
+    guarantees {
+      ok existe
+    }
+    tests {
+      caso "ok" {
+        expect {
+          sucesso: verdadeiro
+        }
+        given {
+          payload: "ok"
+        }
+      }
+    }
+  }
+
+  database principal {
+    adapter: prisma
+    query_model: sql
+    transaction_model: mvcc
+    schema: public
+    engine: postgres
+    durability: alta
+    consistency: forte
+    database: app
+    portavel: falso
+    table pedidos {
+      table: pedidos
+    }
+    query buscar_pedidos {
+      mode: sql
+    }
+  }
+}
+`;
+
+  const antes = compilarCodigo(codigo, "antes.sema");
+  const formatado = formatarCodigo(codigo, "formatado.sema");
+  const depois = compilarCodigo(formatado.codigoFormatado ?? "", "depois.sema");
+  const projetarPersistencia = (databases = []) => databases.map((database: any) => ({
+    nome: database.nome,
+    engine: database.engine,
+    schema: database.schema,
+    database: database.database,
+    consistency: database.consistency,
+    durability: database.durability,
+    transactionModel: database.transactionModel,
+    queryModel: database.queryModel,
+    portavel: database.portavel,
+    adapter: database.adapter,
+    resources: database.resources.map((resource: any) => ({
+      nome: resource.nome,
+      resourceKind: resource.resourceKind,
+      mode: resource.mode,
+      table: resource.table,
+      compatibilidade: resource.compatibilidade.map((item: any) => `${item.engine}:${item.status}`),
+    })),
+  }));
+
+  assert.equal(temErros(antes.diagnosticos), false);
+  assert.equal(temErros(formatado.diagnosticos), false);
+  assert.equal(temErros(depois.diagnosticos), false);
+  assert.match(
+    formatado.codigoFormatado ?? "",
+    /database principal \{\n\s+engine: postgres\n\s+schema: public\n\s+database: app\n\s+consistency: forte\n\s+durability: alta\n\s+transaction_model: mvcc\n\s+query_model: sql\n\s+portavel: falso\n\s+adapter: prisma/,
+  );
+  assert.ok((formatado.codigoFormatado ?? "").indexOf("database principal") < (formatado.codigoFormatado ?? "").indexOf("task eco"));
+  assert.deepEqual(projetarPersistencia(depois.ir?.databases), projetarPersistencia(antes.ir?.databases));
 });

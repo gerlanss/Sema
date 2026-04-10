@@ -67,7 +67,7 @@ async function main() {
       `${JSON.stringify({
         name: "sema-cli-publica-smoke",
         private: true,
-        version: "1.0.0",
+        version: "0.0.0-smoke",
       }, null, 2)}\n`,
       "utf8",
     );

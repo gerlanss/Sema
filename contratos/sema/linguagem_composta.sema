@@ -2,15 +2,9 @@ module sema.produto.linguagem_composta {
   docs {
     resumo: "Contrato interno da Sema para endurecer literais, testes compostos e o ciclo parser -> IR -> formatador -> geradores."
   }
+
   vinculos {
     arquivo: "pacotes/nucleo/src/parser/parser.ts"
-  }
-
-  enum StatusEvolucao {
-    PLANEJADA,
-    MODELADA,
-    VALIDADA,
-    PUBLICADA
   }
 
   type SinalTesteComposto {
@@ -19,6 +13,13 @@ module sema.produto.linguagem_composta {
       objeto_aninhado: Booleano required
       mapa_aninhado: Booleano required
     }
+  }
+
+  enum StatusEvolucao {
+    PLANEJADA,
+    MODELADA,
+    VALIDADA,
+    PUBLICADA
   }
 
   task interpretar_bloco_nomeado {
@@ -81,6 +82,7 @@ module sema.produto.linguagem_composta {
             mapa_aninhado: falso
           }
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -141,6 +143,7 @@ module sema.produto.linguagem_composta {
         given {
           arquivo_semantico: "given { documento { metadata { total: 19.9 } } }"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -176,6 +179,7 @@ module sema.produto.linguagem_composta {
         given {
           arquivo_semantico: "given { documento { texto: \"ok\" } }"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -211,6 +215,7 @@ module sema.produto.linguagem_composta {
         given {
           contrato: "task com given composto e type DocumentoEntrada"
         }
+
         expect {
           sucesso: verdadeiro
         }
@@ -246,6 +251,7 @@ module sema.produto.linguagem_composta {
         given {
           contrato: "task com given composto e nested object"
         }
+
         expect {
           sucesso: verdadeiro
         }
