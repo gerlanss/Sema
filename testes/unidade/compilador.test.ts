@@ -183,6 +183,50 @@ module exemplo.rotas {
   assert.equal(resultado.ir?.states[0]?.nome, "status_execucao");
 });
 
+test("compilador separa campos inline em blocos declarativos e casos de teste", () => {
+  const codigo = `
+module exemplo.inline.campos {
+  task salvar {
+    input { cod: Id required numero: Texto required ativo: Booleano required }
+    output { item: Texto status: Texto }
+    guarantees {
+      item existe
+    }
+    tests {
+      caso "ok" {
+        given { cod: "1" numero: "abc" ativo: verdadeiro }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  route salvar_publico {
+    metodo: POST
+    caminho: /salvar
+    task: salvar
+    input { cod: Id numero: Texto ativo: Booleano }
+    output { item: Texto status: Texto }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.equal(resultado.ir?.tasks[0]?.input.length, 3);
+  assert.deepEqual(
+    resultado.ir?.tasks[0]?.tests[0]?.given.campos.map((campo) => campo.nome),
+    ["cod", "numero", "ativo"],
+  );
+  assert.deepEqual(
+    resultado.ir?.tasks[0]?.tests[0]?.given.campos.map((campo) => campo.tipo),
+    ["1", "abc", "verdadeiro"],
+  );
+  assert.deepEqual(
+    resultado.ir?.routes[0]?.outputPublico.map((campo) => campo.nome),
+    ["item", "status"],
+  );
+});
+
 test("compilador rejeita route invalida", () => {
   const codigo = `
 module exemplo.route.invalida {

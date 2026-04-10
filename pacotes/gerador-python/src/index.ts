@@ -91,9 +91,14 @@ function mapearCampoParaPython(campo: IrCampo): string {
 }
 
 function gerarDataclass(nome: string, campos: IrCampo[]): string {
-  const linhas = campos.length === 0
+  const camposOrdenados = [...campos].sort((a, b) => {
+    const obrigatorioA = a.modificadores.includes("required") ? 0 : 1;
+    const obrigatorioB = b.modificadores.includes("required") ? 0 : 1;
+    return obrigatorioA - obrigatorioB;
+  });
+  const linhas = camposOrdenados.length === 0
     ? "    pass"
-    : campos.map((campo) => {
+    : camposOrdenados.map((campo) => {
       const tipoBase = mapearCampoParaPython(campo);
       if (campo.modificadores.includes("required")) {
         return `    ${campo.nome}: ${tipoBase}`;
@@ -333,6 +338,23 @@ function gerarPreparacaoSaida(task: IrTask): string {
   return `    saida = ${task.nome}Saida(${argumentos})\n${ajustes.join("\n")}`;
 }
 
+function finalizarBlocoPython(linhas: string[]): string {
+  if (linhas.length === 0) {
+    return "    pass";
+  }
+
+  const possuiInstrucaoExecutavel = linhas.some((linha) => {
+    const texto = linha.trim();
+    return texto.length > 0 && !texto.startsWith("#");
+  });
+
+  if (possuiInstrucaoExecutavel) {
+    return linhas.join("\n");
+  }
+
+  return `${linhas.join("\n")}\n    pass`;
+}
+
 function gerarFuncaoGarantias(task: IrTask): string {
   const camposSaida = new Set(task.output.map((campo) => campo.nome));
   const linhas = [
@@ -349,7 +371,7 @@ function gerarFuncaoGarantias(task: IrTask): string {
       .map((garantia) => `    # Garantia declarada em Sema: ${garantia}`),
   ];
 
-  return `def verificar_garantias_${normalizarNomeParaSimbolo(task.nome)}(saida: ${task.nome}Saida) -> None:\n${(linhas.length > 0 ? linhas.join("\n") : "    pass")}\n`;
+  return `def verificar_garantias_${normalizarNomeParaSimbolo(task.nome)}(saida: ${task.nome}Saida) -> None:\n${finalizarBlocoPython(linhas)}\n`;
 }
 
 function gerarMetadadosTask(task: IrTask): string {
@@ -484,7 +506,7 @@ function gerarTask(task: IrTask, tiposCompostos: Map<string, Map<string, string>
     ...task.rules
       .filter((regra) => !task.regrasEstruturadas.some((estruturada) => estruturada.textoOriginal === regra))
       .map((regra) => `    # Regra declarada em Sema: ${regra}`),
-  ].join("\n");
+  ];
 
   const efeitos = task.efeitosEstruturados.length > 0
     ? task.efeitosEstruturados.map((efeito) => `    # Efeito estruturado: categoria=${efeito.categoria} alvo=${efeito.alvo}${efeito.detalhe ? ` detalhe=${efeito.detalhe}` : ""}${efeito.criticidade ? ` criticidade=${efeito.criticidade}` : ""}`).join("\n")
@@ -504,7 +526,7 @@ ${erros.map(([nomeErro, mensagem]) => `\nclass ${task.nome}_${nomeErro}Erro(Exce
 ${gerarMetadadosTask(task)}
 
 def validar_${nome}(entrada: ${task.nome}Entrada) -> None:
-${validacoes || "    pass"}
+${finalizarBlocoPython(validacoes)}
 
 ${gerarFuncaoGarantias(task)}
 

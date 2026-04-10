@@ -724,8 +724,26 @@ class Parser {
     const nome = this.avancar().valor;
     this.consumirValor(":", "Era esperado ':' depois do nome do campo.");
     const partes: Token[] = [];
+    let profundidade = 0;
     while (this.atual().tipo !== "fim_arquivo" && this.atual().tipo !== "nova_linha" && this.atual().valor !== "}") {
-      partes.push(this.avancar());
+      const proximoToken = this.tokens[this.indice + 1];
+      const iniciaNovoCampo =
+        profundidade === 0
+        && partes.length > 0
+        && ["identificador", "palavra_chave"].includes(this.atual().tipo)
+        && proximoToken?.valor === ":";
+
+      if (iniciaNovoCampo) {
+        break;
+      }
+
+      const token = this.avancar();
+      partes.push(token);
+      if (["<", "[", "("].includes(token.valor)) {
+        profundidade += 1;
+      } else if ([">", "]", ")"].includes(token.valor)) {
+        profundidade = Math.max(0, profundidade - 1);
+      }
     }
     const segmentos = partes.filter((token) => token.valor.length > 0);
     const possuiTextoLiteral = segmentos.some((token) => token.tipo === "texto");

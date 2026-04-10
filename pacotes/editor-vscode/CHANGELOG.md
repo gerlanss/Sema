@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.2
+
+- acompanha a linha publica 1.5.2 com correcao do `sema verificar` para payload inline, `pass` em blocos Python comentados e ordenacao segura de campos obrigatorios
+- mantem a extensao alinhada com o patch publico da CLI, MCP e docs
+
 ## 1.5.1
 
 - acompanha a linha publica 1.5.1 com `sema-mcp --help/--version`, `doctor` com preflight por comando e `drift` menos barulhento para IA

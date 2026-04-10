@@ -37,7 +37,7 @@ Adocao incremental:
 
 ## Persistencia vendor-first
 
-A linha 1.5.1 adiciona uma secao canonica de persistencia no contrato, no semantico, no IR e no formatador, alem de `drift` com escopo real, `impacto` e renomeacao semantica assistida.
+A linha 1.5.2 adiciona uma secao canonica de persistencia no contrato, no semantico, no IR e no formatador, alem de `drift` com escopo real, `impacto`, renomeacao semantica assistida e `verificar` mais coerente nos alvos gerados.
 
 Cobertura publica:
 

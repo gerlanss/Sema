@@ -211,6 +211,42 @@ module exemplo.impl {
   assert.ok(arquivosDart[0]?.conteudo.includes("impl=ts:app.gateway.pagamentos.processar[nao_verificado], py:servicos.pagamentos.processar[nao_verificado], dart:app.mobile.pagamentos.processar[nao_verificado]"));
 });
 
+test("gerador typescript preserva payload de teste inline com multiplos campos", () => {
+  const codigo = `
+module exemplo.inline.payload {
+  task salvar {
+    input {
+      cod_colaborador: Id required
+      whatsapp_number: Texto required
+      ativo: Booleano required
+    }
+    output {
+      contato: Texto
+    }
+    guarantees {
+      contato existe
+    }
+    tests {
+      caso "ok" {
+        given { cod_colaborador: "101" whatsapp_number: "+5592999999999" ativo: verdadeiro }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivoTeste = gerarTypeScript(resultado.ir!).find((arquivo) => arquivo.caminhoRelativo.endsWith(".test.ts"));
+  assert.ok(arquivoTeste);
+  assert.ok(arquivoTeste?.conteudo.includes('"cod_colaborador": "101"'));
+  assert.ok(arquivoTeste?.conteudo.includes('"whatsapp_number": "+5592999999999"'));
+  assert.ok(arquivoTeste?.conteudo.includes('"ativo": true'));
+});
+
 test("geradores refletem estruturas semanticas mais ricas no exemplo de pagamento", async () => {
   const caminho = path.resolve("exemplos/pagamento.sema");
   const codigo = await readFile(caminho, "utf8");
@@ -372,6 +408,97 @@ module exemplo.geracao.python_composto {
   assert.doesNotMatch(arquivoPy.conteudo, /class Mapa<Texto, Decimal>/);
 
   const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-gerador-python-composto-"));
+  try {
+    const caminhoArquivo = path.join(baseTemporaria, arquivoPy.caminhoRelativo);
+    await mkdir(path.dirname(caminhoArquivo), { recursive: true });
+    await writeFile(caminhoArquivo, arquivoPy.conteudo, "utf8");
+
+    const compilacao = spawnSync("python", ["-m", "py_compile", caminhoArquivo], {
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+    assert.equal(compilacao.status, 0, compilacao.stderr || compilacao.stdout);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("gerador Python emite pass quando validacao da task tem apenas comentarios", () => {
+  const codigo = `
+module exemplo.geracao.python_predicado {
+  task consultar {
+    input {
+      worker_name: Texto
+    }
+    output {
+      status: Texto
+    }
+    rules {
+      worker_name deve_ser preenchido
+    }
+    guarantees {
+      status existe
+    }
+    tests {
+      caso "ok" {
+        given { worker_name: "main" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "memoria.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivoPy = gerarPython(resultado.ir!).find((arquivo) => arquivo.caminhoRelativo.endsWith(".py"));
+  assert.ok(arquivoPy);
+  assert.match(
+    arquivoPy!.conteudo,
+    /def validar_consultar\(entrada: consultarEntrada\) -> None:\n    # Predicado declarado em Sema: worker_name deve_ser preenchido\n    pass/,
+  );
+});
+
+test("gerador Python ordena campos obrigatorios antes dos opcionais em dataclass de entrada", async () => {
+  const codigo = `
+module exemplo.geracao.python_ordem {
+  task criar_campanha {
+    input {
+      nome: Texto required
+      janela_inicio: Texto
+      janela_fim: Texto
+      dias_semana: Lista<Texto> required
+    }
+    output {
+      protocolo: Id
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "ok" {
+        given { nome: "Resumo" dias_semana: "[MON]" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}
+`;
+
+  const resultado = compilarCodigo(codigo, "python_ordem.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivoPy = gerarPython(resultado.ir!).find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_python_ordem.py");
+  assert.ok(arquivoPy);
+  assert.match(
+    arquivoPy.conteudo,
+    /class criar_campanhaEntrada:\n    nome: str\n    dias_semana: list\[str\]\n    janela_inicio: str \| None = None\n    janela_fim: str \| None = None/,
+  );
+
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-gerador-python-ordem-"));
   try {
     const caminhoArquivo = path.join(baseTemporaria, arquivoPy.caminhoRelativo);
     await mkdir(path.dirname(caminhoArquivo), { recursive: true });
