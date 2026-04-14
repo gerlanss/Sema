@@ -15,6 +15,7 @@ import {
   localizarExportacaoTypeScriptHttp,
   type CampoInferidoTypeScriptHttp,
 } from "./typescript-http.js";
+import { coletarSuperficiesAngularStandaloneConsumer } from "./angular-consumer-standalone.js";
 
 export type FonteImportacao =
   | "nestjs"
@@ -1595,7 +1596,14 @@ async function coletarSuperficiesAngularConsumer(baseProjeto: string, arquivos: 
       }
     }
   }
-  return superficies;
+  if (superficies.length > 0) {
+    return superficies;
+  }
+  return (await coletarSuperficiesAngularStandaloneConsumer(baseProjeto, arquivos)).map((superficie) => ({
+    caminho: superficie.rota,
+    arquivo: superficie.arquivo,
+    tipoArquivo: superficie.tipoArquivo,
+  }));
 }
 
 async function importarNextJsConsumerBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {

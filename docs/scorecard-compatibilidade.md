@@ -18,6 +18,25 @@ O scorecard da Sema mede quanto do contrato esta realmente sustentado pelo codig
 - lacunas semanticas abertas
 - incompatibilidades declaradas entre contrato e engine
 
+## Matriz curta de orquestracao
+
+| Runtime | Onde encaixa bem | Onde exige adapter | Alertas comuns |
+|---|---|---|---|
+| `n8n` | `webhook`, `cron`, HTTP, branching, transformacao de payload | `worker`, `evento`, `fila`, `retry`, `segredos` | nao fingir equivalencia total para `authz`, `dados`, `audit`, `compensacao`, `guarantees` |
+
+## Regua inicial para `n8n`
+
+Leitura oficial inicial para o scorecard de orquestracao:
+
+- `nativo`: `webhook`, `cron`, chamadas HTTP, branching e transformacao
+- `adaptado`: `worker`, `evento`, `fila`, `retry`, `segredos` e idempotencia guiada por convencao externa
+- `parcial`: `authz`, classificacao de dados, auditoria forte, compensacao e `guarantees`
+- `invalido`: quando o contrato exigir semantica transacional, politica forte ou isolamento operacional que o runtime nao sustenta do mesmo jeito
+
+## Principio de produto
+
+Compatibilidade com `n8n` nao significa que a Sema passa a modelar node por node. O contrato continua sendo a fonte da verdade, e o runtime entra como alvo adaptado de orquestracao.
+
 ## Matriz curta de persistencia
 
 | Engine | Recursos fortes | Alertas comuns |

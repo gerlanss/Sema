@@ -255,6 +255,7 @@ interface ResumoSemanticoModuloIa {
   appRoutes: string[];
   consumerSurfaces: string[];
   consumerBridges: string[];
+  ancoragensVinculo: string[];
   arquivosProvaveisEditar: string[];
 }
 
@@ -1649,6 +1650,7 @@ function coletarResumoSemanticoModulo(
     appRoutes: limitarLista(unicosOrdenados(briefing.appRoutes ?? drift.drift.appRoutes ?? []), 8),
     consumerSurfaces: limitarLista(unicosOrdenados(briefing.consumerSurfaces ?? []), 8),
     consumerBridges: limitarLista(unicosOrdenados(briefing.consumerBridges ?? []), 8),
+    ancoragensVinculo: limitarLista(unicosOrdenados(briefing.ancoragensVinculo ?? []), 8),
     arquivosProvaveisEditar: limitarLista(unicosOrdenados(briefing.arquivosProvaveisEditar ?? briefing.oQueTocar), 8),
   };
 }
@@ -1668,6 +1670,7 @@ function renderizarResumoModuloTexto(
     `APP_ROUTES: ${resumirListaTexto(resumo.appRoutes, limite)}`,
     `CONSUMER_SURFACES: ${resumirListaTexto(resumo.consumerSurfaces, limite)}`,
     `CONSUMER_BRIDGES: ${resumirListaTexto(resumo.consumerBridges, limite)}`,
+    `ANCORAGEM_VINCULO: ${resumirListaTexto(resumo.ancoragensVinculo, limite)}`,
     `PUBLICO: ${resumirListaTexto(resumo.superficiesPublicas, limite)}`,
     `TAREFAS: ${resumirListaTexto(resumo.tarefasPrincipais, limite)}`,
     `ENTRADAS: ${resumirListaTexto(resumo.entradasChave, limite)}`,
@@ -1801,6 +1804,7 @@ function criarBriefingMinimo(
     appRoutes: resumo.appRoutes,
     consumerSurfaces: resumo.consumerSurfaces,
     consumerBridges: resumo.consumerBridges,
+    ancoragensVinculo: resumo.ancoragensVinculo,
   };
 }
 
@@ -1951,25 +1955,38 @@ function resumirDriftPorModulo(
     ...recursosValidos.map((recurso) => recurso.arquivo).filter(Boolean),
     ...recursosDivergentes.map((recurso) => recurso.arquivo).filter(Boolean),
   ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const arquivosProvaveisEditar = [...new Set([
+    ...arquivosRelacionados,
+    ...tasks.flatMap((task) => task.arquivosProvaveisEditar),
+  ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const consumerSurfaces = resultadoDrift.consumerSurfaces
     .filter((surface) =>
-      arquivosRelacionados.includes(surface.arquivo)
+      arquivosProvaveisEditar.includes(surface.arquivo)
       || rotasConsumerModulo.has(surface.rota))
     .map((surface) => `${surface.tipoArquivo}:${surface.rota} -> ${surface.arquivo}`)
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
   const consumerBridges = resultadoDrift.consumerBridges
-    .filter((bridge) => arquivosRelacionados.includes(bridge.arquivo))
+    .filter((bridge) => arquivosProvaveisEditar.includes(bridge.arquivo))
     .map((bridge) => bridge.caminho)
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
   const appRoutes = [...new Set(resultadoDrift.consumerSurfaces
     .filter((surface) =>
-      arquivosRelacionados.includes(surface.arquivo)
+      arquivosProvaveisEditar.includes(surface.arquivo)
       || rotasConsumerModulo.has(surface.rota))
     .map((surface) => surface.rota))]
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
-    const consumerFramework = appRoutes.length > 0 || consumerBridges.length > 0
-      ? resultadoDrift.consumerFramework
-      : null;
+  const consumerFramework = appRoutes.length > 0 || consumerBridges.length > 0
+    ? resultadoDrift.consumerFramework
+    : null;
+  const ancoragensVinculo = tasks
+    .filter((task) => task.ancoragemVinculo !== "propria")
+    .map((task) => {
+      if (task.ancoragemVinculo === "herdada_modulo" && task.arquivosAncoraHerdados.length > 0) {
+        return `${task.task}:herdada_modulo -> ${task.arquivosAncoraHerdados.join(", ")}`;
+      }
+      return `${task.task}:${task.ancoragemVinculo}`;
+    })
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   return {
     caminho,
@@ -1988,11 +2005,12 @@ function resumirDriftPorModulo(
         ? "media"
         : "baixa",
     arquivosRelacionados,
-    arquivosProvaveisEditar: arquivosRelacionados,
+    arquivosProvaveisEditar,
     consumerFramework,
     appRoutes,
     consumerSurfaces,
     consumerBridges,
+    ancoragensVinculo,
     checksSugeridos: [...new Set(tasks.flatMap((task) => task.checksSugeridos))],
     lacunas: [...new Set(tasks.flatMap((task) => task.lacunas))],
     tasks,
@@ -2053,6 +2071,7 @@ function criarBriefingAgente(
     appRoutes: resumoDrift.appRoutes,
     consumerSurfaces: resumoDrift.consumerSurfaces,
     consumerBridges: resumoDrift.consumerBridges,
+    ancoragensVinculo: resumoDrift.ancoragensVinculo,
     testesMinimos: [
       "sema validar <arquivo> --json",
       "sema drift <arquivo> --json",

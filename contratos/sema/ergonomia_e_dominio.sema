@@ -1,6 +1,6 @@
 module sema.produto.ergonomia_e_dominio {
   docs {
-    resumo: "Contrato interno da Sema para reduzir atrito sintatico, enriquecer dominio e governar compatibilidade sem virar linguagem maldita."
+    resumo: "Contrato interno da Sema para reduzir atrito sintatico, enriquecer dominio e governar compatibilidade por familia de stack e runtime, incluindo adapters honestos para orquestracao como n8n sem virar DSL de node."
   }
 
   vinculos {
@@ -179,6 +179,16 @@ module sema.produto.ergonomia_e_dominio {
           sucesso: verdadeiro
         }
       }
+      caso "runtime de workflow entra como alvo e nao como linguagem" {
+        given {
+          contrato_atual: "webhook publica, cron de reprocessamento e worker de integracao adaptados para n8n"
+          perfil_atual: "EXPERIMENTAL"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
     }
   }
 
@@ -250,6 +260,16 @@ module sema.produto.ergonomia_e_dominio {
       caso "scorecard publico" {
         given {
           familia: "Next.js App Router"
+          perfil: "PUBLICO"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+      caso "scorecard de runtime n8n" {
+        given {
+          familia: "n8n"
           perfil: "PUBLICO"
         }
 

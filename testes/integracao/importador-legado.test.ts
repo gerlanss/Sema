@@ -7,6 +7,7 @@ import os from "node:os";
 import { spawnSync } from "node:child_process";
 import {
   criarProjetoAngularConsumer,
+  criarProjetoAngularStandaloneConsumer,
   criarProjetoCppBridge,
   criarProjetoDotnetAspNet,
   criarProjetoFirebaseWorker,
@@ -433,6 +434,38 @@ test("cli importa projeto Angular consumer a partir do bridge e inventaria route
     assert.match(arquivoConsumer, /superficie: "?\/ranking"?/);
     assert.match(arquivoConsumer, /arquivo: "src\/app\/app\.routes\.ts"/);
     assert.match(arquivoConsumer, /arquivo: "src\/app\/features\/ranking\/ranking-page\.component\.ts"/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli importa projeto Angular standalone consumer sem routes e inventaria shell slash", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-angular-standalone-consumer-"));
+
+  try {
+    await criarProjetoAngularStandaloneConsumer(base);
+
+    const execucao = executarImportacao([
+      "importar",
+      "angular-consumer",
+      base,
+      "--namespace",
+      "showroom",
+      "--saida",
+      path.join(base, "sema"),
+      "--json",
+    ]);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.fonte, "angular-consumer");
+    assert.equal(json.resumo.sucesso, true);
+
+    const arquivoConsumer = await readFile(path.join(base, "sema", "consumer.sema"), "utf8");
+    assert.match(arquivoConsumer, /superficie: "?\/"?/);
+    assert.match(arquivoConsumer, /arquivo: "src\/app\.component\.ts"/);
+    assert.match(arquivoConsumer, /arquivo: "src\/components\/ranking-shell\.component\.ts"/);
+    assert.match(arquivoConsumer, /ts: src\.app\.sema_consumer_bridge\.semaFetchShowroomRanking/);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

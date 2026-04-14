@@ -37,7 +37,7 @@ Adocao incremental:
 
 ## Persistencia vendor-first
 
-A linha 1.5.4 adiciona uma secao canonica de persistencia no contrato, no semantico, no IR e no formatador, alem de `drift` com escopo real, `impacto`, renomeacao semantica assistida, `verificar` mais coerente nos alvos gerados e match de metodos JS/TS definidos via `Object.assign(...prototype...)`.
+A linha 1.5.7 adiciona uma secao canonica de persistencia no contrato, no semantico, no IR e no formatador, alem de `drift` com escopo real, `impacto`, renomeacao semantica assistida, `verificar` mais coerente nos alvos gerados, match de metodos JS/TS definidos via `Object.assign(...prototype...)`, leitura de `Preferences`/`localStorage`/`sessionStorage`, fallback para `angular-consumer` standalone sem `.routes` e limpeza de runtime da CLI publica para reduzir atrito de instalacao no Windows.
 
 Cobertura publica:
 

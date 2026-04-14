@@ -7,6 +7,7 @@ import os from "node:os";
 import { spawnSync } from "node:child_process";
 import {
   criarProjetoAngularConsumer,
+  criarProjetoAngularStandaloneConsumer,
   criarProjetoCppBridge,
   criarProjetoBridgeDart,
   criarProjetoDotnetAspNet,
@@ -767,6 +768,75 @@ test("cli drift resolve impls, rota worker e recursos Firebase em fixture sintet
     assert.equal(json.rotas_divergentes.length, 0);
     assert.equal(json.recursos_divergentes.length, 0);
     assert.equal(json.recursos_validos.some((recurso: { alvo: string }) => recurso.alvo === "telegram_sessions"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve Angular standalone consumer sem routes e ancora task por modulo", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-angular-standalone-consumer-"));
+
+  try {
+    await criarProjetoAngularStandaloneConsumer(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.vinculos_quebrados.length, 0);
+    assert.equal(json.consumerFramework, "angular-consumer");
+    assert.equal(json.appRoutes.includes("/"), true);
+    assert.equal(json.consumerSurfaces.some((surface: { arquivo: string; rota: string }) =>
+      surface.rota === "/"
+      && (
+        surface.arquivo.endsWith("src\\app.component.ts")
+        || surface.arquivo.endsWith("src/app.component.ts")
+      )), true);
+    assert.equal(json.consumerSurfaces.some((surface: { arquivo: string; rota: string }) =>
+      surface.rota === "/"
+      && (
+        surface.arquivo.endsWith("src\\components\\ranking-shell.component.ts")
+        || surface.arquivo.endsWith("src/components/ranking-shell.component.ts")
+      )), true);
+
+    const taskAnchored = json.tasks.find((task: { task: string }) => task.task === "fetch_showroom_ranking");
+    assert.ok(taskAnchored);
+    assert.equal(taskAnchored.ancoragemVinculo, "herdada_modulo");
+    assert.equal(taskAnchored.arquivosAncoraHerdados.some((arquivo: string) =>
+      arquivo.endsWith("src\\app.component.ts") || arquivo.endsWith("src/app.component.ts")), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift materializa persistencia local com Preferences e localStorage pelo arquivo da impl", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-persistencia-local-arquivo-"));
+
+  try {
+    await criarProjetoAngularStandaloneConsumer(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    const persistenciaSalvar = json.persistencia_real.find((item: { task: string }) => item.task === "salvar_preferencia_ranking");
+    const persistenciaRestaurar = json.persistencia_real.find((item: { task: string }) => item.task === "restaurar_preferencia_ranking");
+
+    assert.ok(persistenciaSalvar);
+    assert.ok(persistenciaRestaurar);
+    assert.equal(persistenciaSalvar.engine, "arquivo");
+    assert.equal(persistenciaSalvar.categoriaPersistencia, "local_arquivo");
+    assert.equal(persistenciaSalvar.status, "materializado");
+    assert.equal(persistenciaSalvar.colunas.includes("ranking_preference_locale"), true);
+    assert.equal(persistenciaSalvar.colunas.includes("ranking_preference_theme"), true);
+    assert.equal(persistenciaSalvar.colunas.includes("ranking_preference_last_view"), true);
+    assert.equal(persistenciaSalvar.repositorios.some((arquivo: string) =>
+      arquivo.endsWith("src\\app\\sema_consumer_bridge.ts")
+      || arquivo.endsWith("src/app/sema_consumer_bridge.ts")), true);
+    assert.equal(persistenciaRestaurar.engine, "arquivo");
+    assert.equal(persistenciaRestaurar.categoriaPersistencia, "local_arquivo");
+    assert.equal(persistenciaRestaurar.colunas.includes("ranking_preference_locale"), true);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

@@ -4,13 +4,13 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 
 ## Quadro-resumo
 
-- Ultima atualizacao: 2026-04-10
+- Ultima atualizacao: 2026-04-14
 - Ultimo commit de referencia: `6b38c68`
 - Convencao de atualizacao: sempre que um item mudar de estado, atualizar este arquivo e registrar o commit de referencia mais recente
-- Estagio atual: linha publica `1.5.4` alinhada para release estavel com persistencia vendor-first, drift com escopo real, impact map, renomeacao semantica assistida, `doctor` mais util, `verificar` corrigido e matcher JS/TS mais forte para prototype browser-side
+- Estagio atual: linha publica `1.5.7` alinhada para release estavel com persistencia vendor-first, fallback Angular standalone sem `.routes`, persistencia local real em browser/Capacitor, `drift` mais explicavel para IA e instalacao Windows sem `tsx` no runtime da CLI
 - Direcao de produto: IA primeiro; legibilidade humana tratada como consequencia da explicitude semantica
 - Posicionamento atual: protocolo de governanca de intencao para IA sobre software vivo, mantido tecnicamente como linguagem de intencao para governar contrato e significado acima das stacks de implementacao
-- Linha publica de release: `1.5.4`, alinhada entre CLI, MCP, pacotes internos, extensao do VS Code, instaladores e documentacao
+- Linha publica de release: `1.5.7`, alinhada entre CLI, MCP, pacotes internos, extensao do VS Code, instaladores e documentacao
 - Pacote npm publico da CLI: `@semacode/cli`
 - Pacote npm publico do MCP: `@semacode/mcp`
 - Principais areas concluidas:
@@ -53,10 +53,15 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - `@semacode/mcp` alinhado como pacote publico de primeira classe na mesma versao da CLI
   - extensao VS Code com snippets, hover, highlight e exemplos embutidos para os cinco bancos suportados
   - documentacao canonica consolidada com indice novo e remocao de docs historicos defasados
+  - `angular-consumer` com fallback real para projeto standalone sem `.routes`, incluindo shell `/` e superfícies alcançaveis
+  - `sema drift` materializando persistencia local real em `Preferences`, `localStorage` e `sessionStorage`
+  - `ancoragemVinculo` exposta em `drift`, `contexto-ia`, `briefing.min.json` e `SEMA_INDEX.json` para separar task sem vinculo proprio de task totalmente cega
+  - CLI publica sem `tsx` como dependencia de runtime, reduzindo atrito de instalacao global no Windows
 - Principais areas parciais:
   - suporte de editor agora tem LSP inicial, mas ainda pode amadurecer bastante
   - `use` avancado para projetos ainda maiores pode amadurecer mais
   - orquestracao backend ainda pode ficar mais forte sem inflar a linguagem
+  - compatibilidade explicita para runtime de orquestracao como `n8n` ainda precisa amadurecer no scorecard e nos adapters honestos
   - contratos de execucao, efeitos e erros ainda podem ficar mais fortes no pos-MVP
 
 ## Fases do Projeto
@@ -102,6 +107,7 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
   - amadurecer `use` para projetos maiores
   - enriquecer contratos de execucao, efeitos e erros
   - ampliar integracao com IA sobre JSON estavel, formatacao canonica e scaffold backend
+  - explicitar a regua de compatibilidade para runtime de workflow como `n8n` sem virar DSL de node
   - fortalecer `impl` e `drift` como ponte concreta com arquivo, simbolo e rota da implementacao viva
   - subir o nivel de invariantes para modulos operacionais que hoje estao bons de fluxo, mas ainda frouxos de garantia
   - mapear melhor `modulo Sema -> arquivos reais` para reduzir adivinhacao de IA em Python, TypeScript e frameworks
@@ -191,6 +197,8 @@ Este arquivo e o ponto de acompanhamento operacional do projeto Sema. Ele resume
 - `[x]` Alinhar release `1.5.1` entre CLI, MCP, extensao, instaladores, docs e scripts de publicacao
 - `[x]` Alinhar patch `1.5.2` com correcao do `verificar`, docs, changelog, npm e instalacao local
 - `[x]` Alinhar patch `1.5.4` com resolucao de `Object.assign(...prototype...)`, entrada padrao da CLI mais segura e docs atualizadas
+- `[x]` Alinhar patch `1.5.6` com fallback Angular standalone sem `.routes`, persistencia local browser/Capacitor no `drift`, publicacao e instalacao local
+- `[x]` Alinhar patch `1.5.7` com limpeza de dependencias de runtime da CLI para remover ruído de instalacao global no Windows
 - `[x]` Consolidar a documentacao publica e remover docs historicos defasados
 
 ## Fundacao do Projeto

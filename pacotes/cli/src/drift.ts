@@ -17,6 +17,7 @@ import type {
 } from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
 import type { FonteLegado } from "./tipos.js";
+import { coletarSuperficiesAngularStandaloneConsumer } from "./angular-consumer-standalone.js";
 import { extrairSimbolosCpp } from "./cpp-symbols.js";
 import { extrairRotasDotnet, extrairSimbolosDotnet } from "./dotnet-http.js";
 import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
@@ -145,6 +146,8 @@ interface SimboloCandidatoDrift {
   motivo: string;
 }
 
+type AncoragemVinculoTaskDrift = "propria" | "herdada_modulo" | "ausente";
+
 interface ResumoTaskDrift {
   modulo: string;
   task: string;
@@ -156,7 +159,9 @@ interface ResumoTaskDrift {
   confiancaVinculo: NivelConfiancaSemantica;
   riscoOperacional: NivelRiscoSemantico;
   lacunas: string[];
+  ancoragemVinculo: AncoragemVinculoTaskDrift;
   arquivosReferenciados: string[];
+  arquivosAncoraHerdados: string[];
   arquivosProvaveisEditar: string[];
   simbolosReferenciados: string[];
   candidatosImpl: SimboloCandidatoDrift[];
@@ -1077,6 +1082,8 @@ function extrairRecursosArquivoLocal(arquivo: string, codigo: string): RecursoRe
   const contextoArquivoLocal = /\b(?:json|jsonl|ndjson)\b/i.test(codigo)
     || /\b(?:read_text|write_text|readFile(?:Sync)?|writeFile(?:Sync)?|open)\b/i.test(codigo)
     || /\.(?:json|jsonl|ndjson|db|sqlite|sqlite3)\b/i.test(codigo)
+    || /@capacitor\/preferences|Preferences\.(?:get|set|remove)\s*\(/i.test(codigo)
+    || /\b(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\s*\(/i.test(codigo)
     || /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(normalizarFragmentoArquivo(arquivo));
   if (!contextoArquivoLocal) {
     return [];
@@ -1094,6 +1101,14 @@ function extrairRecursosArquivoLocal(arquivo: string, codigo: string): RecursoRe
     .trim();
   if (nomeStore && /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(nomeArquivo)) {
     registrarRecursoDrift(recursos, "arquivo", "arquivo_local", nomeStore, arquivo);
+  }
+
+  for (const match of codigo.matchAll(/Preferences\.(?:get|set|remove)\s*\(\s*\{[\s\S]{0,160}?key\s*:\s*["'`]([^"'`]+)["'`]/gi)) {
+    registrarRecursoDrift(recursos, "arquivo", "arquivo_local", match[1]!, arquivo);
+  }
+
+  for (const match of codigo.matchAll(/\b(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\s*\(\s*["'`]([^"'`]+)["'`]/gi)) {
+    registrarRecursoDrift(recursos, "arquivo", "arquivo_local", match[1]!, arquivo);
   }
 
   return [...recursos.values()];
@@ -2051,7 +2066,11 @@ function inferirConsumerFrameworkPrincipal(
     || /(?:^|\/)(?:src\/)?(?:app\/)?(?:router|routes)\.(?:ts|tsx|js|jsx)$/i.test(arquivo))) {
     return "react-vite-consumer";
   }
-  if (arquivos.some((arquivo) => /(?:^|\/)(?:src\/)?app\/.+\.component\.(?:ts|js)$/i.test(arquivo) || arquivoEhRotasAngularConsumer(arquivo))) {
+  if (arquivos.some((arquivo) =>
+    /(?:^|\/)(?:src\/)?app\.component\.(?:ts|js)$/i.test(arquivo)
+    || /(?:^|\/)(?:src\/)?app\/.+\.component\.(?:ts|js)$/i.test(arquivo)
+    || /(?:^|\/)(?:src\/)?components\/.+\.component\.(?:ts|js)$/i.test(arquivo)
+    || arquivoEhRotasAngularConsumer(arquivo))) {
     return "angular-consumer";
   }
   if (arquivos.some((arquivo) =>
@@ -2124,6 +2143,7 @@ async function indexarTypeScript(diretorios: string[]): Promise<{
         .map((arquivo) => path.resolve(arquivo)),
     );
     const usarApenasRotasAngularRaiz = arquivosRotasAngularRaiz.size > 0;
+    let encontrouSuperficieAngularPorRotas = false;
 
     for (const arquivo of arquivos) {
       const codigo = await readFile(arquivo, "utf8");
@@ -2208,6 +2228,7 @@ async function indexarTypeScript(diretorios: string[]): Promise<{
       }
 
       if (arquivoEhRotasAngularConsumer(relacao) && (!usarApenasRotasAngularRaiz || arquivosRotasAngularRaiz.has(path.resolve(arquivo)))) {
+        encontrouSuperficieAngularPorRotas = true;
         for (const rotaAngular of await extrairRotasAngularConsumer(diretorio, relacao)) {
           const arquivoRotasAngular = path.join(diretorio, rotaAngular.arquivoRotas);
           consumerSurfaces.set(`${rotaAngular.rota}:${arquivoRotasAngular}:routes`, {
@@ -2308,6 +2329,24 @@ async function indexarTypeScript(diretorios: string[]): Promise<{
             }
           }
         }
+      }
+    }
+
+    if (!encontrouSuperficieAngularPorRotas) {
+      for (const superficie of await coletarSuperficiesAngularStandaloneConsumer(diretorio, arquivos)) {
+        const arquivoSuperficie = path.join(diretorio, superficie.arquivo);
+        consumerSurfaces.set(`${superficie.rota}:${arquivoSuperficie}:${superficie.tipoArquivo}`, {
+          rota: superficie.rota,
+          arquivo: arquivoSuperficie,
+          tipoArquivo: superficie.tipoArquivo,
+        });
+        rotas.push({
+          origem: "angular-consumer",
+          metodo: "VIEW",
+          caminho: superficie.rota,
+          arquivo: arquivoSuperficie,
+          simbolo: superficie.tipoArquivo,
+        });
       }
     }
   }
@@ -2710,6 +2749,7 @@ async function indexarCpp(diretorios: string[]): Promise<{ simbolos: SimboloReso
         registrarSimboloGenerico(simbolos, "cpp", basesSimbolicas, arquivo, simbolo.simbolo);
       }
     }
+
   }
 
   return {
@@ -2940,6 +2980,14 @@ function extrairCamposArquivoLocalDetalhados(arquivo: string, codigo: string): R
     }
   }
 
+  for (const match of codigo.matchAll(/Preferences\.(?:get|set|remove)\s*\(\s*\{[\s\S]{0,160}?key\s*:\s*["'`]([^"'`]+)["'`]/gi)) {
+    registrarColunaPersistenciaDrift(colunas, "arquivo", match[1]!, match[1]!, arquivo);
+  }
+
+  for (const match of codigo.matchAll(/\b(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\s*\(\s*["'`]([^"'`]+)["'`]/gi)) {
+    registrarColunaPersistenciaDrift(colunas, "arquivo", match[1]!, match[1]!, arquivo);
+  }
+
   return [...colunas.values()];
 }
 
@@ -2951,7 +2999,7 @@ function registrarRepositoriosPorRecursos(
 ): void {
   const contextoRepositorio = /(?:repository|repositories|repositorio|repositorios|repo|dao|store|queries|persistence|persistencia)/i.test(arquivo)
     || /\b(?:Repository|Repositories|Dao|Store)\b/.test(codigo);
-  const contextoAcesso = /\b(?:select|insert|update|delete|aggregate|findOne|findMany|findUnique|findFirst|prisma\.|db\.collection|createClient|hset|hget|xadd|xread|json\.(?:load|loads|dump|dumps)|JSON\.(?:parse|stringify)|read_text|write_text|readFile(?:Sync)?|writeFile(?:Sync)?|open)\b/i.test(codigo)
+  const contextoAcesso = /\b(?:select|insert|update|delete|aggregate|findOne|findMany|findUnique|findFirst|prisma\.|db\.collection|createClient|hset|hget|xadd|xread|json\.(?:load|loads|dump|dumps)|JSON\.(?:parse|stringify)|read_text|write_text|readFile(?:Sync)?|writeFile(?:Sync)?|open|Preferences\.(?:get|set|remove)|localStorage\.(?:getItem|setItem|removeItem)|sessionStorage\.(?:getItem|setItem|removeItem))\b/i.test(codigo)
     || /\.(?:json|jsonl|ndjson|db|sqlite|sqlite3)\b/i.test(codigo);
   if (!contextoRepositorio && !contextoAcesso) {
     return;
@@ -3033,7 +3081,10 @@ function arquivoCombinaDeclaradoDrift(arquivoReal: string, arquivoDeclarado: str
   return real === declarado || real.endsWith(declarado) || declarado.endsWith(real);
 }
 
-function coletarArquivosPreferidosPersistenciaTask(task: IrTask): Set<string> {
+function coletarArquivosPreferidosPersistenciaTask(
+  task: IrTask,
+  mapaImpl?: Map<string, SimboloResolvido>,
+): Set<string> {
   const arquivos = new Set<string>();
   for (const vinculo of task.vinculos) {
     if (vinculo.arquivo) {
@@ -3041,6 +3092,14 @@ function coletarArquivosPreferidosPersistenciaTask(task: IrTask): Set<string> {
     }
     if (vinculo.tipo === "arquivo" && vinculo.valor) {
       arquivos.add(vinculo.valor);
+    }
+  }
+  if (mapaImpl) {
+    for (const impl of task.implementacoesExternas) {
+      const resolvido = mapaImpl.get(impl.caminho);
+      if (resolvido?.arquivo) {
+        arquivos.add(resolvido.arquivo);
+      }
     }
   }
   return arquivos;
@@ -3051,16 +3110,39 @@ function resolverPersistenciaLocalPorTask(
   task: IrTask,
   ir: IrModulo,
   esperado: RecursoEsperadoDrift,
+  mapaImpl?: Map<string, SimboloResolvido>,
 ): RecursoResolvido[] {
   const todosRecursos = deduplicarRecursosResolvidos([...mapaRecursos.values()].flat());
-  const arquivosPreferidos = [...coletarArquivosPreferidosPersistenciaTask(task)];
+  const arquivosPreferidos = [...coletarArquivosPreferidosPersistenciaTask(task, mapaImpl)];
   const candidatosPorArquivo = arquivosPreferidos.length > 0
     ? todosRecursos.filter((recurso) =>
       recurso.origem === "arquivo"
       && arquivosPreferidos.some((arquivo) => arquivoCombinaDeclaradoDrift(recurso.arquivo, arquivo)))
     : [];
+  const variantesAlvo = new Set(variantesNomeRecursoDrift(esperado.alvo));
+  const normalizarBusca = (valor: string) => valor.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const pontuarCandidato = (recurso: RecursoResolvido) => {
+    let score = 0;
+    if (recursoResolvidoCombinaEsperado(recurso, esperado)) {
+      score += 4;
+    }
+    if (variantesNomeRecursoDrift(recurso.nome).some((variacao) => variantesAlvo.has(variacao))) {
+      score += 2;
+    }
+    const nomeNormalizado = normalizarBusca(recurso.nome);
+    const alvoNormalizado = normalizarBusca(esperado.alvo);
+    if (nomeNormalizado.includes(alvoNormalizado) || alvoNormalizado.includes(nomeNormalizado)) {
+      score += 1;
+    }
+    return score;
+  };
+  const ordenarCandidatos = (candidatos: RecursoResolvido[]) =>
+    [...candidatos].sort((a, b) =>
+      pontuarCandidato(b) - pontuarCandidato(a)
+      || a.nome.localeCompare(b.nome, "pt-BR")
+      || a.arquivo.localeCompare(b.arquivo, "pt-BR"));
   if (candidatosPorArquivo.length > 0) {
-    return candidatosPorArquivo;
+    return ordenarCandidatos(candidatosPorArquivo);
   }
 
   const termos = new Set([
@@ -3072,10 +3154,10 @@ function resolverPersistenciaLocalPorTask(
     return [];
   }
 
-  return todosRecursos.filter((recurso) =>
+  return ordenarCandidatos(todosRecursos.filter((recurso) =>
     recurso.origem === "arquivo"
     && [...termos].some((termo) =>
-      variantesNomeRecursoDrift(recurso.nome).some((variacao) => variacao.includes(termo))));
+      variantesNomeRecursoDrift(recurso.nome).some((variacao) => variacao.includes(termo)))));
 }
 
 function detalhePersistenciaCombinaOrigem(
@@ -3145,6 +3227,7 @@ export async function analisarPersistenciaReal(
   mapaRecursos?: Map<string, RecursoResolvido[]>,
   detalhesPersistencia?: Awaited<ReturnType<typeof indexarPersistenciaDetalhada>>,
   opcoes?: OpcoesDriftLegado,
+  mapaImpl?: Map<string, SimboloResolvido>,
 ): Promise<RegistroPersistenciaRealDrift[]> {
   const opcoesResolvidas = resolverOpcoesDrift(opcoes);
   const diretoriosCodigoAtivos = resolverDiretoriosCodigoEscopoReal(contexto, opcoesResolvidas);
@@ -3159,14 +3242,14 @@ export async function analisarPersistenciaReal(
     }
 
     for (const task of ir.tasks) {
-      for (const esperado of extrairRecursosEsperados(task, ir)) {
+      for (const esperado of extrairRecursosEsperados(task, ir, mapa, mapaImpl)) {
         const correspondencias = esperado.nomes.flatMap((nome) =>
           variantesNomeRecursoDrift(nome).flatMap((variante) =>
             (mapa.get(variante) ?? []).filter((recurso) => recursoResolvidoCombinaEsperado(recurso, esperado))));
         let recursosReais = deduplicarRecursosResolvidos(correspondencias);
-        const arquivosPreferidos = [...coletarArquivosPreferidosPersistenciaTask(task)];
+        const arquivosPreferidos = [...coletarArquivosPreferidosPersistenciaTask(task, mapaImpl)];
         if (recursosReais.length === 0) {
-          recursosReais = resolverPersistenciaLocalPorTask(mapa, task, ir, esperado);
+          recursosReais = resolverPersistenciaLocalPorTask(mapa, task, ir, esperado, mapaImpl);
         }
         const compatibilidade = localizarCompatibilidadePersistencia(ir.databases, esperado, recursosReais[0]);
         let colunas = [...new Set(detalhes.colunas
@@ -3485,16 +3568,40 @@ function recursoPersistenciaCombinaAlvo(recurso: IrRecursoPersistencia, alvo: st
     variantesNomeRecursoDrift(nome).some((variacao) => alvoVariantes.has(variacao)));
 }
 
-function taskSugerePersistenciaSemBanco(task: IrTask): boolean {
-  return task.vinculos.some((vinculo) =>
+function taskSugerePersistenciaSemBanco(
+  task: IrTask,
+  mapaRecursos?: Map<string, RecursoResolvido[]>,
+  mapaImpl?: Map<string, SimboloResolvido>,
+): boolean {
+  if (task.vinculos.some((vinculo) =>
     /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(
       `${vinculo.valor} ${vinculo.arquivo ?? ""} ${vinculo.simbolo ?? ""}`,
-    ))
-    || task.implementacoesExternas.some((impl) =>
-      /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(impl.caminho));
+    ))) {
+    return true;
+  }
+  if (task.implementacoesExternas.some((impl) =>
+    /(?:repository|repositories|repositorio|repo|store|storage|persist|cache)/i.test(impl.caminho))) {
+    return true;
+  }
+  if (!mapaRecursos || !mapaImpl) {
+    return false;
+  }
+  const arquivosPreferidos = [...coletarArquivosPreferidosPersistenciaTask(task, mapaImpl)];
+  if (arquivosPreferidos.length === 0) {
+    return false;
+  }
+  const recursos = deduplicarRecursosResolvidos([...mapaRecursos.values()].flat());
+  return recursos.some((recurso) =>
+    recurso.origem === "arquivo"
+    && arquivosPreferidos.some((arquivo) => arquivoCombinaDeclaradoDrift(recurso.arquivo, arquivo)));
 }
 
-function extrairRecursosEsperados(task: IrTask, ir: IrModulo): RecursoEsperadoDrift[] {
+function extrairRecursosEsperados(
+  task: IrTask,
+  ir: IrModulo,
+  mapaRecursos?: Map<string, RecursoResolvido[]>,
+  mapaImpl?: Map<string, SimboloResolvido>,
+): RecursoEsperadoDrift[] {
   const esperados = new Map<string, RecursoEsperadoDrift>();
   const registrar = (esperado: RecursoEsperadoDrift) => {
     const chave = `${esperado.origem ?? "qualquer"}:${esperado.tiposAceitos.join(",")}:${esperado.nomes.join("|")}:${esperado.alvo}`;
@@ -3522,9 +3629,9 @@ function extrairRecursosEsperados(task: IrTask, ir: IrModulo): RecursoEsperadoDr
   }
 
   if (ir.databases.length === 0) {
-    const sugerePersistenciaLocal = taskSugerePersistenciaSemBanco(task);
+    const sugerePersistenciaLocal = taskSugerePersistenciaSemBanco(task, mapaRecursos, mapaImpl);
     for (const efeito of efeitosPersistencia) {
-      if (efeito.categoria !== "persistencia" || !sugerePersistenciaLocal) {
+      if (!sugerePersistenciaLocal) {
         continue;
       }
       if ([...esperados.values()].some((item) => item.alvo === efeito.alvo)) {
@@ -3721,6 +3828,7 @@ export async function analisarDriftLegado(
     exigeSegredos: boolean;
   }>();
   const resumoVinculosPorTask = new Map<string, { validos: number; quebrados: number; arquivos: Set<string> }>();
+  const arquivosAncoraHerdadosPorTask = new Map<string, Set<string>>();
 
   for (const item of contexto.modulosSelecionados) {
     const ir = item.resultado.ir;
@@ -3730,6 +3838,17 @@ export async function analisarDriftLegado(
     const superficiesPorChave = new Map<string, IrSuperficie>(
       ir.superficies.map((superficie) => [`${superficie.tipo}:${superficie.nome}`, superficie]),
     );
+    const routesPorNome = new Map<string, IrRoute>(ir.routes.map((route) => [route.nome, route]));
+    const flowsPorNome = new Map<string, IrFlow>(ir.flows.map((flow) => [flow.nome, flow]));
+    const registrarArquivoAncoraHerdado = (taskNome: string, arquivo?: string) => {
+      if (!arquivo) {
+        return;
+      }
+      const chaveTask = `${ir.nome}:${taskNome}`;
+      const arquivos = arquivosAncoraHerdadosPorTask.get(chaveTask) ?? new Set<string>();
+      arquivos.add(arquivo);
+      arquivosAncoraHerdadosPorTask.set(chaveTask, arquivos);
+    };
     for (const task of ir.tasks) {
       guardrailsPorTask.set(`${ir.nome}:${task.nome}`, {
         publica: false,
@@ -3877,17 +3996,19 @@ export async function analisarDriftLegado(
         confiancaVinculo: "baixa",
         riscoOperacional: "baixo",
         lacunas: [],
+        ancoragemVinculo: "ausente",
         arquivosReferenciados: [...arquivosReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")),
+        arquivosAncoraHerdados: [],
         arquivosProvaveisEditar: [],
         simbolosReferenciados: [...simbolosReferenciados].sort((a, b) => a.localeCompare(b, "pt-BR")),
         candidatosImpl: ordenarCandidatos([...candidatosTask.values()]).slice(0, 5),
         checksSugeridos: [],
       });
 
-      for (const recursoEsperado of extrairRecursosEsperados(task, ir)) {
+      for (const recursoEsperado of extrairRecursosEsperados(task, ir, mapaRecursos, mapaImpl)) {
         let resolvido = resolverRecursoEsperado(mapaRecursos, recursoEsperado, arquivosReferenciados);
         if (!resolvido) {
-          resolvido = resolverPersistenciaLocalPorTask(mapaRecursos, task, ir, recursoEsperado)[0];
+          resolvido = resolverPersistenciaLocalPorTask(mapaRecursos, task, ir, recursoEsperado, mapaImpl)[0];
         }
         const registro: RegistroRecursoDrift = {
           modulo: ir.nome,
@@ -4089,6 +4210,26 @@ export async function analisarDriftLegado(
         });
       } else {
         vinculosValidos.push(registro);
+        if (itemVinculo.donoTipo === "modulo") {
+          for (const task of ir.tasks) {
+            registrarArquivoAncoraHerdado(task.nome, registro.arquivo);
+          }
+        } else if (itemVinculo.donoTipo === "flow") {
+          const flow = flowsPorNome.get(itemVinculo.dono);
+          for (const taskNome of flow?.tasksReferenciadas ?? []) {
+            registrarArquivoAncoraHerdado(taskNome, registro.arquivo);
+          }
+        } else if (itemVinculo.donoTipo === "route") {
+          const route = routesPorNome.get(itemVinculo.dono);
+          if (route?.task) {
+            registrarArquivoAncoraHerdado(route.task, registro.arquivo);
+          }
+        } else if (itemVinculo.donoTipo === "superficie") {
+          const superficie = superficiesPorChave.get(itemVinculo.dono);
+          if (superficie?.task) {
+            registrarArquivoAncoraHerdado(superficie.task, registro.arquivo);
+          }
+        }
       }
 
       if (itemVinculo.donoTipo === "task") {
@@ -4132,6 +4273,9 @@ export async function analisarDriftLegado(
       quebrados: 0,
       arquivos: new Set<string>(),
     };
+    const arquivosAncoraHerdados = [...(arquivosAncoraHerdadosPorTask.get(chaveTask) ?? new Set<string>())]
+      .filter((arquivo) => !resumoVinculos.arquivos.has(arquivo))
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
     if (!task) {
       continue;
     }
@@ -4140,8 +4284,15 @@ export async function analisarDriftLegado(
     resumo.riscoOperacional = calcularRiscoOperacional(task);
     resumo.lacunas = resumirLacunasTask(task, resumo.semImplementacao, resumo.implsQuebrados, resumoVinculos.quebrados, guardrails);
     resumo.scoreSemantico = calcularScoreTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados, resumo.semImplementacao);
+    resumo.ancoragemVinculo = task.vinculos.length > 0
+      ? "propria"
+      : arquivosAncoraHerdados.length > 0
+        ? "herdada_modulo"
+        : "ausente";
+    resumo.arquivosAncoraHerdados = arquivosAncoraHerdados;
     resumo.arquivosProvaveisEditar = [...new Set([
       ...resumo.arquivosReferenciados,
+      ...arquivosAncoraHerdados,
       ...resumo.candidatosImpl.map((candidato) => candidato.arquivo),
       ...resumoVinculos.arquivos,
     ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -4260,7 +4411,7 @@ export async function analisarDriftLegado(
   const appRoutes = [...new Set(consumerSurfaces.map((surface) => surface.rota))]
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
   const consumerFramework = inferirConsumerFrameworkPrincipal(contexto.fontesLegado, consumerSurfaces, consumerBridges);
-  const persistenciaReal = await analisarPersistenciaReal(contexto, mapaRecursos, detalhesPersistencia, opcoesResolvidas);
+  const persistenciaReal = await analisarPersistenciaReal(contexto, mapaRecursos, detalhesPersistencia, opcoesResolvidas, mapaImpl);
   for (const item of persistenciaReal) {
     if (item.status === "divergente") {
       diagnosticos.push({

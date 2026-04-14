@@ -1,6 +1,6 @@
 # Persistencia Vendor-First
 
-Sema 1.5.4 trata banco como superficie semantica de primeira classe. Isso significa assumir diferencas reais entre engines e coloca-las no contrato, no semantico, no IR, no drift, no impact map, na renomeacao assistida, no `verificar` e na extensao.
+Sema 1.5.7 trata banco como superficie semantica de primeira classe. Isso significa assumir diferencas reais entre engines e coloca-las no contrato, no semantico, no IR, no drift, no impact map, na renomeacao assistida, no `verificar` e na extensao. Nesta linha, o `drift` tambem materializa persistencia local real em `Preferences`, `localStorage` e `sessionStorage` quando a task esta ancorada no arquivo que usa essas APIs.
 
 ## Engines publicas
 

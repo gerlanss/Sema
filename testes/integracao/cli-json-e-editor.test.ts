@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import {
   DIRETORIOS_CODIGO_FUTEBOT_FIXTURE,
   criarProjetoAngularConsumer,
+  criarProjetoAngularStandaloneConsumer,
   criarProjetoBridgeDart,
   criarProjetoCppBridge,
   criarProjetoDotnetAspNet,
@@ -1096,6 +1097,73 @@ test("cli compila usando sema.config para scaffold NestJS sem precisar de flags 
   }
 });
 
+test("cli sincroniza SEMA_INDEX com consumer surfaces standalone e ancoragem de vinculo", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-sync-ia-angular-standalone-"));
+
+  try {
+    await criarProjetoAngularStandaloneConsumer(baseTemporaria);
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "sync-ai-entrypoints", "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: baseTemporaria },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const index = JSON.parse(await readFile(path.join(baseTemporaria, "SEMA_INDEX.json"), "utf8"));
+    const modulo = index.modulos[0];
+    assert.equal(modulo.consumerFramework, "angular-consumer");
+    assert.equal(modulo.appRoutes.includes("/"), true);
+    assert.equal(modulo.consumerSurfaces.some((surface: string) =>
+      surface.includes("app:/ ->")
+      && (
+        surface.includes("src\\app.component.ts")
+        || surface.includes("src/app.component.ts")
+      )), true);
+    assert.equal(modulo.ancoragensVinculo.some((item: string) =>
+      item.includes("fetch_showroom_ranking:herdada_modulo")), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+  }
+});
+
+test("cli gera contexto de ia acionavel para Angular standalone consumer com ancoragem herdada", async () => {
+  const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-angular-standalone-consumer-"));
+  const pastaSaida = await mkdtemp(path.join(os.tmpdir(), "sema-contexto-angular-standalone-consumer-out-"));
+
+  try {
+    await criarProjetoAngularStandaloneConsumer(baseTemporaria);
+    const arquivo = path.join(baseTemporaria, "contratos", "showroom_consumer.sema");
+
+    const execucao = spawnSync(
+      "node",
+      [CLI, "contexto-ia", arquivo, "--saida", pastaSaida, "--json"],
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+    );
+
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const drift = JSON.parse(await readFile(path.join(pastaSaida, "drift.json"), "utf8"));
+    const briefing = JSON.parse(await readFile(path.join(pastaSaida, "briefing.json"), "utf8"));
+    const briefingMin = JSON.parse(await readFile(path.join(pastaSaida, "briefing.min.json"), "utf8"));
+
+    assert.equal(drift.drift.consumerFramework, "angular-consumer");
+    assert.equal(drift.drift.appRoutes.includes("/"), true);
+    assert.equal(drift.resumo.consumerSurfaces.some((item: string) => item.includes("app:/ ->")), true);
+    assert.equal(drift.resumo.ancoragensVinculo.some((item: string) => item.includes("fetch_showroom_ranking:herdada_modulo")), true);
+    assert.equal(briefing.consumerFramework, "angular-consumer");
+    assert.equal(briefing.consumerSurfaces.some((item: string) => item.includes("app:/ ->")), true);
+    assert.equal(briefing.ancoragensVinculo.some((item: string) => item.includes("salvar_preferencia_ranking:herdada_modulo")), true);
+    assert.equal(briefingMin.consumerFramework, "angular-consumer");
+    assert.equal(briefingMin.appRoutes.includes("/"), true);
+    assert.equal(briefingMin.ancoragensVinculo.some((item: string) => item.includes("restaurar_preferencia_ranking:herdada_modulo")), true);
+  } finally {
+    await rm(baseTemporaria, { recursive: true, force: true });
+    await rm(pastaSaida, { recursive: true, force: true });
+  }
+});
+
 test("cli verificar usa framework e estruturaSaida do sema.config para scaffold NestJS", async () => {
   const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-verificar-nest-"));
 
@@ -1410,14 +1478,16 @@ test("cli verificar em json falha cedo com preflight explicito quando faltam dep
   }
 });
 
-test("mcp cli responde help e version sem entrar em stdio", () => {
+test("mcp cli responde help e version sem entrar em stdio", async () => {
+  const versaoEsperada = JSON.parse(await readFile(path.resolve("pacotes/mcp/package.json"), "utf8")).version;
+  const versaoEscapada = versaoEsperada.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const ajuda = spawnSync(
     "node",
     [MCP, "--help"],
     { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
   );
   assert.equal(ajuda.status, 0, ajuda.stderr || ajuda.stdout);
-  assert.match(ajuda.stdout, /Sema MCP v1\.5\.4/);
+  assert.match(ajuda.stdout, new RegExp(`Sema MCP v${versaoEscapada}`));
   assert.match(ajuda.stdout, /sema_drift/);
   assert.match(ajuda.stdout, /MCP_PORT/);
 
@@ -1427,7 +1497,7 @@ test("mcp cli responde help e version sem entrar em stdio", () => {
     { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
   );
   assert.equal(versao.status, 0, versao.stderr || versao.stdout);
-  assert.equal(versao.stdout.trim(), "1.5.4");
+  assert.equal(versao.stdout.trim(), versaoEsperada);
 });
 
 test("cli inspeciona familias backend novas e detecta fontes corretas", async () => {

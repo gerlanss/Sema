@@ -1,9 +1,26 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 const raiz = process.cwd();
 const pastaVsix = path.join(raiz, ".tmp", "editor-vscode");
+
+function resolverCodeCliWindows() {
+  const localAppData = process.env.LOCALAPPDATA;
+  const candidatos = [
+    localAppData ? path.join(localAppData, "Programs", "Microsoft VS Code", "bin", "code.cmd") : undefined,
+    localAppData ? path.join(localAppData, "Programs", "VSCodium", "bin", "codium.cmd") : undefined,
+  ].filter(Boolean);
+
+  for (const candidato of candidatos) {
+    if (existsSync(candidato)) {
+      return candidato;
+    }
+  }
+
+  return "code.cmd";
+}
 
 async function main() {
   const manifestExtensao = JSON.parse(
@@ -26,7 +43,8 @@ async function main() {
   const caminhoVsix = path.join(pastaVsix, vsix);
 
   if (process.platform === "win32") {
-    execFileSync("powershell", ["-NoProfile", "-Command", `code --install-extension "${caminhoVsix}" --force`], {
+    const codeCli = resolverCodeCliWindows();
+    execFileSync("powershell", ["-NoProfile", "-Command", `& "${codeCli}" --install-extension "${caminhoVsix}" --force`], {
       stdio: "inherit",
     });
   } else {

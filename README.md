@@ -6,8 +6,12 @@ Sema e um protocolo de governanca de intencao para IA sobre software vivo. Ela g
 
 Ela nao tenta substituir framework, ORM, runtime, observabilidade ou banco real. O papel da Sema e dizer o que existe, o que pode mudar e como uma IA deve navegar nisso com menos improviso e mais verificacao.
 
-## Destaques da linha 1.5.4
+## Destaques da linha 1.5.7
 
+- instalacao global no Windows ficou mais limpa porque a CLI publica nao carrega mais `tsx` como dependencia de runtime
+- `angular-consumer` agora faz fallback honesto para apps standalone sem `.routes`, usando `src/app.component.ts` como shell `/` e superfícies alcançaveis a partir do root
+- `sema drift` agora materializa persistencia local real em `Preferences`, `localStorage` e `sessionStorage`
+- `contexto-ia`, `briefing` e `SEMA_INDEX.json` agora distinguem task com vinculo proprio de task ancorada por modulo com `ancoragemVinculo`
 - persistencia vendor-first de primeira classe para `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
 - `sema drift` com match de codigo vivo para recursos reais desses bancos
 - `sema drift` com escopo real e ignorando worktrees ou consumers laterais por padrao
@@ -68,7 +72,7 @@ sema contexto-ia contratos/pedidos.sema --saida ./.tmp/contexto --json
 
 ## Persistencia vendor-first
 
-Sema 1.5.4 trata banco como superficie semantica de primeira classe, sem fingir que `postgres`, `mysql`, `sqlite`, `mongodb` e `redis` sao a mesma coisa. O contrato canonico agora aceita blocos `database` e recursos como `table`, `collection`, `document`, `keyspace`, `stream`, `relationship`, `query`, `index` e `retention`.
+Sema 1.5.7 trata banco como superficie semantica de primeira classe, sem fingir que `postgres`, `mysql`, `sqlite`, `mongodb` e `redis` sao a mesma coisa. O contrato canonico agora aceita blocos `database` e recursos como `table`, `collection`, `document`, `keyspace`, `stream`, `relationship`, `query`, `index` e `retention`.
 
 Exemplo curto:
 
@@ -87,6 +91,19 @@ database principal_postgres {
 ```
 
 Guia completo com os cinco bancos: [docs/persistencia-vendor-first.md](./docs/persistencia-vendor-first.md)
+
+## Compatibilidade de orquestracao
+
+Sema tambem trata runtime de workflow como alvo de compatibilidade, nao como molde da linguagem. Isso significa que superficies como `webhook`, `cron`, `worker`, `fila` e integracoes HTTP podem entrar no scorecard com uma regua honesta para adapters como `n8n`, sem fingir paridade total em `authz`, classificacao de dados, auditoria forte, compensacao ou `guarantees`.
+
+Direcao explicita:
+
+- `n8n` entra como familia alvo de orquestracao no scorecard
+- o encaixe forte esta em `webhook`, `cron`, chamadas HTTP, branching e transformacao
+- o encaixe mais fraco fica em governanca operacional e semantica forte de contrato
+- a Sema nao vira DSL de node nem promete importador/gerador magico onde ainda nao existe
+
+Guia de compatibilidade: [docs/scorecard-compatibilidade.md](./docs/scorecard-compatibilidade.md)
 
 ## Pacotes publicos
 

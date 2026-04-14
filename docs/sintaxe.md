@@ -175,3 +175,5 @@ O IR de persistencia calcula compatibilidade por recurso com quatro estados:
 - `invalido`
 
 Isso existe para deixar explicito quando um contrato esta pedindo de um banco algo que ele nao entrega do mesmo jeito.
+
+O mesmo principio vale para runtime de orquestracao. Superficies como `webhook`, `cron`, `worker`, `evento` e `fila` podem ser medidas contra familias como `n8n`, mas o contrato continua canonicamente modelado em Sema, sem rebaixar a linguagem para a sintaxe do adapter alvo.

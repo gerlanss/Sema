@@ -58,9 +58,13 @@ sema drift ./contratos-importados --json
 
 ## Persistencia vendor-first
 
-A CLI 1.5.4 entende blocos `database` e recursos de persistencia no IR, no formatador, no semantico, na importacao, no drift, no impact map, na renomeacao semantica assistida e no `verificar`. O objetivo nao e esconder diferencas entre bancos, e sim capturar essas diferencas no contrato.
+A CLI 1.5.7 entende blocos `database` e recursos de persistencia no IR, no formatador, no semantico, na importacao, no drift, no impact map, na renomeacao semantica assistida e no `verificar`. O objetivo nao e esconder diferencas entre bancos, e sim capturar essas diferencas no contrato.
 
 Nesta linha, o `drift` tambem passa a resolver melhor metodos JS/TS browser-side definidos via `Object.assign(...prototype...)` e a entrada padrao da CLI para de tropeçar em `exemplos/` quando o projeto real ja tem `contratos/`, `sema/` ou arquivos `.sema` na raiz.
+
+Nesta linha, o `drift` tambem passa a enxergar `Preferences`, `localStorage` e `sessionStorage` como persistencia local real, distinguir `ancoragemVinculo` herdada do modulo e cobrir `angular-consumer` standalone mesmo quando o app nao tem `.routes`.
+
+Nesta linha, o pacote publico da CLI tambem deixa `tsx` fora das dependencias de runtime para evitar ruído de instalacao global no Windows.
 
 Cobertura publica:
 

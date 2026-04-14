@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.7
+
+- acompanha a linha publica 1.5.7 com limpeza das dependencias de runtime da CLI publica para reduzir atrito de instalacao no Windows
+- mantem a extensao alinhada com `consumerSurfaces` mais honestas, `ancoragemVinculo` e a cadeia de release atualizada
+
+## 1.5.6
+
+- acompanha a linha publica 1.5.6 com fallback de `angular-consumer` standalone sem `.routes` e `consumerSurfaces` mais honestas
+- alinha a extensao com os novos sinais de `drift` e `contexto-ia` para `ancoragemVinculo`
+- mantem a extensao sincronizada com o patch publico da CLI, do MCP, dos instaladores e da documentacao
+
 ## 1.5.4
 
 - acompanha a linha publica 1.5.4 com alinhamento de docs, empacotamento e correcao do `drift` para metodos JS/TS definidos via `Object.assign(...prototype...)`

@@ -14,7 +14,7 @@ Ela cobre escrita, validacao e navegacao da camada semantica no editor enquanto 
 - comandos para abrir `starter-ia`, `prompt-ia`, `prompt-curto`, `resumo` e `drift`
 - lateral `Sema` com status do workspace e da CLI
 
-## Novidades na linha 1.5.4
+## Novidades na linha 1.5.7
 
 - snippets para `database`, `postgres`, `mysql`, `sqlite`, `mongodb` e `redis`
 - exemplos embutidos de persistencia gerados no workspace:
@@ -24,7 +24,8 @@ Ela cobre escrita, validacao e navegacao da camada semantica no editor enquanto 
   - `persistencia_mongodb.sema`
   - `persistencia_redis.sema`
 - hover e highlight para `database`, `table`, `collection`, `document`, `keyspace`, `stream`, `query`, `index`, `retention` e correlatos
-- alinhamento da extensao com a linha publica `1.5.4` e o patch do `drift` para JS/TS browser-side
+- alinhamento da extensao com a linha publica `1.5.7`, incluindo a limpeza de runtime da CLI publica no Windows e os novos sinais de `drift`/`contexto-ia` para `ancoragemVinculo`
+- comandos do editor agora ficam mais uteis em consumers Angular standalone sem `.routes`, porque a linha publica passou a expor melhor `consumerSurfaces`
 
 ## Instalar a extensao
 

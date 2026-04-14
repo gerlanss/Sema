@@ -31,7 +31,7 @@ sema drift ./contratos-importados --json
 - `python`
 - `dart`
 
-## Persistencia na linha 1.5.4
+## Persistencia na linha 1.5.7
 
 A importacao legada agora tenta reconhecer sinais de persistencia vendor-first, incluindo:
 
@@ -39,6 +39,7 @@ A importacao legada agora tenta reconhecer sinais de persistencia vendor-first, 
 - `schema.prisma` e artefatos semelhantes
 - uso de MongoDB com `collection`, `document` e consultas documentais
 - uso de Redis com keyspaces, TTL e streams
+- apps `angular-consumer` standalone sem `.routes`, usando `src/app.component.ts` como shell inicial e componentes alcançaveis como superfícies consumer
 
 O contrato gerado continua sendo rascunho. A confirmacao final vem de:
 

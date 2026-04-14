@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "1.5.5",
+  "version": "1.5.7",
   "type": "module",
   "description": "CLI da Sema para validar contratos, medir drift e governar a navegacao operacional de agentes sobre software vivo, incluindo persistencia vendor-first para bancos reais.",
   "license": "MIT",
@@ -46,8 +46,10 @@
     "@sema/gerador-html": "file:../gerador-html",
     "@sema/gerador-css": "file:../gerador-css",
     "@sema/padroes": "file:../padroes",
-    "tsx": "^4.19.3",
     "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3"
   },
   "bundleDependencies": [
     "@sema/nucleo",
