@@ -1,0 +1,314 @@
+module sema.produto.edicao_fotos {
+  docs {
+    resumo: "Sema para edicao de fotos com preservacao do original, identidade do sujeito, receita nao destrutiva, antes/depois e QA visual."
+  }
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.imagens
+
+  use sema.produto.qa_criativo
+
+  type ReceitaEdicaoFoto {
+    fields {
+      ajustes: Lista
+      areas_protegidas: Lista
+      remocoes: Lista
+      adicoes: Lista
+      formato_saida: Texto
+      justificativa: Texto
+    }
+    invariants {
+      ajustes existe
+      areas_protegidas existe
+      formato_saida existe
+      justificativa existe
+    }
+  }
+
+  task analisar_foto_original {
+    input {
+      foto_original: Texto required
+      objetivo_edicao: Texto required
+      sujeito_principal: Texto required
+    }
+    output {
+      mapa_preservacao: Lista
+      riscos_edicao: Lista
+      pode_editar: Booleano
+    }
+    rules {
+      foto_original deve_ser fornecida
+      objetivo_edicao deve_ser concreto
+      sujeito_principal deve_ser identificado
+    }
+    effects {
+      auditoria analise_foto criticidade = media
+    }
+    forbidden {
+      editar_sem_identificar_sujeito
+      ignorar_elemento_critico
+      objetivo_vago
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      mapa_preservacao existe
+      riscos_edicao existe
+      pode_editar existe
+      mapa_preservacao deve_ser listar_sujeito_e_elementos_criticos
+    }
+    tests {
+      caso "foto pronta para edicao" {
+        given {
+          foto_original: "produto em mesa com fundo escuro"
+          objetivo_edicao: "clarear fundo mantendo produto"
+          sujeito_principal: "produto"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pode_editar: verdadeiro
+        }
+      }
+    }
+  }
+
+  task criar_receita_edicao_foto {
+    input {
+      foto_original: Texto required
+      mapa_preservacao: Lista required
+      objetivo_edicao: Texto required
+      identidade_marca: Texto
+    }
+    output {
+      receita: ReceitaEdicaoFoto
+      nao_destrutiva: Booleano
+    }
+    rules {
+      foto_original deve_ser fornecida
+      mapa_preservacao deve_ser nao_vazio
+      objetivo_edicao deve_ser concreto
+      identidade_marca deve_ser aplicada_quando_fornecida
+    }
+    effects {
+      auditoria receita_edicao_foto criticidade = media
+    }
+    forbidden {
+      sobrescrever_original
+      alterar_identidade_sem_autorizacao
+      remover_sujeito_principal
+      edicao_sem_justificativa
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      receita existe
+      nao_destrutiva == verdadeiro
+      receita deve_ser nao_destrutiva
+      receita deve_ser preservar_sujeito_principal
+    }
+    tests {
+      caso "receita nao destrutiva" {
+        given {
+          foto_original: "produto em fundo escuro"
+          mapa_preservacao: "produto, logotipo, sombra natural"
+          objetivo_edicao: "clarear fundo"
+          identidade_marca: "limpo e confiavel"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          nao_destrutiva: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_edicao_foto {
+    input {
+      foto_original: Texto required
+      foto_editada: Texto required
+      receita: ReceitaEdicaoFoto required
+    }
+    output {
+      aprovado: Booleano
+      original_preservado: Booleano
+      sujeito_preservado: Booleano
+      achados: Lista
+    }
+    rules {
+      foto_original deve_ser fornecida
+      foto_editada deve_ser fornecida
+      receita deve_ser valida
+      foto_editada deve_ser seguir_receita
+      foto_editada deve_ser preservar_sujeito_principal
+      foto_original deve_ser preservada_sem_sobrescrita
+    }
+    effects {
+      auditoria qa_edicao_foto criticidade = alta
+    }
+    authz {
+      escopo: sema.edicao_fotos.validar_edicao
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        foto_original: interno
+        foto_editada: interno
+        receita: interno
+      }
+      output {
+        aprovado: publico
+        original_preservado: publico
+        sujeito_preservado: publico
+        achados: interno
+      }
+    }
+    audit {
+      evento: sema.edicao_fotos.edicao_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      sobrescrever_original
+      alterar_identidade_do_sujeito
+      remover_elemento_protegido
+      artefato_visual_grosseiro
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      original_preservado existe
+      sujeito_preservado existe
+      achados existe
+    }
+    tests {
+      caso "bloqueia alteracao de identidade" {
+        given {
+          foto_original: "retrato da pessoa A"
+          foto_editada: "retrato parecendo pessoa B"
+          receita: "clarear fundo sem alterar rosto"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          sujeito_preservado: falso
+        }
+      }
+    }
+  }
+
+  task exportar_antes_depois {
+    input {
+      foto_original: Texto required
+      foto_editada: Texto required
+      aprovado: Booleano required
+    }
+    output {
+      comparativo: Texto
+      arquivos_saida: Lista
+      pronto_para_uso: Booleano
+    }
+    rules {
+      foto_original deve_ser fornecida
+      foto_editada deve_ser fornecida
+      aprovado deve_ser verdadeiro
+    }
+    effects {
+      auditoria exportacao_foto criticidade = media
+    }
+    forbidden {
+      exportar_sem_aprovacao
+      esconder_original
+      perder_metadados_necessarios
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "seguro"
+      criticidade_operacional: media
+    }
+    guarantees {
+      comparativo existe
+      arquivos_saida existe
+      pronto_para_uso existe
+      comparativo deve_ser rastreavel
+    }
+    tests {
+      caso "exporta antes depois aprovado" {
+        given {
+          foto_original: "original.jpg"
+          foto_editada: "editada.jpg"
+          aprovado: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_uso: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow editar_foto_com_preservacao {
+    foto_original: Texto
+    objetivo_edicao: Texto
+    sujeito_principal: Texto
+    identidade_marca: Texto
+    foto_editada: Texto
+    etapa analisar usa analisar_foto_original com foto_original = foto_original, objetivo_edicao = objetivo_edicao, sujeito_principal = sujeito_principal
+    etapa receita usa criar_receita_edicao_foto com foto_original = foto_original, mapa_preservacao = analisar.mapa_preservacao, objetivo_edicao = objetivo_edicao, identidade_marca = identidade_marca depende_de analisar
+    etapa validar usa validar_edicao_foto com foto_original = foto_original, foto_editada = foto_editada, receita = receita.receita depende_de receita
+    etapa exportar usa exportar_antes_depois com foto_original = foto_original, foto_editada = foto_editada, aprovado = validar.aprovado depende_de validar
+    effects {
+      auditoria fluxo_edicao_foto criticidade = alta
+    }
+  }
+}

@@ -1,0 +1,90 @@
+module sema.produto.cli_dev_mode {
+  docs {
+    resumo: "Modo dev/draft com sema dev --watch para paralelizacao contrato+codigo. Permite iteracao rapida com warnings em vez de errors para contratos em estado 'draft'."
+    versao: "1.0.0"
+    status: "MODELADA"
+  }
+
+  entity SessaoDev {
+    fields {
+      id: Id
+      pasta_observada: Texto
+      modo: ModoValidacao
+      contratos_em_draft: Lista<Texto>
+      ultima_validacao: Timestamp
+      errors_ignorados: Inteiro
+      warnings_pendentes: Inteiro
+    }
+  }
+
+  enum ModoValidacao {
+    RIGOROSO,
+    PERMISSIVO
+  }
+
+  enum EstadoMaturidade {
+    DRAFT,
+    PROTOTYPE,
+    PRODUCTION,
+    CRITICAL
+  }
+
+  task iniciar_modo_dev {
+    input {
+      pasta_contratos: Texto required
+      alvo_codigo: Texto optional // typescript, python, etc
+      modo_inicial: ModoValidacao optional
+    }
+    output {
+      sessao: SessaoDev
+      arquivos_observados: Inteiro
+      status_watch: Texto
+    }
+    rules {
+      pasta_contratos existe
+      pasta_contratos deve_ser diretorio_com_arquivos_sema
+      alvo_codigo deve_ser alvo_codigo_valido_quando_preenchido
+    }
+    effects {
+      consulta sistema_arquivos criticidade = baixa
+      consulta pasta_local criticidade = media
+      auditoria dev_mode_iniciado criticidade = baixa
+    }
+    impl {
+      ts: cli.src.dev.iniciarModoDev
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/dev/watcher.ts"
+      arquivo: "pacotes/cli/src/dev/index.ts"
+      simbolo: cli.src.dev.iniciarModoDev
+    }
+    execucao {
+      idempotencia: falso
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      sessao existe
+      arquivos_observados existe
+    }
+    error {
+      pasta_nao_existe: "Diretorio {pasta_contratos} nao encontrado."
+      sem_contratos: "Nenhum arquivo .sema encontrado em {pasta_contratos}."
+      watcher_falhou: "Nao foi possivel iniciar observacao de arquivos."
+    }
+    tests {
+      caso "inicia watch em contratos/" {
+        given {
+          pasta_contratos: "contratos/"
+          modo_inicial: "PERMISSIVO"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          arquivos_observados: 1
+        }
+      }
+    }
+  }
+}

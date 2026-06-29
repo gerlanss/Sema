@@ -1,0 +1,130 @@
+module sema.drift {
+  docs {
+    resumo: "Contrato que governa o comportamento do drift check entre contratos Sema e codigo implementado."
+  }
+
+  entity SimboloIndexado {
+    fields {
+      caminho: Texto
+      arquivo: Texto
+      simbolo: Texto
+      origem: OrigemCodigo
+    }
+  }
+
+  entity ImplementacaoSema {
+    fields {
+      tarefa: Texto
+      origem: OrigemCodigo
+      caminho: Texto
+      status: StatusImplementacao
+    }
+  }
+
+  enum OrigemCodigo {
+    TS,
+    PY,
+    DART,
+    LUA,
+    CS,
+    JAVA,
+    GO,
+    RUST,
+    CPP
+  }
+
+  enum StatusImplementacao {
+    RESOLVIDO,
+    NAO_VERIFICADO,
+    QUEBRADO
+  }
+
+  enum ConfiancaMatch {
+    ALTA,
+    MEDIA,
+    BAIXA
+  }
+
+  task parsear_implementacao {
+    input {
+      texto_bruto: Texto required
+    }
+    output {
+      origem: OrigemCodigo
+      caminho: Texto
+      valido: Booleano
+    }
+    impl {
+      ts: cli.src.drift.parsearImplementacaoDrift
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.contrato.ts"
+      simbolo: cli.src.drift.parsearImplementacaoDrift
+    }
+    guarantees {
+      origem existe
+      caminho existe
+    }
+  }
+
+  task matchear_impl_drift {
+    input {
+      impl_declarado: ImplementacaoSema
+      simbolos_codigo_vivo: Lista[SimboloIndexado]
+    }
+    output {
+      matchou: Booleano
+      confianca: ConfiancaMatch
+      candidato: SimboloIndexado
+    }
+    impl {
+      ts: cli.src.drift.matchearImplDrift
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.contrato.ts"
+      simbolo: cli.src.drift.matchearImplDrift
+    }
+    guarantees {
+      confianca existe
+    }
+  }
+
+  task executar_drift_check {
+    input {
+      contratos: Lista[Texto]
+      codigo_vivo: Lista[Texto]
+    }
+    output {
+      impls_validos: Inteiro
+      impls_quebrados: Inteiro
+      vinculos_validos: Inteiro
+      vinculos_quebrados: Inteiro
+      score: Inteiro
+      piso_operacional: Decimal
+      alvo_atual: Decimal
+      proximo_alvo: Decimal
+      bloqueado_por_pontuacao: Booleano
+      travas_pontuacao: Lista[Texto]
+    }
+    impl {
+      ts: cli.src.drift.executarDriftCheck
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.contrato.ts"
+      simbolo: cli.src.drift.executarDriftCheck
+    }
+    guarantees {
+      impls_validos >= 0
+      impls_quebrados >= 0
+      score >= 0
+      piso_operacional >= 80
+      alvo_atual >= piso_operacional
+      proximo_alvo <= 100
+      bloqueado_por_pontuacao existe
+      travas_pontuacao existe
+    }
+    error {
+      pontuacao_semantica_insuficiente: "Pontuacao semantica abaixo do piso operacional ou do alvo evolutivo."
+    }
+  }
+}

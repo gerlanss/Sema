@@ -1,0 +1,110 @@
+module exemplos.profile.ops {
+  docs {
+    resumo: "Starter do Profile Ops: contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois runbook, rollback, recuperacao, healthcheck, metricas, logs, traces, observabilidade, incidente, severidade, responsavel, oncall, segredos, acesso e authz."
+  }
+
+  type RunbookOperacional {
+    fields {
+      runbook: Texto
+      rollback: Texto
+      healthcheck: Texto
+      responsavel: Texto
+      severidade: Texto
+    }
+    invariants {
+      runbook existe
+      rollback existe
+      healthcheck existe
+      responsavel existe
+      severidade existe
+    }
+  }
+
+  task validar_operacao_deploy {
+    input {
+      runbook: Texto required
+      rollback: Texto required
+      healthcheck: Texto required
+      responsavel: Texto required
+      recuperacao: Texto
+      metricas: Texto
+      logs: Texto
+      traces: Texto
+      observabilidade: Texto
+      incidente: Texto
+      severidade: Texto
+      segredos: Texto
+      acesso: Texto
+      authz: Texto
+    }
+    output {
+      operavel: Booleano
+      bloqueios: Lista
+    }
+    rules {
+      runbook deve_ser preenchido
+      rollback deve_ser testado
+      recuperacao deve_ser declarada
+      healthcheck deve_ser verificavel
+      metricas deve_ser declaradas
+      logs deve_ser preservados
+      traces deve_ser opcionais
+      observabilidade deve_ser suficiente
+      incidente deve_ser classificado
+      severidade deve_ser definida
+      responsavel deve_ser oncall
+      segredos deve_ser protegidos
+      acesso deve_ser limitado
+      authz deve_ser revisado
+    }
+    effects {
+      auditoria ops_deploy criticidade = media
+    }
+    authz {
+      escopo: ops.validar_deploy
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: exemplos.ops.deploy.validado
+      ator: operador
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      deploy_sem_rollback
+      secret_em_log
+      incidente_sem_responsavel
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      compensacao: "rollback"
+      criticidade_operacional: media
+    }
+    guarantees {
+      operavel existe
+      bloqueios existe
+    }
+    tests {
+      caso "deploy operavel" {
+        given {
+          runbook: "runbook de incidente com severidade"
+          rollback: "rollback testado"
+          healthcheck: "healthcheck metricas logs traces"
+          responsavel: "oncall"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          operavel: verdadeiro
+        }
+      }
+    }
+  }
+}

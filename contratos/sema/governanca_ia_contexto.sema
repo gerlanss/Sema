@@ -1,0 +1,67 @@
+module sema.produto.governanca_ia.contexto {
+  docs {
+    resumo: "Indice fino do contexto IA-first. As responsabilidades vivem em contratos filhos por capacidade real, sem parte_1 ou fatiamento artificial."
+    arquivo: "contratos/sema/governanca_ia_contexto_projeto.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_agent_pack.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_entrypoints.sema"
+  }
+
+  use sema.produto.governanca_ia.contexto.projeto
+
+  use sema.produto.governanca_ia.contexto.agent_pack
+
+  use sema.produto.governanca_ia.contexto.entrypoints
+
+  task manter_mapa_contexto_ia {
+    input {
+      base_projeto: Texto required
+    }
+    output {
+      contratos_filhos: Lista
+      split_por_capacidade: Booleano
+      sem_partes_artificiais: Booleano
+    }
+    rules {
+      base_projeto deve_ser preenchido
+    }
+    effects {
+      auditoria indice_contexto_ia criticidade = baixa
+    }
+    forbidden {
+      parte_1_parte_2
+      fatiamento_artificial
+      contrato_filho_acima_limite_saudavel
+    }
+    impl {
+      ts: cli.src.agent_context.criarEntradaCanonicaProjeto
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/agentContext.ts"
+      simbolo: cli.src.agent_context.criarEntradaCanonicaProjeto
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      contratos_filhos existe
+      contratos_filhos deve_ser incluir_projeto_agent_pack_entrypoints
+      split_por_capacidade == verdadeiro
+      sem_partes_artificiais == verdadeiro
+    }
+    tests {
+      caso "indice aponta filhos reais" {
+        given {
+          base_projeto: "."
+        }
+        expect {
+          sucesso: verdadeiro
+          split_por_capacidade: verdadeiro
+          sem_partes_artificiais: verdadeiro
+        }
+      }
+    }
+  }
+}

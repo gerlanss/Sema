@@ -1,0 +1,141 @@
+module sema.produto.geradores_codigo_governado {
+  docs {
+    resumo: "Contrato interno para garantir que codigo gerado pela Sema carregue um cabecalho curto, humano e IA-first em todos os alvos."
+  }
+
+  vinculos {
+    arquivo: "pacotes/gerador-typescript/src/index.ts"
+    arquivo: "pacotes/gerador-javascript/src/index.ts"
+    arquivo: "pacotes/gerador-python/src/index.ts"
+    arquivo: "pacotes/gerador-dart/src/index.ts"
+    arquivo: "pacotes/gerador-lua/src/index.ts"
+    arquivo: "pacotes/gerador-html/src/index.ts"
+    arquivo: "pacotes/gerador-css/src/index.ts"
+    arquivo: "pacotes/cli/src/index.ts"
+    arquivo: "docs/ai-integration.md"
+  }
+
+  task emitir_cabecalho_codigo_governado {
+    input {
+      modulo: Texto required
+      alvo: Texto required
+      capacidade_ia: Texto required
+    }
+    output {
+      cabecalho_sema_governado: Booleano
+      descricao_humana_presente: Booleano
+      lembrete_consulta_sema: Booleano
+      idioma_humano_preservado: Booleano
+      cobertura_ia_fraca_media_forte: Booleano
+      comentario_compacto: Booleano
+    }
+    rules {
+      modulo deve_ser preenchido
+      alvo deve_ser em [typescript, javascript, python, dart, lua, html, css, nestjs, fastapi]
+      capacidade_ia deve_ser em [fraca, media, forte]
+    }
+    effects {
+      fs.write codigo_gerado criticidade = media
+      auditoria cabecalho_codigo_governado criticidade = media
+    }
+    authz {
+      escopo: sema.geradores.codigo_governado
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        modulo: publico
+        alvo: publico
+        capacidade_ia: publico
+      }
+      output {
+        cabecalho_sema_governado: publico
+        descricao_humana_presente: publico
+        lembrete_consulta_sema: publico
+        idioma_humano_preservado: publico
+        cobertura_ia_fraca_media_forte: publico
+        comentario_compacto: publico
+      }
+    }
+    audit {
+      evento: sema.geracao.codigo_governado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      codigo_gerado_sem_cabecalho_sema
+      codigo_gerado_sem_descricao_humana
+      remover_acentos_do_texto_humano_por_causa_da_dsl
+      copiar_contrato_inteiro_para_comentario
+      substituir_drift_por_comentario_no_codigo
+    }
+    impl {
+      ts: gerador_typescript.src.index.gerarTypeScript
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-typescript/src/index.ts"
+      arquivo: "pacotes/gerador-javascript/src/index.ts"
+      arquivo: "pacotes/gerador-python/src/index.ts"
+      arquivo: "pacotes/gerador-dart/src/index.ts"
+      arquivo: "pacotes/gerador-lua/src/index.ts"
+      arquivo: "pacotes/gerador-html/src/index.ts"
+      arquivo: "pacotes/gerador-css/src/index.ts"
+      simbolo: gerador_typescript.src.index.gerarTypeScript
+      simbolo: gerador_javascript.src.index.gerarJavaScript
+      simbolo: gerador_python.src.index.gerarPython
+      simbolo: gerador_dart.src.index.gerarDart
+      simbolo: gerador_lua.src.index.gerarLua
+      simbolo: gerador_html.src.index.gerarHtml
+      simbolo: gerador_css.src.index.gerarCss
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      compensacao: "regenerar codigo a partir do contrato Sema"
+      criticidade_operacional: media
+    }
+    guarantees {
+      cabecalho_sema_governado == verdadeiro
+      descricao_humana_presente == verdadeiro
+      lembrete_consulta_sema == verdadeiro
+      idioma_humano_preservado == verdadeiro
+      cobertura_ia_fraca_media_forte == verdadeiro
+      comentario_compacto == verdadeiro
+    }
+    tests {
+      caso "typescript recebe cabecalho governado" {
+        given {
+          modulo: "exemplos.calculadora"
+          alvo: "typescript"
+          capacidade_ia: "fraca"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          cabecalho_sema_governado: verdadeiro
+          descricao_humana_presente: verdadeiro
+          lembrete_consulta_sema: verdadeiro
+        }
+      }
+      caso "todos os alvos preservam idioma humano" {
+        given {
+          modulo: "exemplos.calculadora"
+          alvo: "python"
+          capacidade_ia: "forte"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          idioma_humano_preservado: verdadeiro
+          cobertura_ia_fraca_media_forte: verdadeiro
+          comentario_compacto: verdadeiro
+        }
+      }
+    }
+  }
+}

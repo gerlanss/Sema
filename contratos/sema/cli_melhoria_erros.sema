@@ -1,0 +1,125 @@
+module sema.produto.cli_melhoria_erros {
+  docs {
+    resumo: "Melhoria de mensagens de erro SEM0xx com exemplos corrigidos inline, snippets de fix e dicas contextualizadas. Reduz 'feedback criptico' de 6/10 para 9/10."
+    versao: "1.0.0"
+    status: "MODELADA"
+  }
+
+  entity ErroMelhorado {
+    fields {
+      codigo: Texto
+      mensagem_original: Texto
+      mensagem_melhorada: Texto
+      snipppet_exemplo: Texto
+      fix_sugerido: Texto
+      categoria: Texto
+      frequencia: Inteiro
+    }
+  }
+
+  task melhorar_mensagem_erro_semantico {
+    input {
+      codigo_erro: Texto required
+      contexto_contrato: Texto required
+      linha_erro: Inteiro required
+      coluna_erro: Inteiro optional
+      tipo_elemento: Texto required
+      nome_elemento: Texto required
+    }
+    output {
+      mensagem_melhorada: Texto
+      snippet_correcao: Texto
+      explicacao: Texto
+      documentacao_link: Texto
+      gravidade: Texto
+    }
+    rules {
+      codigo_erro deve_ser preenchido
+      tipo_elemento deve_ser preenchido
+      tipo_elemento em [task, route, entity, flow, event, policy]
+    }
+    effects {
+      consulta biblioteca_erros criticidade = baixa
+      consulta exemplos_contratos criticidade = baixa
+    }
+    impl {
+      ts: nucleo.src.diagnosticos.melhorador.melhorarMensagemErro
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/diagnosticos/melhorador.ts"
+      arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+      simbolo: nucleo.src.diagnosticos.melhorador.melhorarMensagemErro
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "1s"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      mensagem_melhorada existe
+      explicacao existe
+    }
+    tests {
+      caso "melhora SEM095 sem authz" {
+        given {
+          codigo_erro: "SEM095"
+          contexto_contrato: "task criar_usuario exposta em route POST /usuarios"
+          linha_erro: 15
+          tipo_elemento: "task"
+          nome_elemento: "criar_usuario"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          mensagem_melhorada contem authz {
+        }
+      }
+    }
+  }
+
+  task gerar_snippet_correcao {
+    input {
+      codigo_erro: Texto required
+      tipo_bloco_faltante: Texto required
+      contexto: Mapa<Texto,Texto> optional
+    }
+    output {
+      snippet: Texto
+      linhas_adicionais: Inteiro
+      campos_necessarios: Lista<Texto>
+    }
+    rules {
+      codigo_erro deve_ser preenchido
+      tipo_bloco_faltante deve_ser preenchido
+      tipo_bloco_faltante em [auth, authz, dados, audit, impl, vinculos, execucao]
+    }
+    effects {
+      consulta templates_snippets criticidade = baixa
+    }
+    impl {
+      ts: nucleo.src.diagnosticos.snippets.gerarSnippetCorrecao
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/diagnosticos/snippets.ts"
+      simbolo: nucleo.src.diagnosticos.snippets.gerarSnippetCorrecao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "500ms"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      snippet existe
+    }
+  }
+
+  flow melhoria_feedback_erros {
+    codigo_erro: Texto
+    contexto_contrato: Texto
+    etapa analisar usa melhorar_mensagem_erro_semantico com codigo_erro = codigo_erro, contexto_contrato = contexto_contrato, linha_erro = 0, tipo_elemento = task, nome_elemento = exemplo em_sucesso snippet
+    etapa snippet usa gerar_snippet_correcao com codigo_erro = codigo_erro, tipo_bloco_faltante = authz depende_de analisar
+    effects {
+      auditoria erro_melhorado criticidade = baixa
+    }
+  }
+}

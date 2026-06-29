@@ -1,0 +1,113 @@
+module sema.produto.prompt_midia_curta {
+  docs {
+    resumo: "Sema para prompts completos de imagem e vídeos curtos de até 6 segundos, com cena, câmera, movimento, assets, direitos e QA."
+  }
+
+  use sema.produto.imagens
+
+  use sema.produto.videos
+
+  use sema.produto.qa_criativo
+
+  enum TipoMidiaCurta {
+    IMAGEM,
+    VIDEO_ATE_6S
+  }
+
+  task preparar_prompt_midia_curta {
+    input {
+      tipo: TipoMidiaCurta required
+      objetivo: Texto required
+      sujeito: Texto required
+      cena: Texto required
+      estilo: Texto required
+      camera: Texto required
+      movimento: Texto
+      duracao: Texto
+      assets: Lista required
+      direitos: Texto required
+      restricoes: Lista required
+    }
+    output {
+      prompt_final: Texto
+      negative_prompt: Lista
+      seguro_para_gerar: Booleano
+    }
+    rules {
+      tipo deve_ser valido
+      objetivo deve_ser concreto
+      sujeito deve_ser reconhecivel
+      cena deve_ser visual
+      estilo deve_ser declarado
+      camera deve_ser declarada
+      assets deve_ser nao_vazio
+      direitos deve_ser confirmados
+      restricoes deve_ser nao_vazio
+      duracao deve_ser ate_6s_quando_video
+    }
+    effects {
+      auditoria prompt_midia_curta criticidade = alta
+    }
+    authz {
+      escopo: sema.prompt_midia_curta
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.prompt_midia_curta.prompt_preparado
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      video_acima_de_6s
+      prompt_sem_camera
+      asset_sem_direito
+      sujeito_inconsistente
+      negative_prompt_ausente
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      prompt_final existe
+      negative_prompt existe
+      seguro_para_gerar existe
+      prompt_final deve_ser completo
+    }
+    tests {
+      caso "prompt de video curto valido" {
+        given {
+          tipo: "VIDEO_ATE_6S"
+          objetivo: "gerar take de produto"
+          sujeito: "carretilha Z-11000"
+          cena: "produto girando com agua ao fundo"
+          estilo: "publicitario premium"
+          camera: "close lento"
+          movimento: "dolly-in"
+          duracao: "6s"
+          assets: "foto do produto"
+          direitos: "asset proprio"
+          restricoes: "sem marca aleatoria"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          seguro_para_gerar: verdadeiro
+        }
+      }
+    }
+  }
+}

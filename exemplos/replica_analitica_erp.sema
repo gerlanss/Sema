@@ -1,0 +1,160 @@
+module exemplos.replica.analitica_erp {
+  docs {
+    resumo: "Exemplo publico neutro de replica analitica ERP para banco analytics: agente pode consultar a origem operacional em modo leitura e persistir apenas no destino analitico."
+  }
+
+  database erp_origem_mariadb {
+    engine: mysql
+    consistency: forte
+    durability: alta
+    transaction_model: bloqueio
+    query_model: sql
+    capabilities {
+      read_only
+      views
+    }
+    table vendas_operacionais {
+      entity: VendaOperacional
+    }
+    query extrair_vendas {
+      mode: sql
+    }
+  }
+
+  database analytics_postgres {
+    engine: postgres
+    schema: public
+    consistency: eventual
+    durability: alta
+    transaction_model: mvcc
+    query_model: sql
+    capabilities {
+      upsert
+      views
+    }
+    table vendas_analytics {
+      entity: VendaAnalitica
+    }
+    query carregar_vendas_analytics {
+      mode: sql
+    }
+  }
+
+  entity VendaOperacional {
+    fields {
+      id: Id
+      loja_id: Id
+      data_venda: Data
+      valor_total: Decimal
+      payload_origem: Objeto
+    }
+    invariants {
+      id existe
+      loja_id existe
+      data_venda existe
+      valor_total >= 0
+    }
+  }
+
+  entity VendaAnalitica {
+    fields {
+      id: Id
+      loja_id: Id
+      data_venda: Data
+      valor_total: Decimal
+      sincronizado_em: Timestamp
+    }
+    invariants {
+      id existe
+      loja_id existe
+      data_venda existe
+      valor_total >= 0
+      sincronizado_em existe
+    }
+  }
+
+  task sincronizar_vendas_erp_para_analytics {
+    input {
+      loja_id: Id required
+      periodo_inicio: Data required
+      periodo_fim: Data required
+    }
+    output {
+      registros_sincronizados: Inteiro
+      banco_producao_modificado: Booleano
+      sincronizado_em: Timestamp
+    }
+    authz {
+      escopo: analytics.replica.sincronizar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        loja_id: interno
+        periodo_inicio: interno
+        periodo_fim: interno
+      }
+      output {
+        registros_sincronizados: interno
+        banco_producao_modificado: interno
+        sincronizado_em: interno
+      }
+    }
+    audit {
+      evento: analytics.replica.erp_sincronizada
+      ator: sistema.analytics
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      loja_id deve_ser valido
+      periodo_inicio deve_ser anterior_a periodo_fim
+    }
+    effects {
+      consulta erp_origem_mariadb criticidade = alta
+      persistencia analytics_postgres criticidade = media
+      auditoria sincronizacao_vendas criticidade = alta
+    }
+    vinculos {
+      recurso: erp_origem_mariadb
+      recurso: analytics_postgres
+      tabela: vendas_operacionais
+      tabela: vendas_analytics
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "60s"
+      retry: "3x exponencial"
+      compensacao: "reexecutar_janela_analitica"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      registros_sincronizados >= 0
+      banco_producao_modificado == falso
+      sincronizado_em existe
+    }
+    tests {
+      caso "sincroniza janela sem escrever na origem" {
+        given {
+          loja_id: "loja_001"
+          periodo_inicio: "2026-05-01"
+          periodo_fim: "2026-05-15"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          registros_sincronizados: 42
+          banco_producao_modificado: falso
+        }
+      }
+    }
+  }
+}

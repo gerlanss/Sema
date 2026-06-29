@@ -1,0 +1,198 @@
+module sema.produto.game {
+  docs {
+    resumo: "Profile Game para agentes produzirem jogo com contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; so depois loop jogavel, regras, estado, falha, balanceamento, telemetria, mecanica ou conteudo."
+  }
+
+  vinculos {
+    arquivo: "pacotes/cli/src/index.ts"
+    simbolo: cli.src.index.validarProfileSemantico
+  }
+
+  type GameCore {
+    fields {
+      publico: Texto
+      loop: Texto
+      objetivo_jogador: Texto
+      regras: Lista
+      estado: Texto
+    }
+    invariants {
+      publico existe
+      loop existe
+      objetivo_jogador existe
+      regras existe
+      estado existe
+    }
+  }
+
+  entity ProfileGame {
+    fields {
+      id: Id
+      core: GameCore
+      status: StatusGame
+      balanceamento: Texto
+    }
+    invariants {
+      id existe
+      core existe
+      status em [RASCUNHO, JOGAVEL, REVISAO, BLOQUEADO]
+      balanceamento existe
+    }
+  }
+
+  enum StatusGame {
+    RASCUNHO,
+    JOGAVEL,
+    REVISAO,
+    BLOQUEADO
+  }
+
+  task validar_loop_game {
+    input {
+      loop: Texto required
+      jogador: Texto required
+      estado: Texto required
+      regras: Lista required
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      jogavel: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      bloqueios: Lista
+    }
+    rules {
+      loop deve_ser preenchido
+      jogador deve_ser declarado
+      estado deve_ser persistente
+      regras deve_ser nao_vazio
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria game_loop criticidade = media
+    }
+    forbidden {
+      mecanica_sem_objetivo
+      regra_sem_estado
+      vitoria_sem_falha
+      aprovar_jogo_sem_loop_real
+      aprovar_jogo_sem_estado_ou_transicoes
+      aprovar_playtest_sem_primeiros_segundos
+      aprovar_mencao_negativa_como_requisito_atendido
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      jogavel existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      bloqueios existe
+    }
+    tests {
+      caso "loop com estado e jogador" {
+        given {
+          loop: "explorar, decidir, falhar, melhorar"
+          jogador: "player controla personagem"
+          estado: "state persistente"
+          regras: "regras e transitions de turno"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          jogavel: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_balanceamento_game {
+    input {
+      falha: Texto required
+      balanceamento: Texto required
+      abuso: Texto required
+      telemetria: Texto
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      aprovado: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      risco_exploit: Texto
+    }
+    rules {
+      falha deve_ser declarada
+      balanceamento deve_ser testavel
+      abuso deve_ser mapeado
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria game_balanceamento criticidade = media
+      evento game_profile_validado criticidade = baixa
+    }
+    forbidden {
+      exploit_sem_mitigacao
+      dificuldade_sem_criterio
+      telemetria_ausente_em_jogo_competitivo
+      aprovar_economia_sem_fonte_gasto_exploit
+      aprovar_pacing_sem_curva_de_dificuldade
+      aprovar_mencao_negativa_como_requisito_atendido
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      risco_exploit existe
+    }
+    tests {
+      caso "balanceamento rastreavel" {
+        given {
+          falha: "derrota por decisao ruim"
+          balanceamento: "curva de dano medida"
+          abuso: "exploit de economia bloqueado"
+          telemetria: "replay metricas"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+}

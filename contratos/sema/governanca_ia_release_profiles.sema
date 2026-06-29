@@ -1,0 +1,207 @@
+module sema.produto.governanca_ia.release_profiles {
+  docs {
+    resumo: "Contrato filho para instalador npm privado-governado e refinamentos de profiles para agentes."
+  }
+
+  task verificar_distribuicao_publica {
+    input {
+      versao_esperada: Texto required
+      repositorio: Texto required
+    }
+    output {
+      manifestos_alinhados: Booleano
+      npm_alinhado: Booleano
+      github_release_bloqueado: Booleano
+      assets_release_bloqueados: Booleano
+      ferramentas_locais_alinhadas: Booleano
+      sinais_distribuicao_emitidos: Booleano
+      repositorio_publico_ausente: Booleano
+    }
+    rules {
+      versao_esperada deve_ser preenchido
+      repositorio deve_ser preenchido
+    }
+    effects {
+      consulta npm_registry criticidade = media
+      auditoria instalador_npm criticidade = media
+      auditoria bloqueio_release_publica criticidade = media
+    }
+    authz {
+      escopo: sema.release.verificar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: parcial
+      input {
+        versao_esperada: publico
+        repositorio: publico
+      }
+      output {
+        manifestos_alinhados: publico
+        npm_alinhado: publico
+        github_release_bloqueado: publico
+        assets_release_bloqueados: publico
+        ferramentas_locais_alinhadas: interno
+        sinais_distribuicao_emitidos: publico
+        repositorio_publico_ausente: publico
+      }
+    }
+    audit {
+      evento: sema.release.distribuicao_verificada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: scripts.verificar_distribuicao_publica.verificarDistribuicaoPublica
+    }
+    vinculos {
+      arquivo: "scripts/verificar-distribuicao-publica.mjs"
+      simbolo: scripts.verificar_distribuicao_publica.verificarDistribuicaoPublica
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "60s"
+      retry: "manual"
+      compensacao: "corrigir instalador npm antes de anunciar instalacao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      manifestos_alinhados existe
+      npm_alinhado existe
+      github_release_bloqueado existe
+      assets_release_bloqueados existe
+      ferramentas_locais_alinhadas existe
+      sinais_distribuicao_emitidos existe
+      repositorio_publico_ausente existe
+    }
+    error {
+      instalador_npm_desalinhado: "README, npm, manifestos ou CLI local nao batem com a versao esperada."
+      release_publica_desbloqueada: "GitHub Release publica, asset aberto de produto ou repositorio publico apareceu onde deveria estar bloqueado."
+    }
+    tests {
+      caso "instalador npm 1.5.35 alinhado sem release publica" {
+        given {
+          versao_esperada: "1.5.35"
+          repositorio: "privado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          manifestos_alinhados: verdadeiro
+          npm_alinhado: verdadeiro
+          github_release_bloqueado: verdadeiro
+          assets_release_bloqueados: verdadeiro
+          repositorio_publico_ausente: verdadeiro
+        }
+      }
+    }
+  }
+
+  task rastrear_refinamentos_profiles_agentes {
+    input {
+      critica_ia: Texto required
+      profiles_afetados: Lista required
+    }
+    output {
+      roadmap: Texto
+      tarefas_rastreaveis: Lista
+      ordem_execucao: Lista
+      profiles_especializados: Lista
+      severidade_padronizada: Lista
+      maturidade_padronizada: Lista
+      presets_especializados: Lista
+      artefato_real_validado: Booleano
+      capability_matrix: Lista
+      confidence_engine: Objeto
+      runtime_gate: Objeto
+      rule_packs: Lista
+      decisao_agente: Texto
+      pronto_para_execucao: Booleano
+    }
+    rules {
+      critica_ia deve_ser preenchida
+      profiles_afetados deve_ser nao_vazio
+    }
+    effects {
+      fs.write docs criticidade = baixa
+      auditoria roadmap_refinamento_profiles criticidade = media
+    }
+    authz {
+      escopo: sema.governanca.roadmap
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: livre
+    }
+    audit {
+      evento: sema.governanca.roadmap_refinamento
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      roadmap_sem_checklist
+      esconder_profile_especializado
+      concluir_sem_riscar_tarefa
+      tratar_author_como_unico_profile
+      profile_sem_severidade_ou_maturidade
+      profile_sem_capability_matrix
+      score_unico_sem_confidence_engine
+      release_sem_caminho_github_publicavel
+      concluir_sem_validar_artefato_real_quando_fornecido
+      concluir_sem_presets_especializados
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "docs/refinamentos-agentes-semanticos.md"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "manual"
+      criticidade_operacional: media
+    }
+    guarantees {
+      roadmap existe
+      roadmap deve_ser arquivo_markdown
+      tarefas_rastreaveis existe
+      tarefas_rastreaveis deve_ser checklist_atualizavel
+      ordem_execucao existe
+      ordem_execucao deve_ser priorizada
+      profiles_especializados existe
+      profiles_especializados deve_ser explicitos
+      severidade_padronizada existe
+      maturidade_padronizada existe
+      presets_especializados existe
+      artefato_real_validado existe
+      capability_matrix existe
+      confidence_engine existe
+      runtime_gate existe
+      rule_packs existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      pronto_para_execucao == verdadeiro
+    }
+    tests {
+      caso "roadmap lista profiles especializados" {
+        given {
+          critica_ia: "Author falha em proibicao literal, profiles precisam maturidade."
+          profiles_afetados: "author, software, workflow, ops, legal, research, game"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_execucao: verdadeiro
+        }
+      }
+    }
+  }
+}

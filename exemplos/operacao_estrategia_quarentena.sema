@@ -1,0 +1,133 @@
+module exemplos.operacao_estrategia.quarentena {
+  docs {
+    resumo: "Task oficial para colocar slice em quarentena seletiva sem desligar a strategy inteira."
+  }
+
+  type ContextoQuarentena {
+    fields {
+      motivo: Texto
+      origem: Texto
+      desde: Data
+    }
+    invariants {
+      motivo existe
+      origem existe
+      desde existe
+    }
+  }
+
+  enum StatusSlice {
+    ATIVO,
+    QUARENTENA,
+    DESLIGADO
+  }
+
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  task colocar_slice_em_quarentena {
+    docs {
+      resumo: "Transforma um problema de slice em acao operacional explicita,sem desligar a strategy inteira por reflexo idiota."
+    }
+    input {
+      strategy_id: Id required
+      slice_id: Id required
+      motivo: Texto required
+      origem: Texto required
+      data_referencia: Data required
+    }
+    output {
+      slice_status: StatusSlice
+      gate_slice: StatusGate
+      contexto: ContextoQuarentena
+    }
+    authz {
+      escopo: strategy.slice.quarentena
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        strategy_id: interno
+        slice_id: interno
+        motivo: interno
+        origem: interno
+        data_referencia: interno
+      }
+      output {
+        slice_status: interno
+        gate_slice: interno
+        contexto: interno
+      }
+    }
+    audit {
+      evento: strategy.slice.quarentena
+      ator: sistema.strategy
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      strategy_id existe
+      slice_id existe
+      motivo existe
+      origem existe
+      data_referencia existe
+    }
+    effects {
+      persistencia slice criticidade = alta
+      persistencia quarentena criticidade = alta
+      notificacao operacao criticidade = alta
+      auditoria quarentena criticidade = alta
+    }
+    vinculos {
+      tabela: slice
+      tabela: quarentena
+      recurso: strategy_registry
+      evento: slice_quarentena
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "reabrir_slice_por_revisao_manual"
+      criticidade_operacional: alta
+    }
+    state governanca_estrategia {
+      transitions {
+        ATIVA -> QUARENTENA
+      }
+    }
+    guarantees {
+      slice_status == QUARENTENA
+      gate_slice == FECHADO
+      contexto existe
+    }
+    tests {
+      caso "quarentena seletiva fecha so o slice afetado" {
+        given {
+          strategy_id: "strategy_alpha"
+          slice_id: "slice_under35_serie_a"
+          motivo: "llm_detectou_noticia_ruim"
+          origem: "monitoramento_live"
+          data_referencia: "2026-03-30"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          slice_status: "QUARENTENA"
+          gate_slice: "FECHADO"
+          contexto: "ctx_quarentena"
+        }
+      }
+    }
+  }
+}

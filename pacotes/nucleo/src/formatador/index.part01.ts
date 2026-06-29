@@ -1,0 +1,445 @@
+// SEMA-GOVERNED: sema.software
+// Descricao: nucleo semantico particionado; consulte contratos/sema/software.sema antes de editar.
+
+import type {
+  BlocoAst,
+  BlocoCasoTesteAst,
+  BlocoGenericoAst,
+  CampoAst,
+  EntityAst,
+  EnumAst,
+  FlowAst,
+  ModuloAst,
+  RouteAst,
+  StateAst,
+  TaskAst,
+  TypeAst,
+  UseAst,
+} from "../ast/tipos.js";
+import type { Diagnostico } from "../diagnosticos/index.js";
+import { parsear } from "../parser/parser.js";
+import { tokenizar } from "../lexer/lexer.js";
+
+export const ORDEM_BLOCOS_MODULO = new Map<string, number>([
+  ["docs", 0],
+  ["comments", 1],
+  ["use", 2],
+  ["vinculos", 3],
+  ["database", 4],
+  ["type", 5],
+  ["entity", 6],
+  ["enum", 7],
+  ["state", 8],
+  ["task", 9],
+  ["flow", 10],
+  ["route", 11],
+  ["worker", 12],
+  ["evento", 13],
+  ["fila", 14],
+  ["cron", 15],
+  ["webhook", 16],
+  ["cache", 17],
+  ["storage", 18],
+  ["policy", 19],
+  ["tests", 20],
+  ["desconhecido", 21],
+]);
+
+export const ORDEM_SUBBLOCOS_TASK = new Map<string, number>([
+  ["docs", 0],
+  ["comments", 1],
+  ["input", 2],
+  ["output", 3],
+  ["rules", 4],
+  ["effects", 5],
+  ["auth", 6],
+  ["authz", 7],
+  ["dados", 8],
+  ["audit", 9],
+  ["segredos", 10],
+  ["forbidden", 11],
+  ["impl", 12],
+  ["vinculos", 13],
+  ["execucao", 14],
+  ["state", 15],
+  ["guarantees", 16],
+  ["error", 17],
+  ["tests", 18],
+  ["desconhecido", 19],
+]);
+
+export const ORDEM_SUBBLOCOS_ROUTE = new Map<string, number>([
+  ["input", 0],
+  ["output", 1],
+  ["effects", 2],
+  ["auth", 3],
+  ["authz", 4],
+  ["dados", 5],
+  ["audit", 6],
+  ["segredos", 7],
+  ["forbidden", 8],
+  ["vinculos", 9],
+  ["error", 10],
+  ["docs", 11],
+  ["comments", 12],
+  ["desconhecido", 13],
+]);
+
+export const ORDEM_SUBBLOCOS_FLOW = new Map<string, number>([
+  ["effects", 0],
+  ["vinculos", 1],
+  ["docs", 2],
+  ["comments", 3],
+  ["desconhecido", 4],
+]);
+
+export const ORDEM_SUBBLOCOS_SUPERFICIE = new Map<string, number>([
+  ["input", 0],
+  ["output", 1],
+  ["effects", 2],
+  ["auth", 3],
+  ["authz", 4],
+  ["dados", 5],
+  ["audit", 6],
+  ["segredos", 7],
+  ["forbidden", 8],
+  ["impl", 9],
+  ["vinculos", 10],
+  ["execucao", 11],
+  ["error", 12],
+  ["docs", 13],
+  ["comments", 14],
+  ["desconhecido", 15],
+]);
+
+export const ORDEM_SUBBLOCOS_STATE = new Map<string, number>([
+  ["fields", 0],
+  ["invariants", 1],
+  ["transitions", 2],
+  ["docs", 3],
+  ["comments", 4],
+  ["desconhecido", 5],
+]);
+
+export const ORDEM_SUBBLOCOS_TESTE = new Map<string, number>([
+  ["given", 0],
+  ["when", 1],
+  ["expect", 2],
+  ["error", 3],
+  ["docs", 4],
+  ["comments", 5],
+  ["desconhecido", 6],
+]);
+
+export const ORDEM_CAMPOS_POR_BLOCO = new Map<string, Map<string, number>>([
+  ["vinculos", new Map<string, number>([
+    ["arquivo", 0],
+    ["simbolo", 1],
+    ["rota", 2],
+    ["superficie", 3],
+    ["recurso", 4],
+    ["tabela", 5],
+    ["fila", 6],
+    ["worker", 7],
+    ["evento", 8],
+    ["cron", 9],
+    ["webhook", 10],
+    ["cache", 11],
+    ["storage", 12],
+    ["policy", 13],
+    ["teste", 14],
+  ])],
+  ["execucao", new Map<string, number>([
+    ["idempotencia", 0],
+    ["timeout", 1],
+    ["retry", 2],
+    ["compensacao", 3],
+    ["criticidade_operacional", 4],
+  ])],
+  ["auth", new Map<string, number>([
+    ["modo", 0],
+    ["estrategia", 1],
+    ["principal", 2],
+    ["origem", 3],
+  ])],
+  ["authz", new Map<string, number>([
+    ["papeis", 0],
+    ["papel", 1],
+    ["escopos", 2],
+    ["escopo", 3],
+    ["politica", 4],
+    ["tenant", 5],
+  ])],
+  ["dados", new Map<string, number>([
+    ["classificacao_padrao", 0],
+    ["redacao_log", 1],
+    ["retencao", 2],
+  ])],
+  ["audit", new Map<string, number>([
+    ["evento", 0],
+    ["ator", 1],
+    ["correlacao", 2],
+    ["retencao", 3],
+    ["motivo", 4],
+  ])],
+  ["database", new Map<string, number>([
+    ["engine", 0],
+    ["schema", 1],
+    ["database", 2],
+    ["consistency", 3],
+    ["durability", 4],
+    ["transaction_model", 5],
+    ["query_model", 6],
+    ["portavel", 7],
+    ["adapter", 8],
+  ])],
+]);
+
+export interface ResultadoFormatacao {
+  modulo?: ModuloAst;
+  codigoFormatado?: string;
+  diagnosticos: Diagnostico[];
+  alterado: boolean;
+}
+
+export function indentacao(nivel: number): string {
+  return "  ".repeat(nivel);
+}
+
+export function ordenarPorMapa<T>(itens: T[], extrairChave: (item: T) => string, ordem: Map<string, number>): T[] {
+  return [...itens].sort((a, b) => {
+    const ordemA = ordem.get(extrairChave(a)) ?? Number.MAX_SAFE_INTEGER;
+    const ordemB = ordem.get(extrairChave(b)) ?? Number.MAX_SAFE_INTEGER;
+    if (ordemA !== ordemB) {
+      return ordemA - ordemB;
+    }
+    return extrairChave(a).localeCompare(extrairChave(b), "pt-BR");
+  });
+}
+
+export function normalizarEspacos(texto: string): string {
+  const marcadorSeta = "__SEMA_SETA__";
+  const marcadorMaiorIgual = "__SEMA_MAIOR_IGUAL__";
+  const marcadorMenorIgual = "__SEMA_MENOR_IGUAL__";
+  const marcadorIgual = "__SEMA_IGUAL__";
+  const marcadorDiferente = "__SEMA_DIFERENTE__";
+  return texto
+    .trim()
+    .replace(/\s*->\s*/g, ` ${marcadorSeta} `)
+    .replace(/\s*-\s*>\s*/g, ` ${marcadorSeta} `)
+    .replace(/\s+/g, " ")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")")
+    .replace(/\[\s+/g, "[")
+    .replace(/\s+\]/g, "]")
+    .replace(/\s*>=\s*/g, ` ${marcadorMaiorIgual} `)
+    .replace(/\s*<=\s*/g, ` ${marcadorMenorIgual} `)
+    .replace(/\s*==\s*/g, ` ${marcadorIgual} `)
+    .replace(/\s*!=\s*/g, ` ${marcadorDiferente} `)
+    .replace(/\s*>\s*/g, " > ")
+    .replace(/\s*<\s*/g, " < ")
+    .replace(new RegExp(`\\s*${marcadorMaiorIgual}\\s*`, "g"), " >= ")
+    .replace(new RegExp(`\\s*${marcadorMenorIgual}\\s*`, "g"), " <= ")
+    .replace(new RegExp(`\\s*${marcadorIgual}\\s*`, "g"), " == ")
+    .replace(new RegExp(`\\s*${marcadorDiferente}\\s*`, "g"), " != ")
+    .replace(new RegExp(`\\s*${marcadorSeta}\\s*`, "g"), " -> ");
+}
+
+export function normalizarCaminho(texto: string): string {
+  return texto
+    .trim()
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/\s+/g, "");
+}
+
+export function deveNormalizarCampoCaminho(contexto: string, campo: CampoAst): boolean {
+  return campo.nome === "caminho" && ["route", "webhook"].includes(contexto);
+}
+
+export function eLiteralEscalar(texto: string): boolean {
+  const normalizado = texto.trim();
+  return /^-?\d+(?:\.\d+)?$/.test(normalizado) || ["verdadeiro", "falso", "nulo"].includes(normalizado);
+}
+
+export function deveColocarAspas(contexto: string, campo: CampoAst, combinado: string): boolean {
+  if (campo.nome === "metodo") {
+    return false;
+  }
+  if (campo.nome === "caminho") {
+    return /[{}]/.test(combinado);
+  }
+  if (contexto === "vinculos" && ["arquivo", "webhook"].includes(campo.nome)) {
+    return true;
+  }
+  if (["timeout", "retry", "compensacao", "retencao", "rotacao"].includes(campo.nome)) {
+    return true;
+  }
+  if (contexto === "docs" || contexto === "comments") {
+    return true;
+  }
+  if (contexto === "error") {
+    return !eLiteralEscalar(combinado);
+  }
+  if (contexto === "given" || contexto === "when" || contexto === "expect") {
+    return !eLiteralEscalar(combinado);
+  }
+  return false;
+}
+
+export function normalizarValorCampo(campo: CampoAst): string {
+  return [campo.valor, ...campo.modificadores]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function ordenarCampos(bloco: BlocoGenericoAst): CampoAst[] {
+  const ordem = ORDEM_CAMPOS_POR_BLOCO.get(bloco.palavraChave);
+  if (!ordem) {
+    return bloco.campos;
+  }
+  return ordenarPorMapa(bloco.campos, (campo) => campo.nome, ordem);
+}
+
+export function renderizarCampo(campo: CampoAst, nivel: number, contexto: string): string {
+  let combinado = normalizarValorCampo(campo);
+
+  if (deveNormalizarCampoCaminho(contexto, campo)) {
+    combinado = normalizarCaminho(combinado);
+  }
+
+  if (deveColocarAspas(contexto, campo, combinado)) {
+    combinado = JSON.stringify(combinado);
+  }
+
+  return `${indentacao(nivel)}${campo.nome}: ${combinado}`;
+}
+
+export function renderizarLinha(linha: string, nivel: number): string {
+  return `${indentacao(nivel)}${normalizarEspacos(linha)}`;
+}
+
+export function renderizarCasoTeste(caso: BlocoCasoTesteAst, nivel: number): string {
+  const partes: string[] = [];
+  if (caso.given) {
+    partes.push(renderizarBlocoGenerico(caso.given, nivel + 1));
+  }
+  if (caso.when) {
+    partes.push(renderizarBlocoGenerico(caso.when, nivel + 1));
+  }
+  if (caso.expect) {
+    partes.push(renderizarBlocoGenerico(caso.expect, nivel + 1));
+  }
+  if (caso.error) {
+    partes.push(renderizarBlocoGenerico(caso.error, nivel + 1));
+  }
+  if (caso.docs) {
+    partes.push(renderizarBlocoGenerico(caso.docs, nivel + 1));
+  }
+  if (caso.comments) {
+    partes.push(renderizarBlocoGenerico(caso.comments, nivel + 1));
+  }
+
+  return `${indentacao(nivel)}caso ${JSON.stringify(caso.nome)} {\n${partes.join("\n\n")}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarBlocoAst(bloco: BlocoAst, nivel: number): string {
+  switch (bloco.tipo) {
+    case "caso_teste":
+      return renderizarCasoTeste(bloco, nivel);
+    case "bloco_generico":
+      return renderizarBlocoGenerico(bloco, nivel);
+    case "use":
+      return `${indentacao(nivel)}use ${bloco.origem === "sema" ? "" : `${bloco.origem} `}${bloco.caminho}`.trimEnd();
+    case "enum":
+      return renderizarEnum(bloco, nivel);
+    case "type":
+      return renderizarTipo(bloco, nivel);
+    case "entity":
+      return renderizarEntity(bloco, nivel);
+    case "task":
+      return renderizarTask(bloco, nivel);
+    case "flow":
+      return renderizarFlow(bloco, nivel);
+    case "route":
+      return renderizarRoute(bloco, nivel);
+    case "state":
+      return renderizarState(bloco, nivel);
+  }
+}
+
+export function ordenarSubblocos(bloco: BlocoGenericoAst): BlocoAst[] {
+  if (bloco.palavraChave === "task") {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_TASK);
+  }
+  if (bloco.palavraChave === "route") {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_ROUTE);
+  }
+  if (bloco.palavraChave === "flow") {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_FLOW);
+  }
+  if (["worker", "evento", "fila", "cron", "webhook", "cache", "storage", "policy"].includes(bloco.palavraChave)) {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_SUPERFICIE);
+  }
+  if (bloco.palavraChave === "state") {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_STATE);
+  }
+  if (bloco.palavraChave === "tests") {
+    return ordenarPorMapa(bloco.blocos, (item) => item.tipo === "caso_teste" ? "case" : item.tipo === "bloco_generico" ? item.palavraChave : item.tipo, ORDEM_SUBBLOCOS_TESTE);
+  }
+  return bloco.blocos;
+}
+
+export function renderizarBlocoGenerico(bloco: BlocoGenericoAst, nivel: number): string {
+  const identificadorBloco = bloco.palavraChave === "desconhecido" && bloco.nome
+    ? bloco.nome
+    : `${bloco.palavraChave}${bloco.nome ? ` ${bloco.nome}` : ""}`;
+  const cabecalho = `${indentacao(nivel)}${identificadorBloco} {`;
+  const linhasCampos = ordenarCampos(bloco).map((campo) => renderizarCampo(campo, nivel + 1, bloco.palavraChave));
+  const linhasDeclarativas = bloco.linhas.map((linha) => renderizarLinha(linha.conteudo, nivel + 1));
+  const blocosInternos = ordenarSubblocos(bloco).map((subbloco) => renderizarBlocoAst(subbloco, nivel + 1));
+  const corpo = [...linhasCampos, ...linhasDeclarativas, ...blocosInternos];
+  if (corpo.length === 0) {
+    return `${cabecalho}\n${indentacao(nivel)}}`;
+  }
+  return `${cabecalho}\n${corpo.join("\n")}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarEnum(enumeracao: EnumAst, nivel: number): string {
+  const corpo = enumeracao.valores.map((valor, indice) => `${indentacao(nivel + 1)}${valor}${indice < enumeracao.valores.length - 1 ? "," : ""}`);
+  return `${indentacao(nivel)}enum ${enumeracao.nome} {\n${corpo.join("\n")}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarTipo(type: TypeAst, nivel: number): string {
+  return `${indentacao(nivel)}type ${type.nome} {\n${renderizarCorpoSimples(type.corpo, nivel + 1)}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarEntity(entity: EntityAst, nivel: number): string {
+  return `${indentacao(nivel)}entity ${entity.nome} {\n${renderizarCorpoSimples(entity.corpo, nivel + 1)}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarTask(task: TaskAst, nivel: number): string {
+  return `${indentacao(nivel)}task ${task.nome} {\n${renderizarCorpoSimples(task.corpo, nivel + 1)}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarFlow(flow: FlowAst, nivel: number): string {
+  return `${indentacao(nivel)}flow ${flow.nome} {\n${renderizarCorpoSimples(flow.corpo, nivel + 1)}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarRoute(route: RouteAst, nivel: number): string {
+  return `${indentacao(nivel)}route ${route.nome} {\n${renderizarCorpoSimples(route.corpo, nivel + 1)}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarState(state: StateAst, nivel: number): string {
+  return `${indentacao(nivel)}state${state.nome ? ` ${state.nome}` : ""} {\n${renderizarCorpoSimples(state.corpo, nivel + 1)}\n${indentacao(nivel)}}`;
+}
+
+export function renderizarCorpoSimples(bloco: BlocoGenericoAst, nivel: number): string {
+  const conteudo = ordenarSubblocos(bloco).map((subbloco) => renderizarBlocoAst(subbloco, nivel));
+  const campos = ordenarCampos(bloco).map((campo) => renderizarCampo(campo, nivel, bloco.palavraChave));
+  const linhas = bloco.linhas.map((linha) => renderizarLinha(linha.conteudo, nivel));
+  const corpo = [...campos, ...linhas, ...conteudo];
+  return corpo.join("\n");
+}

@@ -1,0 +1,91 @@
+module sema.produto.governanca_ia {
+  docs {
+    resumo: "Indice fino da governanca IA-first do Sema. Cada responsabilidade operacional vive em contrato filho para IA fraca, media e forte conseguirem consumir sem monolito."
+    arquivo: "contratos/sema/governanca_ia_contexto.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_projeto.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_agent_pack.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_entrypoints.sema"
+    arquivo: "contratos/sema/governanca_ia_exemplos.sema"
+    arquivo: "contratos/sema/governanca_ia_qualidade_contrato.sema"
+    arquivo: "contratos/sema/governanca_ia_documentacao.sema"
+    arquivo: "contratos/sema/governanca_ia_vocabulario.sema"
+    arquivo: "contratos/sema/governanca_ia_drift.sema"
+    arquivo: "contratos/sema/governanca_ia_drift_impacto.sema"
+    arquivo: "contratos/sema/governanca_ia_release_profiles.sema"
+  }
+
+  use sema.produto.governanca_ia.contexto
+
+  use sema.produto.governanca_ia.contexto.projeto
+
+  use sema.produto.governanca_ia.contexto.agent_pack
+
+  use sema.produto.governanca_ia.contexto.entrypoints
+
+  use sema.produto.governanca_ia.exemplos
+
+  use sema.produto.governanca_ia.qualidade_contrato
+
+  use sema.produto.governanca_ia.documentacao
+
+  use sema.produto.governanca_ia.vocabulario
+
+  use sema.produto.governanca_ia.drift
+
+  use sema.produto.governanca_ia.drift_impacto
+
+  use sema.produto.governanca_ia.release_profiles
+
+  task manter_indice_governanca_ia {
+    input {
+      base_projeto: Texto required
+    }
+    output {
+      contratos_filhos: Lista
+      responsabilidades_separadas: Booleano
+      contratos_contexto_divididos: Booleano
+    }
+    rules {
+      base_projeto deve_ser preenchido
+    }
+    effects {
+      auditoria indice_governanca_ia criticidade = baixa
+    }
+    forbidden {
+      contrato_monolitico
+      parte_1_parte_2
+      remover_contrato_filho_para_caber_limite
+    }
+    impl {
+      ts: cli.src.agent_context.criarEntradaCanonicaProjeto
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/agentContext.ts"
+      simbolo: cli.src.agent_context.criarEntradaCanonicaProjeto
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      contratos_filhos existe
+      contratos_filhos deve_ser incluir_contexto_exemplos_qualidade_documentacao_vocabulario_drift_release
+      responsabilidades_separadas == verdadeiro
+      contratos_contexto_divididos == verdadeiro
+    }
+    tests {
+      caso "indice declara filhos e contexto dividido" {
+        given {
+          base_projeto: "."
+        }
+        expect {
+          sucesso: verdadeiro
+          responsabilidades_separadas: verdadeiro
+          contratos_contexto_divididos: verdadeiro
+        }
+      }
+    }
+  }
+}

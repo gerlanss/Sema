@@ -1,0 +1,156 @@
+module sema.produto.governanca_ia.contexto.entrypoints {
+  docs {
+    resumo: "Sincronizacao dos entrypoints de agentes por cliente, capacidade e falha fechada no workspace local."
+  }
+
+  task sincronizar_entrypoints_agentes {
+    input {
+      base_projeto: Texto required
+      clientes: Texto
+      capacidade_padrao: Texto
+    }
+    output {
+      sema_boot: Texto
+      sema_small_model: Texto
+      agents_md: Texto
+      docs_sintaxe: Texto
+      docs_fluxo_pratico: Texto
+      copilot_instructions: Texto
+      cline_rules: Texto
+      roo_rules: Texto
+      opencode_instructions: Texto
+      cursor_rules: Texto
+      claude_rules: Texto
+      windsurf_rules: Texto
+      idioma_humano_preservado: Booleano
+      fallback_clinerules_arquivo: Booleano
+      retry_timeout_progressivo: Booleano
+      politica_plataforma_explicita: Booleano
+      politica_sinal_vs_ritual_explicita: Booleano
+      ide_local_cli_preflight_explicito: Booleano
+      divisao_por_responsabilidade_explicita: Booleano
+      contexto_local_sem_espelho: Booleano
+    }
+    rules {
+      base_projeto deve_ser preenchido
+      capacidade_padrao deve_ser em [fraca, media, forte]
+      clientes deve_ser incluir_entrypoints_suportados
+    }
+    effects {
+      fs.write entrypoints_agentes criticidade = media
+      auditoria sync_ai_entrypoints criticidade = media
+    }
+    authz {
+      escopo: sema.contexto.agent_entrypoints
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        base_projeto: interno
+        clientes: interno
+        capacidade_padrao: publico
+      }
+      output {
+        sema_boot: publico
+        sema_small_model: publico
+        agents_md: publico
+        docs_sintaxe: publico
+        docs_fluxo_pratico: publico
+        copilot_instructions: publico
+        cline_rules: publico
+        roo_rules: publico
+        opencode_instructions: publico
+        cursor_rules: publico
+        claude_rules: publico
+        windsurf_rules: publico
+        idioma_humano_preservado: publico
+        fallback_clinerules_arquivo: publico
+        retry_timeout_progressivo: publico
+        politica_plataforma_explicita: publico
+        politica_sinal_vs_ritual_explicita: publico
+        ide_local_cli_preflight_explicito: publico
+        divisao_por_responsabilidade_explicita: publico
+        contexto_local_sem_espelho: publico
+      }
+    }
+    audit {
+      evento: sema.ia.sync_entrypoints_agentes
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      sobrescrever_customizacao_manual_sem_bloco_gerenciado
+      apagar_configuracao_local_do_cliente
+      pedir_para_runtime_remoto_ler_pasta_local
+      instruir_ia_fraca_com_documento_longo_primeiro
+      omitir_politica_de_idioma
+      omitir_retry_timeout_progressivo
+      tratar_timeout_do_agente_como_falha_sema
+      omitir_politica_plataforma
+      instruir_bypass_de_politica_da_plataforma
+      omitir_politica_sinal_vs_ritual
+      sugerir_fatiamento_artificial_de_arquivo
+      dispensar_cabecalho_por_validacao_inline
+      tratar_path_linux_remoto_como_pasta_local_do_usuario
+    }
+    impl {
+      ts: cli.src.agent_entry_points.sincronizarEntryPointsAgentes
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/agentEntryPoints.ts"
+      simbolo: cli.src.agent_entry_points.sincronizarEntryPointsAgentes
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "progressivo_por_timeout_local"
+      compensacao: "regenerar entrypoints IA-first"
+      criticidade_operacional: media
+    }
+    guarantees {
+      sema_boot existe
+      sema_boot deve_ser primeiro_entrypoint
+      sema_small_model existe
+      sema_small_model deve_ser compacto_para_ia_fraca
+      agents_md existe
+      docs_sintaxe existe
+      docs_fluxo_pratico existe
+      copilot_instructions existe
+      cline_rules existe
+      roo_rules existe
+      opencode_instructions existe
+      cursor_rules existe
+      claude_rules existe
+      windsurf_rules existe
+      idioma_humano_preservado == verdadeiro
+      fallback_clinerules_arquivo existe
+      retry_timeout_progressivo == verdadeiro
+      politica_plataforma_explicita == verdadeiro
+      politica_sinal_vs_ritual_explicita == verdadeiro
+      ide_local_cli_preflight_explicito == verdadeiro
+      divisao_por_responsabilidade_explicita == verdadeiro
+      contexto_local_sem_espelho == verdadeiro
+    }
+    tests {
+      caso "sincroniza entrypoints sem depender so do AGENTS" {
+        given {
+          base_projeto: "."
+          clientes: "copilot cline roo opencode cursor claude windsurf generico"
+          capacidade_padrao: "fraca"
+        }
+        expect {
+          sucesso: verdadeiro
+          idioma_humano_preservado: verdadeiro
+          retry_timeout_progressivo: verdadeiro
+          politica_plataforma_explicita: verdadeiro
+          agents_md: verdadeiro
+          docs_sintaxe: verdadeiro
+        }
+      }
+    }
+  }
+}

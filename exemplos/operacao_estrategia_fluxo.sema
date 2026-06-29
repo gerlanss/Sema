@@ -1,0 +1,114 @@
+module exemplos.operacao_estrategia.fluxo {
+  docs {
+    resumo: "Flow oficial de governanca operacional com stubs curtos para manter a orquestracao validavel sem virar contrato monolitico."
+  }
+
+  enum StatusStrategy {
+    RASCUNHO,
+    ATIVA,
+    QUARENTENA,
+    DESATIVADA
+  }
+
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  task registrar_discovery_semanal {
+    input {
+      strategy_id: Id required
+      semana_referencia: Data required
+      versao_modelo_candidata: Texto required
+    }
+    output {
+      discovery_registrada: Booleano
+    }
+    guarantees {
+      discovery_registrada existe
+    }
+  }
+
+  task avaliar_slice_apos_discovery {
+    input {
+      strategy_id: Id required
+      slice_id: Id required
+      precision_observada: Decimal required
+      precision_minima: Decimal required
+      risco_operacional: Texto required
+    }
+    output {
+      motivo_operacional: Texto
+    }
+    guarantees {
+      motivo_operacional existe
+    }
+  }
+
+  task colocar_slice_em_quarentena {
+    input {
+      strategy_id: Id required
+      slice_id: Id required
+      motivo: Texto required
+      origem: Texto required
+      data_referencia: Data required
+    }
+    output {
+      gate_slice: StatusGate
+    }
+    guarantees {
+      gate_slice existe
+    }
+  }
+
+  task fechar_gate_global_strategy {
+    input {
+      strategy_id: Id required
+      motivo_operacional: Texto required
+      versao_modelo_ativa: Texto required
+    }
+    output {
+      gate_global: StatusGate
+    }
+    guarantees {
+      gate_global existe
+    }
+  }
+
+  task ativar_strategy_com_nova_versao {
+    input {
+      strategy_id: Id required
+      versao_modelo_ativa: Texto required
+      versao_modelo_candidata: Texto required
+      strategy_status_atual: StatusStrategy required
+      gate_global_atual: StatusGate required
+      aprovacao_manual: Booleano required
+    }
+    output {
+      strategy_status: StatusStrategy
+    }
+    guarantees {
+      strategy_status existe
+    }
+  }
+
+  flow governanca_operacional {
+    strategy_id: Id
+    slice_id: Id
+    semana_referencia: Data
+    versao_modelo_ativa: Texto
+    versao_modelo_candidata: Texto
+    precision_observada: Decimal
+    precision_minima: Decimal
+    risco_operacional: Texto
+    motivo_operacional: Texto
+    strategy_status_atual: StatusStrategy
+    gate_global_atual: StatusGate
+    aprovacao_manual: Booleano
+    etapa discovery usa registrar_discovery_semanal com strategy_id = strategy_id, semana_referencia = semana_referencia, versao_modelo_candidata = versao_modelo_candidata
+    etapa avaliar_slice usa avaliar_slice_apos_discovery com strategy_id = strategy_id, slice_id = slice_id, precision_observada = precision_observada, precision_minima = precision_minima, risco_operacional = risco_operacional depende_de discovery
+    etapa quarentena_slice usa colocar_slice_em_quarentena com strategy_id = strategy_id, slice_id = slice_id, motivo = motivo_operacional, origem = risco_operacional, data_referencia = semana_referencia quando motivo_operacional existe depende_de avaliar_slice
+    etapa fechar_gate_global usa fechar_gate_global_strategy com strategy_id = strategy_id, motivo_operacional = motivo_operacional, versao_modelo_ativa = versao_modelo_ativa quando motivo_operacional existe depende_de quarentena_slice
+    etapa reativacao usa ativar_strategy_com_nova_versao com strategy_id = strategy_id, versao_modelo_ativa = versao_modelo_ativa, versao_modelo_candidata = versao_modelo_candidata, strategy_status_atual = strategy_status_atual, gate_global_atual = gate_global_atual, aprovacao_manual = aprovacao_manual quando aprovacao_manual == verdadeiro depende_de fechar_gate_global
+  }
+}

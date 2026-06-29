@@ -1,0 +1,305 @@
+module sema.produto.propostas_comerciais {
+  docs {
+    resumo: "Sema para propostas comerciais vencedoras em marketplaces freela: leitura do job, decisão de entrar ou pular, proposta pronta, nota interna, preço competitivo e stack sugerida."
+  }
+
+  use sema.produto.research
+
+  use sema.produto.copywriting
+
+  use sema.produto.qa_criativo
+
+  type AnaliseJobFreela {
+    fields {
+      plataforma: Texto
+      texto_projeto: Texto
+      dor_cliente: Texto
+      escopo_assumido: Texto
+      entregaveis_recomendados: Lista
+      risco_furada: Texto
+      estrategia_fechamento: Texto
+    }
+    invariants {
+      texto_projeto existe
+      dor_cliente existe
+      escopo_assumido existe
+      entregaveis_recomendados existe
+      estrategia_fechamento existe
+    }
+  }
+
+  type NotaInternaProposta {
+    fields {
+      tipo_projeto: Texto
+      dificuldade: Texto
+      stack_sugerida: Lista
+      decisao: Texto
+      preco_para_ganhar: Texto
+      preco_equilibrado: Texto
+      preco_ideal: Texto
+      prazo_sugerido: Texto
+      risco_escopo: Texto
+      upsell: Texto
+    }
+    invariants {
+      tipo_projeto existe
+      stack_sugerida existe
+      decisao existe
+      preco_para_ganhar existe
+      prazo_sugerido existe
+    }
+  }
+
+  task analisar_job_freela {
+    input {
+      texto_projeto: Texto required
+      plataforma: Texto
+      orcamento_visivel: Texto
+      sinais_risco: Lista
+      objetivo_usuario: Texto required
+    }
+    output {
+      analise: AnaliseJobFreela
+      pular_job: Booleano
+      escopo_minimo_aceitavel: Texto
+      entregaveis_recomendados: Lista
+    }
+    rules {
+      texto_projeto deve_ser preenchido
+      objetivo_usuario deve_ser ganhar_com_margem
+      plataforma deve_ser opcional
+      plataforma deve_ser assumir_99freelas_quando_ausente
+      orcamento_visivel deve_ser usado_quando_fornecido
+      sinais_risco deve_ser avaliados
+    }
+    effects {
+      auditoria analise_job_freela criticidade = media
+    }
+    forbidden {
+      questionario_longo
+      assumir_codigo_por_padrao
+      ignorar_sinal_de_furada
+      promessa_irreal_para_fechar
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      analise existe
+      analise deve_ser direta
+      pular_job existe
+      escopo_minimo_aceitavel existe
+      entregaveis_recomendados existe
+      entregaveis_recomendados deve_ser claros_para_cliente
+    }
+    tests {
+      caso "analisa job vago sem travar" {
+        given {
+          texto_projeto: "preciso de sistema para controlar clientes e pedidos"
+          plataforma: "99Freelas"
+          orcamento_visivel: "baixo"
+          sinais_risco: "escopo vago"
+          objetivo_usuario: "ganhar projeto com margem aceitavel"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pular_job: falso
+        }
+      }
+    }
+  }
+
+  task gerar_proposta_comercial {
+    input {
+      analise: AnaliseJobFreela required
+      saudacao_apresentacao: Texto required
+      abordagem: Texto required
+      stack_sugerida: Lista required
+      entregaveis_cliente: Lista required
+      nota_interna: NotaInternaProposta required
+      restricoes_plataforma: Lista required
+    }
+    output {
+      proposta_cliente: Texto
+      entregaveis_cliente: Lista
+      nota_interna_final: NotaInternaProposta
+      pronta_para_enviar: Booleano
+      score_final_proposta: Numero
+    }
+    rules {
+      analise deve_ser valida
+      saudacao_apresentacao deve_ser humana
+      abordagem deve_ser agressiva_para_fechamento
+      abordagem deve_ser persuasiva
+      stack_sugerida deve_ser enxuta
+      entregaveis_cliente deve_ser claros_para_cliente
+      nota_interna deve_ser completa
+      restricoes_plataforma deve_ser respeitadas
+      restricoes_plataforma deve_ser compativel_com_99freelas_e_workana
+    }
+    effects {
+      auditoria proposta_freela_gerada criticidade = alta
+    }
+    authz {
+      escopo: sema.propostas_comerciais
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.propostas_comerciais.proposta_gerada
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      mencionar_ia_ou_automacao_interna
+      expor_reaproveitamento_sem_pergunta
+      enviar_contato_externo_em_plataforma
+      proposta_generica
+      proposta_sem_persuasao
+      proposta_sem_entregaveis_claros
+      aprovar_score_abaixo_90
+      diagnostico_enchendo_linguica
+      preco_no_texto_cliente_sem_pedido
+      prazo_no_texto_cliente_sem_estrategia
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      proposta_cliente existe
+      proposta_cliente deve_ser sem_preco_por_padrao
+      proposta_cliente deve_ser persuasiva
+      proposta_cliente deve_ser explicar_o_que_sera_entregue
+      entregaveis_cliente existe
+      entregaveis_cliente deve_ser claros_para_cliente
+      nota_interna_final existe
+      pronta_para_enviar existe
+      proposta_cliente deve_ser curta_confiante_e_especifica
+      score_final_proposta existe
+      score_final_proposta >= 90
+      pronta_para_enviar deve_ser falsa_quando_score_abaixo_90
+      nota_interna_final deve_ser conter_preco_prazo_stack_risco_upsell
+    }
+    tests {
+      caso "proposta com nota interna" {
+        given {
+          analise: "cliente quer painel de pedidos"
+          saudacao_apresentacao: "Ola, meu nome e Gerlan."
+          abordagem: "fase inicial enxuta com base funcional"
+          stack_sugerida: "Next.js, banco relacional, painel admin"
+          entregaveis_cliente: "painel funcional, cadastro de pedidos, fluxo de clientes"
+          nota_interna: "preco para ganhar, prazo, risco e upsell"
+          restricoes_plataforma: "99Freelas como padrao e Workana sem contato externo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronta_para_enviar: verdadeiro
+          score_final_proposta: 90
+        }
+      }
+    }
+  }
+
+  task detectar_furada_freela {
+    input {
+      texto_projeto: Texto required
+      orcamento_visivel: Texto
+      prazo: Texto
+      escopo: Texto required
+    }
+    output {
+      alerta_furada: Booleano
+      motivo: Texto
+      decisao: Texto
+      escopo_minimo_aceitavel: Texto
+    }
+    rules {
+      texto_projeto deve_ser preenchido
+      escopo deve_ser avaliado
+      orcamento_visivel deve_ser considerado
+      prazo deve_ser considerado
+    }
+    effects {
+      auditoria filtro_furada_freela criticidade = alta
+    }
+    authz {
+      escopo: sema.propostas_comerciais
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.propostas_comerciais.furada_avaliada
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      descartar_por_orcamento_baixo_sem_tentar_reposicionar
+      gerar_proposta_para_job_toxico
+      prometer_mvp_impossivel
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      alerta_furada existe
+      motivo existe
+      decisao existe
+      decisao deve_ser entrar_ou_pular
+      escopo_minimo_aceitavel existe
+    }
+  }
+
+  flow proposta_freela_completa {
+    texto_projeto: Texto
+    plataforma: Texto
+    orcamento_visivel: Texto
+    objetivo_usuario: Texto
+    sinais_risco: Lista
+    stack_sugerida: Lista
+    nota_interna: NotaInternaProposta
+    restricoes_plataforma: Lista
+    etapa analise usa analisar_job_freela com texto_projeto = texto_projeto, plataforma = plataforma, orcamento_visivel = orcamento_visivel, sinais_risco = sinais_risco, objetivo_usuario = objetivo_usuario
+    etapa proposta usa gerar_proposta_comercial com analise = analise.analise, saudacao_apresentacao = Ola, meu nome e Gerlan., abordagem = proposta agressiva com escopo protegido, stack_sugerida = stack_sugerida, entregaveis_cliente = analise.entregaveis_recomendados, nota_interna = nota_interna, restricoes_plataforma = restricoes_plataforma depende_de analise
+    effects {
+      auditoria fluxo_proposta_freela criticidade = alta
+    }
+  }
+}

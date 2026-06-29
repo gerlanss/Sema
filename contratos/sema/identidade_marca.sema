@@ -1,0 +1,183 @@
+module sema.produto.identidade_marca {
+  docs {
+    resumo: "Sema de identidade de marca para governar voz, publico, promessa, visual e proibicoes antes de qualquer copy, imagem, arte, foto, video ou publicacao."
+  }
+
+  type BrandVoice {
+    fields {
+      marca: Texto
+      publico: Texto
+      tom: Texto
+      voz: Texto
+      promessa: Texto
+      proibicoes: Lista
+    }
+    invariants {
+      marca existe
+      publico existe
+      tom existe
+      voz existe
+      promessa existe
+      proibicoes existe
+    }
+  }
+
+  type VisualIdentity {
+    fields {
+      cores: Lista
+      tipografia: Texto
+      estilo_visual: Texto
+      referencias: Lista
+      restricoes: Lista
+    }
+    invariants {
+      cores existe
+      estilo_visual existe
+      restricoes existe
+    }
+  }
+
+  enum StatusIdentidadeMarca {
+    RASCUNHO,
+    VALIDADA,
+    BLOQUEADA
+  }
+
+  task declarar_identidade_marca {
+    input {
+      marca: Texto required
+      publico: Texto required
+      tom: Texto required
+      voz: Texto required
+      promessa: Texto required
+      cores: Lista required
+      proibicoes: Lista required
+    }
+    output {
+      brand_voice: BrandVoice
+      visual_identity: VisualIdentity
+      guardrails_prontos: Booleano
+      status: StatusIdentidadeMarca
+    }
+    rules {
+      marca deve_ser preenchida
+      publico deve_ser preenchido
+      tom deve_ser nao_generico
+      voz deve_ser nao_generica
+      promessa deve_ser concreta
+      cores deve_ser nao_vazio
+      proibicoes deve_ser nao_vazio
+    }
+    effects {
+      auditoria identidade_marca criticidade = media
+    }
+    forbidden {
+      marca_sem_publico
+      tom_generico
+      voz_generica_de_ia
+      identidade_sem_proibicoes
+      visual_sem_restricoes
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      brand_voice existe
+      visual_identity existe
+      guardrails_prontos == verdadeiro
+      status em [VALIDADA, BLOQUEADA]
+    }
+    tests {
+      caso "identidade minima validada" {
+        given {
+          marca: "Loja Solar"
+          publico: "donos de pequenos negocios"
+          tom: "direto e consultivo"
+          voz: "pratica com exemplos reais"
+          promessa: "aumentar venda sem complicar rotina"
+          cores: "verde, grafite"
+          proibicoes: "promessa milagrosa, tom corporativo vazio"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          guardrails_prontos: verdadeiro
+          status: "VALIDADA"
+        }
+      }
+    }
+  }
+
+  task validar_aderencia_marca {
+    input {
+      artefato: Texto required
+      identidade_marca: BrandVoice required
+      canal: Texto required
+    }
+    output {
+      aprovado: Booleano
+      achados: Lista
+      ajuste_necessario: Booleano
+    }
+    rules {
+      artefato deve_ser preenchido
+      identidade_marca deve_ser valida
+      canal deve_ser preenchido
+      artefato deve_ser aderente_a identidade_marca
+      artefato deve_ser sem_voz_generica_de_ia
+      artefato deve_ser sem_promessa_milagrosa
+    }
+    effects {
+      auditoria aderencia_marca criticidade = media
+    }
+    forbidden {
+      desvio_de_tom
+      promessa_sem_base
+      visual_fora_da_marca
+      voz_generica_de_ia
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      achados existe
+      ajuste_necessario existe
+    }
+    tests {
+      caso "bloqueia copy generica" {
+        given {
+          artefato: "Solucoes inovadoras para transformar seu negocio."
+          identidade_marca: "voz direta com exemplos reais"
+          canal: "instagram"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          ajuste_necessario: verdadeiro
+        }
+      }
+    }
+  }
+}

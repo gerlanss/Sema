@@ -1,0 +1,142 @@
+module sema.produto.author.modelos {
+  use sema.produto.author.modelos_2
+
+  type AuthorCore {
+    fields {
+      obra: Texto
+      publico: PublicoAuthor
+      genero: Texto
+      tom: Texto
+      estilo: Texto
+      fontes: Lista
+      limites: Lista
+    }
+    invariants {
+      obra existe
+      publico em [INFANTIL, JOVEM, ADULTO, TECNICO, SENSIVEL]
+      genero existe
+      estilo existe
+      limites existe
+    }
+  }
+
+  type AuthorAgent {
+    fields {
+      nome: Texto
+      papel: Texto
+      permissao: Texto
+      politica: Texto
+    }
+    invariants {
+      nome existe
+      papel existe
+      permissao existe
+      politica existe
+    }
+  }
+
+  type ArcoEmocionalAuthor {
+    fields {
+      personagem: Texto
+      estado_inicial: Texto
+      pressao: Texto
+      decisao: Texto
+      custo: Texto
+      estado_final: Texto
+    }
+    invariants {
+      personagem existe
+      estado_inicial existe
+      pressao existe
+      decisao existe
+      custo existe
+      estado_final existe
+    }
+  }
+
+  type PoliticaEstiloAuthor {
+    fields {
+      autor: Texto
+      voz: Texto
+      palavras_banidas: Lista
+      frases_banidas: Lista
+      exigencias_textura: Lista
+    }
+    invariants {
+      autor existe
+      voz existe
+      palavras_banidas existe
+      frases_banidas existe
+    }
+  }
+
+  type PromessaNarrativaAuthor {
+    fields {
+      promessa: Texto
+      pergunta_dramatica: Texto
+      expectativa: Texto
+      custo_minimo: Texto
+      validacao: Texto
+    }
+    invariants {
+      promessa existe
+      pergunta_dramatica existe
+      expectativa existe
+      custo_minimo existe
+      validacao existe
+    }
+  }
+
+  entity ProfileAuthor {
+    fields {
+      id: Id
+      core: AuthorCore
+      agents: Lista
+      flow: Lista
+      status: StatusAuthor
+      sensivel: Booleano
+    }
+    invariants {
+      id existe
+      core existe
+      agents existe
+      flow existe
+      status em [RASCUNHO, BRIEFING, OUTLINE, CENA, REVISAO, PUBLICAVEL, BLOQUEADO]
+    }
+  }
+
+  entity MemoriaPersonagemAuthor {
+    fields {
+      id: Id
+      personagem: Texto
+      desejo: Texto
+      medo: Texto
+      segredo: Texto
+      ferida: Texto
+      relacoes: Lista
+      canon: Lista
+    }
+    invariants {
+      id existe
+      personagem existe
+      desejo existe
+      canon existe
+    }
+  }
+
+  entity CapituloAuthor {
+    fields {
+      id: Id
+      ordem: Inteiro
+      promessas: Lista
+      eventos_canonicos: Lista
+      personagens_afetados: Lista
+      cenas_futuras_afetadas: Lista
+    }
+    invariants {
+      id existe
+      ordem >= 0
+      eventos_canonicos existe
+    }
+  }
+}

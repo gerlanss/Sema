@@ -1,0 +1,455 @@
+module sema.produto.author.tarefas {
+  use sema.produto.author.modelos
+
+  use sema.produto.author.modelos_2
+
+  task iniciar_profile_author {
+    input {
+      obra: Texto required
+      publico: PublicoAuthor required
+      tema_sensivel: Booleano required
+    }
+    output {
+      contrato_author: Texto
+      core_definido: Booleano
+      agents_definidos: Booleano
+      flow_definido: Booleano
+    }
+    rules {
+      obra deve_ser preenchido
+      publico deve_ser valido
+      tema_sensivel deve_ser booleano
+    }
+    effects {
+      evento author_profile_criado criticidade = media
+      auditoria author_profile criticidade = media
+    }
+    authz {
+      escopo: sema.author.iniciar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        obra: publico
+        publico: publico
+        tema_sensivel: interno
+      }
+      output {
+        contrato_author: interno
+        core_definido: interno
+        agents_definidos: interno
+        flow_definido: interno
+      }
+    }
+    audit {
+      evento: sema.author.profile.iniciado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      overwrite.contrato_existente
+      gerar_obra_sem_publico
+      gerar_tema_sensivel_sem_fontes
+    }
+    impl {
+      ts: cli.src.index.iniciarProfileAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.iniciarProfileAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      contrato_author existe
+      core_definido == verdadeiro
+      agents_definidos == verdadeiro
+      flow_definido == verdadeiro
+    }
+    error {
+      contrato_existente: "O arquivo de profile Author ja existe."
+      template_ausente: "O template oficial do Author nao foi encontrado."
+    }
+    tests {
+      caso "cria starter author comum" {
+        given {
+          obra: "Romance sem titulo"
+          publico: "ADULTO"
+          tema_sensivel: falso
+        }
+
+        expect {
+          sucesso: verdadeiro
+          core_definido: verdadeiro
+          agents_definidos: verdadeiro
+          flow_definido: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_profile_author {
+    input {
+      contrato_author: Texto required
+    }
+    output {
+      valido: Booleano
+      diagnosticos: Lista
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+    }
+    effects {
+      consulta contrato_author criticidade = media
+      auditoria author_validacao criticidade = media
+    }
+    impl {
+      ts: cli.src.index.comandoAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.comandoAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      valido existe
+      diagnosticos existe
+    }
+    tests {
+      caso "valida profile author" {
+        given {
+          contrato_author: "contratos/author.sema"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+        }
+      }
+    }
+  }
+
+  task preparar_briefing_author {
+    input {
+      contrato_author: Texto required
+    }
+    output {
+      briefing_author: Texto
+      core_detectado: Booleano
+      agents_detectados: Booleano
+      flow_detectado: Booleano
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+    }
+    effects {
+      consulta contrato_author criticidade = media
+      auditoria author_briefing criticidade = media
+    }
+    authz {
+      escopo: sema.author.ler
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.briefing
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      gerar_texto_final_sem_validacao
+      ignorar_limites_de_estilo
+      inventar_fontes
+    }
+    impl {
+      ts: cli.src.index.criarAuthorBriefing
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.criarAuthorBriefing
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      briefing_author existe
+      core_detectado existe
+      agents_detectados existe
+      flow_detectado existe
+    }
+    tests {
+      caso "briefing detecta core agents e flow" {
+        given {
+          contrato_author: "exemplos/author_obra_comum.sema"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          core_detectado: verdadeiro
+          agents_detectados: verdadeiro
+          flow_detectado: verdadeiro
+        }
+      }
+    }
+  }
+
+  task revisar_cliches_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+      preset_author: Texto
+    }
+    output {
+      achados: Lista
+      bloqueios: Lista
+      recomendacoes: Lista
+      diagnostico_localizado: Lista
+      trechos_bloqueantes: Lista
+      modo_saida_agente: Texto
+      preset_author_aplicado: Texto
+      score_contrato_formal: Numero
+      score_aderencia_semantica: Numero
+      score_risco: Numero
+      pronto_para_acao: Booleano
+      confianca_validacao: Texto
+      violacoes_proibicoes: Lista
+      aprovado: Booleano
+      score_coerencia_tonal: Numero
+      score_drift_narrativo: Numero
+      score_contrato: Numero
+      ir_narrativo: Objeto
+      impact_map: Lista
+      diff_semantico: Objeto
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      texto_alvo deve_ser sem_cliche_escolhido_predestinado
+      texto_alvo deve_ser sem_dialogo_resumo
+      texto_alvo deve_ser sem_frase_de_efeito_vazia
+      texto_alvo deve_ser sem_voz_generica_de_ia
+      texto_alvo deve_ser sem_moralizacao_barata
+      texto_alvo deve_ser sem_exposicao_sem_conflito
+      texto_alvo deve_ser sem_palavra_generica_sem_concreto
+      texto_alvo deve_ser sem_arco_emocional_sem_mudanca
+      texto_alvo deve_ser sem_personagem_sem_memoria
+      texto_alvo deve_ser sem_promessa_narrativa_quebrada
+      texto_alvo deve_ser sem_impacto_capitulo_nao_mapeado
+      texto_alvo deve_ser sem_tema_sensivel_sem_autorizacao
+      texto_alvo deve_ser sem_rpg_campanha_sem_estado
+      texto_alvo deve_ser sem_proibicao_literal_author
+      preset_author deve_ser um_de [conto, romance, roteiro, lore, campanha] quando_fornecido
+      texto_alvo deve_ser compativel_com_preset_author_quando_fornecido
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_revisao_cliches criticidade = media
+    }
+    authz {
+      escopo: sema.author.revisar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.cliche.revisado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aceitar_dialogo_expositivo
+      aceitar_voz_generica_de_ia
+      aceitar_cliche_sem_justificativa
+      aceitar_contrato_descumprido
+      publicar_texto_com_bloqueio
+      aprovar_validacao_semantica_parcial_com_score_total
+      tratar_validar_narrativa_como_revisar_cliches
+      ignorar_proibicao_literal_author
+      ignorar_preset_author_declarado
+      aprovar_campanha_sem_estado_persistente
+      aprovar_roteiro_sem_cena_ou_dialogo
+      aprovar_lore_sem_canon
+      palavra_generica_sem_concreto
+      arco_emocional_sem_mudanca
+      personagem_sem_memoria
+      promessa_narrativa_quebrada
+      impacto_capitulo_nao_mapeado
+      tema_sensivel_sem_autorizacao
+      rpg_campanha_sem_estado
+      frase_banida_uma_jornada_de_autodescoberta
+      frase_banida_emocionante_e_envolvente
+      frase_banida_profundamente_humano
+      palavra_banida_cativante
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      achados existe
+      bloqueios existe
+      recomendacoes existe
+      diagnostico_localizado existe
+      trechos_bloqueantes existe
+      modo_saida_agente existe
+      preset_author_aplicado existe
+      score_contrato_formal >= 0
+      score_aderencia_semantica >= 0
+      score_risco >= 0
+      pronto_para_acao existe
+      confianca_validacao existe
+      violacoes_proibicoes existe
+      aprovado existe
+      score_coerencia_tonal >= 0
+      score_drift_narrativo >= 0
+      score_contrato >= 0
+      ir_narrativo existe
+      impact_map existe
+      diff_semantico existe
+    }
+    tests {
+      caso "bloqueia contrato descumprido" {
+        given {
+          contrato_author: "exemplos/author_obra_comum.sema"
+          texto_alvo: "O escolhido predestinado sorriu diante do destino."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          achados: "escolhido_predestinado"
+          bloqueios: "escolhido_predestinado"
+        }
+      }
+      caso "bloqueia proibicao literal declarada" {
+        given {
+          contrato_author: "exemplos/author_obra_comum.sema"
+          texto_alvo: "A carta atrasada ficou sobre a cadeira vazia depois que o marido morto virou memorial."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          achados: "proibicao_literal_author"
+          bloqueios: "proibicao_literal_author"
+        }
+      }
+    }
+  }
+
+  task validar_proibicoes_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+    }
+    output {
+      violacoes_proibicoes: Lista
+      trechos_bloqueantes: Lista
+      aprovado: Booleano
+      bloqueado: Booleano
+      score_aderencia_semantica: Numero
+      score_risco: Numero
+      pronto_para_acao: Booleano
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      texto_alvo deve_ser sem_proibicao_literal_author
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_proibicoes criticidade = alta
+    }
+    authz {
+      escopo: sema.author.proibicoes.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.proibicoes.validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aprovar_texto_com_evento_proibido
+      aprovar_texto_com_frase_proibida
+      aprovar_texto_com_termo_proibido
+      score_aderencia_total_com_violacao_literal
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      violacoes_proibicoes existe
+      trechos_bloqueantes existe
+      aprovado existe
+      bloqueado existe
+      score_aderencia_semantica >= 0
+      score_risco >= 0
+      pronto_para_acao existe
+    }
+    tests {
+      caso "proibicao literal bloqueia narrativa" {
+        given {
+          contrato_author: "exemplos/author_obra_comum.sema"
+          texto_alvo: "O luto virou motor principal da cena e a carta atrasada explicou tudo."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          violacoes_proibicoes: "carta_atrasada"
+        }
+      }
+    }
+  }
+}

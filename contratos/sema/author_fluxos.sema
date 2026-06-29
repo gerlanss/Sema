@@ -1,0 +1,26 @@
+module sema.produto.author.fluxos {
+  use sema.produto.author.modelos
+
+  use sema.produto.author.modelos_2
+
+  use sema.produto.author.tarefas
+
+  use sema.produto.author.tarefas_2
+
+  use sema.produto.author.tarefas_3
+
+  flow governar_obra_author {
+    contrato_author: Texto
+    texto_alvo: Texto
+    etapa briefing usa preparar_briefing_author com contrato_author = contrato_author
+    etapa validar usa validar_profile_author com contrato_author = contrato_author depende_de briefing
+    etapa cliche usa revisar_cliches_author com contrato_author = contrato_author, texto_alvo = texto_alvo depende_de validar
+    etapa ir usa gerar_ir_narrativo_author com contrato_author = contrato_author, texto_alvo = texto_alvo depende_de cliche
+    effects {
+      auditoria author_flow criticidade = media
+    }
+    vinculos {
+      simbolo: cli.src.index.comandoAuthor
+    }
+  }
+}

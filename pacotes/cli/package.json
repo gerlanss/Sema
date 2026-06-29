@@ -1,0 +1,71 @@
+{
+  "name": "@semacode/cli",
+  "version": "1.5.48",
+  "type": "module",
+  "description": "Local semantic governance CLI for AI agents: contracts, drift, impact, documentation gates, and code generation.",
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://otimitare.online",
+  "bugs": {
+    "url": "https://otimitare.online",
+    "email": "suporte@otimitare.online"
+  },
+  "keywords": [
+    "sema",
+    "ai",
+    "contracts",
+    "governance",
+    "backend",
+    "drift",
+    "dsl"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "icon": "logo.png",
+  "bin": {
+    "sema": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "exemplos",
+    "README.md",
+    "package.json",
+    "logo.png"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "node scripts/prepack-exemplos.mjs",
+    "postpack": "node scripts/postpack-exemplos.mjs"
+  },
+  "dependencies": {
+    "@sema/nucleo": "file:../nucleo",
+    "@sema/gerador-dart": "file:../gerador-dart",
+    "@sema/gerador-lua": "file:../gerador-lua",
+    "@sema/gerador-python": "file:../gerador-python",
+    "@sema/gerador-typescript": "file:../gerador-typescript",
+    "@sema/gerador-javascript": "file:../gerador-javascript",
+    "@sema/gerador-html": "file:../gerador-html",
+    "@sema/gerador-css": "file:../gerador-css",
+    "@sema/padroes": "file:../padroes",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3"
+  },
+  "bundleDependencies": [
+    "@sema/nucleo",
+    "@sema/padroes",
+    "@sema/gerador-typescript",
+    "@sema/gerador-python",
+    "@sema/gerador-dart",
+    "@sema/gerador-lua",
+    "@sema/gerador-javascript",
+    "@sema/gerador-html",
+    "@sema/gerador-css"
+  ]
+}

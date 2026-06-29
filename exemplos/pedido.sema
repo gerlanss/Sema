@@ -1,0 +1,255 @@
+module exemplos.pedido {
+  docs {
+    resumo: "Ciclo completo de pedido IA-first com dependencias explicitas para pagamento e estoque."
+  }
+
+  use exemplos.pagamento
+  use exemplos.estoque
+
+  enum StatusPedido {
+    RASCUNHO,
+    AGUARDANDO_PAGAMENTO,
+    APROVADO,
+    CANCELADO,
+    ENVIADO,
+    ENTREGUE
+  }
+
+  state ciclo_pedido {
+    fields {
+      status: StatusPedido
+    }
+    invariants {
+      status em [RASCUNHO, AGUARDANDO_PAGAMENTO, APROVADO, CANCELADO, ENVIADO, ENTREGUE]
+    }
+    transitions {
+      RASCUNHO -> AGUARDANDO_PAGAMENTO
+      AGUARDANDO_PAGAMENTO -> APROVADO
+      AGUARDANDO_PAGAMENTO -> CANCELADO
+      APROVADO -> CANCELADO
+      APROVADO -> ENVIADO
+      ENVIADO -> ENTREGUE
+    }
+  }
+
+  entity Pedido {
+    fields {
+      id: Id
+      cliente_id: Id
+      status: StatusPedido
+      total: Decimal
+      criado_em: Timestamp
+    }
+  }
+
+  entity ItemPedido {
+    fields {
+      id: Id
+      pedido_id: Id
+      produto_id: Id
+      quantidade: Inteiro
+      preco_unitario: Decimal
+    }
+  }
+
+  task criar_pedido {
+    input {
+      cliente_id: Id required
+      itens: Lista required
+    }
+    output {
+      pedido: Pedido
+      status: StatusPedido
+    }
+    authz {
+      escopo: pedidos.criar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        cliente_id: pii
+        itens: interno
+      }
+      output {
+        pedido: financeiro
+        status: interno
+      }
+    }
+    audit {
+      evento: pedido.criado
+      ator: auth.usuario
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      itens deve_ser nao_vazio
+      cliente_id deve_ser valido
+    }
+    effects {
+      consulta Cliente por cliente_id criticidade = media
+      consulta Produto por cada item.produto_id criticidade = media
+      persistencia Pedido criticidade = alta
+      persistencia ItemPedido criticidade = alta
+      evento pedido_criado criticidade = media
+      auditoria criacao_pedido criticidade = media
+    }
+    vinculos {
+      tabela: pedidos
+      tabela: itens_pedido
+      evento: pedido_criado
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "cancelar_pedido"
+      criticidade_operacional: alta
+    }
+    state ciclo_pedido {
+      transitions {
+        RASCUNHO -> AGUARDANDO_PAGAMENTO
+      }
+    }
+    guarantees {
+      pedido existe
+      status == AGUARDANDO_PAGAMENTO
+    }
+    error {
+      cliente_invalido: "Cliente nao encontrado."
+      item_invalido: "Um ou mais produtos nao existem."
+      carrinho_vazio: "O pedido deve ter ao menos um item."
+    }
+    tests {
+      caso "cria pedido valido" {
+        given {
+          cliente_id: "cli_1"
+          itens: "prod_1:2"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          status: "AGUARDANDO_PAGAMENTO"
+          pedido: "ped_1"
+        }
+      }
+    }
+  }
+
+  task cancelar_pedido {
+    input {
+      pedido_id: Id required
+      status_atual: StatusPedido required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+      status: StatusPedido
+    }
+    authz {
+      escopo: pedidos.cancelar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        pedido_id: interno
+        status_atual: interno
+        motivo: interno
+      }
+      output {
+        protocolo: interno
+        status: interno
+      }
+    }
+    audit {
+      evento: pedido.cancelado
+      ator: auth.usuario
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+    }
+    rules {
+      pedido_id deve_ser valido
+      status_atual em [AGUARDANDO_PAGAMENTO, APROVADO]
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia Pedido criticidade = alta
+      evento pedido_cancelado criticidade = alta
+      notificacao cliente pedido_cancelado criticidade = media
+      auditoria cancelamento_pedido criticidade = media
+    }
+    vinculos {
+      tabela: pedidos
+      evento: pedido_cancelado
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "notificar_operacao"
+      criticidade_operacional: alta
+    }
+    state ciclo_pedido {
+      transitions {
+        AGUARDANDO_PAGAMENTO -> CANCELADO
+        APROVADO -> CANCELADO
+      }
+    }
+    guarantees {
+      protocolo existe
+      status == CANCELADO
+    }
+    error {
+      pedido_nao_cancelavel: "Pedido ja enviado ou entregue nao pode ser cancelado."
+    }
+    tests {
+      caso "cancela pedido pendente" {
+        given {
+          pedido_id: "ped_1"
+          status_atual: "AGUARDANDO_PAGAMENTO"
+          motivo: "Desistencia do cliente"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          protocolo: "cancel_1"
+          status: "CANCELADO"
+        }
+      }
+    }
+  }
+
+  flow aprovacao_pedido {
+    pedido_id: Id
+    valor: Decimal
+    produto_id: Id
+    quantidade: Inteiro
+    token_pagamento: Texto
+    itens_reservados: Texto
+    status_cancelamento: StatusPedido
+    motivo_pagamento_recusado: Texto
+    motivo_estoque_insuficiente: Texto
+    etapa pagar usa processar_pagamento com pagamento_id = pedido_id, valor = valor, token = token_pagamento em_sucesso reservar em_erro cancelar_por_pagamento
+    etapa reservar usa reservar_estoque com produto_id = produto_id, quantidade = quantidade, pedido_id = pedido_id depende_de pagar em_sucesso aprovar em_erro cancelar_por_estoque
+    etapa aprovar usa criar_pedido com cliente_id = pedido_id, itens = itens_reservados depende_de reservar
+    etapa cancelar_por_pagamento usa cancelar_pedido com pedido_id = pedido_id, status_atual = status_cancelamento, motivo = motivo_pagamento_recusado depende_de pagar
+    etapa cancelar_por_estoque usa cancelar_pedido com pedido_id = pedido_id, status_atual = status_cancelamento, motivo = motivo_estoque_insuficiente depende_de reservar
+    effects {
+      auditoria fluxo_aprovacao_pedido criticidade = alta
+    }
+  }
+}

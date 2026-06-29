@@ -1,0 +1,181 @@
+module sema.produto.youtube_thumbnail {
+  docs {
+    resumo: "Sema para thumbnail de YouTube com promessa visual fiel, leitura mobile, variações testáveis e política anti-engano."
+  }
+
+  use sema.produto.imagens
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.qa_criativo
+
+  type BriefingThumbnailYoutube {
+    fields {
+      video: Texto
+      promessa: Texto
+      sujeito_visual: Texto
+      emocao: Texto
+      texto_curto: Texto
+      formato: Texto
+      variantes: Lista
+    }
+    invariants {
+      video existe
+      promessa existe
+      sujeito_visual existe
+      formato existe
+      variantes existe
+    }
+  }
+
+  task criar_briefing_thumbnail {
+    input {
+      video: Texto required
+      promessa: Texto required
+      sujeito_visual: Texto required
+      publico: Texto required
+      identidade_marca: Texto required
+      restricoes: Lista required
+    }
+    output {
+      briefing: BriefingThumbnailYoutube
+      criterios: Lista
+      pronto_para_prompt: Booleano
+    }
+    rules {
+      video deve_ser descrito
+      promessa deve_ser fiel_ao_conteudo
+      sujeito_visual deve_ser reconhecivel
+      publico deve_ser especifico
+      identidade_marca deve_ser declarada
+      restricoes deve_ser nao_vazio
+    }
+    effects {
+      auditoria thumbnail_briefing criticidade = media
+    }
+    forbidden {
+      thumbnail_desconectada_do_video
+      promessa_visual_enganosa
+      celebridade_sem_relacao
+      texto_ilegivel_mobile
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      briefing existe
+      criterios existe
+      pronto_para_prompt existe
+    }
+    tests {
+      caso "thumbnail fiel ao video" {
+        given {
+          video: "review de carretilha Z-11000"
+          promessa: "mostrar se aguenta pescaria pesada"
+          sujeito_visual: "carretilha em destaque"
+          publico: "pescador esportivo"
+          identidade_marca: "visual premium escuro"
+          restricoes: "sem clickbait falso, sem texto pequeno"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_prompt: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_prompt_thumbnail {
+    input {
+      briefing: BriefingThumbnailYoutube required
+      layout: Texto required
+      contraste: Texto required
+      texto_visual: Texto required
+      variantes: Lista required
+      direitos: Texto required
+    }
+    output {
+      prompt_thumbnail: Texto
+      variacoes_teste: Lista
+      gerar_imagem: Booleano
+    }
+    rules {
+      briefing deve_ser valido
+      layout deve_ser legivel_em_mobile
+      contraste deve_ser alto
+      texto_visual deve_ser curto
+      variantes deve_ser testaveis
+      direitos deve_ser confirmados
+    }
+    effects {
+      auditoria prompt_thumbnail criticidade = alta
+    }
+    authz {
+      escopo: sema.youtube_thumbnail
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.youtube_thumbnail.prompt_gerado
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      texto_excessivo
+      contraste_fraco
+      thumbnail_sem_assunto
+      metadata_enganosa
+      imagem_sem_direito
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      prompt_thumbnail existe
+      prompt_thumbnail deve_ser fiel_ao_video
+      variacoes_teste existe
+      gerar_imagem == verdadeiro
+    }
+    tests {
+      caso "prompt thumbnail pronto para gerar" {
+        given {
+          briefing: "thumbnail de review Z-11000"
+          layout: "produto grande, texto curto, fundo contrastado"
+          contraste: "alto"
+          texto_visual: "AGUENTA MESMO?"
+          variantes: "produto fechado, produto com agua, close no freio"
+          direitos: "assets proprios"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          gerar_imagem: verdadeiro
+        }
+      }
+    }
+  }
+}

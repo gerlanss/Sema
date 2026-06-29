@@ -1,0 +1,124 @@
+module exemplos.operacao_estrategia.rollout {
+  docs {
+    resumo: "Task oficial para ativar strategy com nova versao de modelo apos aprovacao manual."
+  }
+
+  enum StatusStrategy {
+    RASCUNHO,
+    ATIVA,
+    QUARENTENA,
+    DESATIVADA
+  }
+
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  task ativar_strategy_com_nova_versao {
+    docs {
+      resumo: "Promove a versao candidata aprovada e reabre a strategy so quando houver aprovacao manual e gate global devidamente controlado."
+    }
+    input {
+      strategy_id: Id required
+      versao_modelo_ativa: Texto required
+      versao_modelo_candidata: Texto required
+      strategy_status_atual: StatusStrategy required
+      gate_global_atual: StatusGate required
+      aprovacao_manual: Booleano required
+    }
+    output {
+      strategy_status: StatusStrategy
+      gate_global: StatusGate
+      versao_modelo_ativa: Texto
+    }
+    authz {
+      escopo: strategy.rollout.ativar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        strategy_id: interno
+        versao_modelo_ativa: interno
+        versao_modelo_candidata: interno
+        strategy_status_atual: interno
+        gate_global_atual: interno
+        aprovacao_manual: interno
+      }
+      output {
+        strategy_status: interno
+        gate_global: interno
+        versao_modelo_ativa: interno
+      }
+    }
+    audit {
+      evento: strategy.rollout.ativado
+      ator: sistema.strategy
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      strategy_id existe
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      strategy_status_atual em [RASCUNHO, QUARENTENA]
+      gate_global_atual == FECHADO
+      aprovacao_manual == verdadeiro
+    }
+    effects {
+      persistencia strategy criticidade = alta
+      evento strategy_ativada criticidade = alta
+      auditoria rollout criticidade = alta
+    }
+    vinculos {
+      tabela: strategy
+      recurso: model_registry
+      evento: strategy_ativada
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      compensacao: "reverter_para_versao_modelo_ativa_anterior"
+      criticidade_operacional: alta
+    }
+    state governanca_estrategia {
+      transitions {
+        QUARENTENA -> ATIVA
+        RASCUNHO -> ATIVA
+      }
+    }
+    guarantees {
+      strategy_status == ATIVA
+      gate_global == ABERTO
+      versao_modelo_ativa existe
+    }
+    tests {
+      caso "reativa strategy apos aprovacao do novo modelo" {
+        given {
+          strategy_id: "strategy_alpha"
+          versao_modelo_ativa: "modelo_2026_12"
+          versao_modelo_candidata: "modelo_2026_13"
+          strategy_status_atual: "QUARENTENA"
+          gate_global_atual: "FECHADO"
+          aprovacao_manual: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          strategy_status: "ATIVA"
+          gate_global: "ABERTO"
+          versao_modelo_ativa: "modelo_2026_13"
+        }
+      }
+    }
+  }
+}

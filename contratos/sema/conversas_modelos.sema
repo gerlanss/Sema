@@ -1,0 +1,136 @@
+module sema.produto.conversas.modelos {
+  docs {
+    resumo: "Modelos, enums e estruturas de conversa governada por contrato."
+  }
+
+  type PoliticaTomConversa {
+    fields {
+      tom: Texto
+      formalidade: Texto
+      intensidade_persuasiva: Texto
+      persona: Texto
+      proibicoes: Lista
+      frases_bloqueadas: Lista
+    }
+    invariants {
+      tom existe
+      formalidade existe
+      intensidade_persuasiva existe
+      persona existe
+      proibicoes existe
+    }
+  }
+
+  type ContextoClienteConversa {
+    fields {
+      canal: CanalConversa
+      objetivo: ObjetivoConversa
+      etapa: Texto
+      intencao_detectada: Texto
+      sentimento: SentimentoCliente
+      objecoes: Lista
+      historico_resumido: Texto
+      ultima_mensagem_cliente: Texto
+      ultima_resposta_visivel: Texto
+      fatos_coletados: Lista
+      proxima_acao_esperada: Texto
+      dados_sensiveis: Booleano
+    }
+    invariants {
+      canal existe
+      objetivo existe
+      etapa existe
+      intencao_detectada existe
+      sentimento existe
+      historico_resumido existe
+      ultima_mensagem_cliente existe
+      ultima_resposta_visivel existe
+      fatos_coletados existe
+      proxima_acao_esperada existe
+    }
+  }
+
+  type EstadoTurnoConversa {
+    fields {
+      conversation_id: Id
+      evento_id: Id
+      canal: CanalConversa
+      mensagem_cliente_visivel: Texto
+      resposta_anterior_visivel: Texto
+      etapa_atual: Texto
+      pergunta_anterior: Texto
+      confirmacao_curta: Booleano
+      fatos_coletados: Lista
+      dedupe_key: Texto
+      origem_estado: Texto
+    }
+    invariants {
+      conversation_id existe
+      evento_id existe
+      canal existe
+      mensagem_cliente_visivel existe
+      resposta_anterior_visivel existe
+      etapa_atual existe
+      dedupe_key existe
+      origem_estado existe
+    }
+  }
+
+  type RespostaBotConversa {
+    fields {
+      resposta_cliente: Texto
+      customer_reply: Texto
+      intent: Texto
+      stage: Texto
+      facts: Lista
+      missing_critical_info: Lista
+      internal_trace_id: Id
+      proxima_acao: Texto
+      escalar_humano: Booleano
+      motivo_escalacao: Texto
+      memoria_atualizada: Texto
+      dedupe_key: Texto
+      canal_saida: CanalConversa
+      riscos: Lista
+    }
+    invariants {
+      resposta_cliente existe
+      customer_reply existe
+      intent existe
+      stage existe
+      facts existe
+      missing_critical_info existe
+      proxima_acao existe
+      escalar_humano existe
+      memoria_atualizada existe
+      dedupe_key existe
+      canal_saida existe
+    }
+  }
+
+  enum CanalConversa {
+    WHATSAPP,
+    CHAT_SITE,
+    INSTAGRAM,
+    EMAIL,
+    VOZ,
+    OUTRO
+  }
+
+  enum ObjetivoConversa {
+    ATENDIMENTO,
+    VENDAS,
+    SUPORTE,
+    QUALIFICACAO,
+    RETENCAO,
+    COBRANCA
+  }
+
+  enum SentimentoCliente {
+    CALMO,
+    INDECISO,
+    IRRITADO,
+    URGENTE,
+    SENSIVEL
+  }
+}

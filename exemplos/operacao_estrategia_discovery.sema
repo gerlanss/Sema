@@ -1,0 +1,220 @@
+module exemplos.operacao_estrategia.discovery {
+  docs {
+    resumo: "Tasks oficiais de discovery semanal e avaliacao de slice apos discovery."
+  }
+
+  type JanelaDiscovery {
+    fields {
+      semana_referencia: Data
+      strategy_id: Id
+      versao_modelo_candidata: Texto
+      status_discovery: StatusDiscovery
+    }
+    invariants {
+      semana_referencia existe
+      strategy_id existe
+      versao_modelo_candidata existe
+      status_discovery em [ABERTA, EM_AVALIACAO, APROVADA, REJEITADA]
+    }
+  }
+
+  enum StatusSlice {
+    ATIVO,
+    QUARENTENA,
+    DESLIGADO
+  }
+
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  enum StatusDiscovery {
+    ABERTA,
+    EM_AVALIACAO,
+    APROVADA,
+    REJEITADA
+  }
+
+  task registrar_discovery_semanal {
+    docs {
+      resumo: "Abre a janela semanal de discovery para uma strategy e marca a versao candidata que esta entrando em avaliacao."
+    }
+    input {
+      strategy_id: Id required
+      semana_referencia: Data required
+      versao_modelo_candidata: Texto required
+    }
+    output {
+      janela: JanelaDiscovery
+      discovery_registrada: Booleano
+    }
+    authz {
+      escopo: strategy.discovery.operar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        strategy_id: interno
+        semana_referencia: interno
+        versao_modelo_candidata: interno
+      }
+      output {
+        janela: interno
+        discovery_registrada: interno
+      }
+    }
+    audit {
+      evento: strategy.discovery.aberta
+      ator: sistema.strategy
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      strategy_id existe
+      semana_referencia existe
+      versao_modelo_candidata existe
+    }
+    effects {
+      persistencia discovery_semanal criticidade = alta
+      auditoria strategy criticidade = alta
+      evento discovery_aberta criticidade = media
+    }
+    vinculos {
+      tabela: discovery_semanal
+      recurso: strategy_registry
+      evento: discovery_aberta
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "fechar_janela_discovery_inconsistente"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      janela existe
+      discovery_registrada == verdadeiro
+    }
+    tests {
+      caso "abre discovery da semana" {
+        given {
+          strategy_id: "strategy_alpha"
+          semana_referencia: "2026-03-30"
+          versao_modelo_candidata: "modelo_2026_13"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          discovery_registrada: verdadeiro
+          janela: "janela_strategy_alpha_2026_13"
+        }
+      }
+    }
+  }
+
+  task avaliar_slice_apos_discovery {
+    docs {
+      resumo: "Decide se um slice segue aberto,entra em quarentena ou precisa ficar bloqueado ate nova avaliacao."
+    }
+    input {
+      strategy_id: Id required
+      slice_id: Id required
+      precision_observada: Decimal required
+      precision_minima: Decimal required
+      risco_operacional: Texto required
+    }
+    output {
+      gate_slice: StatusGate
+      slice_status: StatusSlice
+      motivo_operacional: Texto
+    }
+    authz {
+      escopo: strategy.slice.avaliar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        strategy_id: interno
+        slice_id: interno
+        precision_observada: interno
+        precision_minima: interno
+        risco_operacional: interno
+      }
+      output {
+        gate_slice: interno
+        slice_status: interno
+        motivo_operacional: interno
+      }
+    }
+    audit {
+      evento: strategy.slice.avaliado
+      ator: sistema.strategy
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      strategy_id existe
+      slice_id existe
+      precision_observada existe
+      precision_minima existe
+      risco_operacional existe
+    }
+    effects {
+      persistencia slice criticidade = alta
+      auditoria discovery_slice criticidade = alta
+      notificacao operacao criticidade = media
+    }
+    vinculos {
+      tabela: slice
+      recurso: strategy_registry
+      evento: discovery_slice_avaliado
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "manter_gate_slice_fechado_ate_reavaliacao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      gate_slice existe
+      slice_status existe
+      motivo_operacional existe
+    }
+    tests {
+      caso "slice ruim fecha gate na avaliacao" {
+        given {
+          strategy_id: "strategy_alpha"
+          slice_id: "slice_under35_serie_a"
+          precision_observada: 0.49
+          precision_minima: 0.58
+          risco_operacional: "drawdown_excessivo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          gate_slice: "FECHADO"
+          slice_status: "QUARENTENA"
+          motivo_operacional: "drawdown_excessivo"
+        }
+      }
+    }
+  }
+}

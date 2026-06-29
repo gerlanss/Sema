@@ -1,0 +1,141 @@
+module sema.produto.legal {
+  docs {
+    resumo: "Profile Legal para governanca juridica com contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois textos, fluxos, decisoes, jurisdicao, fontes normativas, limites, revisao humana e auditoria."
+  }
+
+  vinculos {
+    arquivo: "pacotes/cli/src/index.ts"
+    simbolo: cli.src.index.validarProfileSemantico
+  }
+
+  type LegalCore {
+    fields {
+      jurisdicao: Texto
+      escopo: Texto
+      fontes: Lista
+      limite_uso: Texto
+      revisao_humana: Booleano
+    }
+    invariants {
+      jurisdicao existe
+      escopo existe
+      fontes existe
+      limite_uso existe
+      revisao_humana existe
+    }
+  }
+
+  entity ProfileLegal {
+    fields {
+      id: Id
+      core: LegalCore
+      status: StatusLegal
+      retencao: "Texto"
+    }
+    invariants {
+      id existe
+      core existe
+      status em [RASCUNHO, REVISAO, APROVADO, BLOQUEADO]
+      retencao existe
+    }
+  }
+
+  enum StatusLegal {
+    RASCUNHO,
+    REVISAO,
+    APROVADO,
+    BLOQUEADO
+  }
+
+  task validar_contexto_legal {
+    input {
+      jurisdicao: Texto required
+      escopo: Texto required
+      fontes: Lista required
+      revisao_humana: Booleano required
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      aprovado: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      bloqueios: Lista
+    }
+    rules {
+      jurisdicao deve_ser preenchida
+      escopo deve_ser delimitado
+      fontes deve_ser verificaveis
+      revisao_humana deve_ser verdadeiro
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria legal_contexto criticidade = alta
+    }
+    authz {
+      escopo: sema.legal.validar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.legal.profile.validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      parecer_final_sem_advogado
+      jurisdicao_indefinida
+      fonte_normativa_ausente
+      aprovar_parecer_final_sem_revisao_humana
+      aprovar_lgpd_sem_base_legal_finalidade_retencao
+      aprovar_privacidade_com_base_retencao_direitos_ausentes
+      aprovar_mencao_negativa_como_requisito_atendido
+      score_artefato_100_com_politica_vaga
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "bloquear_entrega"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      bloqueios existe
+    }
+    tests {
+      caso "legal exige fonte e revisao" {
+        given {
+          jurisdicao: "BR"
+          escopo: "analise contratual limitada"
+          fontes: "lei norma regulamento documento citacao evidencia"
+          revisao_humana: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+}

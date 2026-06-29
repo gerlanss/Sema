@@ -1,0 +1,132 @@
+module exemplos.operacao_estrategia {
+  docs {
+    resumo: "Referencia oficial de governanca operacional para strategy,slice,gate,discovery semanal e rollout. Este indice fino mantem modelos compartilhados e flow; as tasks ficam em arquivos filhos por responsabilidade."
+  }
+
+  type JanelaDiscovery {
+    fields {
+      semana_referencia: Data
+      strategy_id: Id
+      versao_modelo_candidata: Texto
+      status_discovery: StatusDiscovery
+    }
+    invariants {
+      semana_referencia existe
+      strategy_id existe
+      versao_modelo_candidata existe
+      status_discovery em [ABERTA, EM_AVALIACAO, APROVADA, REJEITADA]
+    }
+  }
+
+  type ContextoQuarentena {
+    fields {
+      motivo: Texto
+      origem: Texto
+      desde: Data
+    }
+    invariants {
+      motivo existe
+      origem existe
+      desde existe
+    }
+  }
+
+  entity Strategy {
+    fields {
+      id: Id
+      versao_modelo_ativa: Texto
+      versao_modelo_candidata: Texto
+      status: StatusStrategy
+      gate_global: StatusGate
+      discovery_atual: JanelaDiscovery
+      ultima_quarentena: ContextoQuarentena
+    }
+    invariants {
+      id existe
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      status em [RASCUNHO, ATIVA, QUARENTENA, DESATIVADA]
+      gate_global em [ABERTO, FECHADO]
+      discovery_atual existe
+      ultima_quarentena existe
+    }
+  }
+
+  entity Slice {
+    fields {
+      id: Id
+      strategy_id: Id
+      status: StatusSlice
+      gate: StatusGate
+      versao_modelo_ativa: Texto
+      versao_modelo_candidata: Texto
+      motivo_quarentena: Texto
+      precision_observada: Decimal
+    }
+    invariants {
+      id existe
+      strategy_id existe
+      status em [ATIVO, QUARENTENA, DESLIGADO]
+      gate em [ABERTO, FECHADO]
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      motivo_quarentena existe
+      precision_observada existe
+    }
+  }
+
+  enum StatusStrategy {
+    RASCUNHO,
+    ATIVA,
+    QUARENTENA,
+    DESATIVADA
+  }
+
+  enum StatusSlice {
+    ATIVO,
+    QUARENTENA,
+    DESLIGADO
+  }
+
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  enum StatusDiscovery {
+    ABERTA,
+    EM_AVALIACAO,
+    APROVADA,
+    REJEITADA
+  }
+
+  state governanca_estrategia {
+    fields {
+      status: StatusStrategy
+      slice_status: StatusSlice
+      gate_global: StatusGate
+      gate_slice: StatusGate
+      discovery_status: StatusDiscovery
+      versao_modelo_ativa: Texto
+      versao_modelo_candidata: Texto
+      motivo_operacional: Texto
+    }
+    invariants {
+      status em [RASCUNHO, ATIVA, QUARENTENA, DESATIVADA]
+      slice_status em [ATIVO, QUARENTENA, DESLIGADO]
+      gate_global em [ABERTO, FECHADO]
+      gate_slice em [ABERTO, FECHADO]
+      discovery_status em [ABERTA, EM_AVALIACAO, APROVADA, REJEITADA]
+      versao_modelo_ativa existe
+      versao_modelo_candidata existe
+      motivo_operacional existe
+    }
+    transitions {
+      RASCUNHO -> ATIVA
+      ATIVA -> QUARENTENA
+      QUARENTENA -> ATIVA
+      ATIVA -> DESATIVADA
+    }
+  }
+
+}

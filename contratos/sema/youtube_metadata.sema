@@ -1,0 +1,179 @@
+module sema.produto.youtube_metadata {
+  docs {
+    resumo: "Sema para títulos, descrições, hashtags e metadata de YouTube com clique honesto, SEO e alinhamento com roteiro/thumbnail."
+  }
+
+  use sema.produto.youtube_roteiro
+
+  use sema.produto.youtube_thumbnail
+
+  use sema.produto.copywriting
+
+  use sema.produto.qa_criativo
+
+  task criar_titulos_youtube {
+    input {
+      roteiro: Texto required
+      promessa: Texto required
+      publico: Texto required
+      palavras_chave: Lista required
+      restricoes: Lista required
+      quantidade: Inteiro required
+    }
+    output {
+      titulos: Lista
+      angulos: Lista
+      aprovado: Booleano
+    }
+    rules {
+      roteiro deve_ser preenchido
+      promessa deve_ser entregue_no_video
+      publico deve_ser especifico
+      palavras_chave deve_ser nao_vazio
+      restricoes deve_ser anti_engano
+      quantidade >= 3
+    }
+    effects {
+      auditoria titulos_youtube criticidade = alta
+    }
+    authz {
+      escopo: sema.youtube_metadata
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.youtube_metadata.titulos_criados
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      titulo_enganoso
+      promessa_nao_entregue
+      sensacionalismo_vazio
+      titulo_generico_de_ia
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      titulos existe
+      titulos deve_ser clicaveis_e_fieis
+      angulos existe
+      aprovado existe
+    }
+    tests {
+      caso "titulos clicaveis e fieis" {
+        given {
+          roteiro: "review da Z-11000 mostrando freio, peso e recolhimento"
+          promessa: "mostrar se vale comprar"
+          publico: "pescador esportivo"
+          palavras_chave: "carretilha, pesca esportiva, review"
+          restricoes: "sem enganar, sem celebridade falsa"
+          quantidade: 5
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+
+  task criar_descricao_youtube {
+    input {
+      titulo_escolhido: Texto required
+      roteiro: Texto required
+      resumo_primeiras_linhas: Texto required
+      links: Lista
+      capitulos: Lista
+      hashtags: Lista
+      cta: Texto required
+    }
+    output {
+      descricao: Texto
+      metadata: Lista
+      publicavel: Booleano
+    }
+    rules {
+      titulo_escolhido deve_ser fiel
+      roteiro deve_ser preenchido
+      resumo_primeiras_linhas deve_ser forte
+      hashtags deve_ser relevantes_quando_fornecidas
+      cta deve_ser claro
+    }
+    effects {
+      auditoria descricao_youtube criticidade = alta
+    }
+    authz {
+      escopo: sema.youtube_metadata
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.youtube_metadata.descricao_criada
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      excesso_de_tags
+      hashtag_irrelevante
+      link_sem_contexto
+      descricao_enganosa
+      contato_externo_quando_plataforma_proibe
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      descricao existe
+      descricao deve_ser sem_spam
+      metadata existe
+      publicavel existe
+    }
+    tests {
+      caso "descricao com SEO e CTA" {
+        given {
+          titulo_escolhido: "Z-11000 vale comprar?"
+          roteiro: "review com prova"
+          resumo_primeiras_linhas: "Veja freio, peso e controle antes de comprar."
+          links: "loja oficial"
+          capitulos: "00:00 introducao"
+          hashtags: "pesca, carretilha"
+          cta: "chamar no direct"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          publicavel: verdadeiro
+        }
+      }
+    }
+  }
+}

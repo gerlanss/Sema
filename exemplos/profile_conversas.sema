@@ -1,0 +1,165 @@
+module exemplos.profile_conversas {
+  docs {
+    resumo: "Exemplo oficial do profile Conversas: bot comercial para atendimento de cliente com tom persuasivo, estado visivel do turno, customer_reply como unica saida ao cliente, deduplicacao, limites de promessa, memoria curta e escalacao humana. Contrato primeiro: criar, editar ou remover contrato antes de qualquer acao."
+  }
+
+  type PoliticaTomConversa {
+    fields {
+      tom: Texto
+      formalidade: Texto
+      intensidade_persuasiva: Texto
+      proibicoes: Lista
+    }
+    invariants {
+      tom existe
+      formalidade existe
+      intensidade_persuasiva existe
+      proibicoes existe
+    }
+  }
+
+  type ContextoClienteConversa {
+    fields {
+      etapa: Texto
+      intencao_detectada: Texto
+      sentimento: Texto
+      objecoes: Lista
+      historico_resumido: Texto
+      ultima_mensagem_cliente: Texto
+      ultima_resposta_visivel: Texto
+      fatos_coletados: Lista
+      proxima_acao_esperada: Texto
+    }
+    invariants {
+      etapa existe
+      intencao_detectada existe
+      sentimento existe
+      historico_resumido existe
+      ultima_mensagem_cliente existe
+      ultima_resposta_visivel existe
+      fatos_coletados existe
+      proxima_acao_esperada existe
+    }
+  }
+
+  type EstadoTurnoConversa {
+    fields {
+      conversation_id: Id
+      evento_id: Id
+      canal: Texto
+      mensagem_cliente_visivel: Texto
+      resposta_anterior_visivel: Texto
+      etapa_atual: Texto
+      pergunta_anterior: Texto
+      confirmacao_curta: Booleano
+      dedupe_key: Texto
+      origem_estado: Texto
+    }
+    invariants {
+      conversation_id existe
+      evento_id existe
+      canal existe
+      mensagem_cliente_visivel existe
+      resposta_anterior_visivel existe
+      etapa_atual existe
+      dedupe_key existe
+      origem_estado existe
+    }
+  }
+
+  task responder_cliente_vendas {
+    input {
+      mensagem_cliente: Texto required
+      contexto: ContextoClienteConversa required
+      politica: PoliticaTomConversa required
+      estado_turno: EstadoTurnoConversa required
+      conhecimento_autorizado: Lista required
+    }
+    output {
+      resposta_cliente: Texto
+      customer_reply: Texto
+      proxima_acao: Texto
+      escalar_humano: Booleano
+      dedupe_key: Texto
+    }
+    rules {
+      mensagem_cliente deve_ser preenchida
+      contexto deve_ser valido
+      politica deve_ser com_tom_comercial_persuasivo
+      estado_turno deve_ser origem_conversa_visivel
+      estado_turno deve_ser deduplicado_por_evento
+      conhecimento_autorizado deve_ser nao_vazio
+      estado_turno.confirmacao_curta deve_ser interpretada_contra_pergunta_anterior
+    }
+    effects {
+      auditoria conversa_cliente criticidade = alta
+      evento resposta_bot_preparada criticidade = media
+    }
+    authz {
+      escopo: sema.conversas.responder
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: exemplos.conversas.resposta
+      ator: auth.agente
+      correlacao: conversation_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      promessa_sem_base
+      inventar_preco_ou_prazo
+      insistencia_agressiva
+      ignorar_objecao_cliente
+      reiniciar_conversa_apos_confirmacao_curta
+      repetir_saudacao_apos_contexto_existente
+      enviar_json_interno_ao_cliente
+      responder_mais_de_uma_vez_o_mesmo_inbound
+      voz_generica_de_ia
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      resposta_cliente existe
+      resposta_cliente deve_ser aderente_ao_tom
+      resposta_cliente deve_ser responder_objecao
+      customer_reply existe
+      customer_reply deve_ser unica_saida_visivel
+      proxima_acao existe
+      proxima_acao deve_ser clara
+      escalar_humano existe
+      dedupe_key existe
+    }
+    tests {
+      caso "lead indeciso recebe resposta com proxima acao" {
+        given {
+          mensagem_cliente: "Ainda estou comparando opcoes."
+          contexto: "etapa comparacao, intencao comprar, sentimento INDECISO, objecao confianca, ultima mensagem Ainda estou comparando opcoes, ultima resposta visivel vazia"
+          politica: "tom comercial persuasivo, formalidade media, proibido prometer preco ou prazo sem base"
+          estado_turno: "conversation_id c1 evento_id msg1 canal WHATSAPP mensagem_cliente_visivel Ainda estou comparando opcoes resposta_anterior_visivel vazia etapa_atual comparacao dedupe_key msg1 origem_estado conversa_visivel"
+          conhecimento_autorizado: "pode oferecer diagnostico rapido"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          escalar_humano: falso
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,189 @@
+module sema.produto.geradores_web {
+  docs {
+    resumo: "Contrato interno da Sema para os geradores JavaScript, HTML e CSS - garantindo que o ciclo IR -> geracao web funcione corretamente, seja exposto como alvo publico da CLI e entregue interface moderna, responsiva e governada."
+  }
+
+  vinculos {
+    arquivo: "pacotes/gerador-javascript/src/index.ts"
+    arquivo: "pacotes/gerador-html/src/index.ts"
+    arquivo: "pacotes/gerador-css/src/index.ts"
+    arquivo: "pacotes/cli/src/index.ts"
+    arquivo: "docs/cli.md"
+    arquivo: "docs/da-sema-para-codigo.md"
+  }
+
+  task gerar_contrato_javascript {
+    input {
+      contrato: Texto required
+    }
+    output {
+      jsdoc_tipado: Booleano
+      validacoes_coerentes: Booleano
+      testes_gerados: Booleano
+      alvo_cli_publico: Booleano
+    }
+    rules {
+      contrato deve_ser preenchido
+    }
+    effects {
+      auditoria geracao_javascript criticidade = media
+    }
+    impl {
+      ts: gerador_javascript.src.index.gerarJavaScript
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-javascript/src/index.ts"
+      simbolo: gerador_javascript.src.index.gerarJavaScript
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      jsdoc_tipado existe
+      validacoes_coerentes existe
+      testes_gerados existe
+      alvo_cli_publico == verdadeiro
+    }
+    tests {
+      caso "javascript gera contrato com JSDoc e validacoes" {
+        given {
+          contrato: "task com entity Produto e task criar_produto"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_pagina_html {
+    input {
+      contrato: Texto required
+    }
+    output {
+      html_semantico: Booleano
+      formularios_derivados: Booleano
+      rotas_visuais: Booleano
+      hierarquia_visual: Booleano
+      estados_ui: Booleano
+      alvo_cli_publico: Booleano
+    }
+    rules {
+      contrato deve_ser preenchido
+      contrato deve_ser mapear_intencao_visual_quando_ui
+    }
+    effects {
+      auditoria geracao_html criticidade = media
+    }
+    forbidden {
+      pagina_com_aparencia_2010
+      formulario_generico_sem_hierarquia
+      conteudo_sem_estados_ui
+    }
+    impl {
+      ts: gerador_html.src.index.gerarHtml
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-html/src/index.ts"
+      simbolo: gerador_html.src.index.gerarHtml
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      html_semantico existe
+      formularios_derivados existe
+      rotas_visuais existe
+      hierarquia_visual existe
+      estados_ui existe
+      alvo_cli_publico == verdadeiro
+    }
+    tests {
+      caso "html gera pagina semantica moderna com formularios" {
+        given {
+          contrato: "task com entity Produto e route produtos"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          hierarquia_visual: verdadeiro
+          estados_ui: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_design_system_css {
+    input {
+      contrato: Texto required
+    }
+    output {
+      variaveis_css: Booleano
+      dark_mode: Booleano
+      responsividade: Booleano
+      tokens_visuais: Booleano
+      visual_moderno: Booleano
+      anti_2010: Booleano
+      alvo_cli_publico: Booleano
+    }
+    rules {
+      contrato deve_ser preenchido
+      contrato deve_ser gerar_tokens_visuais_minimos
+    }
+    effects {
+      auditoria geracao_css criticidade = media
+    }
+    forbidden {
+      css_generico_2010
+      paleta_sem_identidade
+      sem_responsividade_real
+      sem_estados_interativos
+    }
+    impl {
+      ts: gerador_css.src.index.gerarCss
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-css/src/index.ts"
+      simbolo: gerador_css.src.index.gerarCss
+    }
+    execucao {
+      timeout: "15s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      variaveis_css existe
+      dark_mode existe
+      responsividade existe
+      tokens_visuais existe
+      visual_moderno == verdadeiro
+      anti_2010 == verdadeiro
+      alvo_cli_publico == verdadeiro
+    }
+    tests {
+      caso "css gera design system moderno com dark mode" {
+        given {
+          contrato: "task com entity Produto e state ciclo_pagamento"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          visual_moderno: verdadeiro
+          anti_2010: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow gerar_web_completo {
+    contrato: Texto
+    etapa javascript usa gerar_contrato_javascript com contrato = contrato
+    etapa html usa gerar_pagina_html com contrato = contrato depende_de javascript
+    etapa css usa gerar_design_system_css com contrato = contrato depende_de html
+    effects {
+      auditoria geracao_web_completa criticidade = media
+    }
+  }
+}

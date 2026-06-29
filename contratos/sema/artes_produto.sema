@@ -1,0 +1,430 @@
+module sema.produto.artes_produto {
+  docs {
+    resumo: "Sema para criacao de artes de produto, combinando identidade de marca, copy, imagem e QA para produto protagonista e oferta legivel. Contrato criativo vem antes de qualquer acao: criar, editar ou remover o .sema aplicavel antes de gerar arte."
+  }
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.copywriting
+
+  use sema.produto.imagens
+
+  use sema.produto.qa_criativo
+
+  entity ProdutoVisual {
+    fields {
+      id: Id
+      nome: Texto
+      categoria: Texto
+      diferenciais: Lista
+      preco: Decimal
+      restricoes: Lista
+    }
+    invariants {
+      id existe
+      nome existe
+      categoria existe
+      diferenciais existe
+    }
+  }
+
+  task preparar_briefing_arte_produto {
+    input {
+      produto: ProdutoVisual required
+      objetivo: Texto required
+      canal: Texto required
+      identidade_marca: Texto required
+      copy_base: Texto
+    }
+    output {
+      briefing_arte: Texto
+      produto_protagonista: Booleano
+      oferta_legivel: Booleano
+    }
+    rules {
+      produto deve_ser valido
+      objetivo deve_ser concreto
+      canal deve_ser preenchido
+      identidade_marca deve_ser declarada
+      copy_base deve_ser aderente_quando_fornecida
+    }
+    effects {
+      auditoria briefing_arte_produto criticidade = media
+    }
+    forbidden {
+      produto_sem_diferencial
+      canal_indefinido
+      oferta_confusa
+      arte_sem_marca
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      briefing_arte existe
+      produto_protagonista existe
+      oferta_legivel existe
+    }
+    tests {
+      caso "briefing destaca produto" {
+        given {
+          produto: "cafeteira premium com filtro inox"
+          objetivo: "vender kit dia das maes"
+          canal: "instagram"
+          identidade_marca: "elegante e direto"
+          copy_base: "presente pratico para cafe fresco"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          produto_protagonista: verdadeiro
+          oferta_legivel: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_prompt_arte_produto {
+    input {
+      briefing_arte: Texto required
+      produto: ProdutoVisual required
+      proporcao: Texto required
+      variacao: Texto
+    }
+    output {
+      prompt_arte: PromptImagem
+      instrucoes_layout: Lista
+      pronto_para_gerar: Booleano
+      proxima_acao: Texto
+    }
+    rules {
+      briefing_arte deve_ser preenchido
+      produto deve_ser valido
+      proporcao deve_ser preenchida
+      variacao deve_ser aplicada_quando_fornecida
+    }
+    effects {
+      auditoria prompt_arte_produto criticidade = media
+    }
+    forbidden {
+      produto_pequeno_em_cena_generica
+      texto_demais_na_arte
+      preco_ilegivel
+      promessa_nao_comprovada
+      deformar_produto
+      marca_aleatoria
+      prompt_aprovado_sem_gerar_imagem
+      aguardar_usuario_pedir_imagem
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      prompt_arte existe
+      instrucoes_layout existe
+      pronto_para_gerar existe
+      proxima_acao existe
+      prompt_arte deve_ser produto_central
+      instrucoes_layout deve_ser legiveis
+    }
+    tests {
+      caso "prompt de produto central" {
+        given {
+          briefing_arte: "produto no centro com beneficio curto"
+          produto: "cafeteira premium"
+          proporcao: "4:5"
+          variacao: "fundo claro"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_gerar: verdadeiro
+          proxima_acao: "gerar_imagem"
+        }
+      }
+    }
+  }
+
+  task solicitar_geracao_arte_produto {
+    input {
+      prompt_arte: PromptImagem required
+      produto: ProdutoVisual required
+      ferramenta_imagem: Texto required
+      execucao_automatica: Booleano
+    }
+    output {
+      solicitacao_geracao: Texto
+      chamar_ferramenta_imagem: Booleano
+      gerar_imagem: Booleano
+    }
+    rules {
+      prompt_arte deve_ser valido
+      produto deve_ser valido
+      ferramenta_imagem deve_ser preenchida
+      execucao_automatica deve_ser verdadeira_quando_prompt_aprovado
+    }
+    effects {
+      auditoria handoff_arte_produto_imagem criticidade = alta
+    }
+    authz {
+      escopo: sema.artes_produto.gerar_imagem
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        prompt_arte: interno
+        produto: interno
+        ferramenta_imagem: interno
+        execucao_automatica: interno
+      }
+      output {
+        solicitacao_geracao: interno
+        chamar_ferramenta_imagem: publico
+        gerar_imagem: publico
+      }
+    }
+    audit {
+      evento: sema.artes_produto.geracao_solicitada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      prompt_aprovado_sem_gerar_imagem
+      aguardar_usuario_pedir_imagem
+      ferramenta_imagem_indefinida
+      gerar_sem_prompt_aprovado
+      deformar_produto
+      marca_aleatoria
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      solicitacao_geracao existe
+      chamar_ferramenta_imagem == verdadeiro
+      gerar_imagem == verdadeiro
+    }
+    tests {
+      caso "prompt de arte chama imagem automaticamente" {
+        given {
+          prompt_arte: "produto central feed 1:1"
+          produto: "cafeteira premium"
+          ferramenta_imagem: "image_gen"
+          execucao_automatica: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          chamar_ferramenta_imagem: verdadeiro
+          gerar_imagem: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_arte_produto {
+    input {
+      arte_resultado: Texto required
+      produto: ProdutoVisual required
+      briefing_arte: Texto required
+      copy_aplicada: Texto
+    }
+    output {
+      aprovado: Booleano
+      produto_reconhecivel: Booleano
+      legibilidade: Booleano
+      achados: Lista
+    }
+    rules {
+      arte_resultado deve_ser fornecida
+      produto deve_ser valido
+      briefing_arte deve_ser preenchido
+      copy_aplicada deve_ser legivel_quando_fornecida
+      arte_resultado deve_ser mostrar_produto_real_ou_descricao_fiel
+      arte_resultado deve_ser sem_texto_quebrado
+    }
+    effects {
+      auditoria qa_arte_produto criticidade = alta
+    }
+    authz {
+      escopo: sema.artes_produto.validar_arte
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        arte_resultado: interno
+        produto: interno
+        briefing_arte: interno
+        copy_aplicada: interno
+      }
+      output {
+        aprovado: publico
+        produto_reconhecivel: publico
+        legibilidade: publico
+        achados: interno
+      }
+    }
+    audit {
+      evento: sema.artes_produto.arte_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      produto_irreconhecivel
+      mockup_enganoso
+      oferta_ilegivel
+      texto_quebrado
+      fundo_competindo_com_produto
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      produto_reconhecivel existe
+      legibilidade existe
+      achados existe
+    }
+    tests {
+      caso "bloqueia produto pequeno" {
+        given {
+          arte_resultado: "fundo bonito com produto minusculo e preco cortado"
+          produto: "cafeteira premium"
+          briefing_arte: "produto protagonista"
+          copy_aplicada: "kit especial"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          produto_reconhecivel: falso
+        }
+      }
+    }
+  }
+
+  task exportar_variacoes_produto {
+    input {
+      arte_aprovada: Texto required
+      canais: Lista required
+      formatos: Lista required
+    }
+    output {
+      arquivos_exportados: Lista
+      matriz_canais: Lista
+      pronto_para_publicacao: Booleano
+    }
+    rules {
+      arte_aprovada deve_ser fornecida
+      canais deve_ser nao_vazio
+      formatos deve_ser nao_vazio
+    }
+    effects {
+      auditoria exportacao_arte_produto criticidade = media
+    }
+    forbidden {
+      exportar_sem_aprovacao
+      formato_errado_para_canal
+      perder_legibilidade_no_resize
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "seguro"
+      criticidade_operacional: media
+    }
+    guarantees {
+      arquivos_exportados existe
+      matriz_canais existe
+      pronto_para_publicacao existe
+      arquivos_exportados deve_ser respeitar_formatos
+      matriz_canais deve_ser mapear_canal_para_formato
+    }
+    tests {
+      caso "exporta feed e story" {
+        given {
+          arte_aprovada: "arte aprovada cafeteira"
+          canais: "instagram_feed, instagram_story"
+          formatos: "1080x1350, 1080x1920"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_publicacao: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow criar_arte_produto_completa {
+    produto: ProdutoVisual
+    objetivo: Texto
+    canal: Texto
+    identidade_marca: Texto
+    copy_base: Texto
+    proporcao: Texto
+    arte_resultado: Texto
+    etapa briefing usa preparar_briefing_arte_produto com produto = produto, objetivo = objetivo, canal = canal, identidade_marca = identidade_marca, copy_base = copy_base
+    etapa prompt usa gerar_prompt_arte_produto com briefing_arte = briefing.briefing_arte, produto = produto, proporcao = proporcao depende_de briefing
+    etapa gerar usa solicitar_geracao_arte_produto com prompt_arte = prompt.prompt_arte, produto = produto, ferramenta_imagem = image_gen, execucao_automatica = verdadeiro depende_de prompt
+    etapa validar usa validar_arte_produto com arte_resultado = arte_resultado, produto = produto, briefing_arte = briefing.briefing_arte, copy_aplicada = copy_base depende_de gerar
+    effects {
+      auditoria fluxo_arte_produto criticidade = alta
+    }
+  }
+}

@@ -1,0 +1,349 @@
+module sema.produto.videos {
+  docs {
+    resumo: "Sema para criacao de videos com roteiro, storyboard, prompt, continuidade, audio, legendas, direitos e QA final."
+  }
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.copywriting
+
+  use sema.produto.imagens
+
+  use sema.produto.edicao_fotos
+
+  use sema.produto.qa_criativo
+
+  type StoryboardVideo {
+    fields {
+      cenas: Lista
+      duracao: Texto
+      ritmo: Texto
+      narracao: Texto
+      legendas: Texto
+      assets: Lista
+    }
+    invariants {
+      cenas existe
+      duracao existe
+      ritmo existe
+      legendas existe
+      assets existe
+    }
+  }
+
+  enum FormatoVideo {
+    REELS,
+    SHORTS,
+    ANUNCIO,
+    TUTORIAL,
+    REVIEW,
+    INSTITUCIONAL
+  }
+
+  task planejar_video {
+    input {
+      objetivo: Texto required
+      publico: Texto required
+      formato: FormatoVideo required
+      duracao: Texto required
+      identidade_marca: Texto required
+    }
+    output {
+      plano_video: Texto
+      checklist: Lista
+      pronto_para_roteiro: Booleano
+    }
+    rules {
+      objetivo deve_ser concreto
+      publico deve_ser especifico
+      formato deve_ser valido
+      duracao deve_ser preenchida
+      identidade_marca deve_ser declarada
+    }
+    effects {
+      auditoria planejamento_video criticidade = media
+    }
+    forbidden {
+      video_sem_objetivo
+      formato_inadequado_ao_canal
+      duracao_indefinida
+      marca_ausente
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      plano_video existe
+      checklist existe
+      pronto_para_roteiro existe
+    }
+    tests {
+      caso "planeja reels de produto" {
+        given {
+          objetivo: "mostrar beneficio em 20 segundos"
+          publico: "lojista ocupado"
+          formato: "REELS"
+          duracao: "20s"
+          identidade_marca: "direta e visual limpo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_roteiro: verdadeiro
+        }
+      }
+    }
+  }
+
+  task criar_roteiro_video {
+    input {
+      plano_video: Texto required
+      copy_base: Texto required
+      evidencias: Lista
+    }
+    output {
+      roteiro: Texto
+      storyboard: StoryboardVideo
+      gancho_magnetico: Booleano
+    }
+    rules {
+      plano_video deve_ser preenchido
+      copy_base deve_ser preenchida
+      evidencias deve_ser usadas_quando_fornecidas
+    }
+    effects {
+      auditoria roteiro_video criticidade = media
+    }
+    forbidden {
+      abertura_generica
+      roteiro_sem_cenas
+      narracao_sem_prova
+      cta_ausente
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      roteiro existe
+      storyboard existe
+      gancho_magnetico existe
+      roteiro deve_ser com_gancho_concreto
+      storyboard deve_ser cena_a_cena
+      storyboard deve_ser sem_furo_de_continuidade
+    }
+    tests {
+      caso "roteiro com gancho e cta" {
+        given {
+          plano_video: "20s mostrando antes e depois"
+          copy_base: "pare de perder venda por estoque baguncado"
+          evidencias: "relato cliente economizou tempo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          gancho_magnetico: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_prompt_video {
+    input {
+      storyboard: StoryboardVideo required
+      assets: Lista required
+      formato: FormatoVideo required
+      restricoes_direitos: Lista
+    }
+    output {
+      prompt_video: Texto
+      lista_assets: Lista
+      seguro_para_gerar: Booleano
+    }
+    rules {
+      storyboard deve_ser valido
+      assets deve_ser nao_vazio
+      formato deve_ser valido
+      restricoes_direitos deve_ser respeitadas_quando_fornecidas
+    }
+    effects {
+      auditoria prompt_video criticidade = media
+    }
+    forbidden {
+      asset_sem_direito
+      prompt_sem_cena
+      personagem_inconsistente
+      camera_indefinida
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      prompt_video existe
+      lista_assets existe
+      seguro_para_gerar existe
+      prompt_video deve_ser detalhado_por_cena
+      lista_assets deve_ser rastreavel
+    }
+    tests {
+      caso "prompt de video cena a cena" {
+        given {
+          storyboard: "cena1 problema cena2 produto cena3 resultado"
+          assets: "produto.png, logo.png"
+          formato: "ANUNCIO"
+          restricoes_direitos: "sem musica sem licenca"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          seguro_para_gerar: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_video_final {
+    input {
+      video_resultado: Texto required
+      roteiro: Texto required
+      storyboard: StoryboardVideo required
+      lista_assets: Lista required
+    }
+    output {
+      aprovado: Booleano
+      continuidade_ok: Booleano
+      legendas_ok: Booleano
+      achados: Lista
+    }
+    rules {
+      video_resultado deve_ser fornecido
+      roteiro deve_ser preenchido
+      storyboard deve_ser valido
+      lista_assets deve_ser rastreavel
+      video_resultado deve_ser aderente_a roteiro
+      video_resultado deve_ser sem_furo_de_continuidade
+      video_resultado deve_ser com_legendas_legiveis
+      video_resultado deve_ser com_audio_licenciado_quando_houver_audio
+    }
+    effects {
+      auditoria qa_video criticidade = alta
+    }
+    authz {
+      escopo: sema.videos.validar_final
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        video_resultado: interno
+        roteiro: interno
+        storyboard: interno
+        lista_assets: interno
+      }
+      output {
+        aprovado: publico
+        continuidade_ok: publico
+        legendas_ok: publico
+        achados: interno
+      }
+    }
+    audit {
+      evento: sema.videos.video_validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      publicar_video_sem_direitos
+      legenda_ilegivel
+      cena_fora_do_storyboard
+      audio_sem_licenca
+      cta_ausente
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      continuidade_ok existe
+      legendas_ok existe
+      achados existe
+    }
+    tests {
+      caso "bloqueia video sem legenda" {
+        given {
+          video_resultado: "video sem legenda e audio sem licenca"
+          roteiro: "roteiro com cta"
+          storyboard: "cenas planejadas"
+          lista_assets: "produto.png"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          legendas_ok: falso
+        }
+      }
+    }
+  }
+
+  flow criar_video_completo {
+    objetivo: Texto
+    publico: Texto
+    formato: FormatoVideo
+    duracao: Texto
+    identidade_marca: Texto
+    copy_base: Texto
+    evidencias: Lista
+    assets: Lista
+    video_resultado: Texto
+    etapa plano usa planejar_video com objetivo = objetivo, publico = publico, formato = formato, duracao = duracao, identidade_marca = identidade_marca
+    etapa roteiro usa criar_roteiro_video com plano_video = plano.plano_video, copy_base = copy_base, evidencias = evidencias depende_de plano
+    etapa prompt usa gerar_prompt_video com storyboard = roteiro.storyboard, assets = assets, formato = formato depende_de roteiro
+    etapa validar usa validar_video_final com video_resultado = video_resultado, roteiro = roteiro.roteiro, storyboard = roteiro.storyboard, lista_assets = prompt.lista_assets depende_de prompt
+    effects {
+      auditoria fluxo_video criticidade = alta
+    }
+  }
+}

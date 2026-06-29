@@ -1,0 +1,240 @@
+module sema.produto.calendario_editorial {
+  docs {
+    resumo: "Sema para calendario editorial do dia a dia, conectando pesquisa, redator, copy, artes, videos e publicacao por prioridade, canal e data."
+  }
+
+  use sema.produto.research
+
+  use sema.produto.redator
+
+  use sema.produto.copywriting
+
+  use sema.produto.artes_produto
+
+  use sema.produto.videos
+
+  use sema.produto.publicacao_multicanal
+
+  type PautaEditorial {
+    fields {
+      tema: Texto
+      objetivo: Texto
+      canal: Texto
+      formato: Texto
+      data_publicacao: Data
+      prioridade: Texto
+      dependencias: Lista
+    }
+    invariants {
+      tema existe
+      objetivo existe
+      canal existe
+      formato existe
+      data_publicacao existe
+      prioridade existe
+    }
+  }
+
+  task planejar_calendario_editorial {
+    input {
+      periodo_inicio: Data required
+      periodo_fim: Data required
+      objetivos_negocio: Lista required
+      canais: Lista required
+      capacidade_producao: Inteiro required
+    }
+    output {
+      calendario: Lista
+      conflitos: Lista
+      pronto_para_producao: Booleano
+    }
+    rules {
+      periodo_inicio deve_ser anterior_a periodo_fim
+      objetivos_negocio deve_ser nao_vazio
+      canais deve_ser nao_vazio
+      capacidade_producao > 0
+    }
+    effects {
+      auditoria calendario_editorial criticidade = media
+    }
+    forbidden {
+      calendario_sem_objetivo
+      excesso_de_pautas
+      canal_sem_cobertura
+      data_sem_responsavel
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      calendario existe
+      conflitos existe
+      pronto_para_producao existe
+      calendario deve_ser balanceado_por_canal
+      calendario deve_ser respeitar_capacidade_producao
+    }
+    tests {
+      caso "planeja semana possivel" {
+        given {
+          periodo_inicio: "2026-06-01"
+          periodo_fim: "2026-06-07"
+          objetivos_negocio: "vender produto A, educar leads"
+          canais: "blog, instagram, email"
+          capacidade_producao: 5
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_producao: verdadeiro
+        }
+      }
+    }
+  }
+
+  task priorizar_pautas {
+    input {
+      pautas: Lista required
+      dados_pesquisa: Lista required
+      objetivos_negocio: Lista required
+    }
+    output {
+      pautas_priorizadas: Lista
+      justificativas: Lista
+      descartes: Lista
+    }
+    rules {
+      pautas deve_ser nao_vazio
+      dados_pesquisa deve_ser verificaveis
+      objetivos_negocio deve_ser nao_vazio
+    }
+    effects {
+      auditoria priorizacao_pautas criticidade = media
+    }
+    forbidden {
+      priorizar_por_achismo
+      ignorar_pesquisa
+      misturar_objetivo_sem_criterio
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      pautas_priorizadas existe
+      justificativas existe
+      descartes existe
+      pautas_priorizadas deve_ser alinhadas_a_objetivos
+      justificativas deve_ser explicitas
+    }
+    tests {
+      caso "prioriza por pesquisa e objetivo" {
+        given {
+          pautas: "review microfone, tutorial iluminacao"
+          dados_pesquisa: "busca por review cresceu"
+          objetivos_negocio: "vender microfone"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pautas_priorizadas: "review microfone"
+        }
+      }
+    }
+  }
+
+  task validar_cobertura_canais {
+    input {
+      calendario: Lista required
+      canais_obrigatorios: Lista required
+      formatos_obrigatorios: Lista
+    }
+    output {
+      cobertura_ok: Booleano
+      lacunas: Lista
+      ajustes: Lista
+    }
+    rules {
+      calendario deve_ser nao_vazio
+      canais_obrigatorios deve_ser nao_vazio
+      formatos_obrigatorios deve_ser cobertos_quando_fornecidos
+      calendario deve_ser cobrir_canais_obrigatorios
+    }
+    effects {
+      auditoria cobertura_canais criticidade = media
+    }
+    forbidden {
+      canal_obrigatorio_sem_pauta
+      formato_obrigatorio_ausente
+      publicar_sem_variacao_de_formato
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      cobertura_ok existe
+      lacunas existe
+      ajustes existe
+    }
+    tests {
+      caso "detecta canal faltando" {
+        given {
+          calendario: "blog tutorial segunda"
+          canais_obrigatorios: "blog, instagram"
+          formatos_obrigatorios: "post, artigo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          cobertura_ok: falso
+          lacunas: "instagram"
+        }
+      }
+    }
+  }
+
+  flow planejar_semana_conteudo {
+    periodo_inicio: Data
+    periodo_fim: Data
+    objetivos_negocio: Lista
+    canais: Lista
+    capacidade_producao: Inteiro
+    pautas: Lista
+    dados_pesquisa: Lista
+    formatos_obrigatorios: Lista
+    etapa calendario usa planejar_calendario_editorial com periodo_inicio = periodo_inicio, periodo_fim = periodo_fim, objetivos_negocio = objetivos_negocio, canais = canais, capacidade_producao = capacidade_producao
+    etapa priorizar usa priorizar_pautas com pautas = pautas, dados_pesquisa = dados_pesquisa, objetivos_negocio = objetivos_negocio depende_de calendario
+    etapa cobertura usa validar_cobertura_canais com calendario = calendario.calendario, canais_obrigatorios = canais, formatos_obrigatorios = formatos_obrigatorios depende_de priorizar
+    effects {
+      auditoria fluxo_calendario_editorial criticidade = media
+    }
+  }
+}

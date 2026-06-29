@@ -1,0 +1,104 @@
+module exemplos.profile.research {
+  docs {
+    resumo: "Starter do Profile Research: contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois pergunta, hipotese, metodo, metodologia, fonte, citacao, referencia, evidencia, confianca, qualidade, incerteza, lacuna, limite, conclusao, protocolo, dataset, dados, reprodutibilidade e replicacao."
+  }
+
+  type PlanoPesquisa {
+    fields {
+      pergunta: Texto
+      metodologia: Texto
+      fontes: Lista
+      evidencias: Lista
+      limites: Lista
+    }
+    invariants {
+      pergunta existe
+      metodologia existe
+      fontes existe
+      evidencias existe
+      limites existe
+    }
+  }
+
+  task validar_plano_pesquisa {
+    input {
+      pergunta: Texto required
+      metodologia: Texto required
+      fonte: Texto required
+      evidencia: Texto required
+      hipotese: Texto
+      metodo: Texto
+      citacao: Texto
+      referencia: Texto
+      confianca: Texto
+      qualidade: Texto
+      incerteza: Texto
+      lacuna: Texto
+      limite: Texto
+      conclusao: Texto
+      protocolo: Texto
+      dataset: Texto
+      dados: Texto
+      reprodutibilidade: Texto
+      replicacao: Texto
+    }
+    output {
+      aprovado: Booleano
+      lacunas: Lista
+    }
+    rules {
+      pergunta deve_ser especifica
+      hipotese deve_ser declarada
+      metodo deve_ser reproduzivel
+      metodologia deve_ser explicita
+      fonte deve_ser citavel
+      citacao deve_ser verificavel
+      referencia deve_ser preservada
+      evidencia deve_ser qualificada
+      confianca deve_ser estimada
+      qualidade deve_ser avaliada
+      incerteza deve_ser declarada
+      lacuna deve_ser registrada
+      limite deve_ser declarado
+      conclusao deve_ser sustentada
+      protocolo deve_ser versionado
+      dataset deve_ser identificado
+      dados deve_ser preservados
+      reprodutibilidade deve_ser possivel
+      replicacao deve_ser planejada
+    }
+    effects {
+      auditoria research_plano criticidade = media
+    }
+    forbidden {
+      conclusao_sem_evidencia
+      citacao_inventada
+      incerteza_oculta
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      lacunas existe
+    }
+    tests {
+      caso "pesquisa tem metodo e evidencia" {
+        given {
+          pergunta: "qual adapter reduz drift em workflow"
+          metodologia: "comparacao controlada"
+          fonte: "referencia primaria com citacao"
+          evidencia: "dataset com dados e confianca"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+}

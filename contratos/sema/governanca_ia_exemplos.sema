@@ -1,0 +1,97 @@
+module sema.produto.governanca_ia.exemplos {
+  docs {
+    resumo: "Contrato filho para exemplos oficiais, vitrines IA-first e bootstrap seguro via CLI local."
+  }
+
+  task materializar_exemplos_oficiais {
+    input {
+      base_projeto: Texto required
+      preservar_existentes: Booleano required
+    }
+    output {
+      exemplos_disponiveis: Booleano
+      arquivos_preservados: Booleano
+      origem_canonica_resolvida: Booleano
+    }
+    impl {
+      ts: cli.src.index.materializarExemplosOficiais
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "exemplos/calculadora.sema"
+      arquivo: "exemplos/profile_software.sema"
+      simbolo: cli.src.index.materializarExemplosOficiais
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "nenhuma"
+      criticidade_operacional: media
+    }
+    guarantees {
+      exemplos_disponiveis existe
+      arquivos_preservados existe
+      origem_canonica_resolvida existe
+    }
+    tests {
+      caso "bootstrap cria exemplos sem sobrescrever usuario" {
+        given {
+          base_projeto: "."
+          preservar_existentes: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task endurecer_exemplos_vitrine_ia_first {
+    input {
+      exemplos_alvo: Texto required
+      manter_dsl_contida: Booleano required
+    }
+    output {
+      exemplos_sem_erros: Booleano
+      guardrails_explicitos: Booleano
+      sintaxe_nova_evitar: Booleano
+    }
+    impl {
+      ts: cli.src.index.materializarExemplosOficiais
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "docs/syntax.md"
+      simbolo: cli.src.index.materializarExemplosOficiais
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "revalidar exemplos oficiais"
+      criticidade_operacional: media
+    }
+    guarantees {
+      exemplos_sem_erros existe
+      guardrails_explicitos existe
+      sintaxe_nova_evitar existe
+    }
+    tests {
+      caso "vitrine usa blocos existentes" {
+        given {
+          exemplos_alvo: "pagamento,pedido,operacao_estrategia,replica_analitica_erp"
+          manter_dsl_contida: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exemplos_sem_erros: verdadeiro
+          guardrails_explicitos: verdadeiro
+          sintaxe_nova_evitar: verdadeiro
+        }
+      }
+    }
+  }
+}

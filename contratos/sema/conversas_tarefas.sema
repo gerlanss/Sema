@@ -1,0 +1,477 @@
+module sema.produto.conversas.tarefas {
+  docs {
+    resumo: "Tarefas de preparacao, resposta, validacao e escalacao de conversas."
+  }
+
+  use sema.produto.conversas.modelos
+
+  task preparar_politica_conversa {
+    input {
+      objetivo: ObjetivoConversa required
+      canal: CanalConversa required
+      tom: Texto required
+      formalidade: Texto required
+      intensidade_persuasiva: Texto required
+      persona: Texto required
+      politicas_comerciais: Lista required
+      proibicoes: Lista required
+    }
+    output {
+      politica: PoliticaTomConversa
+      pronta_para_responder: Booleano
+      lacunas: Lista
+    }
+    rules {
+      objetivo deve_ser valido
+      canal deve_ser valido
+      tom deve_ser declarado
+      formalidade deve_ser declarada
+      intensidade_persuasiva deve_ser em [baixa, media, alta]
+      persona deve_ser especifica
+      politicas_comerciais deve_ser nao_vazio
+      proibicoes deve_ser nao_vazio
+    }
+    effects {
+      auditoria politica_conversa criticidade = media
+    }
+    authz {
+      escopo: sema.conversas.politica
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        objetivo: publico
+        canal: publico
+        tom: interno
+        politicas_comerciais: interno
+        proibicoes: interno
+      }
+      output {
+        politica: interno
+        pronta_para_responder: publico
+        lacunas: interno
+      }
+    }
+    audit {
+      evento: sema.conversas.politica_preparada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      politica_sem_tom
+      politica_sem_limite_comercial
+      persuasao_sem_freio
+      persona_generica_de_ia
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      politica existe
+      pronta_para_responder existe
+      lacunas existe
+      politica deve_ser com_tom_formalidade_persona_e_proibicoes
+    }
+    tests {
+      caso "politica comercial persuasiva com freios" {
+        given {
+          objetivo: "VENDAS"
+          canal: "WHATSAPP"
+          tom: "comercial persuasivo"
+          formalidade: "media"
+          intensidade_persuasiva: "media"
+          persona: "consultor direto"
+          politicas_comerciais: "sem desconto sem autorizacao"
+          proibicoes: "nao prometer prazo ou preco sem base"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronta_para_responder: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_estado_turno_conversa {
+    input {
+      estado_turno: EstadoTurnoConversa required
+      contexto: ContextoClienteConversa required
+    }
+    output {
+      estado_valido: Booleano
+      bloqueios: Lista
+      proxima_acao_recomendada: Texto
+    }
+    rules {
+      estado_turno deve_ser valido
+      contexto deve_ser valido
+      estado_turno.origem_estado deve_ser conversa_visivel_ao_cliente
+      estado_turno.mensagem_cliente_visivel deve_ser ultima_mensagem_do_cliente
+      estado_turno.resposta_anterior_visivel deve_ser ultima_resposta_enviada_ao_cliente
+      estado_turno.dedupe_key deve_ser unico_por_evento
+      estado_turno.confirmacao_curta deve_ser interpretada_contra_pergunta_anterior
+    }
+    effects {
+      auditoria estado_turno_conversa criticidade = alta
+    }
+    authz {
+      escopo: sema.conversas.estado_turno
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        estado_turno: pii
+        contexto: pii
+      }
+      output {
+        estado_valido: publico
+        bloqueios: interno
+        proxima_acao_recomendada: interno
+      }
+    }
+    audit {
+      evento: sema.conversas.estado_turno_validado
+      ator: auth.agente
+      correlacao: conversation_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      usar_pensamento_interno_como_estado
+      usar_resposta_bruta_filtrada_como_estado
+      ignorar_ultima_mensagem_visivel
+      responder_duas_vezes_mesmo_evento
+      reiniciar_conversa_apos_confirmacao
+      repetir_saudacao_apos_contexto_existente
+      interpretar_sim_claro_como_novo_inicio
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      estado_valido existe
+      bloqueios existe
+      proxima_acao_recomendada existe
+    }
+    tests {
+      caso "sim claro avanca escopo visivel" {
+        given {
+          estado_turno: "conversation_id c1 evento_id e1 WHATSAPP mensagem_cliente_visivel Sim claro resposta_anterior_visivel esse escopo faz sentido etapa_atual escopo_apresentado pergunta_anterior esse escopo faz sentido confirmacao_curta verdadeiro dedupe_key e1 origem_estado conversa_visivel_ao_cliente"
+          contexto: "WHATSAPP VENDAS etapa escopo_apresentado intencao aprovar_escopo sentimento CALMO historico visivel"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          estado_valido: verdadeiro
+        }
+      }
+    }
+  }
+
+  task responder_turno_cliente {
+    input {
+      mensagem_cliente: Texto required
+      contexto: ContextoClienteConversa required
+      politica: PoliticaTomConversa required
+      estado_turno: EstadoTurnoConversa required
+      conhecimento_autorizado: Lista required
+      historico: Lista
+    }
+    output {
+      resposta: RespostaBotConversa
+      pronta_para_envio: Booleano
+    }
+    rules {
+      mensagem_cliente deve_ser preenchida
+      contexto deve_ser valido
+      politica deve_ser valida
+      estado_turno deve_ser valido
+      conhecimento_autorizado deve_ser nao_vazio
+    }
+    effects {
+      auditoria turno_conversa criticidade = alta
+      evento resposta_bot_preparada criticidade = media
+    }
+    authz {
+      escopo: sema.conversas.responder
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        mensagem_cliente: pii
+        contexto: pii
+        politica: interno
+        estado_turno: pii
+        conhecimento_autorizado: interno
+        historico: pii
+      }
+      output {
+        resposta: publico
+        pronta_para_envio: publico
+      }
+    }
+    audit {
+      evento: sema.conversas.turno_respondido
+      ator: auth.agente
+      correlacao: conversation_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      inventar_preco_ou_prazo
+      promessa_sem_base
+      garantia_nao_autorizada
+      insistencia_agressiva
+      ignorar_objecao_cliente
+      ignorar_sentimento_cliente
+      responder_juridico_sem_escalar
+      responder_cancelamento_critico_sem_escalar
+      expor_dados_internos
+      enviar_json_interno_ao_cliente
+      enviar_raciocinio_interno_ao_cliente
+      repetir_saudacao_depois_da_primeira_interacao
+      usar_canal_diferente_sem_pedido_cliente
+      responder_mais_de_uma_vez_o_mesmo_inbound
+      voz_generica_de_ia
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      resposta existe
+      pronta_para_envio existe
+      resposta deve_ser aderente_ao_tom
+      resposta deve_ser responder_intencao_detectada
+      resposta deve_ser considerar_objecoes
+      resposta deve_ser sem_promessa_sem_base
+      resposta deve_ser com_proxima_acao
+      resposta.customer_reply deve_ser unico_texto_enviado_ao_cliente
+      pronta_para_envio == falso quando resposta.customer_reply contem_json_interno
+    }
+    tests {
+      caso "responde lead indeciso sem inventar promessa" {
+        given {
+          mensagem_cliente: "Tenho interesse, mas nao sei se serve para minha loja."
+          contexto: "WHATSAPP VENDAS etapa comparando sentimento INDECISO objecao duvida valor"
+          politica: "tom comercial persuasivo, formalidade media, proibido prometer preco ou prazo sem base"
+          estado_turno: "conversation_id c1 evento_id e1 mensagem_cliente_visivel Tenho interesse resposta_anterior_visivel vazio etapa_atual comparando dedupe_key e1 origem_estado conversa_visivel_ao_cliente"
+          conhecimento_autorizado: "agenda diagnostico, explicar escopo, sem desconto automatico"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronta_para_envio: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_resposta_conversa {
+    input {
+      resposta: RespostaBotConversa required
+      contexto: ContextoClienteConversa required
+      politica: PoliticaTomConversa required
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+      recomendacao: Texto
+    }
+    rules {
+      resposta deve_ser valida
+      contexto deve_ser valido
+      politica deve_ser valida
+      resposta deve_ser aderente_ao_tom
+      resposta deve_ser sem_promessa_sem_base
+      resposta deve_ser sem_dado_interno
+      resposta deve_ser com_escalacao_quando_necessario
+      resposta.customer_reply deve_ser unica_saida_visivel
+      resposta.dedupe_key deve_ser preenchida
+      resposta.canal_saida deve_ser igual_contexto_canal
+    }
+    effects {
+      auditoria resposta_conversa_validada criticidade = alta
+    }
+    authz {
+      escopo: sema.conversas.validar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        resposta: publico
+        contexto: pii
+        politica: interno
+      }
+      output {
+        aprovado: publico
+        bloqueios: interno
+        recomendacao: interno
+      }
+    }
+    audit {
+      evento: sema.conversas.resposta_validada
+      ator: auth.agente
+      correlacao: conversation_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aprovar_resposta_generica
+      aprovar_resposta_com_promessa_sem_base
+      aprovar_resposta_agressiva
+      aprovar_resposta_sem_proxima_acao
+      aprovar_resposta_sem_escalacao_obrigatoria
+      aprovar_reinicio_apos_confirmacao_curta
+      aprovar_repeticao_de_saudacao
+      aprovar_envio_de_json_interno
+      aprovar_resposta_duplicada_mesmo_evento
+      aprovar_canal_inventado
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+      recomendacao existe
+    }
+    tests {
+      caso "bloqueia promessa de resultado garantido" {
+        given {
+          resposta: "Garanto que voce vai vender mais em 7 dias."
+          contexto: "lead vendas indeciso"
+          politica: "proibido prometer resultado garantido"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          bloqueios: "promessa_sem_base"
+        }
+      }
+    }
+  }
+
+  task decidir_escalacao_humana {
+    input {
+      mensagem_cliente: Texto required
+      contexto: ContextoClienteConversa required
+      politica: PoliticaTomConversa required
+    }
+    output {
+      escalar_humano: Booleano
+      motivo: Texto
+      prioridade: Texto
+    }
+    rules {
+      mensagem_cliente deve_ser preenchida
+      contexto deve_ser valido
+      politica deve_ser valida
+    }
+    effects {
+      auditoria escalacao_conversa criticidade = alta
+      evento conversa_escalada criticidade = alta
+    }
+    authz {
+      escopo: sema.conversas.escalar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        mensagem_cliente: pii
+        contexto: pii
+        politica: interno
+      }
+      output {
+        escalar_humano: publico
+        motivo: interno
+        prioridade: interno
+      }
+    }
+    audit {
+      evento: sema.conversas.escalacao_decidida
+      ator: auth.agente
+      correlacao: conversation_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      manter_bot_em_reclamacao_grave
+      manter_bot_em_risco_juridico
+      manter_bot_em_cancelamento_critico
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      escalar_humano existe
+      escalar_humano deve_ser verdadeiro quando contexto.sentimento em [IRRITADO, SENSIVEL]
+      escalar_humano deve_ser verdadeiro quando mensagem_cliente contem juridico_ou_cancelamento_critico
+      motivo existe
+      prioridade existe
+    }
+  }
+}

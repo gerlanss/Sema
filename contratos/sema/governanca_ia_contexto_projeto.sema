@@ -1,0 +1,100 @@
+module sema.produto.governanca_ia.contexto.projeto {
+  docs {
+    resumo: "Resolucao de projeto local e normalizacao de saida para agentes nao adivinharem workspace, estrutura ou origem de verdade."
+  }
+
+  task mapear_projeto_sem_adivinhacao {
+    input {
+      entrada: Texto required
+      explicito: Booleano required
+    }
+    output {
+      base_resolvida: Booleano
+      origens_coerentes: Booleano
+      codigo_vivo_detectado: Booleano
+      workspace_atual_exigido: Booleano
+      ambiente_cliente_questionado: Booleano
+      espelho_contratos_remoto: Booleano
+      codigo_local_opcional_para_contrato: Booleano
+    }
+    forbidden {
+      fallback_para_projeto_padrao_sem_workspace
+      validar_repositorio_errado_por_omissao_de_contexto
+      exigir_runtime_remoto_para_operacao_de_contrato
+    }
+    impl {
+      ts: cli.src.projeto.carregarProjeto
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/projetoCarregar.ts"
+      simbolo: cli.src.projeto.carregarProjeto
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "nenhuma"
+      criticidade_operacional: media
+    }
+    guarantees {
+      base_resolvida existe
+      origens_coerentes existe
+      codigo_vivo_detectado existe
+      workspace_atual_exigido existe
+      ambiente_cliente_questionado existe
+      espelho_contratos_remoto existe
+      codigo_local_opcional_para_contrato existe
+    }
+    tests {
+      caso "entrada explicita vence chute" {
+        given {
+          entrada: "exemplos/calculadora.sema"
+          explicito: verdadeiro
+        }
+        expect {
+          sucesso: verdadeiro
+          workspace_atual_exigido: verdadeiro
+          ambiente_cliente_questionado: verdadeiro
+          espelho_contratos_remoto: verdadeiro
+          codigo_local_opcional_para_contrato: verdadeiro
+        }
+      }
+    }
+  }
+
+  task normalizar_saida_sem_ruido {
+    input {
+      estrutura_desejada: Texto required
+    }
+    output {
+      estrutura_canonica: Booleano
+      alias_confuso: Booleano
+    }
+    impl {
+      ts: cli.src.projeto.normalizarEstruturaSaida
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/projetoConfig.ts"
+      simbolo: cli.src.projeto.normalizarEstruturaSaida
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      estrutura_canonica existe
+      alias_confuso existe
+    }
+    tests {
+      caso "estrutura oficial prevalece" {
+        given {
+          estrutura_desejada: "modulos"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}

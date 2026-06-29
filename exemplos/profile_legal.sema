@@ -1,0 +1,105 @@
+module exemplos.profile.legal {
+  docs {
+    resumo: "Starter do Profile Legal: contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois jurisdicao, escopo, limite, fonte normativa, lei, regulamento, documento, citacao, evidencia, revisao_humana, advogado, aprovador, bloqueio, auditoria, retencao, correlacao e motivo."
+  }
+
+  type ContextoLegal {
+    fields {
+      jurisdicao: Texto
+      escopo: Texto
+      limite: Texto
+      fontes: Lista
+      revisao_humana: Booleano
+    }
+    invariants {
+      jurisdicao existe
+      escopo existe
+      limite existe
+      fontes existe
+      revisao_humana existe
+    }
+  }
+
+  task validar_minuta_legal {
+    input {
+      jurisdicao: Texto required
+      escopo: Texto required
+      fonte: Texto required
+      documento: Texto required
+      limite: Texto
+      norma: Texto
+      lei: Texto
+      regulamento: Texto
+      citacao: Texto
+      evidencia: Texto
+      revisao_humana: Texto
+      advogado: Texto
+    }
+    output {
+      aprovado: Booleano
+      bloqueio: Lista
+    }
+    rules {
+      jurisdicao deve_ser declarada
+      escopo deve_ser limitado
+      limite deve_ser explicito
+      fonte deve_ser normativa
+      norma deve_ser verificavel
+      lei deve_ser citavel
+      regulamento deve_ser citavel
+      documento deve_ser anexado
+      citacao deve_ser rastreavel
+      evidencia deve_ser preservada
+      revisao_humana deve_ser obrigatoria
+      advogado deve_ser aprovador
+    }
+    effects {
+      auditoria legal_minuta criticidade = media
+    }
+    authz {
+      escopo: legal.validar_minuta
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: exemplos.legal.minuta.validada
+      ator: advogado
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      parecer_final_sem_revisao_humana
+      citacao_inventada
+      orientacao_juridica_sem_limite
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      bloqueio existe
+    }
+    tests {
+      caso "minuta exige fonte e humano" {
+        given {
+          jurisdicao: "BR"
+          escopo: "contrato comercial"
+          fonte: "lei e regulamento"
+          documento: "documento com citacao e evidencia"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+}

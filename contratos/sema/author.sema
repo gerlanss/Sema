@@ -1,0 +1,26 @@
+module sema.produto.author {
+  docs {
+    resumo: "Indice fino do profile Author. A semantica operacional fica nos contratos filhos por modelos, tarefas, superficies e fluxos para respeitar o orcamento semantico."
+    arquivo: "contratos/sema/author_modelos.sema"
+    arquivo: "contratos/sema/author_modelos_2.sema"
+    arquivo: "contratos/sema/author_tarefas.sema"
+    arquivo: "contratos/sema/author_tarefas_2.sema"
+    arquivo: "contratos/sema/author_tarefas_3.sema"
+    arquivo: "contratos/sema/author_superficies.sema"
+    arquivo: "contratos/sema/author_fluxos.sema"
+  }
+
+  use sema.produto.author.modelos
+
+  use sema.produto.author.modelos_2
+
+  use sema.produto.author.tarefas
+
+  use sema.produto.author.tarefas_2
+
+  use sema.produto.author.tarefas_3
+
+  use sema.produto.author.superficies
+
+  use sema.produto.author.fluxos
+}

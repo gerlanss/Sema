@@ -1,0 +1,431 @@
+module sema.produto.redator {
+  docs {
+    resumo: "Sema Redator para pesquisar com Research, beber do Author, reescrever materia com SEO magnetico e preservar toda midia original no corpo exatamente no mesmo lugar relativo."
+  }
+
+  use sema.produto.research
+
+  use sema.produto.author
+
+  use sema.produto.copywriting
+
+  use sema.produto.qa_criativo
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.author.tarefas
+
+  type MidiaOriginal {
+    fields {
+      tipo: Texto
+      src: Texto
+      alt: Texto
+      caption: Texto
+      embed: Texto
+      posicao: Inteiro
+      checksum: Texto
+    }
+    invariants {
+      tipo existe
+      src existe
+      posicao >= 0
+      checksum existe
+    }
+  }
+
+  type PacoteSeo {
+    fields {
+      palavra_chave_principal: Texto
+      intencao_busca: Texto
+      titulo_seo: Texto
+      meta_description: Texto
+      headings: Lista
+      links_internos: Lista
+    }
+    invariants {
+      palavra_chave_principal existe
+      intencao_busca existe
+      titulo_seo existe
+      meta_description existe
+      headings existe
+    }
+  }
+
+  task extrair_midia_original_materia {
+    input {
+      materia_original: Texto required
+      formato: Texto required
+    }
+    output {
+      mapa_midia: Lista
+      total_midia: Inteiro
+      checksum_midia: Texto
+    }
+    rules {
+      materia_original deve_ser preenchida
+      formato deve_ser em [html, markdown, docx, cms]
+    }
+    effects {
+      auditoria extracao_midia_materia criticidade = alta
+    }
+    authz {
+      escopo: sema.redator.extrair_midia
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        materia_original: interno
+        formato: publico
+      }
+      output {
+        mapa_midia: interno
+        total_midia: publico
+        checksum_midia: interno
+      }
+    }
+    audit {
+      evento: sema.redator.midia_extraida
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      ignorar_imagem_original
+      ignorar_embed_original
+      alterar_src_original
+      alterar_alt_original
+      perder_posicao_midia
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      mapa_midia existe
+      total_midia >= 0
+      checksum_midia existe
+      mapa_midia deve_ser preservar_src_alt_caption_embed
+      mapa_midia deve_ser preservar_ordem_original
+    }
+    tests {
+      caso "extrai imagem e embed em ordem" {
+        given {
+          materia_original: "<h1>Tutorial</h1><img src='a.jpg' alt='A'><p>Passo</p><iframe src='v'></iframe>"
+          formato: "html"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          total_midia: 2
+        }
+      }
+    }
+  }
+
+  task preparar_pauta_redator {
+    input {
+      tema: Texto required
+      pesquisa: Texto required
+      publico: Texto required
+      objetivo: Texto required
+      identidade_marca: Texto
+    }
+    output {
+      pauta: Texto
+      pacote_seo: PacoteSeo
+      angulo_magnetico: Texto
+    }
+    rules {
+      tema deve_ser preenchido
+      pesquisa deve_ser sustentada
+      publico deve_ser especifico
+      objetivo deve_ser concreto
+      identidade_marca deve_ser aplicada_quando_fornecida
+    }
+    effects {
+      auditoria pauta_redator criticidade = media
+    }
+    forbidden {
+      pauta_sem_pesquisa
+      seo_sem_intencao
+      angulo_generico
+      inventar_fontes
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      pauta existe
+      pacote_seo existe
+      angulo_magnetico existe
+      pacote_seo deve_ser alinhado_a_intencao_busca
+      angulo_magnetico deve_ser nao_generico
+    }
+    tests {
+      caso "pauta com SEO e pesquisa" {
+        given {
+          tema: "melhor microfone para podcast"
+          pesquisa: "fontes comparadas com pros contras"
+          publico: "criador iniciante"
+          objetivo: "review honesto"
+          identidade_marca: "direta, util, sem hype"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          angulo_magnetico: "decisao sem arrependimento"
+        }
+      }
+    }
+  }
+
+  task reescrever_materia_seo {
+    input {
+      materia_original: Texto required
+      mapa_midia: Lista required
+      pauta: Texto required
+      pacote_seo: PacoteSeo required
+      briefing_author: Texto
+    }
+    output {
+      materia_reescrita: Texto
+      midia_preservada: Booleano
+      seo_aplicado: Booleano
+      nao_generica: Booleano
+    }
+    rules {
+      materia_original deve_ser preenchida
+      mapa_midia deve_ser nao_vazio_quando_original_tem_midia
+      pauta deve_ser preenchida
+      pacote_seo deve_ser valido
+      briefing_author deve_ser aplicado_quando_fornecido
+    }
+    effects {
+      auditoria reescrita_materia_seo criticidade = alta
+    }
+    authz {
+      escopo: sema.redator.reescrever_materia
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        materia_original: interno
+        mapa_midia: interno
+        pauta: interno
+        pacote_seo: interno
+        briefing_author: interno
+      }
+      output {
+        materia_reescrita: interno
+        midia_preservada: publico
+        seo_aplicado: publico
+        nao_generica: publico
+      }
+    }
+    audit {
+      evento: sema.redator.materia_reescrita
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      remover_midia_original
+      mover_midia_original_sem_contrato
+      alterar_src_alt_caption_embed
+      plagiar_texto_original
+      inventar_fonte
+      seo_keyword_stuffing
+      paragrafo_generico_de_ia
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      materia_reescrita existe
+      midia_preservada == verdadeiro
+      seo_aplicado == verdadeiro
+      nao_generica == verdadeiro
+      materia_reescrita deve_ser manter_midia_original_exatamente
+      materia_reescrita deve_ser manter_posicao_relativa_da_midia
+      materia_reescrita deve_ser reescrita_com_seo
+      materia_reescrita deve_ser magnetica
+      materia_reescrita deve_ser sem_voz_generica_de_ia
+    }
+    tests {
+      caso "reescreve preservando midia" {
+        given {
+          materia_original: "<p>Original</p><img src='a.jpg' alt='A'><p>Fim</p>"
+          mapa_midia: "img src a.jpg alt A posicao 2"
+          pauta: "tutorial pratico com passos claros"
+          pacote_seo: "keyword tutorial microfone intencao aprender"
+          briefing_author: "sem voz generica"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          midia_preservada: verdadeiro
+          seo_aplicado: verdadeiro
+          nao_generica: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_materia_reescrita {
+    input {
+      materia_original: Texto required
+      materia_reescrita: Texto required
+      mapa_midia: Lista required
+      pacote_seo: PacoteSeo required
+    }
+    output {
+      aprovado: Booleano
+      midia_preservada: Booleano
+      score_seo: Numero
+      achados: Lista
+      bloqueios: Lista
+    }
+    rules {
+      materia_original deve_ser preenchida
+      materia_reescrita deve_ser preenchida
+      mapa_midia deve_ser validado
+      pacote_seo deve_ser valido
+      materia_reescrita deve_ser manter_midia_original_exatamente
+      materia_reescrita deve_ser sem_plagio
+      materia_reescrita deve_ser sem_genericidade
+      materia_reescrita deve_ser alinhada_a_intencao_busca
+    }
+    effects {
+      auditoria qa_materia_reescrita criticidade = alta
+    }
+    authz {
+      escopo: sema.redator.validar_materia
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        materia_original: interno
+        materia_reescrita: interno
+        mapa_midia: interno
+        pacote_seo: interno
+      }
+      output {
+        aprovado: publico
+        midia_preservada: publico
+        score_seo: interno
+        achados: interno
+        bloqueios: interno
+      }
+    }
+    audit {
+      evento: sema.redator.materia_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aprovar_midia_removida
+      aprovar_midia_movida
+      aprovar_materia_generica
+      aprovar_plagio
+      aprovar_sem_fontes_da_pesquisa
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      midia_preservada existe
+      score_seo >= 0
+      achados existe
+      bloqueios existe
+    }
+    tests {
+      caso "bloqueia reescrita que remove imagem" {
+        given {
+          materia_original: "<p>A</p><img src='a.jpg' alt='A'><p>B</p>"
+          materia_reescrita: "<p>A reescrito</p><p>B reescrito</p>"
+          mapa_midia: "img src a.jpg posicao 2"
+          pacote_seo: "keyword tutorial"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          midia_preservada: falso
+          bloqueios: "aprovar_midia_removida"
+        }
+      }
+    }
+  }
+
+  flow redigir_materia_com_pesquisa {
+    tema: Texto
+    materia_original: Texto
+    formato: Texto
+    publico: Texto
+    objetivo: Texto
+    identidade_marca: Texto
+    fontes: Lista
+    evidencias: Lista
+    contrato_author: Texto
+    etapa research usa validar_plano_research com pergunta = tema, metodologia = pesquisa editorial com fontes comparaveis, fontes = fontes, evidencias = evidencias
+    etapa briefing_author usa preparar_briefing_author com contrato_author = contrato_author depende_de research
+    etapa midia usa extrair_midia_original_materia com materia_original = materia_original, formato = formato depende_de briefing_author
+    etapa pauta usa preparar_pauta_redator com tema = tema, pesquisa = research.aprovado, publico = publico, objetivo = objetivo, identidade_marca = identidade_marca depende_de midia
+    etapa reescrever usa reescrever_materia_seo com materia_original = materia_original, mapa_midia = midia.mapa_midia, pauta = pauta.pauta, pacote_seo = pauta.pacote_seo, briefing_author = briefing_author.briefing_author depende_de pauta
+    etapa validar_midia usa validar_midia_preservada com original = materia_original, versao_final = reescrever.materia_reescrita, mapa_midia_original = midia.mapa_midia depende_de reescrever
+    etapa validar_final usa validar_materia_reescrita com materia_original = materia_original, materia_reescrita = reescrever.materia_reescrita, mapa_midia = midia.mapa_midia, pacote_seo = pauta.pacote_seo depende_de validar_midia
+    effects {
+      auditoria fluxo_redator_pesquisa_author criticidade = alta
+    }
+  }
+}

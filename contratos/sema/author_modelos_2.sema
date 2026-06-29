@@ -1,0 +1,39 @@
+module sema.produto.author.modelos_2 {
+  use sema.produto.author.modelos
+
+  entity CampanhaAuthor {
+    fields {
+      id: Id
+      mundo: Texto
+      sessao_atual: Texto
+      personagens: Lista
+      inventario: Lista
+      missoes: Lista
+      faccoes: Lista
+      estado_canonico: Lista
+    }
+    invariants {
+      id existe
+      mundo existe
+      estado_canonico existe
+    }
+  }
+
+  enum PublicoAuthor {
+    INFANTIL,
+    JOVEM,
+    ADULTO,
+    TECNICO,
+    SENSIVEL
+  }
+
+  enum StatusAuthor {
+    RASCUNHO,
+    BRIEFING,
+    OUTLINE,
+    CENA,
+    REVISAO,
+    PUBLICAVEL,
+    BLOQUEADO
+  }
+}

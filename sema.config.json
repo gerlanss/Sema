@@ -1,0 +1,30 @@
+{
+  "origens": [
+    "./contratos"
+  ],
+  "saida": "./.tmp/generated",
+  "alvos": ["typescript", "python", "dart", "lua", "javascript", "html", "css"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "pontuacaoSemanticaMinimaOperacional": 80,
+  "pontuacaoSemanticaAlvo": 85,
+  "pontuacaoSemanticaPasso": 0.5,
+  "diretoriosCodigo": [
+    "./pacotes",
+    "./scripts",
+    "./testes",
+    "./docs"
+  ],
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./.tmp/generated/typescript",
+    "python": "./.tmp/generated/python",
+    "dart": "./.tmp/generated/dart",
+    "lua": "./.tmp/generated/lua",
+    "javascript": "./.tmp/generated/javascript",
+    "html": "./.tmp/generated/html",
+    "css": "./.tmp/generated/css"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}

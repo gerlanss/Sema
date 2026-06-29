@@ -1,0 +1,319 @@
+module sema.produto.governanca_ia.drift {
+  docs {
+    resumo: "Contrato filho para drift contra codigo vivo, mapa de impacto e renomeacao semantica."
+  }
+
+  task medir_drift_contra_codigo_vivo {
+    input {
+      contrato_alvo: Texto required
+      codigo_vivo: Texto required
+      escopo_real: Texto required
+      alvo_explicito: Booleano required
+      ignorar_worktrees: Booleano required
+      ignorar_consumidores_laterais: Booleano required
+    }
+    output {
+      impls_resolvidas: Booleano
+      rotas_resolvidas: Booleano
+      ambiguidades_explicitas: Booleano
+      escopo_aplicado: Booleano
+      escopo_estreito_sem_alvo_bloqueado: Booleano
+      ruido_lateral_reduzido: Booleano
+      consumer_surfaces_priorizadas: Booleano
+      persistencia_local_classificada: Booleano
+      simbolos_sql_resolvidos: Booleano
+      arquivos_documentais_resolvidos: Booleano
+      superficies_publicas_resolvidas: Booleano
+    }
+    rules {
+      contrato_alvo deve_ser informado
+      escopo_real deve_ser projeto_ou_alvo_explicitado
+      alvo_explicito deve_ser verdadeiro quando escopo_real em [arquivo, modulo]
+    }
+    authz {
+      escopo: sema.drift.executar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        codigo_vivo: interno
+        escopo_real: interno
+        alvo_explicito: interno
+        ignorar_worktrees: interno
+        ignorar_consumidores_laterais: interno
+      }
+      output {
+        impls_resolvidas: interno
+        rotas_resolvidas: interno
+        ambiguidades_explicitas: interno
+        escopo_aplicado: interno
+        escopo_estreito_sem_alvo_bloqueado: interno
+        ruido_lateral_reduzido: interno
+        consumer_surfaces_priorizadas: interno
+        persistencia_local_classificada: interno
+        simbolos_sql_resolvidos: interno
+        arquivos_documentais_resolvidos: interno
+        superficies_publicas_resolvidas: interno
+      }
+    }
+    audit {
+      evento: sema.drift.executado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      executar_drift_modulo_sem_contrato_alvo
+      executar_drift_arquivo_sem_contrato_alvo
+      varrer_projeto_inteiro_com_escopo_estreito
+      tratar_ruido_global_como_diagnostico_util
+      tratar_funcao_sql_declarada_como_vinculo_quebrado
+      tratar_documentacao_existente_como_arquivo_inexistente
+      tratar_superficie_publica_sincronizada_como_vinculo_quebrado
+    }
+    impl {
+      ts: cli.src.drift.analisarDriftLegado
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      simbolo: cli.src.drift.analisarDriftLegado
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "3x exponencial"
+      compensacao: "reanalisar contexto"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      impls_resolvidas existe
+      rotas_resolvidas existe
+      ambiguidades_explicitas existe
+      escopo_aplicado existe
+      escopo_estreito_sem_alvo_bloqueado existe
+      ruido_lateral_reduzido existe
+      consumer_surfaces_priorizadas existe
+      persistencia_local_classificada existe
+      simbolos_sql_resolvidos existe
+      arquivos_documentais_resolvidos existe
+      superficies_publicas_resolvidas existe
+    }
+    error {
+      simbolo_ambiguo {
+        mensagem: codigo vivo com simbolo candidato demais
+        categoria: infraestrutura
+        recuperabilidade: temporaria
+        acao_chamador: retry
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+      contrato_alvo_nao_informado {
+        mensagem: drift estreito exige contrato alvo explicito
+        categoria: contrato
+        recuperabilidade: imediata
+        acao_chamador: informar_contrato_alvo_ou_usar_escopo_projeto
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+    }
+    tests {
+      caso "drift guia edicao real" {
+        given {
+          contrato_alvo: "contratos/sema/*.sema"
+          codigo_vivo: "pacotes/**/*.ts"
+          escopo_real: "modulo"
+          alvo_explicito: verdadeiro
+          ignorar_worktrees: verdadeiro
+          ignorar_consumidores_laterais: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          impls_resolvidas: verdadeiro
+          escopo_aplicado: "modulo"
+          escopo_estreito_sem_alvo_bloqueado: verdadeiro
+          simbolos_sql_resolvidos: verdadeiro
+          arquivos_documentais_resolvidos: verdadeiro
+          superficies_publicas_resolvidas: verdadeiro
+        }
+      }
+      caso "vinculo documental em modulo publico resolve" {
+        given {
+          contrato_alvo: "contratos/sema/persistencia_vendor_first.sema"
+          codigo_vivo: "pacotes/**/*.ts docs/*.md"
+          escopo_real: "modulo"
+          alvo_explicito: verdadeiro
+          ignorar_worktrees: verdadeiro
+          ignorar_consumidores_laterais: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          simbolos_sql_resolvidos: verdadeiro
+          arquivos_documentais_resolvidos: verdadeiro
+        }
+      }
+      caso "cli bloqueia drift estreito sem contrato alvo" {
+        given {
+          contrato_alvo: ""
+          codigo_vivo: "./workspace-local/projeto"
+          escopo_real: "modulo"
+          alvo_explicito: falso
+          ignorar_worktrees: verdadeiro
+          ignorar_consumidores_laterais: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          escopo_estreito_sem_alvo_bloqueado: verdadeiro
+        }
+      }
+    }
+  }
+
+  task mapear_impacto_semantico {
+    input {
+      contrato_alvo: Texto required
+      alvo_semantico: Texto required
+      mudanca_proposta: Texto required
+    }
+    output {
+      arquivos_afetados: Booleano
+      superfices_afetadas: Booleano
+      ordem_operacional_emitida: Booleano
+    }
+    authz {
+      escopo: sema.impacto.mapear
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        alvo_semantico: interno
+        mudanca_proposta: interno
+      }
+      output {
+        arquivos_afetados: interno
+        superfices_afetadas: interno
+        ordem_operacional_emitida: interno
+      }
+    }
+    audit {
+      evento: sema.impacto.mapeado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: cli.src.drift.gerarMapaImpactoSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.drift.gerarMapaImpactoSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      arquivos_afetados existe
+      superfices_afetadas existe
+      ordem_operacional_emitida existe
+    }
+    tests {
+      caso "mudanca semantica vira plano acionavel" {
+        given {
+          contrato_alvo: "contratos/colaboradores_whatsapp.sema"
+          alvo_semantico: "ranking_geral"
+          mudanca_proposta: "substituir classificacao_atual por ranking_geral e ranking_loja"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          arquivos_afetados: "contratos/colaboradores_whatsapp.sema"
+          ordem_operacional_emitida: verdadeiro
+        }
+      }
+    }
+  }
+
+  task assistir_renomeacao_semantica {
+    input {
+      contrato_alvo: Texto required
+      nome_atual: Texto required
+      nome_novo: Texto required
+    }
+    output {
+      contrato_reescrito: Booleano
+      codigo_relacionado_mapeado: Booleano
+      testes_afetados_sugeridos: Booleano
+    }
+    authz {
+      escopo: sema.renomeacao.executar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        nome_atual: interno
+        nome_novo: interno
+      }
+      output {
+        contrato_reescrito: interno
+        codigo_relacionado_mapeado: interno
+        testes_afetados_sugeridos: interno
+      }
+    }
+    audit {
+      evento: sema.renomeacao.assistida
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: cli.src.drift.assistirRenomeacaoSemantica
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.drift.assistirRenomeacaoSemantica
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      contrato_reescrito existe
+      codigo_relacionado_mapeado existe
+      testes_afetados_sugeridos existe
+    }
+    tests {
+      caso "renomeacao guiada evita quebra lateral" {
+        given {
+          contrato_alvo: "contratos/colaboradores_whatsapp.sema"
+          nome_atual: "classificacao_atual"
+          nome_novo: "ranking_geral"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          contrato_reescrito: verdadeiro
+          codigo_relacionado_mapeado: verdadeiro
+        }
+      }
+    }
+  }
+}

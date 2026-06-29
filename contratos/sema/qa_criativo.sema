@@ -1,0 +1,315 @@
+module sema.produto.qa_criativo {
+  docs {
+    resumo: "Gate transversal de qualidade criativa para validar briefing, marca, direitos, midia preservada, acessibilidade, nao genericidade e pronto para publicacao."
+  }
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.author
+
+  use sema.produto.research
+
+  type ChecklistCriativo {
+    fields {
+      objetivo: Texto
+      publico: Texto
+      marca: Texto
+      canal: Texto
+      direitos: Texto
+      acessibilidade: Texto
+      midia: Texto
+    }
+    invariants {
+      objetivo existe
+      publico existe
+      marca existe
+      canal existe
+      direitos existe
+      acessibilidade existe
+    }
+  }
+
+  enum DecisaoCriativa {
+    APROVAR,
+    AJUSTAR,
+    BLOQUEAR
+  }
+
+  task validar_briefing_criativo {
+    input {
+      briefing: Texto required
+      publico: Texto required
+      objetivo: Texto required
+      identidade_marca: Texto required
+    }
+    output {
+      aprovado: Booleano
+      lacunas: Lista
+      decisao_agente: DecisaoCriativa
+    }
+    rules {
+      briefing deve_ser preenchido
+      publico deve_ser preenchido
+      objetivo deve_ser concreto
+      identidade_marca deve_ser declarada
+      briefing deve_ser sem_generico
+    }
+    effects {
+      auditoria briefing_criativo criticidade = media
+    }
+    forbidden {
+      briefing_vago
+      publico_indefinido
+      objetivo_sem_metrica
+      marca_ausente
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      lacunas existe
+      decisao_agente em [APROVAR, AJUSTAR, BLOQUEAR]
+    }
+    tests {
+      caso "briefing concreto aprova" {
+        given {
+          briefing: "post de comparacao para reduzir abandono de carrinho"
+          publico: "lojista que vende por whatsapp"
+          objetivo: "aumentar cliques no botao de compra"
+          identidade_marca: "direta, util e visual limpo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+          decisao_agente: "APROVAR"
+        }
+      }
+    }
+  }
+
+  task validar_artefato_criativo {
+    input {
+      artefato_real: Texto required
+      checklist: ChecklistCriativo required
+      tipo_artefato: Texto required
+    }
+    output {
+      aprovado: Booleano
+      score_qualidade: Numero
+      achados: Lista
+      bloqueios: Lista
+      decisao_agente: DecisaoCriativa
+    }
+    rules {
+      artefato_real deve_ser preenchido
+      checklist deve_ser completo
+      tipo_artefato deve_ser preenchido
+      artefato_real deve_ser aderente_a checklist
+      artefato_real deve_ser sem_voz_generica_de_ia
+      artefato_real deve_ser sem_visual_stock_generico
+      artefato_real deve_ser com_direitos_de_uso
+    }
+    effects {
+      auditoria artefato_criativo criticidade = alta
+    }
+    authz {
+      escopo: sema.qa_criativo.validar_artefato
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        artefato_real: interno
+        checklist: interno
+        tipo_artefato: publico
+      }
+      output {
+        aprovado: publico
+        score_qualidade: interno
+        achados: interno
+        bloqueios: interno
+        decisao_agente: publico
+      }
+    }
+    audit {
+      evento: sema.qa_criativo.artefato_validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      publicar_sem_direitos
+      aprovar_generico
+      promessa_sem_base
+      midia_sem_alt_text_quando_publica
+      ignorar_identidade_marca
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      score_qualidade >= 0
+      achados existe
+      bloqueios existe
+      decisao_agente em [APROVAR, AJUSTAR, BLOQUEAR]
+    }
+    tests {
+      caso "bloqueia artefato generico sem direitos" {
+        given {
+          artefato_real: "imagem stock sem fonte e texto inovador"
+          checklist: "marca canal direitos acessibilidade objetivo"
+          tipo_artefato: "imagem"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          decisao_agente: "BLOQUEAR"
+        }
+      }
+    }
+  }
+
+  task validar_midia_preservada {
+    input {
+      original: Texto required
+      versao_final: Texto required
+      mapa_midia_original: Lista required
+    }
+    output {
+      midia_preservada: Booleano
+      deslocamentos: Lista
+      bloqueios: Lista
+    }
+    rules {
+      original deve_ser preenchido
+      versao_final deve_ser preenchida
+      mapa_midia_original deve_ser nao_vazio
+      versao_final deve_ser manter_midia_original_exatamente
+      versao_final deve_ser manter_posicao_relativa_da_midia
+      versao_final deve_ser manter_src_alt_caption_embed_original
+    }
+    effects {
+      auditoria preservacao_midia criticidade = alta
+    }
+    authz {
+      escopo: sema.qa_criativo.validar_midia
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        original: interno
+        versao_final: interno
+        mapa_midia_original: interno
+      }
+      output {
+        midia_preservada: publico
+        deslocamentos: interno
+        bloqueios: interno
+      }
+    }
+    audit {
+      evento: sema.qa_criativo.midia_preservada_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      remover_midia_original
+      trocar_src_original
+      alterar_alt_original
+      alterar_caption_original
+      mover_midia_original_sem_contrato
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      midia_preservada existe
+      deslocamentos existe
+      bloqueios existe
+    }
+    tests {
+      caso "bloqueia materia com imagem removida" {
+        given {
+          original: "<p>a</p><img src='produto.jpg' alt='Produto'><p>b</p>"
+          versao_final: "<p>a reescrito</p><p>b reescrito</p>"
+          mapa_midia_original: "img src produto.jpg posicao 2"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          midia_preservada: falso
+          bloqueios: "remover_midia_original"
+        }
+      }
+    }
+  }
+
+  flow gate_criativo_completo {
+    briefing: Texto
+    publico: Texto
+    objetivo: Texto
+    identidade_marca: Texto
+    artefato_real: Texto
+    checklist: ChecklistCriativo
+    tipo_artefato: Texto
+    etapa briefing_ok usa validar_briefing_criativo com briefing = briefing, publico = publico, objetivo = objetivo, identidade_marca = identidade_marca
+    etapa artefato_ok usa validar_artefato_criativo com artefato_real = artefato_real, checklist = checklist, tipo_artefato = tipo_artefato depende_de briefing_ok
+    effects {
+      auditoria gate_criativo criticidade = alta
+    }
+  }
+
+  policy creative_quality_gate {
+    task: validar_artefato_criativo
+    forbidden {
+      publicar_sem_direitos
+      aprovar_generico
+      ignorar_identidade_marca
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      criticidade_operacional: alta
+    }
+  }
+}

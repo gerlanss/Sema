@@ -1,0 +1,101 @@
+module sema.validacao_resposta {
+  docs {
+    resumo: "Contrato que define o formato padrao de resposta da validacao de contratos Sema."
+    linguagem: "O formato segue a estrutura canonica: valido, bloqueia_acao, erros, advertencias e proximo_passo_obrigatorio."
+  }
+
+  entity DiagnosticoValidacao {
+    fields {
+      codigo: Texto
+      mensagem: Texto
+      dica: Texto
+      contexto: Texto
+    }
+    invariants {
+      codigo existe
+      mensagem existe
+    }
+  }
+
+  entity RespostaValidacao {
+    fields {
+      valido: Booleano
+      bloqueia_acao: Booleano
+      erros: Lista<DiagnosticoValidacao>
+      advertencias: Lista<DiagnosticoValidacao>
+      proximo_passo_obrigatorio: Texto
+    }
+    invariants {
+      valido existe
+      bloqueia_acao existe
+      erros existe
+      advertencias existe
+      proximo_passo_obrigatorio existe
+    }
+  }
+
+  task validar_contrato_resposta {
+    input {
+      conteudo: Texto
+      arquivo: Texto
+      projeto: Texto
+      diagnosticos: Lista<DiagnosticoValidacao>
+    }
+    output {
+      resposta: RespostaValidacao
+      bloqueia_acao: Booleano
+    }
+    rules {
+      diagnosticos existe
+    }
+    effects {
+      auditoria validacao_resposta criticidade = media
+    }
+    authz {
+      escopo: sema.validacao.resposta
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        conteudo: interno
+        arquivo: interno
+        projeto: interno
+        diagnosticos: interno
+      }
+      output {
+        resposta: interno
+        bloqueia_acao: publico
+      }
+    }
+    audit {
+      evento: sema.validacao.resposta_emitida
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aprovar_com_erro_semantico
+      omitir_proximo_passo_obrigatorio
+      retornar_bloqueia_acao_falso_com_erros
+    }
+    impl {
+      ts: nucleo.src.index.gerarRespostaValidacao
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/index.ts"
+      simbolo: nucleo.src.index.gerarRespostaValidacao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "1s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      resposta existe
+      bloqueia_acao existe
+    }
+  }
+}

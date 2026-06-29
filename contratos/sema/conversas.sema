@@ -1,0 +1,32 @@
+module sema.produto.conversas {
+  docs {
+    resumo: "Indice fino do profile Conversas. Modelos, tarefas e fluxo ficam em contratos filhos para evitar contrato monolitico. Guardrails minimos: contrato primeiro exige criar, editar ou remover contrato antes de qualquer acao; tom, persona, voz, formalidade e persuasivo comercial devem ser declarados; estado, etapa, intencao, sentimento, objecao, historico e memoria do cliente devem ser modelados; promessas de preco, prazo, garantia e desconto sem_base ficam forbidden, proibidas, bloqueadas e nao autorizadas; escalacao humana/escalar_humano para atendente e obrigatoria em caso irritado, juridico, cancelamento ou reclamacao; validar_resposta/resposta exige proxima_acao, CTA e aderente_ao_tom; em vendas, objecao, duvida, interesse e dor precisam ser tratados antes de agendar diagnostico ou proposta."
+    arquivo: "contratos/sema/conversas_modelos.sema"
+    arquivo: "contratos/sema/conversas_tarefas.sema"
+    arquivo: "contratos/sema/conversas_fluxos.sema"
+  }
+
+  use sema.produto.conversas.modelos
+
+  use sema.produto.conversas.tarefas
+
+  use sema.produto.conversas.fluxos
+
+  policy conversas_profile_gate {
+    task: validar_resposta_conversa
+    forbidden {
+      acao_sem_contrato_primeiro
+      resposta_sem_tom_e_persona
+      resposta_sem_estado_cliente
+      promessa_comercial_sem_base
+      resposta_sem_escalacao_humana_obrigatoria
+      resposta_sem_validar_resposta
+      venda_sem_objecao_e_cta
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: alta
+    }
+  }
+}

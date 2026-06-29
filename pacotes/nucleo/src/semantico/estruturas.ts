@@ -1,0 +1,4 @@
+// SEMA-GOVERNED: sema.software
+// Descricao: fachada publica particionada; consulte contratos/sema/software.sema antes de editar.
+export { TipoExpressaoSemantica, CategoriaEfeitoSemantico, CriticidadeEfeitoSemantico, ExpressaoBaseSemantica, ExpressaoExisteSemantica, ExpressaoComparacaoSemantica, ExpressaoPredicadoSemantica, ExpressaoPertencimentoSemantica, ExpressaoCompostaSemantica, ExpressaoNegacaoSemantica, ExpressaoSemantica, EfeitoSemantico, TransicaoEstadoSemantica, EtapaFlowSemantica, ContratoErroRouteSemantico, ContratoRouteSemantico, normalizarPredicadoSemantico, parsearExpressaoSemantica } from "./estruturas.part01.js";
+export { parsearEfeitoSemantico, parsearTransicaoEstado, parsearEtapaFlow, extrairReferenciasDaExpressao, pareceReferenciaSemantica, ehCategoriaEfeitoSemantico, ehCriticidadeEfeitoSemantico } from "./estruturas.part02.js";

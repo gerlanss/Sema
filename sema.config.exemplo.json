@@ -1,0 +1,17 @@
+{
+  "origens": ["./contratos"],
+  "saida": "./generated",
+  "alvos": ["typescript", "python"],
+  "alvoPadrao": "typescript",
+  "estruturaSaida": "backend",
+  "framework": "nestjs",
+  "modoAdocao": "incremental",
+  "diretoriosCodigo": ["./src"],
+  "fontesLegado": ["nestjs"],
+  "modoEstrito": true,
+  "diretoriosSaidaPorAlvo": {
+    "typescript": "./generated/nestjs",
+    "python": "./generated/fastapi"
+  },
+  "convencoesGeracaoPorProjeto": "backend"
+}

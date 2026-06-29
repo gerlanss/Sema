@@ -1,0 +1,174 @@
+module sema.produto.cli_sync_prisma {
+  docs {
+    resumo: "Sync bidirecional Sema ↔ Prisma para eliminar 3 fontes de verdade. Gera schema.prisma a partir de contratos e importa schemas existentes."
+    versao: "1.0.0"
+    status: "MODELADA"
+  }
+
+  entity MapeamentoTipo {
+    fields {
+      sema_tipo: Texto
+      prisma_tipo: Texto
+      atributos_prisma: Lista<Texto>
+      validacoes: Lista<Texto>
+    }
+  }
+
+  entity DivergenciaSchema {
+    fields {
+      id: Id
+      tipo: Texto
+      elemento: Texto
+      lado_sema: Texto
+      lado_prisma: Texto
+      severidade: Texto
+      sugestao: Texto
+    }
+  }
+
+  enum DirecaoSync {
+    SEMA_PARA_PRISMA,
+    PRISMA_PARA_SEMA,
+    BIDIRECIONAL
+  }
+
+  task mapear_tipos_sema_prisma {
+    input {
+      incluir_relations: Booleano optional
+      mapeamento_customizado: Mapa<Texto,Texto> optional
+    }
+    output {
+      mapeamentos: Lista<MapeamentoTipo>
+      tipos_nao_mapeados: Lista<Texto>
+      cobertura: Decimal
+    }
+    effects {
+      consulta tabela_mapeamento criticidade = baixa
+    }
+    impl {
+      ts: cli.src.sync.mapearTiposSemaPrisma
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sync/index.ts"
+      simbolo: cli.src.sync.mapearTiposSemaPrisma
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "1s"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      mapeamentos existe
+      cobertura >= 0.8
+    }
+  }
+
+  task gerar_schema_prisma {
+    input {
+      pasta_contratos: Texto required
+      saida_schema: Texto required
+      incluir_relations: Booleano optional
+      datasource_provider: Texto optional // postgresql, mysql, sqlite
+      datasource_url: Texto optional
+    }
+    output {
+      schema_gerado: Texto
+      caminho_schema: Texto
+      models_gerados: Inteiro
+      enums_gerados: Inteiro
+      relations_geradas: Inteiro
+    }
+    rules {
+      pasta_contratos existe
+      saida_schema deve_ser arquivo_prisma
+      datasource_provider deve_ser provider_prisma_valido_quando_preenchido
+    }
+    effects {
+      consulta contratos_sema criticidade = alta
+      consulta parser_sema criticidade = alta
+      persistencia schema_prisma criticidade = alta
+      auditoria schema_gerado criticidade = media
+    }
+    authz {
+      escopo: sema.sync.prisma.gerar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        pasta_contratos: interno
+        saida_schema: interno
+        incluir_relations: publico
+        datasource_provider: publico
+        datasource_url: segredo
+      }
+      output {
+        schema_gerado: interno
+        caminho_schema: interno
+        models_gerados: publico
+        enums_gerados: publico
+        relations_geradas: publico
+      }
+    }
+    audit {
+      evento: sema.sync.prisma_schema_gerado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    segredos {
+      datasource_url {
+        origem: runtime
+        escopo: prisma_datasource
+        acesso: variavel_ambiente
+        rotacao: "sob_demanda"
+        nao_logar: verdadeiro
+        nao_retornar: verdadeiro
+        mascarar: verdadeiro
+      }
+    }
+    forbidden {
+      gravar_schema_fora_do_workspace
+      logar_datasource_url
+      sobrescrever_schema_sem_confirmacao
+      gerar_schema_sem_contrato
+    }
+    impl {
+      ts: cli.src.sync.gerarSchemaPrisma
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sync/index.ts"
+      simbolo: cli.src.sync.gerarSchemaPrisma
+    }
+    execucao {
+      idempotencia: falso
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      schema_gerado existe
+      models_gerados >= 0
+    }
+    error {
+      pasta_invalida: "Pasta {pasta_contratos} nao existe ou nao contem contratos."
+      sem_entities: "Nenhuma entity encontrada nos contratos para gerar models."
+      geracao_falhou: "Falha ao gerar schema: {erro_detalhes}"
+    }
+    tests {
+      caso "gera schema com entities" {
+        given {
+          pasta_contratos: "contratos/"
+          saida_schema: "prisma/schema.prisma"
+          datasource_provider: "postgresql"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          models_gerados: 1
+        }
+      }
+    }
+  }
+}

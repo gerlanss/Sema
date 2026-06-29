@@ -1,0 +1,239 @@
+module sema.produto.workflow_ops {
+  docs {
+    resumo: "Profile Workflow/Ops para automacoes, runtimes como n8n e operacao governada por contrato: contrato primeiro; criar, editar ou remover contrato antes de qualquer acao; workflow como contrato canonico, adapter honesto, runbook, rollback, observabilidade e decisao de agente rastreavel. Runbooks de deploy e runtime hospedado privado ficam fora de artefatos distribuidos pelo instalador publico."
+  }
+
+  vinculos {
+    arquivo: "pacotes/cli/src/index.ts"
+    simbolo: cli.src.index.validarProfileSemantico
+  }
+
+  type RuntimeWorkflow {
+    fields {
+      familia: Texto
+      adapter: Texto
+      superficies_nativas: Lista
+      superficies_adaptadas: Lista
+      lacunas: Lista
+    }
+    invariants {
+      familia existe
+      adapter existe
+      superficies_nativas existe
+      superficies_adaptadas existe
+      lacunas existe
+    }
+  }
+
+  type OpsRunbook {
+    fields {
+      runbook: Texto
+      rollback: Texto
+      healthcheck: Texto
+      metricas: Lista
+      responsavel: Texto
+    }
+    invariants {
+      runbook existe
+      rollback existe
+      healthcheck existe
+      responsavel existe
+    }
+  }
+
+  entity ProfileWorkflowOps {
+    fields {
+      id: Id
+      runtime: RuntimeWorkflow
+      ops: OpsRunbook
+      status: StatusWorkflowOps
+    }
+    invariants {
+      id existe
+      runtime existe
+      ops existe
+      status em [RASCUNHO, COMPATIVEL, ADAPTADO, BLOQUEADO]
+    }
+  }
+
+  enum StatusWorkflowOps {
+    RASCUNHO,
+    COMPATIVEL,
+    ADAPTADO,
+    BLOQUEADO
+  }
+
+  task validar_runtime_workflow {
+    input {
+      runtime: Texto required
+      adapter: Texto required
+      scorecard: Texto required
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      aprovado: Booleano
+      status: StatusWorkflowOps
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      requisitos_pendentes: Lista
+    }
+    rules {
+      runtime deve_ser declarado
+      adapter deve_ser explicito
+      scorecard deve_ser calculado
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      artefato_real deve_ser inspecionado_para_auth_em_webhook_quando_fornecido
+      artefato_real deve_ser inspecionado_para_workspace_em_webhook_multi_tenant
+      artefato_real deve_ser inspecionado_para_idempotencia_por_workspace_quando_external_event
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria workflow_runtime criticidade = media
+    }
+    forbidden {
+      n8n_como_linguagem_canonica
+      equivalencia_total_falsa
+      node_sem_contrato
+      aprovar_webhook_sem_idempotencia
+      aprovar_workflow_sem_retry_ou_compensacao
+      aprovar_ordem_de_etapas_invertida
+      aprovar_mencao_negativa_como_requisito_atendido
+      aprovar_webhook_sem_autenticacao
+      aprovar_webhook_multi_tenant_sem_workspace
+      aprovar_idempotencia_global_em_webhook_multi_tenant
+      aprovar_webhook_de_pagamento_apenas_com_invoice_id
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      status em [COMPATIVEL, ADAPTADO, BLOQUEADO]
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      score_artefato deve_ser menor_que_100_quando_webhook_sem_auth_ou_workspace
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      requisitos_pendentes existe
+    }
+    tests {
+      caso "n8n entra como adapter honesto" {
+        given {
+          runtime: "workflow n8n"
+          adapter: "n8n adapter adaptado"
+          scorecard: "webhook cron HTTP branching transformacao nativos, authz audit compensacao guarantees parciais"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_operacao_ops {
+    input {
+      runbook: Texto required
+      rollback: Texto required
+      healthcheck: Texto required
+      responsavel: Texto required
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      operavel: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      bloqueios: Lista
+    }
+    rules {
+      runbook deve_ser preenchido
+      rollback deve_ser preenchido
+      healthcheck deve_ser preenchido
+      responsavel deve_ser preenchido
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria ops_runbook criticidade = alta
+    }
+    authz {
+      escopo: sema.ops.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.ops.profile.validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      deploy_sem_rollback
+      incidente_sem_responsavel
+      secret_em_log
+      aprovar_ops_sem_runbook
+      aprovar_ops_sem_healthcheck
+      aprovar_migration_sem_reversibilidade
+      aprovar_mencao_negativa_como_requisito_atendido
+      score_artefato_100_com_runbook_negando_rollback_ou_healthcheck
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "bloquear_conclusao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      operavel existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      bloqueios existe
+    }
+    tests {
+      caso "ops exige recuperacao e observabilidade" {
+        given {
+          runbook: "runbook de incidente com severidade e operador responsavel"
+          rollback: "rollback testado"
+          healthcheck: "healthcheck metricas logs traces observabilidade"
+          responsavel: "oncall"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          operavel: verdadeiro
+        }
+      }
+    }
+  }
+}

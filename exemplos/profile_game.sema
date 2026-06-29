@@ -1,0 +1,114 @@
+module exemplos.profile.game {
+  docs {
+    resumo: "Starter do Profile Game: contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois loop jogavel, jogador, estado, state, regras, transicoes, falha, derrota, balanceamento, abuso, exploit, telemetria, replay e metricas."
+  }
+
+  state partida_status {
+    fields {
+      estado: StatusPartida
+    }
+    invariants {
+      estado existe
+    }
+    transitions {
+      PREPARANDO -> EM_JOGO
+      EM_JOGO -> VITORIA
+      EM_JOGO -> DERROTA
+    }
+  }
+
+  enum StatusPartida {
+    PREPARANDO,
+    EM_JOGO,
+    VITORIA,
+    DERROTA
+  }
+
+  type LoopJogo {
+    fields {
+      objetivo: Texto
+      jogador: Texto
+      estado: Texto
+      regras: Lista
+      telemetria: Lista
+    }
+    invariants {
+      objetivo existe
+      jogador existe
+      estado existe
+      regras existe
+    }
+  }
+
+  task validar_loop_jogavel {
+    input {
+      loop: Texto required
+      jogador: Texto required
+      estado: Texto required
+      regras: Lista required
+      estado_state: Texto
+      transicoes: Texto
+      falha: Texto
+      derrota: Texto
+      balanceamento: Texto
+      abuso: Texto
+      exploit: Texto
+      telemetria: Texto
+      replay: Texto
+      metricas: Texto
+    }
+    output {
+      jogavel: Booleano
+      bloqueios: Lista
+    }
+    rules {
+      loop deve_ser jogavel
+      jogador deve_ser declarado
+      estado deve_ser persistente
+      estado_state deve_ser explicito
+      regras deve_ser testaveis
+      transicoes deve_ser declaradas
+      falha deve_ser possivel
+      derrota deve_ser legivel
+      balanceamento deve_ser testavel
+      abuso deve_ser mapeado
+      exploit deve_ser bloqueado
+      telemetria deve_ser declarada
+      replay deve_ser opcional
+      metricas deve_ser coletaveis
+    }
+    effects {
+      evento game_loop_validado criticidade = baixa
+      auditoria game_loop criticidade = media
+    }
+    forbidden {
+      vitoria_sem_custo
+      exploit_sem_mitigacao
+      falha_invisivel
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      jogavel existe
+      bloqueios existe
+    }
+    tests {
+      caso "loop tem estado e falha" {
+        given {
+          loop: "explorar, escolher risco, resolver encontro"
+          jogador: "piloto"
+          estado: "energia e mapa"
+          regras: "transicoes PREPARANDO EM_JOGO DERROTA"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          jogavel: verdadeiro
+        }
+      }
+    }
+  }
+}

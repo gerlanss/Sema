@@ -1,0 +1,419 @@
+module sema.produto.author.tarefas_2 {
+  use sema.produto.author.modelos
+
+  use sema.produto.author.modelos_2
+
+  task validar_arco_emocional_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+      arco: ArcoEmocionalAuthor required
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+      score_drift_narrativo: Numero
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      arco deve_ser valido
+      texto_alvo deve_ser sem_arco_emocional_sem_mudanca
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_arco_emocional criticidade = media
+    }
+    authz {
+      escopo: sema.author.arco.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.arco.validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      arco_emocional_sem_mudanca
+      publicar_arco_sem_custo
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+      score_drift_narrativo >= 0
+    }
+  }
+
+  task validar_memoria_personagem_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+      memoria: MemoriaPersonagemAuthor required
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+      personagens_afetados: Lista
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      memoria deve_ser valido
+      texto_alvo deve_ser sem_personagem_sem_memoria
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_memoria_personagem criticidade = media
+    }
+    authz {
+      escopo: sema.author.memoria.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.memoria.validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      personagem_sem_memoria
+      contradizer_canon_personagem
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+      personagens_afetados existe
+    }
+  }
+
+  task validar_promessa_narrativa_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+      promessa: PromessaNarrativaAuthor required
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+      promessas_afetadas: Lista
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      promessa deve_ser valido
+      texto_alvo deve_ser sem_promessa_narrativa_quebrada
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_promessa_narrativa criticidade = alta
+    }
+    authz {
+      escopo: sema.author.promessa.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.promessa.validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      promessa_narrativa_quebrada
+      resolver_promessa_sem_custo
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+      promessas_afetadas existe
+    }
+  }
+
+  task mapear_impacto_capitulos_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+      capitulos: Lista required
+    }
+    output {
+      impact_map: Lista
+      bloqueios: Lista
+      aprovado: Booleano
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      capitulos deve_ser nao_vazio
+      texto_alvo deve_ser sem_impacto_capitulo_nao_mapeado
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_impacto_capitulos criticidade = alta
+    }
+    authz {
+      escopo: sema.author.impacto.mapear
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.impacto.mapeado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      impacto_capitulo_nao_mapeado
+      mudanca_canonica_sem_consequencia
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      impact_map existe
+      bloqueios existe
+      aprovado existe
+    }
+  }
+
+  task gerar_ir_narrativo_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+    }
+    output {
+      ir_narrativo: Objeto
+      visualizavel: Booleano
+      bloqueios: Lista
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_ir_narrativo criticidade = media
+    }
+    authz {
+      escopo: sema.author.ir.gerar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.ir.gerado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      gerar_texto_sem_ir_narrativo
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      ir_narrativo existe
+      visualizavel == verdadeiro
+      bloqueios existe
+    }
+  }
+
+  task comparar_diff_semantico_author {
+    input {
+      contrato_author: Texto required
+      texto_anterior: Texto required
+      texto_alvo: Texto required
+    }
+    output {
+      diff_semantico: Objeto
+      risco_drift: Texto
+      bloqueios: Lista
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_anterior deve_ser preenchido
+      texto_alvo deve_ser preenchido
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_diff_semantico criticidade = media
+    }
+    authz {
+      escopo: sema.author.diff.comparar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.diff.comparado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      drift_semantico_sem_revisao
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      diff_semantico existe
+      risco_drift existe
+      bloqueios existe
+    }
+  }
+
+  task validar_campanha_persistente_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+      campanha: CampanhaAuthor required
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+      estado_canonico_preservado: Booleano
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      campanha deve_ser valido
+      texto_alvo deve_ser sem_rpg_campanha_sem_estado
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_campanha criticidade = alta
+    }
+    authz {
+      escopo: sema.author.campanha.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.campanha.validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      rpg_campanha_sem_estado
+      resetar_estado_campanha_sem_contrato
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+      estado_canonico_preservado existe
+    }
+  }
+}

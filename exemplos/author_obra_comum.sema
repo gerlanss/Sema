@@ -1,0 +1,294 @@
+module exemplos.author.obra_comum {
+  docs {
+    resumo: "Starter publico do Sema Author para obra autoral comum com core, agents, flow e regras anti-cliche."
+  }
+
+  type AuthorCore {
+    fields {
+      obra: Texto
+      publico: PublicoAuthor
+      genero: Texto
+      tom: Texto
+      estilo: Texto
+      limites: Lista
+    }
+    invariants {
+      obra existe
+      publico em [INFANTIL, JOVEM, ADULTO, TECNICO]
+      genero existe
+      tom existe
+      estilo existe
+      limites existe
+    }
+  }
+
+  type AgentAuthor {
+    fields {
+      nome: Texto
+      papel: Texto
+      permissao: Texto
+    }
+    invariants {
+      nome existe
+      papel existe
+      permissao existe
+    }
+  }
+
+  entity CenaAuthor {
+    fields {
+      id: Id
+      obra: Texto
+      status: StatusCena
+      objetivo: Texto
+      conflito: Texto
+      mudanca_de_estado: Booleano
+    }
+    invariants {
+      id existe
+      obra existe
+      status em [BRIEFING, OUTLINE, RASCUNHO, REVISAO, PUBLICAVEL]
+      objetivo existe
+      conflito existe
+      mudanca_de_estado existe
+    }
+  }
+
+  enum PublicoAuthor {
+    INFANTIL,
+    JOVEM,
+    ADULTO,
+    TECNICO
+  }
+
+  enum StatusCena {
+    BRIEFING,
+    OUTLINE,
+    RASCUNHO,
+    REVISAO,
+    PUBLICAVEL
+  }
+
+  task declarar_author_core {
+    input {
+      obra: Texto required
+      publico: PublicoAuthor required
+      genero: Texto required
+      estilo: Texto required
+    }
+    output {
+      core: AuthorCore
+      pronto_para_outline: Booleano
+    }
+    rules {
+      obra deve_ser preenchido
+      publico deve_ser valido
+      genero deve_ser preenchido
+      estilo deve_ser preenchido
+    }
+    effects {
+      auditoria author_core criticidade = media
+    }
+    forbidden {
+      publico_indefinido
+      estilo_generico
+      fontes_inventadas
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      core existe
+      pronto_para_outline == verdadeiro
+    }
+    tests {
+      caso "core autoral minimo" {
+        given {
+          obra: "As Cidades de Vidro"
+          publico: "ADULTO"
+          genero: "fantasia_politica"
+          estilo: "sobrio"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_outline: verdadeiro
+        }
+      }
+    }
+  }
+
+  task montar_agents_author {
+    input {
+      planejador: Texto required
+      editor: Texto required
+      revisor_cliche: Texto required
+      guardiao_estilo: Texto required
+    }
+    output {
+      agents: Lista
+      pronto_para_cena: Booleano
+    }
+    rules {
+      planejador deve_ser preenchido
+      editor deve_ser preenchido
+      revisor_cliche deve_ser preenchido
+      guardiao_estilo deve_ser preenchido
+    }
+    effects {
+      auditoria author_agents criticidade = media
+    }
+    forbidden {
+      agent_sem_papel
+      agent_sem_limite
+      revisor_cliche_ausente
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      agents existe
+      pronto_para_cena == verdadeiro
+    }
+    tests {
+      caso "agents autorais completos" {
+        given {
+          planejador: "planejador"
+          editor: "editor"
+          revisor_cliche: "anti_cliche"
+          guardiao_estilo: "guardiao_estilo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_cena: verdadeiro
+        }
+      }
+    }
+  }
+
+  task revisar_cena_contra_cliche {
+    input {
+      cena_id: Id required
+      texto: Texto required
+    }
+    output {
+      achados: Lista
+      aprovado: Booleano
+    }
+    rules {
+      cena_id deve_ser valido
+      texto deve_ser preenchido
+      texto deve_ser sem_cliche_escolhido_predestinado
+      texto deve_ser sem_dialogo_resumo
+      texto deve_ser sem_frase_de_efeito_vazia
+      texto deve_ser sem_voz_generica_de_ia
+    }
+    effects {
+      auditoria author_cliche criticidade = media
+    }
+    forbidden {
+      exposicao_sem_conflito
+      dialogo_expositivo
+      moralizacao_barata
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      achados existe
+      aprovado existe
+    }
+    tests {
+      caso "bloqueia escolhido predestinado" {
+        given {
+          cena_id: "cena_1"
+          texto: "O escolhido predestinado aceitou sua missao."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          achados: "escolhido_predestinado"
+        }
+      }
+    }
+  }
+
+  task validar_cena_viva {
+    input {
+      cena_id: Id required
+      objetivo: Texto required
+      conflito: Texto required
+      dialogo_tem_atrito: Booleano required
+      altera_estado: Booleano required
+    }
+    output {
+      publicavel: Booleano
+      status: StatusCena
+    }
+    rules {
+      objetivo deve_ser preenchido
+      conflito deve_ser preenchido
+      dialogo_tem_atrito deve_ser verdadeiro
+      altera_estado deve_ser verdadeiro
+    }
+    effects {
+      auditoria author_cena criticidade = media
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      publicavel existe
+      status em [REVISAO, PUBLICAVEL]
+    }
+    tests {
+      caso "cena altera estado" {
+        given {
+          cena_id: "cena_2"
+          objetivo: "obter a carta"
+          conflito: "a aliada mente"
+          dialogo_tem_atrito: verdadeiro
+          altera_estado: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          publicavel: verdadeiro
+          status: "PUBLICAVEL"
+        }
+      }
+    }
+  }
+
+  flow author_flow_obra_comum {
+    obra: Texto
+    publico: PublicoAuthor
+    genero: Texto
+    estilo: Texto
+    cena_id: Id
+    objetivo: Texto
+    conflito: Texto
+    planejador: Texto
+    editor: Texto
+    revisor_cliche: Texto
+    guardiao_estilo: Texto
+    texto: Texto
+    etapa core usa declarar_author_core com obra = obra, publico = publico, genero = genero, estilo = estilo
+    etapa agents usa montar_agents_author com planejador = planejador, editor = editor, revisor_cliche = revisor_cliche, guardiao_estilo = guardiao_estilo depende_de core
+    etapa cliche usa revisar_cena_contra_cliche com cena_id = cena_id, texto = texto depende_de agents
+    etapa cena usa validar_cena_viva com cena_id = cena_id, objetivo = objetivo, conflito = conflito, dialogo_tem_atrito = verdadeiro, altera_estado = verdadeiro depende_de cliche
+    effects {
+      auditoria author_flow criticidade = media
+    }
+  }
+}

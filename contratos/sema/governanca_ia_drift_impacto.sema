@@ -1,0 +1,9 @@
+module sema.produto.governanca_ia.drift_impacto {
+  docs {
+    resumo: "Indice de compatibilidade para drift, impacto, release e refinamentos de profiles."
+  }
+
+  use sema.produto.governanca_ia.drift
+
+  use sema.produto.governanca_ia.release_profiles
+}

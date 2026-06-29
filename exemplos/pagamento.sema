@@ -1,0 +1,434 @@
+module exemplos.pagamento {
+  docs {
+    resumo: "Vertical oficial de pagamento IA-first: contrato operacional para agente governar cobranca, estado, erro, efeito, seguranca e retry sem inventar comportamento."
+  }
+
+  use exemplos.pagamento.dominio
+
+  task processar_pagamento {
+    input {
+      pagamento_id: Id required
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      pagamento: Pagamento
+      status: StatusPagamento
+    }
+    authz {
+      escopo: pagamentos.processar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: financeiro
+      redacao_log: obrigatoria
+      input {
+        pagamento_id: interno
+        valor: financeiro
+        token: segredo
+      }
+      output {
+        pagamento: financeiro
+        status: interno
+      }
+    }
+    audit {
+      evento: pagamento.processado
+      ator: auth.usuario
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    segredos {
+      gateway_pagamento_token {
+        origem: vault
+        escopo: runtime
+        acesso: gateway_pagamento
+        rotacao: "30d"
+        nao_logar: verdadeiro
+        nao_retornar: verdadeiro
+        mascarar: verdadeiro
+      }
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      valor > 0
+      token existe
+      token deve_ser valido
+    }
+    effects {
+      consulta gateway_pagamento criticidade = alta
+      persistencia Pagamento criticidade = alta
+      evento pagamento_autorizado criticidade = media
+      notificacao cliente comprovante_pagamento criticidade = media
+      auditoria pagamento criticidade = alta
+    }
+    vinculos {
+      recurso: gateway_pagamento
+      tabela: pagamentos
+      evento: pagamento_autorizado
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "2x exponencial"
+      compensacao: "registrar_falha_pagamento"
+      criticidade_operacional: alta
+    }
+    state ciclo_pagamento {
+      transitions {
+        PENDENTE -> AUTORIZADO
+        AUTORIZADO -> PROCESSADO
+      }
+    }
+    guarantees {
+      pagamento existe
+      status em [AUTORIZADO, PROCESSADO]
+      pagamento.status == status
+    }
+    error {
+      autorizacao_negada: "A operacao foi recusada pelo gateway."
+      saldo_insuficiente: "O saldo nao cobre o valor da cobranca."
+      timeout_gateway: "O gateway nao respondeu em tempo habil."
+    }
+    tests {
+      caso "pagamento autorizado" {
+        given {
+          pagamento_id: "pag_1"
+          valor: 199.9
+          token: "tok_ok"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          status: "AUTORIZADO"
+          pagamento: "pag_1"
+        }
+      }
+      caso "pagamento recusado por autorizacao" {
+        given {
+          pagamento_id: "pag_erro"
+          valor: 10
+          token: "tok_recusado"
+        }
+
+        expect {
+          sucesso: falso
+        }
+
+        error {
+          tipo: "autorizacao_negada"
+        }
+      }
+      caso "pagamento falha por timeout" {
+        given {
+          pagamento_id: "pag_timeout"
+          valor: 10
+          token: "tok_timeout"
+        }
+
+        expect {
+          sucesso: falso
+        }
+
+        error {
+          tipo: "timeout_gateway"
+        }
+      }
+    }
+  }
+
+  task confirmar_pagamento {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      status: StatusPagamento
+    }
+    authz {
+      escopo: pagamentos.confirmar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: financeiro
+      redacao_log: obrigatoria
+      input {
+        pagamento_id: interno
+      }
+      output {
+        status: interno
+      }
+    }
+    audit {
+      evento: pagamento.confirmado
+      ator: sistema.pagamentos
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+    }
+    rules {
+      pagamento_id existe
+    }
+    effects {
+      consulta gateway_pagamento criticidade = alta
+      persistencia Pagamento criticidade = alta
+      evento pagamento_confirmado criticidade = media
+      auditoria conciliacao_pagamento criticidade = alta
+    }
+    vinculos {
+      recurso: gateway_pagamento
+      tabela: pagamentos
+      evento: pagamento_confirmado
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "2x exponencial"
+      compensacao: "registrar_timeout_pagamento"
+      criticidade_operacional: alta
+    }
+    state ciclo_pagamento {
+      transitions {
+        AUTORIZADO -> PROCESSADO
+      }
+    }
+    guarantees {
+      status == PROCESSADO
+    }
+    tests {
+      caso "confirma pagamento autorizado" {
+        given {
+          pagamento_id: "pag_1"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          status: "PROCESSADO"
+        }
+      }
+    }
+  }
+
+  task notificar_falha_pagamento {
+    input {
+      pagamento_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo_notificacao: Id
+    }
+    authz {
+      escopo: pagamentos.notificar_falha
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        pagamento_id: interno
+        motivo: interno
+      }
+      output {
+        protocolo_notificacao: interno
+      }
+    }
+    audit {
+      evento: pagamento.falha_notificada
+      ator: sistema.pagamentos
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+    }
+    effects {
+      notificacao cliente falha_pagamento criticidade = alta
+      auditoria falha_pagamento criticidade = media
+    }
+    vinculos {
+      evento: falha_pagamento
+      recurso: canal_notificacao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "3x exponencial"
+      compensacao: "registrar_auditoria_falha"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      protocolo_notificacao existe
+    }
+    tests {
+      caso "notifica falha por recusa" {
+        given {
+          pagamento_id: "pag_erro"
+          motivo: "autorizacao_negada"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          protocolo_notificacao: "notif_1"
+        }
+      }
+    }
+  }
+
+  task registrar_timeout_pagamento {
+    input {
+      pagamento_id: Id required
+    }
+    output {
+      auditoria_id: Id
+    }
+    authz {
+      escopo: pagamentos.registrar_timeout
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        pagamento_id: interno
+      }
+      output {
+        auditoria_id: interno
+      }
+    }
+    audit {
+      evento: pagamento.timeout_registrado
+      ator: sistema.pagamentos
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+    }
+    effects {
+      auditoria timeout_gateway criticidade = alta
+      persistencia incidente_pagamento criticidade = media
+    }
+    vinculos {
+      tabela: incidentes_pagamento
+      evento: timeout_gateway
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "notificar_operacao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      auditoria_id existe
+    }
+    tests {
+      caso "registra timeout" {
+        given {
+          pagamento_id: "pag_timeout"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          auditoria_id: "aud_1"
+        }
+      }
+    }
+  }
+
+  flow orquestracao_pagamento {
+    pagamento_id: Id
+    valor: Decimal
+    token: Texto
+    etapa autorizar usa processar_pagamento com pagamento_id = pagamento_id, valor = valor, token = token em_sucesso confirmar em_erro registrar_falha por_erro autorizacao_negada = notificar_falha, timeout_gateway = registrar_timeout
+    etapa confirmar usa confirmar_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    etapa notificar_falha usa notificar_falha_pagamento com pagamento_id = pagamento_id, motivo = "autorizacao_negada" depende_de autorizar
+    etapa registrar_timeout usa registrar_timeout_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    etapa registrar_falha usa registrar_timeout_pagamento com pagamento_id = pagamento_id depende_de autorizar
+    effects {
+      auditoria fluxo_pagamento criticidade = alta
+      evento pagamento_em_processamento criticidade = media
+    }
+  }
+
+  route processar_pagamento_publico {
+    metodo: POST
+    caminho: /pagamentos/processar
+    task: processar_pagamento
+    auth {
+      modo: obrigatorio
+      principal: usuario
+      origem: publica
+    }
+    authz {
+      escopo: pagamentos.processar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: financeiro
+      redacao_log: obrigatoria
+      input {
+        pagamento_id: interno
+        valor: financeiro
+        token: segredo
+      }
+      output {
+        pagamento: financeiro
+        status: interno
+      }
+    }
+    audit {
+      evento: pagamento.processado.publico
+      ator: auth.usuario
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    segredos {
+      gateway_pagamento_token {
+        origem: vault
+        escopo: runtime
+        acesso: gateway_pagamento
+        rotacao: "30d"
+        nao_logar: verdadeiro
+        nao_retornar: verdadeiro
+        mascarar: verdadeiro
+      }
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    input {
+      pagamento_id: Id required
+      valor: Decimal required
+      token: Texto required
+    }
+    output {
+      pagamento: Pagamento required
+      status: StatusPagamento required
+    }
+    effects {
+      auditoria pagamento_publico criticidade = alta
+      evento pagamento_requisitado criticidade = media
+    }
+    error {
+      autorizacao_negada: "Erro publico quando o gateway recusa a operacao."
+      saldo_insuficiente: "Erro publico quando nao ha saldo suficiente."
+      timeout_gateway: "Erro publico quando o gateway nao responde."
+    }
+  }
+}

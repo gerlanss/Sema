@@ -1,0 +1,264 @@
+module exemplos.author.tema_sensivel {
+  docs {
+    resumo: "Starter publico do Sema Author para obra com tema sensivel, exigindo publico, fontes, limites, agentes e fluxo de revisao."
+  }
+
+  type FonteAuthor {
+    fields {
+      nome: Texto
+      tipo: Texto
+      confianca: Texto
+      limite_uso: Texto
+    }
+    invariants {
+      nome existe
+      tipo existe
+      confianca existe
+      limite_uso existe
+    }
+  }
+
+  type AgentAuthor {
+    fields {
+      nome: Texto
+      papel: Texto
+      permissao: Texto
+    }
+    invariants {
+      nome existe
+      papel existe
+      permissao existe
+    }
+  }
+
+  enum PublicoSensivel {
+    ADULTO,
+    TECNICO,
+    COMUNIDADE_AFETADA
+  }
+
+  enum StatusSensivel {
+    BLOQUEADO,
+    BRIEFING,
+    REVISAO_FONTES,
+    REVISAO_SENSIBILIDADE,
+    PUBLICAVEL
+  }
+
+  task declarar_tema_sensivel {
+    input {
+      obra: Texto required
+      publico: PublicoSensivel required
+      tema: Texto required
+      fontes: Lista required
+      limites: Lista required
+    }
+    output {
+      status: StatusSensivel
+      fontes_validas: Booleano
+      limites_explicitos: Booleano
+    }
+    rules {
+      obra deve_ser preenchido
+      publico deve_ser valido
+      tema deve_ser preenchido
+      fontes deve_ser nao_vazio
+      limites deve_ser nao_vazio
+    }
+    effects {
+      auditoria author_tema_sensivel criticidade = alta
+    }
+    authz {
+      escopo: author.tema_sensivel.declarar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: author.tema_sensivel.declarado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      publico_indefinido
+      fontes_inventadas
+      limite_implicito
+      sensibilidade_sem_revisor
+    }
+    vinculos {
+      arquivo: "docs/profiles-author-agents-flow.md"
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      status em [BRIEFING, REVISAO_FONTES]
+      fontes_validas == verdadeiro
+      limites_explicitos == verdadeiro
+    }
+    tests {
+      caso "tema sensivel com fonte e limite" {
+        given {
+          obra: "Relato Documental"
+          publico: "ADULTO"
+          tema: "violencia_historica"
+          fontes: "arquivo_publico"
+          limites: "nao_romantizar_dano"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          fontes_validas: verdadeiro
+          limites_explicitos: verdadeiro
+        }
+      }
+    }
+  }
+
+  task montar_agents_author {
+    input {
+      planejador: Texto required
+      editor: Texto required
+      revisor_cliche: Texto required
+      sensitivity_reviewer: Texto required
+    }
+    output {
+      agents: Lista
+      pronto_para_flow: Booleano
+    }
+    rules {
+      planejador deve_ser preenchido
+      editor deve_ser preenchido
+      revisor_cliche deve_ser preenchido
+      sensitivity_reviewer deve_ser preenchido
+    }
+    effects {
+      auditoria author_agents criticidade = media
+    }
+    forbidden {
+      agent_sem_papel
+      sensitivity_reviewer_ausente
+      agente_sem_limite
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      agents existe
+      pronto_para_flow == verdadeiro
+    }
+    tests {
+      caso "agents sensiveis completos" {
+        given {
+          planejador: "planejador"
+          editor: "editor"
+          revisor_cliche: "anti_cliche"
+          sensitivity_reviewer: "revisor_sensibilidade"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_flow: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_entrega_sensivel {
+    input {
+      texto: Texto required
+      fontes_lidas: Booleano required
+      revisao_sensibilidade: Booleano required
+      dano_mitigado: Booleano required
+    }
+    output {
+      status: StatusSensivel
+      bloqueios: Lista
+    }
+    rules {
+      texto deve_ser preenchido
+      fontes_lidas deve_ser verdadeiro
+      revisao_sensibilidade deve_ser verdadeiro
+      dano_mitigado deve_ser verdadeiro
+    }
+    effects {
+      auditoria author_entrega_sensivel criticidade = alta
+    }
+    authz {
+      escopo: author.tema_sensivel.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: author.tema_sensivel.entrega_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      publicar_sem_fontes_lidas
+      publicar_sem_revisao_sensibilidade
+      estetizar_sofrimento
+      atribuir_fala_a_grupo_sem_base
+    }
+    vinculos {
+      arquivo: "docs/profiles-author-agents-flow.md"
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      status em [REVISAO_SENSIBILIDADE, PUBLICAVEL]
+      bloqueios existe
+    }
+    tests {
+      caso "entrega sensivel publicavel" {
+        given {
+          texto: "cena revisada"
+          fontes_lidas: verdadeiro
+          revisao_sensibilidade: verdadeiro
+          dano_mitigado: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          status: "PUBLICAVEL"
+        }
+      }
+    }
+  }
+
+  flow author_flow_tema_sensivel {
+    obra: Texto
+    publico: PublicoSensivel
+    tema: Texto
+    fontes: Lista
+    limites: Lista
+    planejador: Texto
+    editor: Texto
+    revisor_cliche: Texto
+    sensitivity_reviewer: Texto
+    texto: Texto
+    etapa tema usa declarar_tema_sensivel com obra = obra, publico = publico, tema = tema, fontes = fontes, limites = limites
+    etapa agents usa montar_agents_author com planejador = planejador, editor = editor, revisor_cliche = revisor_cliche, sensitivity_reviewer = sensitivity_reviewer depende_de tema
+    etapa entrega usa validar_entrega_sensivel com texto = texto, fontes_lidas = verdadeiro, revisao_sensibilidade = verdadeiro, dano_mitigado = verdadeiro depende_de agents
+    effects {
+      auditoria author_flow_sensivel criticidade = alta
+    }
+  }
+}

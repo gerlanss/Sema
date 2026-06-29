@@ -1,0 +1,150 @@
+module sema.produto.author.tarefas_3 {
+  use sema.produto.author.modelos
+
+  use sema.produto.author.modelos_2
+
+  task validar_politica_estilo_author {
+    input {
+      contrato_author: Texto required
+      texto_alvo: Texto required
+      politica: PoliticaEstiloAuthor required
+    }
+    output {
+      aprovado: Booleano
+      score_coerencia_tonal: Numero
+      bloqueios: Lista
+    }
+    rules {
+      contrato_author deve_ser arquivo_sema
+      texto_alvo deve_ser preenchido
+      politica deve_ser valido
+      texto_alvo deve_ser sem_palavra_generica_sem_concreto
+      texto_alvo deve_ser sem_voz_generica_de_ia
+    }
+    effects {
+      consulta contrato_author criticidade = baixa
+      auditoria author_politica_estilo criticidade = alta
+    }
+    authz {
+      escopo: sema.author.estilo.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.author.estilo.validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      politica_estilo_por_autor
+      estilo_autor_diluido
+      frase_banida_uma_jornada_de_autodescoberta
+      frase_banida_emocionante_e_envolvente
+      palavra_banida_cativante
+    }
+    impl {
+      ts: cli.src.index.revisarClichesAuthor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.revisarClichesAuthor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      score_coerencia_tonal >= 0
+      bloqueios existe
+    }
+  }
+
+  task validar_tema_sensivel_author {
+    input {
+      contrato_author: Texto required
+      publico: PublicoAuthor required
+      fontes: Lista required
+      limites: Lista required
+      agents: Lista required
+      flow: Lista required
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+    }
+    rules {
+      publico deve_ser SENSIVEL
+      fontes deve_ser nao_vazio
+      limites deve_ser nao_vazio
+      agents deve_ser nao_vazio
+      flow deve_ser nao_vazio
+    }
+    effects {
+      consulta contrato_author criticidade = media
+      auditoria author_tema_sensivel criticidade = alta
+    }
+    authz {
+      escopo: sema.author.sensivel.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.author.sensivel.validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      obra_sensivel_sem_publico
+      obra_sensivel_sem_fontes
+      obra_sensivel_sem_sensitivity_reviewer
+      gerar_conteudo_lesivo
+    }
+    impl {
+      ts: cli.src.index.criarAuthorBriefing
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.criarAuthorBriefing
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+    }
+    tests {
+      caso "tema sensivel exige fontes e agentes" {
+        given {
+          contrato_author: "exemplos/author_tema_sensivel.sema"
+          publico: "SENSIVEL"
+          fontes: "fontes_curadas"
+          limites: "limites_explicitos"
+          agents: "sensitivity_reviewer"
+          flow: "validacao"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+}

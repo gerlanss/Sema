@@ -1,0 +1,86 @@
+module exemplos.persistencia.vendor_first {
+  database principal_postgres {
+    engine: postgres
+    schema: public
+    consistency: forte
+    durability: alta
+    transaction_model: mvcc
+    query_model: sql
+    capabilities {
+      joins
+      views
+    }
+    table pedidos {
+      entity: Pedido
+    }
+    relationship pedido_cliente {
+      from: Pedido
+      to: Cliente
+    }
+    query buscar_pedidos {
+      mode: sql
+    }
+  }
+
+  database principal_mysql {
+    engine: mysql
+    consistency: forte
+    durability: alta
+    transaction_model: bloqueio
+    query_model: sql
+    table faturamento {
+      table: faturamento
+    }
+    query buscar_faturas {
+      mode: sql
+    }
+  }
+
+  database principal_sqlite {
+    engine: sqlite
+    consistency: snapshot
+    durability: media
+    transaction_model: single_thread
+    query_model: sql
+    table cache_local {
+      table: cache_local
+    }
+    retention limpeza_local {
+      retention: 7d
+    }
+  }
+
+  database principal_mongodb {
+    engine: mongodb
+    consistency: eventual
+    durability: alta
+    transaction_model: documento
+    query_model: documento
+    collection pedidos {
+      collection: pedidos
+    }
+    document pedido_snapshot {
+      entity: PedidoSnapshot
+    }
+    query pipeline_pedido {
+      mode: pipeline
+    }
+  }
+
+  database principal_redis {
+    engine: redis
+    consistency: eventual
+    durability: media
+    transaction_model: single_thread
+    query_model: chave_valor
+    keyspace cache_pedidos {
+      ttl: 300s
+    }
+    stream eventos_pedido {
+      surface: fila
+    }
+    retention expurgo_cache {
+      retention: 300s
+    }
+  }
+}

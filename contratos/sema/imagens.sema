@@ -1,0 +1,373 @@
+module sema.produto.imagens {
+  docs {
+    resumo: "Sema para criacao de imagens com briefing, prompt, direitos, acessibilidade, aderencia de marca e QA de resultado. Contrato criativo vem antes de qualquer acao: criar, editar ou remover o .sema aplicavel antes de gerar imagem."
+  }
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.qa_criativo
+
+  type BriefingImagem {
+    fields {
+      tipo: TipoImagem
+      objetivo: Texto
+      publico: Texto
+      cena: Texto
+      restricoes: Lista
+      referencias: Lista
+    }
+    invariants {
+      tipo existe
+      objetivo existe
+      publico existe
+      cena existe
+      restricoes existe
+    }
+  }
+
+  type PromptImagem {
+    fields {
+      prompt: Texto
+      negative_prompt: Texto
+      proporcao: Texto
+      estilo: Texto
+      direitos: Texto
+      alt_text: Texto
+    }
+    invariants {
+      prompt existe
+      proporcao existe
+      estilo existe
+      direitos existe
+      alt_text existe
+    }
+  }
+
+  enum TipoImagem {
+    PRODUTO,
+    EDITORIAL,
+    SOCIAL,
+    CAPA,
+    ANUNCIO,
+    ILUSTRACAO
+  }
+
+  task criar_briefing_imagem {
+    input {
+      tipo: TipoImagem required
+      objetivo: Texto required
+      publico: Texto required
+      cena: Texto required
+      identidade_marca: Texto required
+    }
+    output {
+      briefing: BriefingImagem
+      pronto_para_prompt: Booleano
+      lacunas: Lista
+    }
+    rules {
+      tipo deve_ser valido
+      objetivo deve_ser concreto
+      publico deve_ser especifico
+      cena deve_ser visualmente_descritiva
+      identidade_marca deve_ser declarada
+    }
+    effects {
+      auditoria briefing_imagem criticidade = media
+    }
+    forbidden {
+      cena_generica
+      imagem_sem_objetivo
+      referencia_sem_direito
+      marca_ausente
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      briefing existe
+      pronto_para_prompt existe
+      lacunas existe
+    }
+    tests {
+      caso "briefing visual pronto" {
+        given {
+          tipo: "SOCIAL"
+          objetivo: "mostrar antes e depois do estoque organizado"
+          publico: "lojista de bairro"
+          cena: "balcao com caixas etiquetadas e celular aberto no dashboard"
+          identidade_marca: "verde grafite direto"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_prompt: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_prompt_imagem {
+    input {
+      briefing: BriefingImagem required
+      identidade_marca: Texto required
+      proporcao: Texto required
+      restricoes_legais: Lista
+    }
+    output {
+      prompt_imagem: PromptImagem
+      seguro_para_gerar: Booleano
+    }
+    rules {
+      briefing deve_ser valido
+      identidade_marca deve_ser declarada
+      proporcao deve_ser preenchida
+      restricoes_legais deve_ser respeitadas_quando_fornecidas
+    }
+    effects {
+      auditoria prompt_imagem criticidade = media
+    }
+    forbidden {
+      prompt_curto_demais
+      visual_stock_generico
+      referencia_a_artista_vivo_sem_permissao
+      ausencia_de_alt_text
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      prompt_imagem existe
+      seguro_para_gerar existe
+      prompt_imagem deve_ser detalhado
+      prompt_imagem deve_ser sem_visual_stock_generico
+    }
+    tests {
+      caso "prompt completo com alt text" {
+        given {
+          briefing: "SOCIAL com cena de estoque organizado"
+          identidade_marca: "verde grafite"
+          proporcao: "1:1"
+          restricoes_legais: "sem marca de terceiros"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          seguro_para_gerar: verdadeiro
+        }
+      }
+    }
+  }
+
+  task solicitar_geracao_imagem {
+    input {
+      prompt_imagem: PromptImagem required
+      ferramenta_imagem: Texto required
+      execucao_automatica: Booleano
+    }
+    output {
+      solicitacao_geracao: Texto
+      chamar_ferramenta_imagem: Booleano
+      gerar_imagem: Booleano
+    }
+    rules {
+      prompt_imagem deve_ser valido
+      ferramenta_imagem deve_ser preenchida
+      execucao_automatica deve_ser verdadeira_quando_prompt_aprovado
+    }
+    effects {
+      auditoria handoff_geracao_imagem criticidade = alta
+    }
+    authz {
+      escopo: sema.imagens.gerar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        prompt_imagem: interno
+        ferramenta_imagem: interno
+        execucao_automatica: interno
+      }
+      output {
+        solicitacao_geracao: interno
+        chamar_ferramenta_imagem: publico
+        gerar_imagem: publico
+      }
+    }
+    audit {
+      evento: sema.imagens.geracao_solicitada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      prompt_aprovado_sem_gerar_imagem
+      aguardar_usuario_pedir_imagem
+      ferramenta_imagem_indefinida
+      gerar_sem_prompt_aprovado
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      solicitacao_geracao existe
+      chamar_ferramenta_imagem == verdadeiro
+      gerar_imagem == verdadeiro
+    }
+    tests {
+      caso "prompt aprovado chama ferramenta de imagem" {
+        given {
+          prompt_imagem: "produto central em feed 1:1 com alt text"
+          ferramenta_imagem: "image_gen"
+          execucao_automatica: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          chamar_ferramenta_imagem: verdadeiro
+          gerar_imagem: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_imagem_gerada {
+    input {
+      imagem_resultado: Texto required
+      prompt_imagem: PromptImagem required
+      briefing: BriefingImagem required
+    }
+    output {
+      aprovado: Booleano
+      achados: Lista
+      precisa_regerar: Booleano
+    }
+    rules {
+      imagem_resultado deve_ser fornecida
+      prompt_imagem deve_ser valido
+      briefing deve_ser valido
+      imagem_resultado deve_ser aderente_a prompt_imagem
+      imagem_resultado deve_ser aderente_a briefing
+      imagem_resultado deve_ser sem_texto_quebrado
+      imagem_resultado deve_ser sem_elemento_de_marca_indevido
+    }
+    effects {
+      auditoria imagem_gerada criticidade = alta
+    }
+    authz {
+      escopo: sema.imagens.validar_resultado
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        imagem_resultado: interno
+        prompt_imagem: interno
+        briefing: interno
+      }
+      output {
+        aprovado: publico
+        achados: interno
+        precisa_regerar: publico
+      }
+    }
+    audit {
+      evento: sema.imagens.resultado_validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aprovar_imagem_sem_qa
+      texto_visual_ilegivel
+      objeto_principal_cortado
+      marca_terceira_visivel
+      visual_generico_sem_identidade
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      achados existe
+      precisa_regerar existe
+    }
+    tests {
+      caso "bloqueia imagem com texto quebrado" {
+        given {
+          imagem_resultado: "banner com letras deformadas e marca de terceiro"
+          prompt_imagem: "imagem social limpa"
+          briefing: "campanha estoque organizado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          precisa_regerar: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow criar_imagem_com_gate {
+    tipo: TipoImagem
+    objetivo: Texto
+    publico: Texto
+    cena: Texto
+    identidade_marca: Texto
+    proporcao: Texto
+    imagem_resultado: Texto
+    etapa briefing usa criar_briefing_imagem com tipo = tipo, objetivo = objetivo, publico = publico, cena = cena, identidade_marca = identidade_marca
+    etapa prompt usa gerar_prompt_imagem com briefing = briefing.briefing, identidade_marca = identidade_marca, proporcao = proporcao depende_de briefing
+    etapa gerar usa solicitar_geracao_imagem com prompt_imagem = prompt.prompt_imagem, ferramenta_imagem = image_gen, execucao_automatica = verdadeiro depende_de prompt
+    etapa validar usa validar_imagem_gerada com imagem_resultado = imagem_resultado, prompt_imagem = prompt.prompt_imagem, briefing = briefing.briefing depende_de gerar
+    effects {
+      auditoria fluxo_imagem criticidade = alta
+    }
+  }
+}

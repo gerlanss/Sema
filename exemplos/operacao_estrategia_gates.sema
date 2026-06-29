@@ -1,0 +1,106 @@
+module exemplos.operacao_estrategia.gates {
+  docs {
+    resumo: "Task oficial para fechamento do gate global de uma strategy com trilha auditavel."
+  }
+
+  enum StatusStrategy {
+    RASCUNHO,
+    ATIVA,
+    QUARENTENA,
+    DESATIVADA
+  }
+
+  enum StatusGate {
+    ABERTO,
+    FECHADO
+  }
+
+  task fechar_gate_global_strategy {
+    docs {
+      resumo: "Fecha o gate global quando a strategy inteira precisa parar de liberar sem apagar historico nem perder a trilha da versao ativa."
+    }
+    input {
+      strategy_id: Id required
+      motivo_operacional: Texto required
+      versao_modelo_ativa: Texto required
+    }
+    output {
+      strategy_status: StatusStrategy
+      gate_global: StatusGate
+      versao_modelo_ativa: Texto
+    }
+    authz {
+      escopo: strategy.gate.fechar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        strategy_id: interno
+        motivo_operacional: interno
+        versao_modelo_ativa: interno
+      }
+      output {
+        strategy_status: interno
+        gate_global: interno
+        versao_modelo_ativa: interno
+      }
+    }
+    audit {
+      evento: strategy.gate_global.fechado
+      ator: sistema.strategy
+      correlacao: request_id
+      retencao: "180d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      shell.exec
+      log.segredo
+      retorno.credencial
+    }
+    rules {
+      strategy_id existe
+      motivo_operacional existe
+      versao_modelo_ativa existe
+    }
+    effects {
+      persistencia strategy criticidade = alta
+      notificacao operacao criticidade = alta
+      auditoria gate_global criticidade = alta
+    }
+    vinculos {
+      tabela: strategy
+      recurso: strategy_registry
+      evento: gate_global_fechado
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "manter_strategy_em_quarentena"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      strategy_status == QUARENTENA
+      gate_global == FECHADO
+      versao_modelo_ativa existe
+    }
+    tests {
+      caso "fecha gate global sem perder versao ativa" {
+        given {
+          strategy_id: "strategy_alpha"
+          motivo_operacional: "sequencia_ruim_em_varias_ligas"
+          versao_modelo_ativa: "modelo_2026_12"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          strategy_status: "QUARENTENA"
+          gate_global: "FECHADO"
+          versao_modelo_ativa: "modelo_2026_12"
+        }
+      }
+    }
+  }
+}

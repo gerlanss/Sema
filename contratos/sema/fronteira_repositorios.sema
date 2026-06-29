@@ -1,0 +1,221 @@
+module sema.produto.fronteira_repositorios {
+  docs {
+    resumo: "Contrato de fronteira publica local-only do Sema. O repositorio publico contem CLI local, pacotes de runtime local, contratos, exemplos, testes locais e documentacao em ingles. Materiais privados ou sensiveis ficam fora da distribuicao publica. A fonte e publica, mas nao pode ser replicada para venda comercial sem permissao escrita da OtimiTare."
+  }
+
+  vinculos {
+    arquivo: "scripts/verificar-fronteira-publica.mjs"
+    arquivo: "scripts/empacotar-cli-publica.mjs"
+    arquivo: "scripts/testar-pacote-cli-publico.mjs"
+    arquivo: "README.md"
+    arquivo: "LICENSE"
+    arquivo: "docs/repositories.md"
+    arquivo: "docs/security.md"
+    arquivo: "pacotes/cli/package.json"
+    simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
+  }
+
+  type ResultadoFronteiraPublica {
+    fields {
+      aprovado: Booleano
+      bloqueado: Booleano
+      fronteira: Texto
+      suporte: Texto
+      politica_comercial: Texto
+      bloqueios: Lista
+      avisos: Lista
+    }
+  }
+
+  task verificar_fronteira_publica_local_only {
+    input {
+      repositorio: Texto required
+      suporte_oficial: Texto required
+      licenca_nao_comercial: Booleano required
+    }
+    output {
+      resultado: ResultadoFronteiraPublica
+      materiais_privados_ausentes: Booleano
+      artefatos_sensiveis_ausentes: Booleano
+      segredos_ausentes: Booleano
+      docs_publicas_em_ingles: Booleano
+      suporte_email_oficial: Booleano
+      revenda_comercial_bloqueada: Booleano
+      decisao_agente: Texto
+    }
+    rules {
+      repositorio deve_ser preenchido
+      suporte_oficial == "suporte@otimitare.online"
+      licenca_nao_comercial == verdadeiro
+    }
+    effects {
+      consulta repositorio_local criticidade = alta
+      auditoria fronteira_publica_local_only criticidade = alta
+    }
+    authz {
+      escopo: sema.publico.fronteira.verificar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: obrigatoria
+      input {
+        repositorio: publico
+        suporte_oficial: publico
+        licenca_nao_comercial: publico
+      }
+      output {
+        resultado: publico
+        materiais_privados_ausentes: publico
+        artefatos_sensiveis_ausentes: publico
+        segredos_ausentes: publico
+        docs_publicas_em_ingles: publico
+        suporte_email_oficial: publico
+        revenda_comercial_bloqueada: publico
+        decisao_agente: publico
+      }
+    }
+    audit {
+      evento: sema.publico.fronteira.verificada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      publicar_credencial
+      publicar_env_real
+      publicar_chave_pem
+      publicar_material_privado
+      publicar_artefato_sensivel
+      publicar_docs_publicas_em_portugues
+      usar_site_como_email_de_suporte
+      usar_mit_com_permissao_de_revenda
+      permitir_replicacao_para_venda_comercial
+    }
+    impl {
+      ts: scripts.verificar_fronteira_publica.verificarFronteiraPublica
+    }
+    vinculos {
+      arquivo: "scripts/verificar-fronteira-publica.mjs"
+      arquivo: "scripts/empacotar-cli-publica.mjs"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "package.json"
+      arquivo: "pacotes/cli/package.json"
+      arquivo: "README.md"
+      arquivo: "LICENSE"
+      arquivo: "docs/repositories.md"
+      simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "nenhum"
+      compensacao: "remover artefato privado ou bloquear publicacao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      resultado existe
+      materiais_privados_ausentes == verdadeiro
+      artefatos_sensiveis_ausentes == verdadeiro
+      segredos_ausentes == verdadeiro
+      docs_publicas_em_ingles == verdadeiro
+      suporte_email_oficial == verdadeiro
+      revenda_comercial_bloqueada == verdadeiro
+      decisao_agente em [continuar, parar]
+    }
+    tests {
+      caso "repo publico local-only aprovado" {
+        given {
+          repositorio: "Sema"
+          suporte_oficial: "suporte@otimitare.online"
+          licenca_nao_comercial: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          materiais_privados_ausentes: verdadeiro
+          artefatos_sensiveis_ausentes: verdadeiro
+          segredos_ausentes: verdadeiro
+          suporte_email_oficial: verdadeiro
+          revenda_comercial_bloqueada: verdadeiro
+        }
+      }
+    }
+  }
+
+  task empacotar_cli_publica_local_only {
+    input {
+      versao: Texto required
+      incluir_docs_ingles: Booleano required
+    }
+    output {
+      pacote_gerado: Booleano
+      dependencias_file_removidas: Booleano
+      metadados_suporte_email: Booleano
+      licenca_nao_comercial_incluida: Booleano
+    }
+    rules {
+      versao deve_ser preenchido
+      incluir_docs_ingles == verdadeiro
+    }
+    effects {
+      fs.write pacote_cli_publico criticidade = alta
+      auditoria pacote_publico criticidade = alta
+    }
+    authz {
+      escopo: sema.publico.cli.empacotar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: obrigatoria
+      input {
+        versao: publico
+        incluir_docs_ingles: publico
+      }
+      output {
+        pacote_gerado: publico
+        dependencias_file_removidas: publico
+        metadados_suporte_email: publico
+        licenca_nao_comercial_incluida: publico
+      }
+    }
+    audit {
+      evento: sema.publico.cli.empacotada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      incluir_agent_context_privado
+      incluir_indice_workspace
+      incluir_artefato_sensivel
+      incluir_dependencia_file_no_tarball_publico
+      incluir_doc_removida
+    }
+    impl {
+      ts: scripts.empacotar_cli_publica.main
+    }
+    vinculos {
+      arquivo: "scripts/empacotar-cli-publica.mjs"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "pacotes/cli/README.md"
+      arquivo: "docs/README.md"
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "nenhum"
+      compensacao: "apagar stage e bloquear publicacao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      pacote_gerado existe
+      dependencias_file_removidas == verdadeiro
+      metadados_suporte_email == verdadeiro
+      licenca_nao_comercial_incluida == verdadeiro
+    }
+  }
+}

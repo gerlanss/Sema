@@ -1,0 +1,43 @@
+module sema.produto.author.superficies {
+  use sema.produto.author.modelos
+
+  use sema.produto.author.modelos_2
+
+  use sema.produto.author.tarefas
+
+  use sema.produto.author.tarefas_2
+
+  use sema.produto.author.tarefas_3
+
+  worker author_briefing {
+    task: preparar_briefing_author
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      worker: author_briefing
+    }
+    execucao {
+      idempotencia: verdadeiro
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+  }
+
+  policy author_quality_gate {
+    task: revisar_cliches_author
+    forbidden {
+      aceitar_contrato_descumprido
+      publicar_texto_com_bloqueio
+      drift_semantico_sem_revisao
+      gerar_texto_sem_ir_narrativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      policy: author_quality_gate
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+  }
+}

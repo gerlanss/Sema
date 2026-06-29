@@ -1,0 +1,199 @@
+module sema.produto.research {
+  docs {
+    resumo: "Profile Research para pesquisa IA-first com contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois pergunta, metodologia, fontes, evidencias, citacoes, incerteza, limites e reproducibilidade."
+  }
+
+  vinculos {
+    arquivo: "pacotes/cli/src/index.ts"
+    simbolo: cli.src.index.validarProfileSemantico
+  }
+
+  type ResearchCore {
+    fields {
+      pergunta: Texto
+      metodologia: Texto
+      fontes: Lista
+      evidencias: Lista
+      limites: Lista
+    }
+    invariants {
+      pergunta existe
+      metodologia existe
+      fontes existe
+      evidencias existe
+      limites existe
+    }
+  }
+
+  entity ProfileResearch {
+    fields {
+      id: Id
+      core: ResearchCore
+      status: StatusResearch
+      protocolo: Texto
+    }
+    invariants {
+      id existe
+      core existe
+      status em [RASCUNHO, COLETA, REVISAO, PUBLICAVEL, BLOQUEADO]
+      protocolo existe
+    }
+  }
+
+  enum StatusResearch {
+    RASCUNHO,
+    COLETA,
+    REVISAO,
+    PUBLICAVEL,
+    BLOQUEADO
+  }
+
+  task validar_plano_research {
+    input {
+      pergunta: Texto required
+      metodologia: Texto required
+      fontes: Lista required
+      evidencias: Lista required
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      aprovado: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      lacunas: Lista
+    }
+    rules {
+      pergunta deve_ser preenchida
+      metodologia deve_ser declarada
+      fontes deve_ser citaveis
+      evidencias deve_ser verificaveis
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria research_plano criticidade = media
+    }
+    forbidden {
+      conclusao_sem_evidencia
+      citacao_inventada
+      incerteza_oculta
+      aprovar_resposta_sem_fontes
+      aprovar_resposta_sem_fato_vs_inferencia
+      aprovar_research_critica_sem_contraditorio
+      aprovar_mencao_negativa_como_requisito_atendido
+      score_artefato_100_com_pesquisa_negando_fontes_ou_incerteza
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      lacunas existe
+    }
+    tests {
+      caso "research exige metodo fontes e evidencia" {
+        given {
+          pergunta: "qual hipotese sera testada"
+          metodologia: "metodo comparativo"
+          fontes: "fonte citacao referencia"
+          evidencias: "evidencia confianca qualidade"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_conclusao_research {
+    input {
+      conclusao: Texto required
+      incerteza: Texto required
+      limite: Texto required
+      protocolo: Texto
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      publicavel: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      alertas: Lista
+    }
+    rules {
+      conclusao deve_ser sustentada
+      incerteza deve_ser explicita
+      limite deve_ser declarado
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria research_conclusao criticidade = media
+    }
+    forbidden {
+      afirmacao_absoluta_sem_base
+      remover_incerteza
+      ignorar_lacuna
+      publicar_sem_fontes_citaveis
+      publicar_sem_evidencia_contraria_quando_critica
+      aprovar_mencao_negativa_como_requisito_atendido
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      publicavel existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      alertas existe
+    }
+    tests {
+      caso "conclusao preserva limite" {
+        given {
+          conclusao: "conclusao apoiada por evidencia"
+          incerteza: "incerteza declarada"
+          limite: "limite de amostra"
+          protocolo: "dataset dados reprodutibilidade replicacao"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          publicavel: verdadeiro
+        }
+      }
+    }
+  }
+}

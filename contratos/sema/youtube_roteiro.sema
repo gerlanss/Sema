@@ -1,0 +1,208 @@
+module sema.produto.youtube_roteiro {
+  docs {
+    resumo: "Sema para roteiro de YouTube com pesquisa, gancho forte, retenção, payoff, CTA e bloqueio de clichê."
+  }
+
+  use sema.produto.research
+
+  use sema.produto.copywriting
+
+  use sema.produto.qa_criativo
+
+  type BriefingRoteiroYoutube {
+    fields {
+      assunto: Texto
+      publico: Texto
+      promessa: Texto
+      evidencias: Lista
+      formato: Texto
+      duracao_alvo: Texto
+      objetivo_canal: Texto
+    }
+    invariants {
+      assunto existe
+      publico existe
+      promessa existe
+      formato existe
+      duracao_alvo existe
+    }
+  }
+
+  task preparar_briefing_youtube {
+    input {
+      assunto: Texto required
+      publico: Texto required
+      promessa: Texto required
+      fontes: Lista required
+      formato: Texto required
+      duracao_alvo: Texto required
+      objetivo_canal: Texto required
+    }
+    output {
+      briefing: BriefingRoteiroYoutube
+      lacunas: Lista
+      pronto_para_roteiro: Booleano
+    }
+    rules {
+      assunto deve_ser especifico
+      publico deve_ser definido
+      promessa deve_ser honesta
+      fontes deve_ser citaveis
+      formato deve_ser youtube
+      duracao_alvo deve_ser declarada
+      objetivo_canal deve_ser declarado
+    }
+    effects {
+      consulta research criticidade = media
+      auditoria briefing_youtube criticidade = media
+    }
+    forbidden {
+      roteiro_sem_fonte
+      promessa_clickbait_sem_entrega
+      publico_generico
+      assunto_vago
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      briefing existe
+      lacunas existe
+      pronto_para_roteiro existe
+    }
+    tests {
+      caso "briefing YouTube com fonte" {
+        given {
+          assunto: "como escolher carretilha para pescaria pesada"
+          publico: "pescador intermediario que compra equipamento"
+          promessa: "evitar compra errada sem enrolacao"
+          fontes: "manual do produto, review tecnico"
+          formato: "YouTube longo"
+          duracao_alvo: "8 a 12 minutos"
+          objetivo_canal: "reter e gerar direct"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_roteiro: verdadeiro
+        }
+      }
+    }
+  }
+
+  task criar_roteiro_retencao {
+    input {
+      briefing: BriefingRoteiroYoutube required
+      estrutura: Lista required
+      ganchos: Lista required
+      ctas: Lista required
+      prova: Lista required
+      anticliches: Lista required
+    }
+    output {
+      roteiro: Texto
+      mapa_retencao: Lista
+      aprovado_para_metadata: Booleano
+    }
+    rules {
+      briefing deve_ser valido
+      estrutura deve_ser cena_ou_bloco
+      ganchos deve_ser fortes_no_inicio
+      ctas deve_ser naturais
+      prova deve_ser usada
+      anticliches deve_ser declarados
+    }
+    effects {
+      auditoria roteiro_youtube criticidade = alta
+    }
+    authz {
+      escopo: sema.youtube_roteiro
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.youtube_roteiro.roteiro_criado
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      abertura_generica
+      enrolacao_antes_da_entrega
+      prometer_e_nao_entregar
+      cta_mecanico_demais
+      voz_generica_de_ia
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      roteiro existe
+      mapa_retencao existe
+      aprovado_para_metadata existe
+      roteiro deve_ser entregar_a_promessa_do_titulo
+      roteiro deve_ser com_gancho_nos_primeiros_segundos
+      roteiro deve_ser com_payoff_claro
+      roteiro deve_ser sem_cliche
+    }
+    tests {
+      caso "roteiro segura a promessa" {
+        given {
+          briefing: "video para pescador escolher carretilha"
+          estrutura: "gancho, erro comum, criterio, prova, comparacao, CTA"
+          ganchos: "nao compre antes de ver o freio real"
+          ctas: "salvar video e chamar no direct"
+          prova: "especificacao de freio e peso"
+          anticliches: "sem transforme sua pesca"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado_para_metadata: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow produzir_roteiro_youtube {
+    assunto: Texto
+    publico: Texto
+    promessa: Texto
+    fontes: Lista
+    formato: Texto
+    duracao_alvo: Texto
+    objetivo_canal: Texto
+    estrutura: Lista
+    ganchos: Lista
+    ctas: Lista
+    prova: Lista
+    anticliches: Lista
+    etapa briefing usa preparar_briefing_youtube com assunto = assunto, publico = publico, promessa = promessa, fontes = fontes, formato = formato, duracao_alvo = duracao_alvo, objetivo_canal = objetivo_canal
+    etapa roteiro usa criar_roteiro_retencao com briefing = briefing.briefing, estrutura = estrutura, ganchos = ganchos, ctas = ctas, prova = prova, anticliches = anticliches depende_de briefing
+    effects {
+      auditoria fluxo_youtube_roteiro criticidade = alta
+    }
+  }
+}

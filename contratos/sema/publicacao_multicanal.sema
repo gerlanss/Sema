@@ -1,0 +1,292 @@
+module sema.produto.publicacao_multicanal {
+  docs {
+    resumo: "Sema para montar, validar e registrar pacotes de publicacao em varios canais, conectando redator, copy, artes, videos e QA criativo. Contrato criativo vem antes de qualquer acao: criar, editar ou remover o .sema aplicavel antes de publicar."
+  }
+
+  use sema.produto.redator
+
+  use sema.produto.copywriting
+
+  use sema.produto.artes_produto
+
+  use sema.produto.videos
+
+  use sema.produto.qa_criativo
+
+  type PacotePublicacao {
+    fields {
+      canal: Texto
+      copy: Texto
+      midia: Lista
+      metadata: Lista
+      utm: Texto
+      data_publicacao: Data
+      aprovacao: Texto
+    }
+    invariants {
+      canal existe
+      copy existe
+      midia existe
+      metadata existe
+      data_publicacao existe
+      aprovacao existe
+    }
+  }
+
+  task montar_pacote_publicacao {
+    input {
+      canal: Texto required
+      copy_aprovada: Texto required
+      midia_aprovada: Lista required
+      metadata: Lista required
+      data_publicacao: Data required
+      utm: Texto
+    }
+    output {
+      pacote: PacotePublicacao
+      pronto_para_validacao: Booleano
+    }
+    rules {
+      canal deve_ser preenchido
+      copy_aprovada deve_ser preenchida
+      midia_aprovada deve_ser nao_vazio
+      metadata deve_ser completa
+      data_publicacao deve_ser valida
+      utm deve_ser aplicado_quando_fornecido
+    }
+    effects {
+      auditoria pacote_publicacao criticidade = media
+    }
+    forbidden {
+      pacote_sem_copy
+      pacote_sem_midia_quando_canal_exige
+      publicar_sem_metadata
+      utm_quebrada
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      pacote existe
+      pronto_para_validacao existe
+    }
+    tests {
+      caso "monta pacote social" {
+        given {
+          canal: "instagram"
+          copy_aprovada: "copy com cta"
+          midia_aprovada: "arte_feed.png"
+          metadata: "alt text, hashtags, legenda"
+          data_publicacao: "2026-06-03"
+          utm: "utm_campaign=lancamento"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_validacao: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_publicacao_multicanal {
+    input {
+      pacote: PacotePublicacao required
+      checklist: ChecklistCriativo required
+      canal: Texto required
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+      ajustes: Lista
+    }
+    rules {
+      pacote deve_ser valido
+      checklist deve_ser completo
+      canal deve_ser preenchido
+      pacote deve_ser aderente_ao_canal
+      pacote deve_ser com_direitos_de_uso
+      pacote deve_ser com_acessibilidade
+      pacote deve_ser sem_link_quebrado
+    }
+    effects {
+      auditoria qa_publicacao criticidade = alta
+    }
+    authz {
+      escopo: sema.publicacao.validar_multicanal
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        pacote: interno
+        checklist: interno
+        canal: publico
+      }
+      output {
+        aprovado: publico
+        bloqueios: interno
+        ajustes: interno
+      }
+    }
+    audit {
+      evento: sema.publicacao.multicanal_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      publicar_sem_aprovacao
+      publicar_sem_direitos
+      metadata_ausente
+      link_quebrado
+      canal_errado
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+      ajustes existe
+    }
+    tests {
+      caso "bloqueia link quebrado" {
+        given {
+          pacote: "copy midia metadata link quebrado"
+          checklist: "direitos acessibilidade canal"
+          canal: "email"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          bloqueios: "link_quebrado"
+        }
+      }
+    }
+  }
+
+  task registrar_resultado_publicacao {
+    input {
+      pacote: PacotePublicacao required
+      status_publicacao: Texto required
+      metricas_iniciais: Lista
+    }
+    output {
+      registro: Texto
+      aprendizado: Lista
+      proxima_acao: Texto
+    }
+    rules {
+      pacote deve_ser valido
+      status_publicacao deve_ser em [PUBLICADO, AGENDADO, FALHOU, PAUSADO]
+      metricas_iniciais deve_ser registradas_quando_fornecidas
+    }
+    effects {
+      persistencia historico_publicacao criticidade = media
+      auditoria resultado_publicacao criticidade = media
+    }
+    authz {
+      escopo: sema.publicacao.registrar_resultado
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        pacote: interno
+        status_publicacao: publico
+        metricas_iniciais: interno
+      }
+      output {
+        registro: interno
+        aprendizado: interno
+        proxima_acao: interno
+      }
+    }
+    audit {
+      evento: sema.publicacao.resultado_registrado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      perder_status_publicacao
+      ignorar_falha_de_publicacao
+      aprendizado_generico
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "seguro"
+      criticidade_operacional: media
+    }
+    guarantees {
+      registro existe
+      aprendizado existe
+      proxima_acao existe
+      aprendizado deve_ser acionavel
+    }
+    tests {
+      caso "registra publicacao agendada" {
+        given {
+          pacote: "instagram post produto"
+          status_publicacao: "AGENDADO"
+          metricas_iniciais: "sem metricas ainda"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          registro: "AGENDADO"
+        }
+      }
+    }
+  }
+
+  flow publicar_conteudo_multicanal {
+    canal: Texto
+    copy_aprovada: Texto
+    midia_aprovada: Lista
+    metadata: Lista
+    data_publicacao: Data
+    checklist: ChecklistCriativo
+    metricas_iniciais: Lista
+    etapa pacote usa montar_pacote_publicacao com canal = canal, copy_aprovada = copy_aprovada, midia_aprovada = midia_aprovada, metadata = metadata, data_publicacao = data_publicacao
+    etapa validar usa validar_publicacao_multicanal com pacote = pacote.pacote, checklist = checklist, canal = canal depende_de pacote
+    etapa registrar usa registrar_resultado_publicacao com pacote = pacote.pacote, status_publicacao = AGENDADO, metricas_iniciais = metricas_iniciais depende_de validar
+    effects {
+      auditoria fluxo_publicacao_multicanal criticidade = alta
+    }
+  }
+}

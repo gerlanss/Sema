@@ -1,0 +1,123 @@
+module exemplos.profile.software {
+  docs {
+    resumo: "Starter do Profile Software: contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois codigo vivo, drift, impacto, vinculos rastreaveis, arquivo, simbolo, validar, verificar, checks e testes."
+  }
+
+  type MudancaSoftware {
+    fields {
+      contrato: Texto
+      codigo_vivo: Texto
+      drift: Texto
+      impacto: Texto
+      checks: Lista
+    }
+    invariants {
+      contrato existe
+      codigo_vivo existe
+      drift existe
+      impacto existe
+      checks existe
+    }
+  }
+
+  task declarar_mudanca_contract_first {
+    input {
+      contrato: Texto required
+      codigo_vivo: Texto required
+      arquivo: Texto required
+      simbolo: Texto required
+      vinculos: Texto
+      impl: Texto
+    }
+    output {
+      mudanca: MudancaSoftware
+      pode_editar: Booleano
+    }
+    rules {
+      contrato deve_ser preenchido
+      codigo_vivo deve_ser declarado
+      arquivo deve_ser rastreavel
+      simbolo deve_ser rastreavel
+      vinculos deve_ser explicitos
+      impl deve_ser coerente
+    }
+    effects {
+      auditoria profile_software_mudanca criticidade = media
+    }
+    forbidden {
+      codigo_sem_contrato
+      editar_sem_drift
+      finalizar_sem_checks
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: media
+    }
+    guarantees {
+      mudanca existe
+      pode_editar == verdadeiro
+    }
+    tests {
+      caso "mudanca pronta para codigo" {
+        given {
+          contrato: "contrato validado"
+          codigo_vivo: "implementacao existente"
+          arquivo: "src/pedidos.ts"
+          simbolo: "criarPedido"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pode_editar: verdadeiro
+        }
+      }
+    }
+  }
+
+  task fechar_mudanca_com_verificacao {
+    input {
+      drift: Texto required
+      impacto: Texto required
+      validar: Texto required
+      verificar: Texto required
+      testes: Lista required
+      checks: Lista
+    }
+    output {
+      concluida: Booleano
+      bloqueios: Lista
+    }
+    rules {
+      drift deve_ser executado
+      impacto deve_ser mapeado
+      validar deve_ser executado
+      verificar deve_ser executado
+      testes deve_ser nao_vazio
+      checks deve_ser completos
+    }
+    effects {
+      auditoria profile_software_fechamento criticidade = media
+    }
+    guarantees {
+      concluida existe
+      bloqueios existe
+    }
+    tests {
+      caso "fecha com checks completos" {
+        given {
+          drift: "sem divergencia"
+          impacto: "mapa calculado"
+          validar: "sema validar"
+          verificar: "sema verificar"
+          testes: "npm test"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          concluida: verdadeiro
+        }
+      }
+    }
+  }
+}

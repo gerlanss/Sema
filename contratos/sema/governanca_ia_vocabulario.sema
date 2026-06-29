@@ -1,0 +1,101 @@
+module sema.produto.governanca_ia.vocabulario {
+  docs {
+    resumo: "Vocabulario canonico da Sema para agentes IA: conceito de produto em PT-BR ou termo canonico Sema; ingles somente para comando, identificador, endpoint, variavel, pacote, marca, protocolo ou nome externo."
+    arquivo: "docs/vocabulary.md"
+  }
+
+  task aplicar_vocabulario_canonico_ia {
+    input {
+      superficie: Texto required
+      texto: Texto required
+    }
+    output {
+      vocabulario_canonico_aplicado: Booleano
+      termos_tecnicos_preservados: Booleano
+      ingles_produto_removido: Booleano
+    }
+    rules {
+      superficie deve_ser preenchida
+      texto deve_ser preenchido
+      texto deve_ser portugues_canonico_para_conceito_produto
+      texto deve_ser preservar_identificador_tecnico
+    }
+    effects {
+      auditoria vocabulario_ia criticidade = media
+    }
+    authz {
+      escopo: sema.ia.vocabulario.aplicar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        superficie: interno
+        texto: interno
+      }
+      output {
+        vocabulario_canonico_aplicado: publico
+        termos_tecnicos_preservados: publico
+        ingles_produto_removido: publico
+      }
+    }
+    audit {
+      evento: sema.ia.vocabulario.aplicado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      usar_ingles_para_conceito_produto_com_termo_ptbr_existente
+      traduzir_comando
+      traduzir_identificador
+      traduzir_endpoint
+      traduzir_variavel_ambiente
+      traduzir_pacote
+      trocar_nome_externo_sem_contrato
+      inventar_sinonimo_para_termo_canonico
+      usar_score_quando_pontuacao_for_texto_humano
+      usar_drift_quando_desvio_semantico_for_texto_humano
+      usar_gate_quando_trava_for_texto_humano
+      usar_runtime_quando_ambiente_execucao_for_texto_humano
+      usar_profile_quando_perfil_for_texto_humano
+    }
+    impl {
+      ts: cli.src.agent_context_pack.criarAgentContextPack
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/agentContextPack.ts"
+      arquivo: "pacotes/cli/src/agentEntryPoints.ts"
+      arquivo: "docs/vocabulary.md"
+      simbolo: cli.src.agent_context_pack.criarAgentContextPack
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      vocabulario_canonico_aplicado existe
+      termos_tecnicos_preservados existe
+      ingles_produto_removido existe
+    }
+    tests {
+      caso "mata ingles de produto sem traduzir identificador" {
+        given {
+          superficie: "agent_context_pack"
+          texto: "Use pontuacao, desvio semantico e trava; preserve sema drift, SEMA_HOME e /healthz."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          vocabulario_canonico_aplicado: verdadeiro
+          termos_tecnicos_preservados: verdadeiro
+          ingles_produto_removido: verdadeiro
+        }
+      }
+    }
+  }
+}

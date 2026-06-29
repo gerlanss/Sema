@@ -1,0 +1,40 @@
+# Dependencias locais
+node_modules/
+**/node_modules/
+
+# Areas temporarias e saidas locais
+.tmp/
+**/.tmp/
+_local/
+.worktrees/
+.minimax/
+.tools/
+dist/
+**/dist/
+*.tsbuildinfo
+
+# Pacotes e logs gerados localmente
+*.tgz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Artefatos do sistema operacional/editor
+.DS_Store
+Thumbs.db
+
+# Segredos e estado local
+.env
+.env.*
+!.env.example
+.sema/
+AGENT_CONTEXT_PACK.json
+SEMA_BRIEF*.txt
+SEMA_BRIEF.md
+SEMA_INDEX.json
+
+# Artefatos soltos de smoke/debug
+image_*.png
+navigate.json
+sema_*_test.json

@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "references": [
+    { "path": "../nucleo" },
+    { "path": "../gerador-dart" },
+    { "path": "../gerador-lua" },
+    { "path": "../gerador-python" },
+    { "path": "../gerador-typescript" },
+    { "path": "../gerador-javascript" },
+    { "path": "../gerador-html" },
+    { "path": "../gerador-css" },
+    { "path": "../padroes" }
+  ],
+  "include": ["src/**/*"]
+}

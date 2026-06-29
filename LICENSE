@@ -1,0 +1,39 @@
+Sema Public Non-Commercial License
+Version 1.0
+
+Copyright (c) 2026 Sema
+
+Official support: suporte@otimitare.online
+
+Permission is granted, free of charge, to use, copy, study, modify, and
+distribute this software and its documentation for personal, educational,
+research, internal business, and non-commercial purposes, subject to the terms
+below.
+
+You may:
+
+1. Use Sema locally as a CLI in your own projects.
+2. Study and modify the source code.
+3. Share unmodified or modified copies for non-commercial purposes.
+4. Publish patches, examples, documentation, and integrations that do not sell
+   Sema itself as a product or commercial replacement.
+
+You may not, without prior written permission from OtimiTare:
+
+1. Sell Sema, a modified Sema, or a substantially similar rebranded copy.
+2. Offer Sema, a modified Sema, or a substantially similar implementation as a
+   commercial replica or paid replacement.
+3. Bundle Sema into a paid product in a way that makes Sema itself a material
+   commercial feature.
+4. Use Sema's name, marks, documentation, or public repository to imply
+   endorsement by Sema or OtimiTare.
+5. Remove this license or the copyright notice from distributed copies.
+
+Commercial licensing, resale permission, or commercial replica permission
+requires written approval. Contact suporte@otimitare.online.
+
+This software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to warranties of merchantability, fitness for
+a particular purpose, and non-infringement. In no event shall the authors or
+copyright holders be liable for any claim, damages, or other liability arising
+from the software or its use.

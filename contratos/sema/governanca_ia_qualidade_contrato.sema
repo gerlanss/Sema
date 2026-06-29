@@ -1,0 +1,274 @@
+module sema.produto.governanca_ia.qualidade_contrato {
+  docs {
+    resumo: "Contrato filho para qualidade semantica de contrato, predicados, testes fortes e nomes legiveis para IA."
+  }
+
+  task normalizar_predicados_para_ia {
+    input {
+      predicado_original: Texto required
+      preservar_original: Booleano required
+    }
+    output {
+      predicado_canonico: Texto
+      original_preservado: Booleano
+    }
+    impl {
+      ts: nucleo.src.semantico.estruturas.normalizarPredicadoSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/estruturas.ts"
+      simbolo: nucleo.src.semantico.estruturas.normalizarPredicadoSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      compensacao: "preservar predicado original"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      predicado_canonico existe
+      original_preservado existe
+    }
+    tests {
+      caso "preenchida vira token canonico sem apagar original" {
+        given {
+          predicado_original: "preenchida"
+          preservar_original: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task emitir_diagnosticos_de_contrato_frouxo {
+    input {
+      contrato_alvo: Texto required
+      sensivel: Booleano required
+    }
+    output {
+      avisos_emitidos: Booleano
+      erros_bloqueantes: Booleano
+    }
+    impl {
+      ts: nucleo.src.semantico.analisador.emitirDiagnosticosContratoFrouxo
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+      simbolo: nucleo.src.semantico.analisador.emitirDiagnosticosContratoFrouxo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      compensacao: "diagnostico apenas informativo"
+      criticidade_operacional: media
+    }
+    guarantees {
+      avisos_emitidos existe
+      erros_bloqueantes existe
+    }
+    tests {
+      caso "contrato frouxo gera aviso sem quebrar validacao" {
+        given {
+          contrato_alvo: "task critica com teste fraco"
+          sensivel: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_testes_semanticos_fortes {
+    input {
+      task_sensivel: Texto required
+      expect_minimo: Texto required
+    }
+    output {
+      teste_forte: Booleano
+      aviso_teste_fraco: Booleano
+    }
+    impl {
+      ts: nucleo.src.semantico.analisador.validarTesteSemanticoForte
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+      simbolo: nucleo.src.semantico.analisador.validarTesteSemanticoForte
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      compensacao: "manter aviso nao bloqueante"
+      criticidade_operacional: media
+    }
+    guarantees {
+      teste_forte existe
+      aviso_teste_fraco existe
+    }
+    tests {
+      caso "sucesso verdadeiro sozinho nao basta em task sensivel" {
+        given {
+          task_sensivel: "processar_pagamento"
+          expect_minimo: "sucesso: verdadeiro"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task padronizar_nomes_para_leitura_de_ia {
+    input {
+      contrato_atual: Texto required
+      sinonimos_em_excesso: Booleano required
+    }
+    output {
+      nomes_consistentes: Booleano
+      leitura_rapida: Booleano
+      casos_especiais_reduzidos: Booleano
+    }
+    impl {
+      ts: nucleo.src.formatador.index.formatarCodigo
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/formatador/index.ts"
+      simbolo: nucleo.src.formatador.index.formatarCodigo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      nomes_consistentes existe
+      leitura_rapida existe
+      casos_especiais_reduzidos existe
+    }
+    tests {
+      caso "ia le sem tropeco" {
+        given {
+          contrato_atual: "task, route, flow, state e tests com nomes regulares"
+          sinonimos_em_excesso: falso
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_i18n_texto_visivel_observavel {
+    input {
+      contrato_alvo: Texto required
+      artefato_ui: Texto required
+      idioma: Texto required
+      maturidade: Texto required
+    }
+    output {
+      diacriticos_preservados: Booleano
+      achados_bloqueantes: Lista
+      garantia_observavel: Booleano
+    }
+    rules {
+      contrato_alvo deve_ser preenchido
+      artefato_ui deve_ser comparado_quando_contrato_declarar_i18n
+      idioma deve_ser declarado_quando_i18n_for_exigido
+      maturidade deve_ser definida
+    }
+    effects {
+      auditoria i18n_texto_visivel_observavel criticidade = media
+    }
+    forbidden {
+      aprovar_garantia_i18n_sem_comparar_artefato
+      aprovar_i18n_sem_idioma_declarado
+      aprovar_idioma_i18n_sem_validador_observavel
+      aprovar_texto_visivel_sem_diacritico_obrigatorio
+    }
+    impl {
+      ts: cli.src.profile_i18n_visivel.avaliarI18nVisivelArtefato
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profileI18nVisivel.ts"
+      arquivo: "pacotes/cli/src/profileI18nCatalogo.ts"
+      simbolo: cli.src.profile_i18n_visivel.avaliarI18nVisivelArtefato
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      compensacao: "emitir achado bloqueante sem alterar artefato"
+      criticidade_operacional: media
+    }
+    guarantees {
+      garantia_observavel existe
+      achados_bloqueantes existe
+      diacriticos_preservados existe
+      diacriticos_preservados deve_ser falso_quando_texto_visivel_sem_diacritico
+      achados_bloqueantes deve_ser emitidos_quando_literal_visivel_sem_diacritico
+      achados_bloqueantes deve_ser emitidos_quando_i18n_sem_idioma
+    }
+    tests {
+      caso "descricao sem acento bloqueia quando i18n ptbr foi declarado" {
+        given {
+          contrato_alvo: "i18n_ptbr exige texto visivel com acentos"
+          artefato_ui: "<label>Descricao</label>"
+          idioma: "pt-BR"
+          maturidade: "production"
+        }
+
+        expect {
+          sucesso: falso
+        }
+      }
+
+      caso "descripcion sem acento bloqueia quando i18n es foi declarado" {
+        given {
+          contrato_alvo: "i18n_es exige texto visible con acentos"
+          artefato_ui: "<label>Descripcion</label>"
+          idioma: "es"
+          maturidade: "production"
+        }
+
+        expect {
+          sucesso: falso
+        }
+      }
+
+      caso "i18n sem idioma declarado bloqueia" {
+        given {
+          contrato_alvo: "i18n exige texto visivel com acentos"
+          artefato_ui: "<label>Descrição</label>"
+          idioma: ""
+          maturidade: "production"
+        }
+
+        expect {
+          sucesso: falso
+        }
+      }
+
+      caso "descricao com acento passa na checagem ptbr" {
+        given {
+          contrato_alvo: "i18n_ptbr exige texto visivel com acentos"
+          artefato_ui: "<label>Descrição</label>"
+          idioma: "pt-BR"
+          maturidade: "production"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}

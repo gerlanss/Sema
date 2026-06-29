@@ -1,0 +1,357 @@
+module sema.produto.copywriting {
+  docs {
+    resumo: "Sema de copywriting para produzir copy persuasiva, especifica, aderente a marca e testavel por canal, usando Research, Author e QA criativo. Contrato criativo vem antes de qualquer acao: criar, editar ou remover o .sema aplicavel antes de gerar copy."
+  }
+
+  use sema.produto.identidade_marca
+
+  use sema.produto.qa_criativo
+
+  use sema.produto.research
+
+  use sema.produto.author
+
+  type BriefingCopy {
+    fields {
+      objetivo: Texto
+      publico: Texto
+      oferta: Texto
+      canal: CanalCopy
+      prova: Texto
+      restricoes: Lista
+    }
+    invariants {
+      objetivo existe
+      publico existe
+      oferta existe
+      canal existe
+      prova existe
+    }
+  }
+
+  type CopyGerada {
+    fields {
+      titulo: Texto
+      subtitulo: Texto
+      corpo: Texto
+      cta: Texto
+      variantes: Lista
+      hipoteses: Lista
+    }
+    invariants {
+      titulo existe
+      corpo existe
+      cta existe
+      hipoteses existe
+    }
+  }
+
+  enum CanalCopy {
+    ANUNCIO,
+    EMAIL,
+    LANDING,
+    SOCIAL,
+    WHATSAPP,
+    PUSH,
+    SEO
+  }
+
+  task preparar_briefing_copy {
+    input {
+      objetivo: Texto required
+      publico: Texto required
+      oferta: Texto required
+      canal: CanalCopy required
+      identidade_marca: Texto required
+      fontes: Lista
+    }
+    output {
+      briefing: BriefingCopy
+      pronto_para_copy: Booleano
+      lacunas: Lista
+    }
+    rules {
+      objetivo deve_ser concreto
+      publico deve_ser especifico
+      oferta deve_ser clara
+      canal deve_ser valido
+      identidade_marca deve_ser declarada
+      fontes deve_ser citaveis_quando_fornecidas
+    }
+    effects {
+      auditoria briefing_copy criticidade = media
+    }
+    forbidden {
+      publico_generico
+      oferta_sem_prova
+      promessa_milagrosa
+      briefing_sem_marca
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      briefing existe
+      pronto_para_copy existe
+      lacunas existe
+    }
+    tests {
+      caso "briefing de campanha pronto" {
+        given {
+          objetivo: "aumentar teste gratis"
+          publico: "gestor de loja com pouco tempo"
+          oferta: "7 dias para organizar campanhas"
+          canal: "LANDING"
+          identidade_marca: "voz direta sem promessa milagrosa"
+          fontes: "pesquisa clientes abril"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pronto_para_copy: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_copy_persuasiva {
+    input {
+      briefing: BriefingCopy required
+      evidencias: Lista required
+      estilo_author: Texto
+      quantidade_variantes: Inteiro
+    }
+    output {
+      copy: CopyGerada
+      nao_generica: Booleano
+      baseada_em_evidencia: Booleano
+    }
+    rules {
+      briefing deve_ser valido
+      evidencias deve_ser nao_vazio
+      estilo_author deve_ser aplicado_quando_fornecido
+      quantidade_variantes >= 1
+    }
+    effects {
+      auditoria copy_gerada criticidade = media
+    }
+    forbidden {
+      copy_generica
+      cliche_de_marketing
+      promessa_sem_base
+      cta_fraco
+      inventar_prova
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      copy existe
+      nao_generica == verdadeiro
+      baseada_em_evidencia == verdadeiro
+      copy deve_ser magnetica
+      copy deve_ser especifica
+      copy deve_ser sem_voz_generica_de_ia
+    }
+    tests {
+      caso "gera copy com prova e cta" {
+        given {
+          briefing: "landing para lojista ocupado"
+          evidencias: "usuarios economizam 3 horas por semana"
+          estilo_author: "direto com imagem concreta"
+          quantidade_variantes: 2
+        }
+
+        expect {
+          sucesso: verdadeiro
+          nao_generica: verdadeiro
+          baseada_em_evidencia: verdadeiro
+        }
+      }
+    }
+  }
+
+  task adaptar_copy_multicanal {
+    input {
+      copy_base: CopyGerada required
+      canais: Lista required
+      limite_caracteres: Inteiro
+    }
+    output {
+      copys_por_canal: Lista
+      coerencia_mantida: Booleano
+    }
+    rules {
+      copy_base deve_ser valida
+      canais deve_ser nao_vazio
+      limite_caracteres deve_ser respeitado_quando_fornecido
+    }
+    effects {
+      auditoria copy_multicanal criticidade = baixa
+    }
+    forbidden {
+      mesma_copy_para_todo_canal
+      perder_cta
+      quebrar_tom_da_marca
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      copys_por_canal existe
+      coerencia_mantida existe
+      copys_por_canal deve_ser adaptar_sem_perder_promessa
+    }
+    tests {
+      caso "adapta para social e email" {
+        given {
+          copy_base: "titulo corpo cta"
+          canais: "SOCIAL, EMAIL"
+          limite_caracteres: 180
+        }
+
+        expect {
+          sucesso: verdadeiro
+          coerencia_mantida: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_copy_magnetica {
+    input {
+      copy: CopyGerada required
+      briefing: BriefingCopy required
+      identidade_marca: Texto required
+    }
+    output {
+      aprovado: Booleano
+      achados: Lista
+      versao_recomendada: Texto
+    }
+    rules {
+      copy deve_ser valida
+      briefing deve_ser valido
+      identidade_marca deve_ser declarada
+      copy deve_ser aderente_a briefing
+      copy deve_ser aderente_a identidade_marca
+      copy deve_ser com_tensao_concreta
+      copy deve_ser sem_generico
+    }
+    effects {
+      auditoria copy_quality_gate criticidade = alta
+    }
+    authz {
+      escopo: sema.copywriting.validar_copy
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        copy: interno
+        briefing: interno
+        identidade_marca: interno
+      }
+      output {
+        aprovado: publico
+        achados: interno
+        versao_recomendada: interno
+      }
+    }
+    audit {
+      evento: sema.copywriting.copy_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      headline_generica
+      sem_cta
+      sem_prova
+      exagero_nao_comprovado
+      voz_generica_de_ia
+    }
+    impl {
+      ts: cli.src.profiles.validate.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profiles/validate.ts"
+      simbolo: cli.src.profiles.validate.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      achados existe
+      versao_recomendada existe
+    }
+    tests {
+      caso "bloqueia headline vazia" {
+        given {
+          copy: "Transforme seu negocio com solucao inovadora"
+          briefing: "lojista quer reduzir retrabalho"
+          identidade_marca: "direta e concreta"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: falso
+          achados: "headline_generica"
+        }
+      }
+    }
+  }
+
+  flow produzir_copy_com_pesquisa {
+    objetivo: Texto
+    publico: Texto
+    oferta: Texto
+    canal: CanalCopy
+    identidade_marca: Texto
+    fontes: Lista
+    evidencias: Lista
+    etapa research usa validar_plano_research com pergunta = objetivo, metodologia = pesquisa de publico oferta e objecoes, fontes = fontes, evidencias = evidencias
+    etapa briefing usa preparar_briefing_copy com objetivo = objetivo, publico = publico, oferta = oferta, canal = canal, identidade_marca = identidade_marca, fontes = fontes depende_de research
+    etapa copy usa gerar_copy_persuasiva com briefing = briefing.briefing, evidencias = evidencias, estilo_author = sem voz generica, quantidade_variantes = 3 depende_de briefing
+    etapa validar usa validar_copy_magnetica com copy = copy.copy, briefing = briefing.briefing, identidade_marca = identidade_marca depende_de copy
+    effects {
+      auditoria fluxo_copy_pesquisa criticidade = media
+    }
+  }
+}

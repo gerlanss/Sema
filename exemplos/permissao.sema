@@ -1,0 +1,121 @@
+module exemplos.permissao {
+  docs {
+    resumo: "Controle de acesso baseado em papeis e permissoes granulares."
+  }
+
+  entity Papel {
+    fields {
+      id: Id
+      nome: Texto
+      descricao: Texto
+    }
+  }
+
+  entity Permissao {
+    fields {
+      id: Id
+      recurso: Texto
+      acao: Texto
+      descricao: Texto
+    }
+  }
+
+  task atribuir_papel {
+    input {
+      usuario_id: Id required
+      papel_id: Id required
+    }
+    output {
+      atribuicao_id: Id
+    }
+    rules {
+      usuario_id deve_ser valido
+      papel_id deve_ser valido
+    }
+    effects {
+      consulta Usuario por usuario_id
+      consulta Papel por papel_id
+      persistencia AtribuicaoPapel
+      evento papel_atribuido criticidade = media
+      auditoria atribuicao_papel criticidade = alta
+    }
+    guarantees {
+      atribuicao_id existe
+    }
+    error {
+      usuario_nao_encontrado: "Usuario nao localizado."
+      papel_nao_encontrado: "Papel nao localizado."
+      atribuicao_duplicada: "Usuario ja possui este papel."
+    }
+    tests {
+      caso "atribui papel admin" {
+        given { usuario_id: "usr_1"  papel_id: "papel_admin" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task verificar_permissao {
+    input {
+      usuario_id: Id required
+      recurso: Texto required
+      acao: Texto required
+    }
+    output {
+      autorizado: Booleano
+    }
+    rules {
+      usuario_id deve_ser valido
+      recurso deve_ser preenchido
+      acao deve_ser preenchida
+    }
+    effects {
+      consulta AtribuicaoPapel por usuario_id
+      consulta PermissaoPapel por papel_id
+      auditoria verificacao_permissao
+    }
+    guarantees {
+      autorizado existe
+    }
+    tests {
+      caso "usuario autorizado" {
+        given { usuario_id: "usr_admin"  recurso: "relatorios"  acao: "exportar" }
+        expect { sucesso: verdadeiro }
+      }
+      caso "usuario sem permissao" {
+        given { usuario_id: "usr_basico"  recurso: "admin"  acao: "deletar" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+
+  task revogar_papel {
+    input {
+      usuario_id: Id required
+      papel_id: Id required
+      motivo: Texto required
+    }
+    output {
+      protocolo: Id
+    }
+    rules {
+      usuario_id deve_ser valido
+      papel_id deve_ser valido
+      motivo deve_ser preenchido
+    }
+    effects {
+      persistencia AtribuicaoPapel
+      evento papel_revogado criticidade = alta
+      auditoria revogacao_papel criticidade = alta
+    }
+    guarantees {
+      protocolo existe
+    }
+    tests {
+      caso "revoga papel" {
+        given { usuario_id: "usr_1"  papel_id: "papel_admin"  motivo: "Saida da equipe" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

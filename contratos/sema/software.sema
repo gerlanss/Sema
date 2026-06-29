@@ -1,0 +1,261 @@
+module sema.produto.software {
+  docs {
+    resumo: "Profile Software oficial da Sema para mudanca contract-first em codigo vivo: contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois drift, impacto, contexto IA e fechamento verificavel."
+  }
+
+  vinculos {
+    arquivo: "pacotes/cli/src/index.ts"
+    simbolo: cli.src.index.validarProfileSemantico
+  }
+
+  type SoftwareChangeCore {
+    fields {
+      intencao: Texto
+      contrato: Texto
+      codigo_vivo: Texto
+      risco: Texto
+      checks: Lista
+    }
+    invariants {
+      intencao existe
+      contrato existe
+      codigo_vivo existe
+      checks existe
+    }
+  }
+
+  entity ProfileSoftware {
+    fields {
+      id: Id
+      core: SoftwareChangeCore
+      drift_exigido: Booleano
+      impacto_exigido: Booleano
+      contexto_ia_exigido: Booleano
+      status: StatusProfileSoftware
+    }
+    invariants {
+      id existe
+      core existe
+      drift_exigido existe
+      impacto_exigido existe
+      contexto_ia_exigido existe
+      status em [RASCUNHO, PRONTO, BLOQUEADO]
+    }
+  }
+
+  enum StatusProfileSoftware {
+    RASCUNHO,
+    PRONTO,
+    BLOQUEADO
+  }
+
+  task validar_profile_software {
+    input {
+      contrato: Texto required
+      codigo_vivo: Texto required
+      drift: Texto required
+      impacto: Texto required
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      aprovado: Booleano
+      score_contrato: Decimal
+      score_artefato: Decimal
+      score_pronto_para_acao: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      requisitos_pendentes: Lista
+    }
+    rules {
+      contrato deve_ser preenchido
+      codigo_vivo deve_ser declarado
+      drift deve_ser executado
+      drift deve_ser sucesso_true_quando_fechar
+      drift deve_ser sem_vinculos_quebrados_quando_fechar
+      drift deve_ser sem_rotas_divergentes_quando_fechar
+      impacto deve_ser mapeado
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser inspecionado_para_responsividade_mobile_quando_ui
+      artefato_real deve_ser inspecionado_para_riscos_basicos_quando_fornecido
+      artefato_real deve_ser inspecionado_para_fronteira_multi_workspace_quando_webhook
+      artefato_real deve_ser inspecionado_para_idempotencia_por_workspace_quando_external_event
+      artefato_real deve_ser inspecionado_para_schema_prisma_duplicado_quando_houver_sql_manual
+      artefato_real deve_ser inspecionado_para_i18n_visivel_por_idioma_quando_contrato_exigir
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria profile_software criticidade = media
+    }
+    forbidden {
+      codigo_sem_contrato
+      editar_sem_drift
+      finalizar_sem_checks
+      aprovar_codigo_com_eval_proibido
+      aprovar_codigo_com_function_dinamico_proibido
+      aprovar_sql_concatenado_proibido
+      aprovar_innerhtml_inseguro_proibido
+      aprovar_artefato_suspeito_sem_achado
+      score_artefato_100_com_codigo_suspeito
+      aprovar_segredo_hardcoded
+      aprovar_tls_desativado
+      aprovar_shell_exec_com_input_dinamico
+      aprovar_webhook_multi_workspace_sem_auth_ou_workspace
+      aprovar_external_event_id_unico_global_em_saas_multi_workspace
+      aprovar_schema_prisma_com_shadow_sql_manual
+      aprovar_lint_next_varrendo_next_build
+      aprovar_drift_sucesso_false
+      aprovar_vinculos_quebrados
+      aprovar_rotas_divergentes
+      aprovar_ui_responsiva_sem_check_scrollwidth
+      aprovar_ui_mobile_com_overflow_horizontal
+      aprovar_texto_visivel_i18n_sem_diacritico_quando_idioma_exigir
+      aprovar_i18n_sem_idioma_declarado
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      score_contrato >= 0
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_risco_basico_detectado
+      score_artefato deve_ser menor_que_100_quando_webhook_sem_fronteira_workspace
+      score_artefato deve_ser menor_que_100_quando_idempotencia_global_detectada
+      score_artefato deve_ser menor_que_100_quando_i18n_visivel_sem_diacritico_detectado
+      score_artefato deve_ser menor_que_100_quando_ui_mobile_com_overflow_horizontal
+      score_pronto_para_acao deve_ser menor_que_80_quando_drift_sucesso_false
+      score_artefato deve_ser menor_que_100_quando_i18n_sem_idioma_declarado
+      score_pronto_para_acao >= 0
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      requisitos_pendentes existe
+    }
+    tests {
+      caso "software exige contrato drift e impacto" {
+        given {
+          contrato: "contrato antes de codigo vivo com vinculos e impl por arquivo e simbolo"
+          codigo_vivo: "implementacao rastreada"
+          drift: "drift executado"
+          impacto: "mapa de impacto calculado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+
+      caso "bloqueia i18n ptbr sem acento no artefato real" {
+        given {
+          contrato: "contrato antes de codigo vivo com vinculos e impl por arquivo e simbolo; i18n_ptbr exige texto visivel com acentos"
+          codigo_vivo: "index.html com texto visivel"
+          drift: "drift executado"
+          impacto: "mapa de impacto calculado"
+          artefato_real: "<label>Descricao</label>"
+        }
+
+        expect {
+          sucesso: falso
+          aprovado: falso
+        }
+      }
+
+      caso "bloqueia fechamento com drift falso ou UI mobile estourada" {
+        given {
+          contrato: "contrato antes de codigo vivo com vinculos e impl por arquivo e simbolo; UI responsiva exige evidencia mobile"
+          codigo_vivo: "index.html implementado"
+          drift: "sucesso:false vinculos_quebrados:[./index.html] rotas_divergentes:[GET /index.html]"
+          impacto: "mapa de impacto calculado"
+          artefato_real: "viewport 390px scrollWidth 610 clientWidth 390"
+        }
+
+        expect {
+          sucesso: falso
+          aprovado: falso
+        }
+      }
+
+      caso "bloqueia i18n sem idioma declarado" {
+        given {
+          contrato: "contrato antes de codigo vivo com vinculos e impl por arquivo e simbolo; i18n exige texto visivel com diacriticos"
+          codigo_vivo: "index.html com texto visivel"
+          drift: "drift executado"
+          impacto: "mapa de impacto calculado"
+          artefato_real: "<label>Descrição</label>"
+        }
+
+        expect {
+          sucesso: falso
+          aprovado: falso
+        }
+      }
+    }
+  }
+
+  task fechar_mudanca_software {
+    input {
+      contrato: Texto required
+      checks: Lista required
+      testes: Lista required
+    }
+    output {
+      verificacao_final: Booleano
+      pode_concluir: Booleano
+    }
+    rules {
+      contrato deve_ser valido
+      checks deve_ser nao_vazio
+      testes deve_ser nao_vazio
+    }
+    effects {
+      auditoria fechamento_software criticidade = media
+    }
+    forbidden {
+      finalizar_sem_validar
+      finalizar_sem_verificar
+      ignorar_diagnostico_alto
+    }
+    impl {
+      ts: cli.src.index.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.index.validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      verificacao_final existe
+      pode_concluir existe
+    }
+    tests {
+      caso "fecha apenas com checks" {
+        given {
+          contrato: "contrato validado"
+          checks: "sema validar, sema verificar, testes"
+          testes: "npm test"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pode_concluir: verdadeiro
+        }
+      }
+    }
+  }
+}

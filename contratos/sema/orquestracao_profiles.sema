@@ -1,0 +1,445 @@
+module sema.produto.orquestracao_profiles {
+  docs {
+    resumo: "Orquestracao IA-first de profiles: dicionario semantico, starters por preset, pipelines adaptaveis, QA criativo publicavel e handoff automatico."
+  }
+
+  type ExpansaoSemanticaIaFirst {
+    fields {
+      termo_detectado: Texto
+      requisitos_sugeridos: Lista
+      faltando_declarar: Lista
+      conta_como_requisito_total: Booleano
+    }
+    invariants {
+      termo_detectado existe
+      requisitos_sugeridos existe
+      conta_como_requisito_total == falso
+    }
+  }
+
+  type StarterProfilePreset {
+    fields {
+      profile: Texto
+      preset: Texto
+      contrato: Texto
+      requisitos_cobertos: Lista
+    }
+    invariants {
+      profile existe
+      contrato existe
+      requisitos_cobertos existe
+    }
+  }
+
+  type PipelineProfile {
+    fields {
+      nome: Texto
+      profiles_obrigatorios: Lista
+      profiles_opcionais: Lista
+      adaptavel: Booleano
+      exige_justificativa_pular: Booleano
+    }
+    invariants {
+      nome existe
+      profiles_obrigatorios existe
+      adaptavel == verdadeiro
+    }
+  }
+
+  type ProfileCliExecutavel {
+    fields {
+      nome: Texto
+      aliases: Lista
+      contrato_oficial: Texto
+      valida_artefato_real: Booleano
+    }
+    invariants {
+      nome existe
+      aliases existe
+      contrato_oficial existe
+      valida_artefato_real == verdadeiro
+    }
+  }
+
+  task expandir_intencao_semantica {
+    input {
+      contrato: Texto required
+      profile: Texto
+      termo_detectado: Texto
+    }
+    output {
+      expansoes: Lista
+      requisitos_inferidos: Lista
+      exige_declaracao: Booleano
+    }
+    rules {
+      contrato deve_ser preenchido
+      termo_detectado deve_ser opcional
+      profile deve_ser opcional
+    }
+    effects {
+      auditoria dicionario_semantico_ia_first criticidade = media
+    }
+    forbidden {
+      aprovar_por_inferencia
+      substituir_requisito_literal_por_termo_vago
+    }
+    impl {
+      ts: cli.src.index.expandirIntencaoSemanticaProfile
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: expandirIntencaoSemanticaProfile
+    }
+    guarantees {
+      expansoes existe
+      requisitos_inferidos existe
+      exige_declaracao existe
+    }
+    tests {
+      caso "campanha pronta vira checklist" {
+        given {
+          contrato: "campanha pronta para instagram"
+          termo_detectado: "campanha pronta"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exige_declaracao: verdadeiro
+        }
+      }
+    }
+  }
+
+  task sugerir_starter_profile_preset {
+    input {
+      profile: Texto required
+      preset: Texto
+      requisitos_pendentes: Lista required
+      expansoes_semanticas: Lista
+    }
+    output {
+      starter: StarterProfilePreset
+      contrato_minimo: Texto
+      deve_aplicar_como_patch: Booleano
+    }
+    rules {
+      profile deve_ser preenchido
+      requisitos_pendentes deve_ser nao_vazio
+      preset deve_ser opcional
+    }
+    effects {
+      auditoria starter_profile_preset criticidade = media
+    }
+    forbidden {
+      starter_substituir_contexto_real
+      starter_aprovar_sem_validacao
+    }
+    impl {
+      ts: cli.src.index.sugerirStarterPresetProfile
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: sugerirStarterPresetProfile
+    }
+    guarantees {
+      starter existe
+      contrato_minimo existe
+      deve_aplicar_como_patch existe
+    }
+    tests {
+      caso "starter instagram para copy" {
+        given {
+          profile: "copywriting"
+          preset: "instagram"
+          requisitos_pendentes: "cta, prova"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          deve_aplicar_como_patch: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_pipeline_profiles {
+    input {
+      pipeline: Texto required
+      contrato: Texto required
+      artefato: Texto
+      maturidade: Texto required
+    }
+    output {
+      decisao_global: Texto
+      matriz: Lista
+      motivo_principal: Texto
+      proxima_acao: Texto
+    }
+    rules {
+      pipeline deve_ser preenchido
+      contrato deve_ser preenchido
+      maturidade deve_ser declarada
+      artefato deve_ser opcional
+    }
+    effects {
+      auditoria pipeline_profiles_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.pipeline.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.pipeline.validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      rodar_todos_profiles_sem_pipeline
+      ocultar_bloqueador_principal
+      tratar_pipeline_como_trilho_obrigatorio
+    }
+    impl {
+      ts: cli.src.index.validarPipelineProfiles
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: validarPipelineProfiles
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      compensacao: "bloquear_conclusao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      decisao_global existe
+      matriz existe
+      motivo_principal existe
+    }
+    tests {
+      caso "pipeline campanha produto" {
+        given {
+          pipeline: "campanha_produto"
+          contrato: "contrato campanha"
+          maturidade: "production"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          decisao_global: "continuar"
+        }
+      }
+    }
+  }
+
+  task exigir_qa_criativo_publicavel {
+    input {
+      contrato: Texto required
+      profile: Texto required
+      artefato_publicavel: Booleano required
+    }
+    output {
+      qa_requerido: Booleano
+      gate_final: Texto
+    }
+    rules {
+      contrato deve_ser preenchido
+      profile deve_ser preenchido
+      artefato_publicavel deve_ser declarado
+    }
+    effects {
+      auditoria qa_criativo_publicavel criticidade = alta
+    }
+    authz {
+      escopo: sema.qa_criativo.exigir
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.qa_criativo.publicavel_exigido
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      publicar_sem_qa_criativo
+      aprovar_midia_sem_direitos
+      aprovar_texto_generico_publicavel
+    }
+    impl {
+      ts: cli.src.index.exigirQaCriativoQuandoPublicavel
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: exigirQaCriativoQuandoPublicavel
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "bloquear_publicacao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      qa_requerido existe
+      gate_final existe
+    }
+    tests {
+      caso "publicavel exige qa" {
+        given {
+          contrato: "post publicavel"
+          profile: "copywriting"
+          artefato_publicavel: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          qa_requerido: verdadeiro
+        }
+      }
+    }
+  }
+
+  task montar_catalogo_dropdown_onboarding {
+    input {
+      publico: Texto required
+      contexto: Texto required
+    }
+    output {
+      pipelines: Lista
+      starters: Lista
+      profiles_principais: Lista
+      profiles_cli_executaveis: Lista
+      profile_redacao: ProfileCliExecutavel
+      profile_propostas: ProfileCliExecutavel
+    }
+    rules {
+      publico deve_ser preenchido
+      contexto deve_ser preenchido
+    }
+    effects {
+      auditoria catalogo_onboarding_dropdown criticidade = media
+    }
+    forbidden {
+      expor_quarenta_tools_no_dropdown
+      esconder_pipelines_principais
+    }
+    impl {
+      ts: cli.src.index.catalogoDropdownOnboarding
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: catalogoDropdownOnboarding
+    }
+    guarantees {
+      pipelines existe
+      starters existe
+      profiles_principais existe
+      profiles_cli_executaveis existe
+      profile_redacao existe
+      profile_redacao deve_ser profile_cli_executavel
+      profile_propostas existe
+      profile_propostas deve_ser profile_cli_executavel
+    }
+    tests {
+      caso "catalogo inclui redacao e propostas" {
+        given {
+          publico: "agente"
+          contexto: "cli"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          profiles_cli_executaveis: "redacao, propostas"
+        }
+      }
+    }
+  }
+
+  task registrar_profiles_cli_criativos {
+    input {
+      profiles_solicitados: Lista required
+      contratos_existentes: Lista required
+    }
+    output {
+      profiles_cli_executaveis: Lista
+      profile_redacao: ProfileCliExecutavel
+      profile_propostas: ProfileCliExecutavel
+      aliases_publicos: Lista
+      deve_aparecer_em_capabilities: Booleano
+    }
+    rules {
+      profiles_solicitados deve_ser nao_vazio
+      contratos_existentes deve_ser incluir_redator_e_propostas_comerciais
+    }
+    effects {
+      auditoria profile_cli_criativo_registrado criticidade = alta
+    }
+    authz {
+      escopo: sema.profile.catalogo
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.profile.catalogo.criativo_registrado
+      correlacao: request_id
+      motivo: obrigatorio
+    }
+    forbidden {
+      contrato_sem_profile_cli
+      profile_sem_capability_matrix
+      profile_sem_validacao_de_artefato
+    }
+    impl {
+      ts: cli.src.profile_command.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profileCommand.ts"
+      arquivo: "pacotes/cli/src/profileCatalogo.ts"
+      simbolo: validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      profiles_cli_executaveis existe
+      profile_redacao existe
+      profile_redacao deve_ser profile_cli_executavel
+      profile_propostas existe
+      profile_propostas deve_ser profile_cli_executavel
+      aliases_publicos existe
+      deve_aparecer_em_capabilities == verdadeiro
+    }
+    tests {
+      caso "profiles criativos viram capability" {
+        given {
+          profiles_solicitados: "redacao, propostas"
+          contratos_existentes: "redator, propostas_comerciais"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          deve_aparecer_em_capabilities: verdadeiro
+        }
+      }
+    }
+  }
+}

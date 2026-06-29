@@ -1,0 +1,93 @@
+module exemplos.upload.arquivo {
+  docs {
+    resumo: "Upload de arquivos com validacao de tipo, tamanho e processamento."
+  }
+
+  entity Arquivo {
+    fields {
+      id: Id
+      nome: Texto
+      tipo_mime: Texto
+      tamanho_bytes: Inteiro
+      url: Texto
+      status: Texto
+      enviado_por: Id
+      criado_em: Timestamp
+    }
+  }
+
+  task iniciar_upload {
+    input {
+      nome: Texto required
+      tipo_mime: Texto required
+      tamanho_bytes: Inteiro required
+    }
+    output {
+      upload_id: Id
+      url_upload: Texto
+    }
+    rules {
+      tipo_mime em [image/jpeg, image/png, application/pdf, text/csv]
+      tamanho_bytes <= 10485760
+      nome deve_ser preenchido
+    }
+    effects {
+      consulta storage criticidade = alta
+      persistencia Arquivo
+      auditoria upload_iniciado
+    }
+    guarantees {
+      upload_id existe
+      url_upload existe
+    }
+    error {
+      tipo_nao_permitido: "Tipo de arquivo nao aceito."
+      tamanho_excedido: "Arquivo excede o limite de 10MB."
+      storage_indisponivel: "Servico de armazenamento indisponivel."
+    }
+    tests {
+      caso "inicia upload de imagem" {
+        given { nome: "foto.jpg"  tipo_mime: "image/jpeg"  tamanho_bytes: 512000 }
+        expect { sucesso: verdadeiro }
+      }
+      caso "rejeita arquivo muito grande" {
+        given { nome: "video.mp4"  tipo_mime: "video/mp4"  tamanho_bytes: 20971520 }
+        expect { sucesso: falso }
+        error { tipo: "tamanho_excedido" }
+      }
+    }
+  }
+
+  task confirmar_upload {
+    input {
+      upload_id: Id required
+    }
+    output {
+      arquivo: Arquivo
+    }
+    rules {
+      upload_id deve_ser valido
+    }
+    effects {
+      consulta storage por upload_id criticidade = alta
+      persistencia Arquivo
+      evento arquivo_disponivel criticidade = baixa
+      auditoria upload_confirmado
+    }
+    state ciclo_arquivo {
+      transitions {
+        PENDENTE -> DISPONIVEL
+      }
+    }
+    guarantees {
+      arquivo existe
+      arquivo.url existe
+    }
+    tests {
+      caso "confirma upload realizado" {
+        given { upload_id: "upl_1" }
+        expect { sucesso: verdadeiro }
+      }
+    }
+  }
+}

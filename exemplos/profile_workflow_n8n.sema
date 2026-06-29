@@ -1,0 +1,99 @@
+module exemplos.profile.workflow_n8n {
+  docs {
+    resumo: "Starter do Profile Workflow para n8n: contrato primeiro. Criar, editar ou remover contrato antes de qualquer acao; depois runtime workflow como alvo de compatibilidade, adapter adaptado, scorecard parcial, webhook, cron, HTTP, branching, transformacao, authz, audit, compensacao e guarantees."
+  }
+
+  type RuntimeN8n {
+    fields {
+      runtime: Texto
+      adapter: Texto
+      compatibilidade: Texto
+      scorecard: Texto
+      lacunas: Lista
+    }
+    invariants {
+      runtime existe
+      adapter existe
+      compatibilidade existe
+      scorecard existe
+      lacunas existe
+    }
+  }
+
+  task validar_workflow_n8n {
+    input {
+      runtime: Texto required
+      adapter: Texto required
+      scorecard: Texto required
+      compatibilidade: Texto
+      webhook: Texto
+      cron: Texto
+      http: Texto
+      branching: Texto
+      transformacao: Texto
+      authz: Texto
+      audit: Texto
+      compensacao: Texto
+      guarantees: Texto
+    }
+    output {
+      runtime_validado: RuntimeN8n
+      aprovado: Booleano
+    }
+    rules {
+      runtime deve_ser workflow
+      adapter deve_ser n8n
+      compatibilidade deve_ser parcial
+      scorecard deve_ser calculado
+      webhook deve_ser mapeado
+      cron deve_ser mapeado
+      http deve_ser mapeado
+      branching deve_ser mapeado
+      transformacao deve_ser mapeada
+      authz deve_ser declarado
+      audit deve_ser declarado
+      compensacao deve_ser declarada
+      guarantees deve_ser declaradas
+    }
+    effects {
+      auditoria workflow_n8n_scorecard criticidade = media
+    }
+    forbidden {
+      equivalencia_total_falsa
+      n8n_como_linguagem_canonica
+      node_sem_contrato
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      compensacao: "bloquear_publicacao_do_workflow"
+      criticidade_operacional: media
+    }
+    guarantees {
+      runtime_validado existe
+      aprovado existe
+    }
+    tests {
+      caso "n8n e adapter honesto" {
+        given {
+          runtime: "workflow n8n"
+          adapter: "adapter adaptado"
+          scorecard: "webhook cron HTTP branching transformacao nativos; authz audit compensacao guarantees parciais"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+
+  flow onboarding_por_n8n {
+    lead_id: Id
+    email: Email
+    etapa receber usa validar_workflow_n8n com runtime = "workflow n8n", adapter = "n8n", scorecard = "webhook cron HTTP branching transformacao com lacunas authz audit compensacao guarantees" em_sucesso concluir em_erro bloquear
+    etapa concluir usa validar_workflow_n8n com runtime = "workflow n8n", adapter = "n8n", scorecard = "compatibilidade parcial" depende_de receber
+    etapa bloquear usa validar_workflow_n8n com runtime = "workflow n8n", adapter = "n8n", scorecard = "bloqueio por lacuna" depende_de receber
+  }
+}

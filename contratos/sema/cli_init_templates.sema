@@ -1,0 +1,245 @@
+module sema.produto.cli_init_templates {
+  docs {
+    resumo: "Comando sema init --template para reduzir curva de aprendizado. Gera esqueletos de contrato prontos para validar, minimizando linhas iniciais e erros de sintaxe."
+    versao: "1.0.0"
+    status: "MODELADA"
+  }
+
+  entity TemplateInit {
+    fields {
+      id: Id
+      nome: Texto
+      categoria: Texto
+      descricao: Texto
+      linhas_base: Inteiro
+      campos_editaveis: Lista<Texto>
+    }
+  }
+
+  task listar_templates_disponiveis {
+    input {
+      categoria_filtro: Texto optional
+    }
+    output {
+      templates: Lista<TemplateInit>
+      total: Inteiro
+    }
+    effects {
+      consulta templates_locais criticidade = baixa
+    }
+    impl {
+      ts: cli.src.init.listarTemplatesDisponiveis
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/init/templates.ts"
+      simbolo: cli.src.init.listarTemplatesDisponiveis
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "2s"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      templates existe
+      total >= 0
+    }
+  }
+
+  task iniciar_projeto_com_kit_ia {
+    input {
+      template_nome: Texto required
+      base_projeto: Texto required
+    }
+    output {
+      contrato_inicial: Booleano
+      exemplos_oficiais: Booleano
+      agents_md: Booleano
+      docs_comandos: Booleano
+      docs_sintaxe: Booleano
+      agent_context_pack: Booleano
+      alvo_javascript_visivel: Booleano
+    }
+    rules {
+      template_nome deve_ser preenchido
+      base_projeto deve_ser preenchido
+    }
+    effects {
+      persistencia arquivo_config criticidade = media
+      persistencia contrato_inicial criticidade = media
+      persistencia kit_ia criticidade = media
+      persistencia exemplos_oficiais criticidade = baixa
+      auditoria projeto_iniciado criticidade = baixa
+    }
+    authz {
+      escopo: sema.init.iniciar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      input {
+        template_nome: publico
+        base_projeto: interno
+      }
+      output {
+        contrato_inicial: publico
+        exemplos_oficiais: publico
+        agents_md: publico
+        docs_comandos: publico
+        docs_sintaxe: publico
+        agent_context_pack: publico
+        alvo_javascript_visivel: publico
+      }
+    }
+    audit {
+      evento: sema.init.projeto_iniciado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      iniciar_sem_exemplos
+      iniciar_sem_agents_md
+      iniciar_sem_docs_comandos
+      iniciar_sem_docs_sintaxe
+      esconder_alvo_javascript_no_template_base
+    }
+    impl {
+      ts: cli.src.init_command.comandoIniciar
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/initCommand.ts"
+      arquivo: "pacotes/cli/src/initTemplatesBase.ts"
+      arquivo: "pacotes/cli/src/agentEntryPoints.ts"
+      arquivo: "pacotes/cli/src/exemplosOficiais.ts"
+      simbolo: cli.src.init_command.comandoIniciar
+    }
+    execucao {
+      idempotencia: falso
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      contrato_inicial existe
+      exemplos_oficiais existe
+      agents_md existe
+      docs_comandos existe
+      docs_sintaxe existe
+      agent_context_pack existe
+      alvo_javascript_visivel existe
+    }
+    tests {
+      caso "inicia base com kit ia e javascript" {
+        given {
+          template_nome: "base"
+          base_projeto: "."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exemplos_oficiais: verdadeiro
+          docs_comandos: verdadeiro
+          agents_md: verdadeiro
+          docs_sintaxe: verdadeiro
+          alvo_javascript_visivel: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_contrato_de_template {
+    input {
+      template_nome: Texto required
+      saida_caminho: Texto required
+      nome_modulo: Texto required
+      parametros: Mapa<Texto,Texto> optional
+    }
+    output {
+      contrato_gerado: Texto
+      caminho_absoluto: Texto
+      linhas_geradas: Inteiro
+      campos_para_editar: Lista<Texto>
+    }
+    rules {
+      template_nome deve_ser preenchido
+      template_nome em [crud-simples, auth-completo, api-rest, workflow, pedido, usuario, upload]
+      saida_caminho deve_ser preenchido
+      nome_modulo deve_ser preenchido
+    }
+    effects {
+      consulta templates_locais criticidade = baixa
+      persistencia arquivo_contrato criticidade = media
+      auditoria template_gerado criticidade = baixa
+    }
+    authz {
+      escopo: sema.init.gerar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      input {
+        template_nome: publico
+        saida_caminho: interno
+        nome_modulo: publico
+        parametros: interno
+      }
+      output {
+        contrato_gerado: interno
+        caminho_absoluto: interno
+        linhas_geradas: publico
+      }
+    }
+    audit {
+      evento: sema.init.contrato_gerado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      sobrescrever_sem_confirmacao
+      gerar_fora_de_contratos_pasta
+      usar_template_experimental_em_producao
+    }
+    impl {
+      ts: cli.src.init.gerarContratoDeTemplate
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/init/templates.ts"
+      arquivo: "pacotes/cli/src/init/index.ts"
+      simbolo: cli.src.init.gerarContratoDeTemplate
+    }
+    execucao {
+      idempotencia: falso
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      contrato_gerado existe
+      caminho_absoluto existe
+      linhas_geradas >= 0
+    }
+    error {
+      template_inexistente: "Template '{template_nome}' nao encontrado. Use --listar para ver disponiveis."
+      arquivo_ja_existe: "Arquivo ja existe em {saida_caminho}. Use --force para sobrescrever."
+      nome_modulo_invalido: "Nome do modulo deve ser snake_case sem espacos."
+      pasta_nao_existe: "Diretorio de saida nao existe."
+    }
+    tests {
+      caso "gera crud-simples" {
+        given {
+          template_nome: "crud-simples"
+          saida_caminho: "contratos/pedido.sema"
+          nome_modulo: "meu_app.pedidos"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          linhas_geradas: 45
+        }
+      }
+    }
+  }
+}

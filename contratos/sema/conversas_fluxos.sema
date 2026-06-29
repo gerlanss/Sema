@@ -1,0 +1,39 @@
+module sema.produto.conversas.fluxos {
+  docs {
+    resumo: "Fluxos de atendimento governado por contratos de conversa."
+  }
+
+  use sema.produto.conversas.modelos
+
+  use sema.produto.conversas.tarefas
+
+  flow atender_cliente_com_contrato {
+    mensagem_cliente: Texto
+    contexto: ContextoClienteConversa
+    politica: PoliticaTomConversa
+    estado_turno: EstadoTurnoConversa
+    conhecimento_autorizado: Lista
+    etapa estado usa validar_estado_turno_conversa com estado_turno = estado_turno, contexto = contexto
+    etapa responder usa responder_turno_cliente com mensagem_cliente = mensagem_cliente, contexto = contexto, politica = politica, estado_turno = estado_turno, conhecimento_autorizado = conhecimento_autorizado depende_de estado
+    etapa validar usa validar_resposta_conversa com resposta = responder.resposta, contexto = contexto, politica = politica depende_de responder
+    etapa escalar usa decidir_escalacao_humana com mensagem_cliente = mensagem_cliente, contexto = contexto, politica = politica depende_de validar
+    effects {
+      auditoria fluxo_conversa_cliente criticidade = alta
+    }
+  }
+
+  policy conversa_quality_gate {
+    task: validar_resposta_conversa
+    forbidden {
+      aprovar_resposta_generica
+      aprovar_resposta_com_promessa_sem_base
+      aprovar_resposta_sem_escalacao_obrigatoria
+      aprovar_resposta_sem_proxima_acao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      criticidade_operacional: alta
+    }
+  }
+}
