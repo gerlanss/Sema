@@ -1,6 +1,6 @@
 module sema.produto.governanca_ia.release_profiles {
   docs {
-    resumo: "Contrato filho para instalador npm privado-governado e refinamentos de profiles para agentes."
+    resumo: "Contrato filho para distribuicao npm publica local-only e refinamentos de profiles para agentes."
   }
 
   task verificar_distribuicao_publica {
@@ -160,7 +160,7 @@ module sema.produto.governanca_ia.release_profiles {
       ts: cli.src.index.validarProfileSemantico
     }
     vinculos {
-      arquivo: "docs/refinamentos-agentes-semanticos.md"
+      arquivo: "docs/agent-profile-refinements.md"
       arquivo: "pacotes/cli/src/index.ts"
       simbolo: cli.src.index.validarProfileSemantico
     }

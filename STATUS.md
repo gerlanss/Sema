@@ -6,7 +6,7 @@ contracts, examples, tests, installation scripts, and English documentation.
 
 ## Current Line
 
-- Version: `1.5.51`
+- Version: `1.5.53`
 - Package: `@semacode/cli`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, local packages, contracts, examples, tests,
