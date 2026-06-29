@@ -1,6 +1,8 @@
 # Sema
 
-<img src="./logo.png" alt="Sema logo" width="180">
+<p align="center">
+  <img src="./logo.png" alt="Sema logo" width="240">
+</p>
 
 Sema is a local-first semantic governance CLI for AI-assisted software work.
 It gives agents a contract-first workflow before they edit code, operational
