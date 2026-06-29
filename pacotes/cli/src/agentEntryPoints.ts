@@ -1,5 +1,5 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.contexto.entrypoints
-// DescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o: renderiza e sincroniza instruÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes curtas para agentes de IDE e clientes com disciplina variÃƒÆ’Ã‚Â¡vel.
+// Descrição: renderiza e sincroniza instruções curtas para agentes de IDE e clientes com disciplina variável.
 
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -31,9 +31,9 @@ async function statSeguro(caminho: string): Promise<Awaited<ReturnType<typeof st
 }
 
 function pareceEntradaSemaLegada(conteudo: string): boolean {
-  return /Sema.*Regras obrigat[oÃƒÆ’Ã‚Â³]rias para IA/is.test(conteudo) ||
+  return /Sema.*Regras obrigat[oó]rias para IA/is.test(conteudo) ||
     /Sema.*Regras obrigatorias para IA/is.test(conteudo) ||
-    /Sema.*Regras obrigatÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³rias para IA/is.test(conteudo);
+    /Sema.*Regras obrigatórias para IA/is.test(conteudo);
 }
 
 function montarBlocoGerenciadoSema(conteudo: string): string {
@@ -83,64 +83,64 @@ export function renderizarSemaBoot(agentContextPack: AgentContextPack): string {
   const politicaPlataforma = agentContextPack.politicaPlataforma;
   return `# SEMA_BOOT
 
-VocÃƒÆ’Ã‚Âª estÃƒÆ’Ã‚Â¡ em um projeto governado por Sema. O contrato semÃƒÆ’Ã‚Â¢ntico vem antes de qualquer aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
+Você está em um projeto governado por Sema. O contrato semântico vem antes de qualquer ação.
 
-## Primeira aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
+## Primeira ação
 
-1. Em IDE local, confirme \`AGENTS.md\` na raiz e rode \`sema --version\`; se o comando nÃƒÆ’Ã‚Â£o existir, pare. A IA nÃƒÆ’Ã‚Â£o acessa o painel Sema: peÃƒÆ’Ã‚Â§a ao humano para instalar a CLI pelo painel.
-2. Chame \`sema preflight resumo --json\`; se \`decisao\` nÃƒÆ’Ã‚Â£o for \`use_cli_local\`, pare bloqueado.
+1. Em IDE local, confirme \`AGENTS.md\` na raiz e rode \`sema --version\`; se o comando não existir, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel.
+2. Chame \`sema preflight resumo --json\`; se \`decisao\` não for \`use_cli_local\`, pare bloqueado.
 3. Use a CLI local para ler o workspace: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
-4. NÃƒÆ’Ã‚Â£o use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
-5. Este boot ÃƒÆ’Ã‚Â© para workspace local em disco; se nÃƒÆ’Ã‚Â£o houver workspace local, pare bloqueado em vez de inventar caminho.
-6. Antes de criar mÃƒÆ’Ã‚Â³dulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicÃƒÆ’Ã‚Â¡vel.
-7. Antes de editar cÃƒÆ’Ã‚Â³digo existente, rode drift e impacto pelo caminho autorizado da superfÃƒÆ’Ã‚Â­cie atual.
+4. Não use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
+5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
+6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicável.
+7. Antes de editar código existente, rode drift e impacto pelo caminho autorizado da superfície atual.
 8. Antes de criar ou corrigir \`.sema\`, use \`sema exemplos\` na CLI local.
-9. Se qualquer etapa falhar, pare e diga que estÃƒÆ’Ã‚Â¡ bloqueado.
+9. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
-NÃƒÆ’Ã‚Â£o substitua esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local, inferÃƒÆ’Ã‚Âªncia pelo nome do projeto, bom senso ou ferramenta nÃƒÆ’Ã‚Â£o citada aqui.
+Não substitua esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
 
-## PolÃƒÆ’Ã‚Â­ticas da plataforma
+## Políticas da plataforma
 
 ${politicaPlataforma.regra}
 
 - Escopo: ${politicaPlataforma.escopoGovernanca}
 - Se houver alerta externo: ${politicaPlataforma.quandoHouverBloqueio}
 - IA fraca: ${politicaPlataforma.porCapacidade.fraca}
-- IA mÃƒÆ’Ã‚Â©dia: ${politicaPlataforma.porCapacidade.media}
+- IA média: ${politicaPlataforma.porCapacidade.media}
 - IA forte: ${politicaPlataforma.porCapacidade.forte}
 
 ## Capacidade do agente
 
-- Fraca: leia \`${ARQUIVO_SEMA_SMALL_MODEL}\`, \`SEMA_BRIEF.micro.txt\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\` e sÃƒÆ’Ã‚Â³ suba contexto se necessÃƒÆ’Ã‚Â¡rio.
-- MÃƒÆ’Ã‚Â©dia: leia este boot, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.curto.txt\`, \`SEMA_INDEX.json\` e a doc indicada pelo Sema.
+- Fraca: leia \`${ARQUIVO_SEMA_SMALL_MODEL}\`, \`SEMA_BRIEF.micro.txt\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\` e só suba contexto se necessário.
+- Média: leia este boot, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.curto.txt\`, \`SEMA_INDEX.json\` e a doc indicada pelo Sema.
 - Forte: leia este boot, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.md\`, \`SEMA_INDEX.json\`, \`AGENTS.md\` e rode os gates completos.
 
-## CÃƒÆ’Ã‚Â³digo governado
+## Código governado
 
 ${politicaCodigo.regra}
 
 - Marcador: \`${politicaCodigo.marcador}\`.
-- OrÃƒÆ’Ã‚Â§amento de cÃƒÆ’Ã‚Â³digo: arquivo governado acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} linhas gera diagnÃƒÆ’Ã‚Â³stico; acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} bloqueia conclusÃƒÆ’Ã‚Â£o, geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o e snapshot. DocumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Markdown nÃƒÆ’Ã‚Â£o entra nesse limite de cÃƒÆ’Ã‚Â³digo.
-- OrÃƒÆ’Ã‚Â§amento de contrato .sema: atÃƒÆ’Ã‚Â© ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} linhas ÃƒÆ’Ã‚Â© saudÃƒÆ’Ã‚Â¡vel; ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA + 1}-${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} ÃƒÆ’Ã‚Â© diagnÃƒÆ’Ã‚Â³stico; acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} bloqueia criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, drift, finalizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o e snapshot.
-- Divida .sema por domÃƒÆ’Ã‚Â­nio/capacidade, nunca parte_1/parte_2. Um mesmo arquivo de cÃƒÆ’Ã‚Â³digo pode ter vÃƒÆ’Ã‚Â¡rios contratos governando via vinculos; preserve essa rastreabilidade no Sema CÃƒÆ’Ã‚Â³digo.
-- Payload inline: acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres em \`arquivos_codigo.conteudo\` ou \`conteudo\` nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© timeout; divida por responsabilidade ou use anexo/caminho de servidor autorizado.
-- ValidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o inline com score alto nÃƒÆ’Ã‚Â£o substitui cabeÃƒÆ’Ã‚Â§alho no arquivo fÃƒÆ’Ã‚Â­sico: ela prova o payload enviado, nÃƒÆ’Ã‚Â£o prepara a prÃƒÆ’Ã‚Â³xima IA que vai abrir o arquivo depois.
-- DivisÃƒÆ’Ã‚Â£o correta ÃƒÆ’Ã‚Â© por responsabilidade real. Exemplo web: \`index.html\` para estrutura, \`styles/*.css\` para estilos, \`js/state.js\`, \`js/calc.js\`, \`js/render/*.js\` para comportamento, e \`data/*.json\` para dados.
-- Proibido fatiar arquivo em \`index_p1.html\`, \`index_p2.html\` ou similares sem fronteira semÃƒÆ’Ã‚Â¢ntica sÃƒÆ’Ã‚Â³ para passar no limite.
+- Orçamento de código: arquivo governado acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} linhas gera diagnóstico; acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} bloqueia conclusão, geração e snapshot. Documentação Markdown não entra nesse limite de código.
+- Orçamento de contrato .sema: até ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} linhas é saudável; ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA + 1}-${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} é diagnóstico; acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} bloqueia criação, edição, drift, finalização, geração e snapshot.
+- Divida .sema por domínio/capacidade, nunca parte_1/parte_2. Um mesmo arquivo de código pode ter vários contratos governando via vinculos; preserve essa rastreabilidade no Sema Código.
+- Payload inline: acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres em \`arquivos_codigo.conteudo\` ou \`conteudo\` não é timeout; divida por responsabilidade ou use anexo/caminho de servidor autorizado.
+- Validação inline com score alto não substitui cabeçalho no arquivo físico: ela prova o payload enviado, não prepara a próxima IA que vai abrir o arquivo depois.
+- Divisão correta é por responsabilidade real. Exemplo web: \`index.html\` para estrutura, \`styles/*.css\` para estilos, \`js/state.js\`, \`js/calc.js\`, \`js/render/*.js\` para comportamento, e \`data/*.json\` para dados.
+- Proibido fatiar arquivo em \`index_p1.html\`, \`index_p2.html\` ou similares sem fronteira semântica só para passar no limite.
 - IA fraca: ${politicaCodigo.porCapacidade.fraca}
-- IA mÃƒÆ’Ã‚Â©dia: ${politicaCodigo.porCapacidade.media}
+- IA média: ${politicaCodigo.porCapacidade.media}
 - IA forte: ${politicaCodigo.porCapacidade.forte}
 
-## Sinal, evidÃƒÆ’Ã‚Âªncia e ritual
+## Sinal, evidência e ritual
 
-Score composto, \`achados[]\` e \`decisaoAgente\` sÃƒÆ’Ã‚Â£o sinais para guiar a prÃƒÆ’Ã‚Â³xima aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. Abaixo de 80 bloqueia; alvo evolui 0.5 ponto atÃƒÆ’Ã‚Â© 100; nada disso basta sozinho.
+Score composto, \`achados[]\` e \`decisaoAgente\` são sinais para guiar a próxima ação. Abaixo de 80 bloqueia; alvo evolui 0.5 ponto até 100; nada disso basta sozinho.
 
-- Fraca: se o score passou, confira se cada achado tem evidÃƒÆ’Ã‚Âªncia concreta; se nÃƒÆ’Ã‚Â£o souber provar, pare.
-- MÃƒÆ’Ã‚Â©dia: conecte regra, arquivo, contrato e evidÃƒÆ’Ã‚Âªncia antes de concluir aderÃƒÆ’Ã‚Âªncia.
-- Forte: nÃƒÆ’Ã‚Â£o transforme regex, palavra-chave ou score 100 em ritual vazio; valide substÃƒÆ’Ã‚Â¢ncia, risco e comportamento.
-- Fechamento governado: se \`sema drift --json\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impls quebradas, nÃƒÆ’Ã‚Â£o diga que passou limpo. Corrija e rode drift de novo.
-- ExperiÃƒÆ’Ã‚Âªncia governada: se a tarefa cria ou altera site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, prove acabamento moderno, contextual e nÃƒÆ’Ã‚Â£o genÃƒÆ’Ã‚Â©rico. Em UI estreita (ex. 390px), \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\` precisa ser verdadeiro.
-- Caminho fora do workspace local aberto pelo usuÃƒÆ’Ã‚Â¡rio nÃƒÆ’Ã‚Â£o substitui a pasta local.
+- Fraca: se o score passou, confira se cada achado tem evidência concreta; se não souber provar, pare.
+- Média: conecte regra, arquivo, contrato e evidência antes de concluir aderência.
+- Forte: não transforme regex, palavra-chave ou score 100 em ritual vazio; valide substância, risco e comportamento.
+- Fechamento governado: se \`sema drift --json\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impls quebradas, não diga que passou limpo. Corrija e rode drift de novo.
+- Experiência governada: se a tarefa cria ou altera site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, prove acabamento moderno, contextual e não genérico. Em UI estreita (ex. 390px), \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\` precisa ser verdadeiro.
+- Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
 ## Acabamento visual e terminal
 
@@ -148,7 +148,7 @@ ${politicaDesign.regra}
 
 - Aplicar quando: ${politicaDesign.aplicarQuando}
 - IA fraca: ${politicaDesign.porCapacidade.fraca}
-- IA mÃƒÆ’Ã‚Â©dia: ${politicaDesign.porCapacidade.media}
+- IA média: ${politicaDesign.porCapacidade.media}
 - IA forte: ${politicaDesign.porCapacidade.forte}
 - Proibido: ${politicaDesign.proibicoes.slice(0, 5).join(", ")}.
 
@@ -159,7 +159,7 @@ ${politicaTimeout.regra}
 - Timeout inicial recomendado para projeto inteiro: ${politicaTimeout.timeoutInicialSegundos}s.
 - Escalonamento: ${politicaTimeout.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")}.
 - IA fraca: ${politicaTimeout.porCapacidade.fraca}
-- IA mÃƒÆ’Ã‚Â©dia: ${politicaTimeout.porCapacidade.media}
+- IA média: ${politicaTimeout.porCapacidade.media}
 - IA forte: ${politicaTimeout.porCapacidade.forte}
 - ${politicaTimeout.ateQuandoTentar}
 
@@ -167,10 +167,10 @@ ${politicaTimeout.regra}
 
 ${politica.regra}
 
-- Use o idioma falado pelo usuÃƒÆ’Ã‚Â¡rio.
-- Em PT-BR, escreva com acentos, cedilha e pontuaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o normal.
-- Use vocabulÃƒÆ’Ã‚Â¡rio Sema canÃƒÆ’Ã‚Â´nico para conceitos de produto: pontuaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, desvio semÃƒÆ’Ã‚Â¢ntico, trava, prÃƒÆ’Ã‚Â©-checagem, ambiente de execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o e perfil.
-- NÃƒÆ’Ã‚Â£o traduza comandos, rotas, nomes de arquivos, endpoints, variÃƒÆ’Ã‚Â¡veis, pacotes, marcas, sÃƒÆ’Ã‚Â­mbolos de cÃƒÆ’Ã‚Â³digo nem palavras-chave da DSL.
+- Use o idioma falado pelo usuário.
+- Em PT-BR, escreva com acentos, cedilha e pontuação normal.
+- Use vocabulário Sema canônico para conceitos de produto: pontuação, desvio semântico, trava, pré-checagem, ambiente de execução e perfil.
+- Não traduza comandos, rotas, nomes de arquivos, endpoints, variáveis, pacotes, marcas, símbolos de código nem palavras-chave da DSL.
 
 ## Falha fechada
 
@@ -184,28 +184,28 @@ export function renderizarSemaSmallModel(agentContextPack: AgentContextPack): st
   const politicaPlataforma = agentContextPack.politicaPlataforma;
   return `# SEMA_SMALL_MODEL
 
-Leia isto primeiro se vocÃƒÆ’Ã‚Âª tem pouco contexto, pouca memÃƒÆ’Ã‚Â³ria, pouco tool use ou tendÃƒÆ’Ã‚Âªncia a ignorar instruÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes longas.
+Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use ou tendência a ignorar instruções longas.
 
-1. NÃƒÆ’Ã‚Â£o edite nada antes de chamar Sema.
-2. Em IDE local, rode \`sema --version\`; se falhar, pare. A IA nÃƒÆ’Ã‚Â£o acessa o painel Sema: peÃƒÆ’Ã‚Â§a ao humano para instalar a CLI pelo painel. Depois rode \`sema preflight resumo --json\`; sÃƒÆ’Ã‚Â³ continue com \`use_cli_local\`; nÃƒÆ’Ã‚Â£o use fonte externa de workspace para substituir a CLI local.
-3. Sema nÃƒÆ’Ã‚Â£o contorna polÃƒÆ’Ã‚Â­ticas da plataforma: ele governa contrato, escopo, drift, evidÃƒÆ’Ã‚Âªncia e qualidade.
-4. Se aparecer alerta de polÃƒÆ’Ã‚Â­tica: pare, explique de forma neutra e nÃƒÆ’Ã‚Â£o tente burlar filtro.
-5. Se nÃƒÆ’Ã‚Â£o houver workspace local em disco: pare bloqueado e peÃƒÆ’Ã‚Â§a o fluxo apropriado; nÃƒÆ’Ã‚Â£o invente leitura por caminho.
+1. Não edite nada antes de chamar Sema.
+2. Em IDE local, rode \`sema --version\`; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode \`sema preflight resumo --json\`; só continue com \`use_cli_local\`; não use fonte externa de workspace para substituir a CLI local.
+3. Sema não contorna políticas da plataforma: ele governa contrato, escopo, drift, evidência e qualidade.
+4. Se aparecer alerta de política: pare, explique de forma neutra e não tente burlar filtro.
+5. Se não houver workspace local em disco: pare bloqueado e peça o fluxo apropriado; não invente leitura por caminho.
 6. Se for escrever \`.sema\`: use \`sema_exemplos\` antes.
-7. Se nÃƒÆ’Ã‚Â£o houver contrato ou vÃƒÆ’Ã‚Â­nculo semÃƒÆ’Ã‚Â¢ntico do arquivo: inspecione o arquivo, crie ou edite o contrato aplicÃƒÆ’Ã‚Â¡vel e vincule antes do cÃƒÆ’Ã‚Â³digo.
-8. Se nÃƒÆ’Ã‚Â£o conseguir chamar Sema: pare e declare bloqueio.
-9. Responda no idioma do usuÃƒÆ’Ã‚Â¡rio. Em PT-BR, use vocabulÃƒÆ’Ã‚Â¡rio Sema: pontuaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, desvio semÃƒÆ’Ã‚Â¢ntico, prÃƒÆ’Ã‚Â©-checagem, ambiente de execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o e perfil; preserve comandos, endpoints e identificadores.
-10. Se abrir cÃƒÆ’Ã‚Â³digo com \`${agentContextPack.politicaCodigoGovernado.marcador}\`: volte ao contrato, chame Sema e sÃƒÆ’Ã‚Â³ entÃƒÆ’Ã‚Â£o edite.
-11. Score 100, achados atendidos ou validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o inline sÃƒÆ’Ã‚Â£o sinais; confira evidÃƒÆ’Ã‚Âªncia real no contrato e no cÃƒÆ’Ã‚Â³digo.
-12. ValidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o inline nÃƒÆ’Ã‚Â£o dispensa cabeÃƒÆ’Ã‚Â§alho \`${agentContextPack.politicaCodigoGovernado.marcador}\` no arquivo fÃƒÆ’Ã‚Â­sico.
-13. NÃƒÆ’Ã‚Â£o crie cÃƒÆ’Ã‚Â³digo governado acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas nem contrato .sema acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}; acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} em cÃƒÆ’Ã‚Â³digo ou ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} em .sema, planeje divisÃƒÆ’Ã‚Â£o por responsabilidade.
-14. Divida por funÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o real: HTML, CSS, estado, cÃƒÆ’Ã‚Â¡lculo, renderizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, dados. NÃƒÆ’Ã‚Â£o faÃƒÆ’Ã‚Â§a \`index_p1.html\` e \`index_p2.html\` sem sentido.
-15. Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© lentidÃƒÆ’Ã‚Â£o: divida por responsabilidade; nÃƒÆ’Ã‚Â£o aumente timeout para tentar passar limite de transporte.
-16. Se aparecer caminho que nÃƒÆ’Ã‚Â£o pertence ao workspace local aberto pelo usuÃƒÆ’Ã‚Â¡rio, pare e confirme a fonte antes de agir.
-17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. NÃƒÆ’Ã‚Â£o trate isso como falha do Sema.
-18. Se \`sema drift --json\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impl quebrada, nÃƒÆ’Ã‚Â£o conclua. Corrija contrato/cÃƒÆ’Ã‚Â³digo e rode drift de novo.
-19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonÃƒÆ’Ã‚Â´mico, com hierarquia clara, estados e evidÃƒÆ’Ã‚Âªncia. Em UI, valide mobile/desktop e prove \`scrollWidth <= clientWidth\` em viewport estreito como 390px.
-20. NÃƒÆ’Ã‚Â£o substitua o contexto Sema por AGENTS.md, README.md, busca local, inferÃƒÆ’Ã‚Âªncia por nome ou bom senso.
+7. Se não houver contrato ou vínculo semântico do arquivo: inspecione o arquivo, crie ou edite o contrato aplicável e vincule antes do código.
+8. Se não conseguir chamar Sema: pare e declare bloqueio.
+9. Responda no idioma do usuário. Em PT-BR, use vocabulário Sema: pontuação, desvio semântico, pré-checagem, ambiente de execução e perfil; preserve comandos, endpoints e identificadores.
+10. Se abrir código com \`${agentContextPack.politicaCodigoGovernado.marcador}\`: volte ao contrato, chame Sema e só então edite.
+11. Score 100, achados atendidos ou validação inline são sinais; confira evidência real no contrato e no código.
+12. Validação inline não dispensa cabeçalho \`${agentContextPack.politicaCodigoGovernado.marcador}\` no arquivo físico.
+13. Não crie código governado acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas nem contrato .sema acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}; acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} em código ou ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} em .sema, planeje divisão por responsabilidade.
+14. Divida por função real: HTML, CSS, estado, cálculo, renderização, dados. Não faça \`index_p1.html\` e \`index_p2.html\` sem sentido.
+15. Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres não é lentidão: divida por responsabilidade; não aumente timeout para tentar passar limite de transporte.
+16. Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.
+17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. Não trate isso como falha do Sema.
+18. Se \`sema drift --json\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impl quebrada, não conclua. Corrija contrato/código e rode drift de novo.
+19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonômico, com hierarquia clara, estados e evidência. Em UI, valide mobile/desktop e prove \`scrollWidth <= clientWidth\` em viewport estreito como 390px.
+20. Não substitua o contexto Sema por AGENTS.md, README.md, busca local, inferência por nome ou bom senso.
 
 Ordem curta:
 
@@ -215,7 +215,7 @@ Ordem curta:
 - \`SEMA_INDEX.json\`
 - \`AGENTS.md\`
 
-PolÃƒÆ’Ã‚Â­ticas da plataforma:
+Políticas da plataforma:
 
 - ${politicaPlataforma.regra}
 - IA fraca: ${politicaPlataforma.porCapacidade.fraca}
@@ -223,7 +223,7 @@ PolÃƒÆ’Ã‚Â­ticas da plataforma:
 
 Timeout:
 
-- Timeout local do agente nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© falha do Sema.
+- Timeout local do agente não é falha do Sema.
 - Projeto inteiro: comece com ${politicaTimeout.timeoutInicialSegundos}s ou mais.
 - Escalonamento: ${politicaTimeout.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")}.
 - Se o projeto inteiro for lento, escopar para \`sema resumo <arquivo.sema> --micro --para mudanca\`.
@@ -233,7 +233,7 @@ Acabamento visual e terminal:
 
 - ${politicaDesign.regra}
 - IA fraca: ${politicaDesign.porCapacidade.fraca}
-- EvidÃƒÆ’Ã‚Âªncia mÃƒÆ’Ã‚Â­nima: ${politicaDesign.evidencias.fraca.join(", ")}.
+- Evidência mínima: ${politicaDesign.evidencias.fraca.join(", ")}.
 - Proibido: ${politicaDesign.proibicoes.slice(0, 5).join(", ")}.
 
 Fail-closed:
@@ -350,25 +350,25 @@ function renderizarInstrucaoClienteSema(
   const tituloCliente = cliente === "generico" ? "agente" : cliente;
   return `# Sema para ${tituloCliente}
 
-Este workspace ÃƒÆ’Ã‚Â© governado por Sema. Antes de qualquer aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o em cÃƒÆ’Ã‚Â³digo, contrato, documentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o operacional, workflow, profile ou deploy:
+Este workspace é governado por Sema. Antes de qualquer ação em código, contrato, documentação operacional, workflow, profile ou deploy:
 
 1. Leia \`${ARQUIVO_SEMA_BOOT}\`.
-2. Em IDE local, rode \`sema --version\`; se falhar, pare. A IA nÃƒÆ’Ã‚Â£o acessa o painel Sema: peÃƒÆ’Ã‚Â§a ao humano para instalar a CLI pelo painel. Depois rode \`sema preflight resumo --json\`; se \`decisao\` nÃƒÆ’Ã‚Â£o for \`use_cli_local\`, pare.
+2. Em IDE local, rode \`sema --version\`; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode \`sema preflight resumo --json\`; se \`decisao\` não for \`use_cli_local\`, pare.
 3. Use CLI local: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
-4. NÃƒÆ’Ã‚Â£o use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
-5. Chame docs-impacto com a intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o declarada antes de agir.
-6. Chame inspecionar no contrato \`.sema\` aplicÃƒÆ’Ã‚Â¡vel.
-7. Antes de editar cÃƒÆ’Ã‚Â³digo existente, rode drift e impacto.
+4. Não use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
+5. Chame docs-impacto com a intenção declarada antes de agir.
+6. Chame inspecionar no contrato \`.sema\` aplicável.
+7. Antes de editar código existente, rode drift e impacto.
 8. Antes de criar ou editar \`.sema\`, use exemplos oficiais.
-9. Ao concluir mudanÃƒÆ’Ã‚Â§a de contrato, rode validar.
+9. Ao concluir mudança de contrato, rode validar.
 10. Antes de finalizar, use finalizar-mudanca com as docs lidas.
 
-ÃƒÆ’Ã¢â‚¬Â° proibido substituir esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local por arquivos, inferÃƒÆ’Ã‚Âªncia pelo nome do projeto, bom senso ou ferramenta nÃƒÆ’Ã‚Â£o citada nesta lista.
+É proibido substituir esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 
-Capacidade padrÃƒÆ’Ã‚Â£o deste cliente: ${capacidade}.
+Capacidade padrão deste cliente: ${capacidade}.
 Ordem de leitura: ${guia.join(" -> ")}.
 
-PolÃƒÆ’Ã‚Â­ticas da plataforma:
+Políticas da plataforma:
 - ${politicaPlataforma.regra}
 - Capacidade ${capacidade}: ${politicaPlataforma.porCapacidade[capacidade]}
 - Se houver alerta externo: ${politicaPlataforma.quandoHouverBloqueio}
@@ -377,37 +377,37 @@ Falha fechada:
 ${agentContextPack.failClosed.map((regra) => `- ${regra}`).join("\n")}
 
 Timeout:
-- Timeout local do agente nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© falha do Sema.
+- Timeout local do agente não é falha do Sema.
 - Se uma chamada Sema estourar, aumente o timeout e tente de novo antes de declarar bloqueio.
 - Para projeto inteiro, comece com ${politicaTimeout.timeoutInicialSegundos}s ou mais; se for lento, escale ${politicaTimeout.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")}.
-- Se possÃƒÆ’Ã‚Â­vel, reduza escopo para \`sema resumo <arquivo.sema> --micro --para mudanca\`.
+- Se possível, reduza escopo para \`sema resumo <arquivo.sema> --micro --para mudanca\`.
 
-CÃƒÆ’Ã‚Â³digo governado:
-- Mantenha o marcador \`${agentContextPack.politicaCodigoGovernado.marcador}\` em cÃƒÆ’Ã‚Â³digo gerado ou governado.
-- Ao encontrar esse marcador, volte ao contrato .sema aplicÃƒÆ’Ã‚Â¡vel e chame Sema antes de editar.
-- ComentÃƒÆ’Ã‚Â¡rio de cÃƒÆ’Ã‚Â³digo ÃƒÆ’Ã‚Â© lembrete curto; nÃƒÆ’Ã‚Â£o substitui drift, docs-impacto nem finalizar-mudanca.
-- ValidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o inline prova o payload enviado; nÃƒÆ’Ã‚Â£o dispensa o marcador no arquivo fÃƒÆ’Ã‚Â­sico sincronizado.
-- Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres nÃƒÆ’Ã‚Â£o deve virar retry de timeout: modularize por responsabilidade ou use anexo/caminho de servidor autorizado.
-- Se um arquivo crescer, divida por responsabilidade real. Em web: \`index.html\`, \`styles/*.css\`, \`js/state.js\`, \`js/calc.js\`, \`js/render/*.js\`, \`data/*.json\`. NÃƒÆ’Ã‚Â£o fatie em p1/p2 sem fronteira semÃƒÆ’Ã‚Â¢ntica.
+Código governado:
+- Mantenha o marcador \`${agentContextPack.politicaCodigoGovernado.marcador}\` em código gerado ou governado.
+- Ao encontrar esse marcador, volte ao contrato .sema aplicável e chame Sema antes de editar.
+- Comentário de código é lembrete curto; não substitui drift, docs-impacto nem finalizar-mudanca.
+- Validação inline prova o payload enviado; não dispensa o marcador no arquivo físico sincronizado.
+- Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres não deve virar retry de timeout: modularize por responsabilidade ou use anexo/caminho de servidor autorizado.
+- Se um arquivo crescer, divida por responsabilidade real. Em web: \`index.html\`, \`styles/*.css\`, \`js/state.js\`, \`js/calc.js\`, \`js/render/*.js\`, \`data/*.json\`. Não fatie em p1/p2 sem fronteira semântica.
 
-Sinal e evidÃƒÆ’Ã‚Âªncia:
-- Score composto, \`achados[]\` e \`decisaoAgente\` orientam a aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o; abaixo de 80 bloqueia, alvo evolui 0.5 ponto atÃƒÆ’Ã‚Â© 100, e nada substitui evidÃƒÆ’Ã‚Âªncia concreta.
-- Palavra-chave ou regex passando nÃƒÆ’Ã‚Â£o prova governanÃƒÆ’Ã‚Â§a se contrato, cÃƒÆ’Ã‚Â³digo e comportamento nÃƒÆ’Ã‚Â£o batem.
-- \`sema drift --json\` com \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impls quebradas bloqueia fechamento. NÃƒÆ’Ã‚Â£o diga "drift limpo" atÃƒÆ’Ã‚Â© rodar de novo e ficar verde.
-- Caminho fora do workspace local aberto pelo usuÃƒÆ’Ã‚Â¡rio nÃƒÆ’Ã‚Â£o substitui a pasta local.
+Sinal e evidência:
+- Score composto, \`achados[]\` e \`decisaoAgente\` orientam a ação; abaixo de 80 bloqueia, alvo evolui 0.5 ponto até 100, e nada substitui evidência concreta.
+- Palavra-chave ou regex passando não prova governança se contrato, código e comportamento não batem.
+- \`sema drift --json\` com \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impls quebradas bloqueia fechamento. Não diga "drift limpo" até rodar de novo e ficar verde.
+- Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
 Acabamento visual e terminal:
-- Se houver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, acabamento moderno, contextual e nÃƒÆ’Ã‚Â£o genÃƒÆ’Ã‚Â©rico ÃƒÆ’Ã‚Â© requisito governado, nÃƒÆ’Ã‚Â£o enfeite.
+- Se houver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, acabamento moderno, contextual e não genérico é requisito governado, não enfeite.
 - Capacidade ${capacidade}: ${politicaDesign.porCapacidade[capacidade]}
-- EvidÃƒÆ’Ã‚Âªncias: ${politicaDesign.evidencias[capacidade].join(", ")}.
-- Responsividade/ergonomia real: valide desktop/mobile e, em viewport estreito como 390px, confirme \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\`; em terminal/CLI/TUI, rode smoke check de saÃƒÆ’Ã‚Â­da, erro e ajuda quando aplicÃƒÆ’Ã‚Â¡vel.
+- Evidências: ${politicaDesign.evidencias[capacidade].join(", ")}.
+- Responsividade/ergonomia real: valide desktop/mobile e, em viewport estreito como 390px, confirme \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\`; em terminal/CLI/TUI, rode smoke check de saída, erro e ajuda quando aplicável.
 - Proibido: ${politicaDesign.proibicoes.slice(0, 5).join(", ")}.
 
 Idioma:
-- Responda no idioma do usuÃƒÆ’Ã‚Â¡rio.
-- Em PT-BR, use vocabulÃƒÆ’Ã‚Â¡rio Sema canÃƒÆ’Ã‚Â´nico, acentos, cedilha, pontuaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o e sÃƒÆ’Ã‚Â­mbolos normais.
-- A DSL \`.sema\` pode ser ASCII; texto humano nÃƒÆ’Ã‚Â£o precisa ser.
-- NÃƒÆ’Ã‚Â£o traduza comandos, rotas, arquivos, endpoints, variÃƒÆ’Ã‚Â¡veis, pacotes, marcas, sÃƒÆ’Ã‚Â­mbolos de cÃƒÆ’Ã‚Â³digo nem palavras-chave da DSL.
+- Responda no idioma do usuário.
+- Em PT-BR, use vocabulário Sema canônico, acentos, cedilha, pontuação e símbolos normais.
+- A DSL \`.sema\` pode ser ASCII; texto humano não precisa ser.
+- Não traduza comandos, rotas, arquivos, endpoints, variáveis, pacotes, marcas, símbolos de código nem palavras-chave da DSL.
 `;
 }
 

@@ -1,27 +1,27 @@
 # SEMA_SMALL_MODEL
 
-Leia isto primeiro se vocÃƒÆ’Ã‚Âª tem pouco contexto, pouca memÃƒÆ’Ã‚Â³ria, pouco tool use ou tendÃƒÆ’Ã‚Âªncia a ignorar instruÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes longas.
+Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use ou tendência a ignorar instruções longas.
 
-1. NÃƒÆ’Ã‚Â£o edite nada antes de chamar Sema.
-2. Em IDE local, rode `sema --version`; se falhar, pare. A IA nÃƒÆ’Ã‚Â£o acessa o painel Sema: peÃƒÆ’Ã‚Â§a ao humano para instalar a CLI pelo painel. Depois rode `sema preflight resumo --json`; sÃƒÆ’Ã‚Â³ continue com `use_cli_local`; nÃƒÆ’Ã‚Â£o use fonte externa de workspace para substituir a CLI local.
-3. Sema nÃƒÆ’Ã‚Â£o contorna polÃƒÆ’Ã‚Â­ticas da plataforma: ele governa contrato, escopo, drift, evidÃƒÆ’Ã‚Âªncia e qualidade.
-4. Se aparecer alerta de polÃƒÆ’Ã‚Â­tica: pare, explique de forma neutra e nÃƒÆ’Ã‚Â£o tente burlar filtro.
-5. Se nÃƒÆ’Ã‚Â£o houver workspace local em disco: pare bloqueado e peÃƒÆ’Ã‚Â§a o fluxo apropriado; nÃƒÆ’Ã‚Â£o invente leitura por caminho.
+1. Não edite nada antes de chamar Sema.
+2. Em IDE local, rode `sema --version`; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode `sema preflight resumo --json`; só continue com `use_cli_local`; não use fonte externa de workspace para substituir a CLI local.
+3. Sema não contorna políticas da plataforma: ele governa contrato, escopo, drift, evidência e qualidade.
+4. Se aparecer alerta de política: pare, explique de forma neutra e não tente burlar filtro.
+5. Se não houver workspace local em disco: pare bloqueado e peça o fluxo apropriado; não invente leitura por caminho.
 6. Se for escrever `.sema`: use `sema_exemplos` antes.
-7. Se nÃƒÆ’Ã‚Â£o houver contrato ou vÃƒÆ’Ã‚Â­nculo semÃƒÆ’Ã‚Â¢ntico do arquivo: inspecione o arquivo, crie ou edite o contrato aplicÃƒÆ’Ã‚Â¡vel e vincule antes do cÃƒÆ’Ã‚Â³digo.
-8. Se nÃƒÆ’Ã‚Â£o conseguir chamar Sema: pare e declare bloqueio.
-9. Responda no idioma do usuÃƒÆ’Ã‚Â¡rio. Em PT-BR, use vocabulÃƒÆ’Ã‚Â¡rio Sema: pontuaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, desvio semÃƒÆ’Ã‚Â¢ntico, prÃƒÆ’Ã‚Â©-checagem, ambiente de execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o e perfil; preserve comandos, endpoints e identificadores.
-10. Se abrir cÃƒÆ’Ã‚Â³digo com `SEMA-GOVERNED`: volte ao contrato, chame Sema e sÃƒÆ’Ã‚Â³ entÃƒÆ’Ã‚Â£o edite.
-11. Score 100, achados atendidos ou validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o inline sÃƒÆ’Ã‚Â£o sinais; confira evidÃƒÆ’Ã‚Âªncia real no contrato e no cÃƒÆ’Ã‚Â³digo.
-12. ValidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o inline nÃƒÆ’Ã‚Â£o dispensa cabeÃƒÆ’Ã‚Â§alho `SEMA-GOVERNED` no arquivo fÃƒÆ’Ã‚Â­sico.
-13. NÃƒÆ’Ã‚Â£o crie cÃƒÆ’Ã‚Â³digo governado acima de 2000 linhas nem contrato .sema acima de 500; acima de 1000 em cÃƒÆ’Ã‚Â³digo ou 300 em .sema, planeje divisÃƒÆ’Ã‚Â£o por responsabilidade.
-14. Divida por funÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o real: HTML, CSS, estado, cÃƒÆ’Ã‚Â¡lculo, renderizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, dados. NÃƒÆ’Ã‚Â£o faÃƒÆ’Ã‚Â§a `index_p1.html` e `index_p2.html` sem sentido.
-15. Payload inline acima de 262144 caracteres nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© lentidÃƒÆ’Ã‚Â£o: divida por responsabilidade; nÃƒÆ’Ã‚Â£o aumente timeout para tentar passar limite de transporte.
-16. Se aparecer caminho que nÃƒÆ’Ã‚Â£o pertence ao workspace local aberto pelo usuÃƒÆ’Ã‚Â¡rio, pare e confirme a fonte antes de agir.
-17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. NÃƒÆ’Ã‚Â£o trate isso como falha do Sema.
-18. Se `sema drift --json` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou impl quebrada, nÃƒÆ’Ã‚Â£o conclua. Corrija contrato/cÃƒÆ’Ã‚Â³digo e rode drift de novo.
-19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonÃƒÆ’Ã‚Â´mico, com hierarquia clara, estados e evidÃƒÆ’Ã‚Âªncia. Em UI, valide mobile/desktop e prove `scrollWidth <= clientWidth` em viewport estreito como 390px.
-20. NÃƒÆ’Ã‚Â£o substitua o contexto Sema por AGENTS.md, README.md, busca local, inferÃƒÆ’Ã‚Âªncia por nome ou bom senso.
+7. Se não houver contrato ou vínculo semântico do arquivo: inspecione o arquivo, crie ou edite o contrato aplicável e vincule antes do código.
+8. Se não conseguir chamar Sema: pare e declare bloqueio.
+9. Responda no idioma do usuário. Em PT-BR, use vocabulário Sema: pontuação, desvio semântico, pré-checagem, ambiente de execução e perfil; preserve comandos, endpoints e identificadores.
+10. Se abrir código com `SEMA-GOVERNED`: volte ao contrato, chame Sema e só então edite.
+11. Score 100, achados atendidos ou validação inline são sinais; confira evidência real no contrato e no código.
+12. Validação inline não dispensa cabeçalho `SEMA-GOVERNED` no arquivo físico.
+13. Não crie código governado acima de 2000 linhas nem contrato .sema acima de 500; acima de 1000 em código ou 300 em .sema, planeje divisão por responsabilidade.
+14. Divida por função real: HTML, CSS, estado, cálculo, renderização, dados. Não faça `index_p1.html` e `index_p2.html` sem sentido.
+15. Payload inline acima de 262144 caracteres não é lentidão: divida por responsabilidade; não aumente timeout para tentar passar limite de transporte.
+16. Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.
+17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. Não trate isso como falha do Sema.
+18. Se `sema drift --json` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou impl quebrada, não conclua. Corrija contrato/código e rode drift de novo.
+19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonômico, com hierarquia clara, estados e evidência. Em UI, valide mobile/desktop e prove `scrollWidth <= clientWidth` em viewport estreito como 390px.
+20. Não substitua o contexto Sema por AGENTS.md, README.md, busca local, inferência por nome ou bom senso.
 
 Ordem curta:
 
@@ -31,7 +31,7 @@ Ordem curta:
 - `SEMA_INDEX.json`
 - `AGENTS.md`
 
-PolÃƒÆ’Ã‚Â­ticas da plataforma:
+Políticas da plataforma:
 
 - O Sema governa contrato, escopo, drift, evidência e qualidade do projeto. Ele não pede, não autoriza e não contorna políticas da plataforma, termos de uso, permissões, segurança ou leis.
 - IA fraca: Se aparecer alerta de política, pare. Diga que Sema é governança de projeto, não bypass; peça reformulação segura ou contexto permitido.
@@ -39,7 +39,7 @@ PolÃƒÆ’Ã‚Â­ticas da plataforma:
 
 Timeout:
 
-- Timeout local do agente nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© falha do Sema.
+- Timeout local do agente não é falha do Sema.
 - Projeto inteiro: comece com 120s ou mais.
 - Escalonamento: 120s -> 300s -> 600s.
 - Se o projeto inteiro for lento, escopar para `sema resumo <arquivo.sema> --micro --para mudanca`.
@@ -49,7 +49,7 @@ Acabamento visual e terminal:
 
 - Quando a tarefa envolve site, sistema, app, interface, dashboard, painel, formulário, landing, jogo, terminal, CLI/TUI ou qualquer artefato voltado ao usuário, o Sema governa também acabamento, modernidade e adequação ao domínio. Beleza funcional, identidade, criatividade útil, tecnologia adequada, estados, responsividade e evidência não são extras opcionais.
 - IA fraca: Use um padrão moderno seguro e contextual: hierarquia clara, espaçamento consistente, paleta com contraste, componentes coerentes com o domínio, estados básicos, responsivo mobile/desktop e nada de formulário cinza genérico. Em terminal, entregue saída organizada com status e erro claros. Se não conseguir validar o resultado, pare e peça revisão.
-- EvidÃƒÆ’Ã‚Âªncia mÃƒÆ’Ã‚Â­nima: descrever padrão visual escolhido, explicar como o domínio aparece na interface ou terminal, confirmar responsividade básica, provar mobile sem overflow horizontal com scrollWidth <= clientWidth, listar estados essenciais.
+- Evidência mínima: descrever padrão visual escolhido, explicar como o domínio aparece na interface ou terminal, confirmar responsividade básica, provar mobile sem overflow horizontal com scrollWidth <= clientWidth, listar estados essenciais.
 - Proibido: interface_generica_2010, formularios_sem_hierarquia_visual, cards_cinzas_sem_identidade, layout_sem_responsividade_real, texto_estourando_ou_sobreposto.
 
 Fail-closed:

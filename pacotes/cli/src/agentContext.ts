@@ -18,7 +18,7 @@ export function criarEntradaCanonicaProjeto(guiaPorCapacidade: GuiaCapacidadeIaM
   const media = [ARQUIVO_SEMA_BOOT, 'llms.txt', ARQUIVO_AGENT_CONTEXT_PACK, 'SEMA_BRIEF.curto.txt', 'SEMA_INDEX.json', 'AGENTS.md', 'README.md'];
   const forte = [ARQUIVO_SEMA_BOOT, 'llms-full.txt', ARQUIVO_AGENT_CONTEXT_PACK, 'SEMA_BRIEF.md', 'SEMA_INDEX.json', 'AGENTS.md', 'README.md'];
   return {
-    descricao: 'Entrada can?nica do reposit?rio para IA. O repo n?o ? human-first; a IA deve come?ar por esses artefatos antes de abrir c?digo cru.',
+    descricao: 'Entrada canônica do repositório para IA. O repo não é human-first; a IA deve começar por esses artefatos antes de abrir código cru.',
     ordemLeitura: [...ARQUIVOS_CANONICOS_IA_RAIZ],
     porCapacidade: {
       fraca,

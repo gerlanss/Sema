@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "1.5.49",
+  "version": "1.5.50",
   "type": "module",
   "description": "Local semantic governance CLI for AI agents: contracts, drift, impact, documentation gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",
