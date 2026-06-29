@@ -1,6 +1,6 @@
 {
   "name": "sema",
-  "version": "1.5.48",
+  "version": "1.5.49",
   "private": true,
   "description": "Sema is a semantic governance layer for AI agents operating live software, workflows, documents, and operational systems.",
   "license": "SEE LICENSE IN LICENSE",
