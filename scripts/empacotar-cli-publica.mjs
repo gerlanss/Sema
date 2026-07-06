@@ -45,6 +45,7 @@ const PACOTES_RUNTIME = [
   "gerador-javascript",
   "gerador-html",
   "gerador-css",
+  "gerador-php",
 ];
 
 const DIST_NAO_PUBLICAVEL = [

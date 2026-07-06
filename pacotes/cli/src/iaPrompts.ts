@@ -12,7 +12,7 @@ Importante:
 - leitura humana e bonus toleravel, nao objetivo de produto
 - a Sema nao e gerador magico que deveria fazer tudo
 - a Sema modela contratos, estados, fluxos, erros, efeitos, garantias, vinculos e execucao
-- a Sema gera codigo e scaffolding real para TypeScript, Python, Dart, Lua, JavaScript, HTML e CSS
+- a Sema gera codigo e scaffolding real para TypeScript, Python, PHP, Dart, Lua, JavaScript, HTML e CSS
 - a Sema usa \`importar\` para bootstrap revisavel, nao para contrato final automatico
 - a Sema usa \`impl\` para ligar task a simbolo real do runtime
 - a Sema usa \`vinculos\` para ligar contrato a arquivo, simbolo, recurso e superficie real
@@ -55,7 +55,7 @@ Comandos essenciais:
 - formatacao: \`sema formatar <arquivo.sema>\`
 - importacao assistida de legado: \`sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|php|typescript|python|dart> <diretorio> --saida <diretorio>\`
 - exemplos oficiais no projeto: \`sema instalar-exemplos\`
-- geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart|lua|javascript|html|css> --saida <diretorio>\`
+- geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css> --saida <diretorio>\`
 - verificacao final: \`sema verificar <arquivo-ou-pasta> [--json]\`
 
 Antes de editar:

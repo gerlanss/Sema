@@ -15,6 +15,7 @@ import { gerarPython } from "../../pacotes/gerador-python/dist/index.js";
 import { gerarJavaScript } from "../../pacotes/gerador-javascript/dist/index.js";
 import { gerarHtml } from "../../pacotes/gerador-html/dist/index.js";
 import { gerarCss } from "../../pacotes/gerador-css/dist/index.js";
+import { gerarPhp } from "../../pacotes/gerador-php/dist/index.js";
 async function compilarTypeScriptEstritoTemporario(
   arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
 ): Promise<{ status: number | null; stdout: string; stderr: string }> {
@@ -156,6 +157,31 @@ async function executarTestesPythonGeradosTemporario(
     await rm(base, { recursive: true, force: true });
   }
 }
+async function executarTestesPhpGeradosTemporario(
+  arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
+): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-run-php-"));
+
+  try {
+    let arquivoTeste = "";
+    for (const arquivo of arquivos) {
+      const destino = path.join(base, arquivo.caminhoRelativo);
+      await mkdir(path.dirname(destino), { recursive: true });
+      await writeFile(destino, arquivo.conteudo, "utf8");
+      if (path.basename(arquivo.caminhoRelativo).startsWith("test_") && arquivo.caminhoRelativo.endsWith(".php")) {
+        arquivoTeste = arquivo.caminhoRelativo;
+      }
+    }
+
+    return spawnSync(
+      "php",
+      [arquivoTeste],
+      { stdio: "pipe", encoding: "utf8", cwd: base, shell: process.platform === "win32" },
+    );
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+}
 
 test("geradores produzem artefatos para o exemplo de calculadora", async () => {
   const caminho = path.resolve("exemplos/calculadora.sema");
@@ -172,6 +198,7 @@ test("geradores produzem artefatos para o exemplo de calculadora", async () => {
   const arquivosJs = gerarJavaScript(resultado.ir!);
   const arquivosHtml = gerarHtml(resultado.ir!);
   const arquivosCss = gerarCss(resultado.ir!);
+  const arquivosPhp = gerarPhp(resultado.ir!);
 
   assert.ok(arquivosTs.some((arquivo) => arquivo.caminhoRelativo.endsWith(".ts")));
   assert.ok(arquivosPy.some((arquivo) => arquivo.caminhoRelativo.endsWith(".py")));
@@ -180,8 +207,10 @@ test("geradores produzem artefatos para o exemplo de calculadora", async () => {
   assert.ok(arquivosJs.some((arquivo) => arquivo.caminhoRelativo.endsWith(".js")));
   assert.ok(arquivosHtml.some((arquivo) => arquivo.caminhoRelativo.endsWith(".html")));
   assert.ok(arquivosCss.some((arquivo) => arquivo.caminhoRelativo.endsWith(".css")));
+  assert.ok(arquivosPhp.some((arquivo) => arquivo.caminhoRelativo.endsWith(".php")));
   assert.ok(arquivosTs[0]?.conteudo.includes("executar_somar"));
   assert.ok(arquivosPy[0]?.conteudo.includes("def executar_somar"));
+  assert.ok(arquivosPhp[0]?.conteudo.includes("function executar_somar"));
   for (const arquivo of [
     ...arquivosTs,
     ...arquivosPy,
@@ -190,9 +219,25 @@ test("geradores produzem artefatos para o exemplo de calculadora", async () => {
     ...arquivosJs,
     ...arquivosHtml,
     ...arquivosCss,
+    ...arquivosPhp,
   ]) {
     assert.ok(arquivo.conteudo.includes("SEMA-GOVERNED"), `${arquivo.caminhoRelativo} sem cabeçalho Sema`);
   }
+});
+
+test("gerador PHP produz teste executavel pelo runner PHP", async () => {
+  const caminho = path.resolve("exemplos/calculadora.sema");
+  const codigo = await readFile(caminho, "utf8");
+  const resultado = compilarCodigo(codigo, caminho);
+
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosPhp = gerarPhp(resultado.ir!);
+  const execucao = await executarTestesPhpGeradosTemporario(arquivosPhp);
+
+  assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+  assert.match(execucao.stdout, /ok 2 testes/);
 });
 
 test("geradores refletem interoperabilidade externa e alvo Dart", () => {

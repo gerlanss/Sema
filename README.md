@@ -83,8 +83,9 @@ sema compilar contratos/sema/software.sema \
   --estrutura modulos
 ```
 
-Supported generation targets include TypeScript, JavaScript, Python, Dart, Lua,
-HTML, and CSS. Generated code remains governed by the source `.sema` contract.
+Supported generation targets include TypeScript, JavaScript, Python, PHP, Dart,
+Lua, HTML, and CSS. Generated code remains governed by the source `.sema`
+contract.
 
 ## Public Boundary
 

@@ -371,6 +371,7 @@ test("cli compila geradores web como alvos publicos", async () => {
     { alvo: "javascript", arquivos: ["exemplos/calculadora.js", "exemplos/calculadora.test.js"] },
     { alvo: "html", arquivos: ["exemplos/calculadora.html"] },
     { alvo: "css", arquivos: ["exemplos/calculadora.css"] },
+    { alvo: "php", arquivos: ["exemplos/calculadora.php", "exemplos/test_calculadora.php"] },
   ];
 
   try {

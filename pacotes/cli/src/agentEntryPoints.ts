@@ -523,7 +523,7 @@ The CLI supports JavaScript generation:
 sema compilar contratos/orders.sema --alvo javascript --saida ./generated/javascript
 \`\`\`
 
-The project can also generate TypeScript, Python, Dart, Lua, HTML, and CSS when those targets are enabled in \`sema.config.json\`.
+The project can also generate TypeScript, Python, PHP, Dart, Lua, HTML, and CSS when those targets are enabled in \`sema.config.json\`.
 
 ## Support Files
 
@@ -578,7 +578,7 @@ If the delivery includes code derived from a contract, run \`sema compilar\`.
 sema compilar contratos/orders.sema --alvo javascript --saida ./generated/javascript
 \`\`\`
 
-Replace \`javascript\` with \`typescript\`, \`python\`, \`dart\`, \`lua\`, \`html\`, or \`css\` when appropriate.
+Replace \`javascript\` with \`typescript\`, \`python\`, \`php\`, \`dart\`, \`lua\`, \`html\`, or \`css\` when appropriate.
 
 ## Fail Closed
 
@@ -624,7 +624,7 @@ Honest closure: treat drift JSON as the source of truth. \`sucesso:false\`, \`vi
 
 ## Sema Code
 
-- \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|dart|lua|javascript|html|css> --saida <diretorio>\`: generates starter/support artifacts from the contract.
+- \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css> --saida <diretorio>\`: generates starter/support artifacts from the contract.
 - \`sema testar <arquivo.sema> --alvo <alvo> --saida <diretorio-temporario>\`: generates and runs local tests when the target supports it.
 - \`sema importar <fonte> <diretorio> --saida <diretorio> --json\`: imports a legacy project into initial contracts.
 - \`sema renomear-semantico <arquivo-ou-pasta> --de <nome> --para <nome> --json\`: helps rename symbols semantically.

@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "1.5.54",
+  "version": "1.5.55",
   "type": "module",
   "description": "Local semantic governance CLI for AI agents: contracts, drift, impact, documentation gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",
@@ -51,6 +51,7 @@
     "@sema/gerador-javascript": "file:../gerador-javascript",
     "@sema/gerador-html": "file:../gerador-html",
     "@sema/gerador-css": "file:../gerador-css",
+    "@sema/gerador-php": "file:../gerador-php",
     "@sema/padroes": "file:../padroes",
     "typescript": "^5.8.3"
   },
@@ -66,6 +67,7 @@
     "@sema/gerador-lua",
     "@sema/gerador-javascript",
     "@sema/gerador-html",
-    "@sema/gerador-css"
+    "@sema/gerador-css",
+    "@sema/gerador-php"
   ]
 }

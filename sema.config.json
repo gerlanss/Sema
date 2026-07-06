@@ -3,7 +3,7 @@
     "./contratos"
   ],
   "saida": "./.tmp/generated",
-  "alvos": ["typescript", "python", "dart", "lua", "javascript", "html", "css"],
+  "alvos": ["typescript", "python", "dart", "lua", "javascript", "html", "css", "php"],
   "alvoPadrao": "typescript",
   "estruturaSaida": "modulos",
   "framework": "base",
@@ -24,7 +24,8 @@
     "lua": "./.tmp/generated/lua",
     "javascript": "./.tmp/generated/javascript",
     "html": "./.tmp/generated/html",
-    "css": "./.tmp/generated/css"
+    "css": "./.tmp/generated/css",
+    "php": "./.tmp/generated/php"
   },
   "convencoesGeracaoPorProjeto": "base"
 }

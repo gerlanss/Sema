@@ -15,6 +15,7 @@ import { gerarTypeScript } from "@sema/gerador-typescript";
 import { gerarJavaScript } from "@sema/gerador-javascript";
 import { gerarHtml } from "@sema/gerador-html";
 import { gerarCss } from "@sema/gerador-css";
+import { gerarPhp } from "@sema/gerador-php";
 import type { FonteImportacao } from "./importador.js";
 import type { EstruturaSaida } from "./tipos.js";
 import type { TemplateIniciar } from "./initTemplatesBase.js";
@@ -63,7 +64,7 @@ export function validarCompatibilidadeFramework(alvo: AlvoGeracao, framework: Fr
   if (framework === "fastapi" && alvo !== "python") {
     return `Framework "${framework}" so pode ser usado com o alvo python.`;
   }
-  if (alvo === "dart" || alvo === "lua" || alvo === "javascript" || alvo === "html" || alvo === "css") {
+  if (alvo === "dart" || alvo === "lua" || alvo === "javascript" || alvo === "html" || alvo === "css" || alvo === "php") {
     return `Framework "${framework}" nao e suportado para o alvo ${alvo}.`;
   }
   return undefined;
@@ -193,6 +194,9 @@ export function gerarArquivosPorAlvo(ir: IrModulo, alvo: AlvoGeracao, framework:
   if (alvo === "css") {
     return gerarCss(ir);
   }
+  if (alvo === "php") {
+    return gerarPhp(ir);
+  }
   return gerarTypeScript(ir, { framework });
 }
 
@@ -241,6 +245,11 @@ export function aplicarEstruturaSaida(
       novoBasename = `${nomeArquivo}.html`;
     } else if (basename === `${nomeBaseAntigo}.css`) {
       novoBasename = `${nomeArquivo}.css`;
+    } else if (basename === `${nomeBaseAntigo}.php`) {
+      novoBasename = `${nomeArquivo}.php`;
+    } else if (basename === `test_${nomeBaseAntigo}.php`) {
+      novoBasename = `test_${nomeArquivo}.php`;
+      conteudo = conteudo.replace(`/${nomeBaseAntigo}.php`, `/${nomeArquivo}.php`);
     }
 
     return {
@@ -253,6 +262,13 @@ export function aplicarEstruturaSaida(
 export function contarCasosDeTesteGerados(alvo: AlvoGeracao, arquivos: Array<{ caminhoRelativo: string; conteudo: string }>): number {
   if (alvo === "dart" || alvo === "html" || alvo === "css") {
     return 0;
+  }
+  if (alvo === "php") {
+    const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_") && item.caminhoRelativo.endsWith(".php"));
+    if (!arquivoTeste) {
+      return 0;
+    }
+    return (arquivoTeste.conteudo.match(/\bfunction test_/g) ?? []).length;
   }
   if (alvo === "lua") {
     const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_") && item.caminhoRelativo.endsWith(".lua"));
@@ -294,7 +310,7 @@ export function executarTestesGerados(
   const quantidadeTestes = contarCasosDeTesteGerados(alvo, arquivos);
   if (quantidadeTestes === 0) {
     if (!silencioso) {
-      const nomesAlvo: Record<AlvoGeracao, string> = { typescript: "TypeScript", python: "Python", lua: "Lua", dart: "Dart", javascript: "JavaScript", html: "HTML", css: "CSS" };
+      const nomesAlvo: Record<AlvoGeracao, string> = { typescript: "TypeScript", python: "Python", lua: "Lua", dart: "Dart", javascript: "JavaScript", html: "HTML", css: "CSS", php: "PHP" };
       console.log(`Nenhum teste ${nomesAlvo[alvo] ?? alvo} foi gerado.`);
     }
     return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
@@ -370,6 +386,36 @@ export function executarTestesGerados(
       };
     }
     const execucao = spawnSync("lua", [arquivoTeste], {
+      stdio: silencioso ? "pipe" : "inherit",
+      cwd: baseSaida,
+      encoding: silencioso ? "utf8" : undefined,
+      shell: process.platform === "win32",
+    });
+    return {
+      codigoSaida: execucao.status ?? 1,
+      quantidadeTestes,
+      saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
+      saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : "",
+    };
+  }
+
+  if (alvo === "php") {
+    const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_") && item.caminhoRelativo.endsWith(".php"))?.caminhoRelativo;
+    if (!arquivoTeste) {
+      if (!silencioso) {
+        console.log("Nenhum teste PHP foi gerado.");
+      }
+      return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
+    }
+    if (!comandoDisponivel("php", ["-v"])) {
+      return {
+        codigoSaida: 1,
+        quantidadeTestes,
+        saidaPadrao: "",
+        saidaErro: "Nao foi possivel localizar o runner php para executar os testes gerados.",
+      };
+    }
+    const execucao = spawnSync("php", [arquivoTeste], {
       stdio: silencioso ? "pipe" : "inherit",
       cwd: baseSaida,
       encoding: silencioso ? "utf8" : undefined,

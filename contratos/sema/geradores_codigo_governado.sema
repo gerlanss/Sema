@@ -11,6 +11,7 @@ module sema.produto.geradores_codigo_governado {
     arquivo: "pacotes/gerador-lua/src/index.ts"
     arquivo: "pacotes/gerador-html/src/index.ts"
     arquivo: "pacotes/gerador-css/src/index.ts"
+    arquivo: "pacotes/gerador-php/src/index.ts"
     arquivo: "pacotes/cli/src/index.ts"
     arquivo: "docs/ai-integration.md"
   }
@@ -31,7 +32,7 @@ module sema.produto.geradores_codigo_governado {
     }
     rules {
       modulo deve_ser preenchido
-      alvo deve_ser em [typescript, javascript, python, dart, lua, html, css, nestjs, fastapi]
+      alvo deve_ser em [typescript, javascript, python, php, dart, lua, html, css, nestjs, fastapi]
       capacidade_ia deve_ser em [fraca, media, forte]
     }
     effects {
@@ -84,6 +85,7 @@ module sema.produto.geradores_codigo_governado {
       arquivo: "pacotes/gerador-lua/src/index.ts"
       arquivo: "pacotes/gerador-html/src/index.ts"
       arquivo: "pacotes/gerador-css/src/index.ts"
+      arquivo: "pacotes/gerador-php/src/index.ts"
       simbolo: gerador_typescript.src.index.gerarTypeScript
       simbolo: gerador_javascript.src.index.gerarJavaScript
       simbolo: gerador_python.src.index.gerarPython
@@ -91,6 +93,7 @@ module sema.produto.geradores_codigo_governado {
       simbolo: gerador_lua.src.index.gerarLua
       simbolo: gerador_html.src.index.gerarHtml
       simbolo: gerador_css.src.index.gerarCss
+      simbolo: gerador_php.src.index.gerarPhp
     }
     execucao {
       idempotencia: verdadeiro
@@ -134,6 +137,20 @@ module sema.produto.geradores_codigo_governado {
           idioma_humano_preservado: verdadeiro
           cobertura_ia_fraca_media_forte: verdadeiro
           comentario_compacto: verdadeiro
+        }
+      }
+      caso "php recebe cabecalho governado" {
+        given {
+          modulo: "exemplos.calculadora"
+          alvo: "php"
+          capacidade_ia: "media"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          cabecalho_sema_governado: verdadeiro
+          descricao_humana_presente: verdadeiro
+          lembrete_consulta_sema: verdadeiro
         }
       }
     }

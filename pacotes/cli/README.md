@@ -47,6 +47,7 @@ sema iniciar --template base
 ```bash
 sema compilar contratos/app.sema --alvo typescript --saida .tmp/app-ts --estrutura modulos
 sema compilar contratos/app.sema --alvo python --saida .tmp/app-py --estrutura modulos
+sema compilar contratos/app.sema --alvo php --saida .tmp/app-php --estrutura modulos
 ```
 
 Generated artifacts include `SEMA-GOVERNED` headers and must stay aligned with

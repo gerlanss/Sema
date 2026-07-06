@@ -1,4 +1,4 @@
-export type AlvoGeracao = "typescript" | "python" | "dart" | "lua" | "javascript" | "html" | "css";
+export type AlvoGeracao = "typescript" | "python" | "dart" | "lua" | "javascript" | "html" | "css" | "php";
 export type FrameworkGeracao = "base" | "nestjs" | "fastapi";
 
 export interface ArquivoGerado {
@@ -379,4 +379,40 @@ export function mapearTipoParaInputHtml(tipo: string): string {
     Vazio: "hidden",
   };
   return tabela[tipo] ?? "text";
+}
+
+export function mapearTipoParaPhp(tipo: string): string {
+  const limpo = tipo.trim();
+  if (/^Opcional<.+>$/.test(limpo)) {
+    return `${mapearTipoParaPhp(limpo.slice("Opcional<".length, -1))}|null`;
+  }
+
+  const uniao = dividirTipoNoNivelRaiz(limpo, "|");
+  if (uniao.length > 1) {
+    return uniao.map((item) => mapearTipoParaPhp(item)).join("|");
+  }
+
+  if (limpo.endsWith("[]")) {
+    return "array";
+  }
+
+  if (/^Lista<.+>$/.test(limpo) || /^Mapa<.+>$/.test(limpo)) {
+    return "array";
+  }
+
+  const tabela: Record<string, string> = {
+    Texto: "string",
+    Numero: "float",
+    Inteiro: "int",
+    Decimal: "float",
+    Booleano: "bool",
+    Data: "string",
+    DataHora: "string",
+    Id: "string",
+    Email: "string",
+    Url: "string",
+    Json: "array",
+    Vazio: "void",
+  };
+  return tabela[limpo] ?? "mixed";
 }

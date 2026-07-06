@@ -10,6 +10,7 @@
     { "path": "./pacotes/gerador-javascript" },
     { "path": "./pacotes/gerador-html" },
     { "path": "./pacotes/gerador-css" },
+    { "path": "./pacotes/gerador-php" },
     { "path": "./pacotes/cli" }
   ]
 }

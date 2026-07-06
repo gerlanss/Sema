@@ -18,6 +18,7 @@ const dependenciasInternas = [
   "gerador-javascript",
   "gerador-html",
   "gerador-css",
+  "gerador-php",
 ];
 const escopoSema = path.join(cliDir, "node_modules", "@sema");
 const marcadorDependencias = path.join(cliDir, "node_modules", ".sema-prepack-internal-deps");
