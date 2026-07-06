@@ -341,7 +341,7 @@ export function extrairRecursosArquivoLocal(arquivo: string, codigo: string): Re
     registrarRecursoDrift(recursos, "arquivo", "arquivo_local", nomeBase, arquivo);
   }
 
-  const nomeArquivo = path.basename(arquivo).replace(/\.(?:ts|tsx|js|jsx|mjs|cjs|py|dart|lua|cs|java|go|rs|cpp|cc|cxx|hpp|h)$/i, "");
+  const nomeArquivo = path.basename(arquivo).replace(/\.(?:ts|tsx|js|jsx|mjs|cjs|py|dart|lua|cs|java|go|rs|cpp|cc|cxx|hpp|h|php)$/i, "");
   const nomeStore = nomeArquivo
     .replace(/(?:[_.-]?(?:repository|repositories|repo|store|storage|persistencia|persistence))$/i, "")
     .trim();

@@ -118,6 +118,9 @@ export function normalizarFonteImportacao(valor: string | undefined): FonteImpor
   if (valor === "cpp" || valor === "cxx" || valor === "cc" || valor === "c++") {
     return "cpp";
   }
+  if (valor === "php") {
+    return "php";
+  }
   if (
     valor === "nestjs"
     || valor === "fastapi"
@@ -133,6 +136,7 @@ export function normalizarFonteImportacao(valor: string | undefined): FonteImpor
     || valor === "go"
     || valor === "rust"
     || valor === "cpp"
+    || valor === "php"
     || valor === "typescript"
     || valor === "python"
     || valor === "dart"

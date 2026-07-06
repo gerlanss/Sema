@@ -98,6 +98,7 @@ export function normalizarFonteLegado(valor: string): FonteLegado | undefined {
     || valor === "go"
     || valor === "rust"
     || valor === "cpp"
+    || valor === "php"
   ) {
     return valor;
   }

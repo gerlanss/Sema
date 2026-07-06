@@ -6,7 +6,7 @@ import type { ConfiguracaoEscopoDriftAplicada, RecursoResolvido, RotaResolvida, 
 import { resolverDiretoriosCodigoEscopoReal } from "./drift.part02.js";
 import { indexarArquivosRastreaveis } from "./drift.part04.js";
 import { indexarTypeScript } from "./drift.part06.js";
-import { indexarCpp, indexarDart, indexarDotnet, indexarGo, indexarJava, indexarLua, indexarPersistenciaDeclarativa, indexarPython, indexarRust } from "./drift.part07.js";
+import { indexarCpp, indexarDart, indexarDotnet, indexarGo, indexarJava, indexarLua, indexarPersistenciaDeclarativa, indexarPhp, indexarPython, indexarRust } from "./drift.part07.js";
 import { indexarPersistenciaDetalhada } from "./drift.part08.js";
 import { construirMapaRecursos } from "./drift.part10.js";
 
@@ -35,6 +35,7 @@ export async function prepararIndicesDrift(
   const indexGo = await indexarGo(diretoriosCodigoAtivos);
   const indexRust = await indexarRust(diretoriosCodigoAtivos);
   const indexLua = await indexarLua(diretoriosCodigoAtivos);
+  const indexPhp = await indexarPhp(diretoriosCodigoAtivos);
   const indexPersistencia = await indexarPersistenciaDeclarativa(diretoriosCodigoAtivos);
   const detalhesPersistencia = await indexarPersistenciaDetalhada(diretoriosCodigoAtivos);
   const indexCpp = await indexarCpp(diretoriosCodigoAtivos);
@@ -49,6 +50,7 @@ export async function prepararIndicesDrift(
     ...indexRust.simbolos,
     ...indexLua.simbolos,
     ...indexCpp.simbolos,
+    ...indexPhp.simbolos,
     ...indexPersistencia.simbolos,
   ];
   const mapaImpl = new Map<string, SimboloResolvido>([
@@ -61,6 +63,7 @@ export async function prepararIndicesDrift(
     ...indexRust.simbolos.map((item) => [item.caminho, item] as const),
     ...indexLua.simbolos.map((item) => [item.caminho, item] as const),
     ...indexCpp.simbolos.map((item) => [item.caminho, item] as const),
+    ...indexPhp.simbolos.map((item) => [item.caminho, item] as const),
   ]);
   const todosRecursos = [
     ...indexTs.recursos,
@@ -72,6 +75,7 @@ export async function prepararIndicesDrift(
     ...indexRust.recursos,
     ...indexLua.recursos,
     ...indexCpp.recursos,
+    ...indexPhp.recursos,
     ...indexPersistencia.recursos,
   ];
   const mapaRecursos = construirMapaRecursos(todosRecursos);
@@ -83,6 +87,7 @@ export async function prepararIndicesDrift(
     ...indexJava.rotas,
     ...indexGo.rotas,
     ...indexRust.rotas,
+    ...indexPhp.rotas,
   ];
   const todosArquivosConhecidos = [...new Set([
     ...arquivosRastreaveis,

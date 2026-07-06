@@ -140,9 +140,9 @@ export function extrairFontesHttpTypeScript(fontesLegado: FonteLegado[]): Array<
     fonte === "nestjs" || fonte === "nextjs" || fonte === "firebase");
 }
 
-export function extrairFontesHttpBackend(fontesLegado: FonteLegado[]): Array<"dotnet" | "java" | "go" | "rust"> {
-  return fontesLegado.filter((fonte): fonte is "dotnet" | "java" | "go" | "rust" =>
-    fonte === "dotnet" || fonte === "java" || fonte === "go" || fonte === "rust");
+export function extrairFontesHttpBackend(fontesLegado: FonteLegado[]): Array<"dotnet" | "java" | "go" | "rust" | "php"> {
+  return fontesLegado.filter((fonte): fonte is "dotnet" | "java" | "go" | "rust" | "php" =>
+    fonte === "dotnet" || fonte === "java" || fonte === "go" || fonte === "rust" || fonte === "php");
 }
 
 export function ultimoSegmentoSimbolico(caminho: string): string {
@@ -292,7 +292,7 @@ export function sugerirCandidatosParaTaskSemImpl(simbolos: SimboloResolvido[], n
   )).slice(0, 5);
 }
 
-export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust"> {
+export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust" | "php"> {
   const fontesTs = extrairFontesHttpTypeScript(fontesLegado);
   const fontesBackend = extrairFontesHttpBackend(fontesLegado);
   const implTsOuJs = task.implementacoesExternas.find((impl) => impl.origem === "ts" || impl.origem === "js");
@@ -337,6 +337,10 @@ export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]
   const implRust = task.implementacoesExternas.find((impl) => impl.origem === "rust");
   if (implRust) {
     return fontesBackend.includes("rust") ? ["rust"] : ["rust"];
+  }
+  const implPhp = task.implementacoesExternas.find((impl) => impl.origem === "php");
+  if (implPhp) {
+    return fontesBackend.includes("php") ? ["php"] : ["php"];
   }
   if (fontesTs.length > 0) {
     return fontesTs;

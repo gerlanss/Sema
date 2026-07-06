@@ -61,6 +61,8 @@ export async function inferirFontesLegado(
     const arquivosRust = await listarArquivosRecursivosLimitado(diretorio, [".rs"], 5, 20);
     const arquivosCppBrutos = await listarArquivosRecursivosLimitado(diretorio, [".cpp", ".cc", ".cxx", ".hpp", ".h"], 5, 30);
     const arquivosCpp = arquivosCppBrutos.filter((arquivo) => !/(^|[\\/])(windows|linux|macos|runner|flutter|ephemeral|build|vendor)([\\/]|$)/i.test(arquivo));
+    const arquivosPhp = (await listarArquivosRecursivosLimitado(diretorio, [".php"], 5, 30))
+      .filter((arquivo) => !/(^|[\\/])(vendor|storage|bootstrap[\\/]cache|cache|tests?)([\\/]|$)/i.test(arquivo));
 
     if (arquivosTs.length > 0) {
       encontrados.add("typescript");
@@ -218,6 +220,18 @@ export async function inferirFontesLegado(
 
     if (arquivosCpp.length > 0) {
       encontrados.add("cpp");
+    }
+
+    if (arquivosPhp.length > 0) {
+      encontrados.add("php");
+      const composer = await procurarArquivosPorNome(diretorio, ["composer.json"], 4);
+      const amostrasPhp = await Promise.all(arquivosPhp.slice(0, 8).map((arquivo) => lerConteudoSeExistir(arquivo)));
+      if (
+        composer.length > 0
+        || amostrasPhp.some((texto) => /Route::(?:get|post|put|patch|delete)|#\[\s*Route\s*\(|namespace\s+App\\|use\s+Illuminate\\|use\s+Symfony\\/i.test(texto ?? ""))
+      ) {
+        encontrados.add("php");
+      }
     }
   }
 

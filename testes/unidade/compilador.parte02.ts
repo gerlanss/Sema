@@ -18,6 +18,7 @@ module app.interop {
   use go internal.health
   use rust src.handlers.health
   use cpp src.runtime.RuntimeBridge
+  use php app.Http.Controllers.HealthController
 
   task consultar_status {
     input {
@@ -57,6 +58,7 @@ module app.interop {
     "go:internal.health",
     "rust:src.handlers.health",
     "cpp:src.runtime.RuntimeBridge",
+    "php:app.Http.Controllers.HealthController",
   ]);
   assert.deepEqual(resultado.ir?.interoperabilidades.map((item) => `${item.origem}:${item.caminho}`), [
     "ts:app.gateway.pagamentos",
@@ -69,6 +71,7 @@ module app.interop {
     "go:internal.health",
     "rust:src.handlers.health",
     "cpp:src.runtime.RuntimeBridge",
+    "php:app.Http.Controllers.HealthController",
   ]);
 });
 
@@ -124,6 +127,7 @@ module app.impl {
       py: servicos.pagamentos.processar
       dart: app.mobile.pagamentos.processar
       lua: app.social.pagamentos.processar
+      php: app.Http.Controllers.PaymentController.processar
     }
     guarantees {
       protocolo existe
@@ -150,6 +154,7 @@ module app.impl {
     "py:servicos.pagamentos.processar",
     "dart:app.mobile.pagamentos.processar",
     "lua:app.social.pagamentos.processar",
+    "php:app.Http.Controllers.PaymentController.processar",
   ]);
 });
 

@@ -26,6 +26,7 @@ import { extrairRotasDotnet, extrairSimbolosDotnet } from "./dotnet-http.js";
 import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
 import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
 import { extrairSimbolosLua } from "./lua-symbols.js";
+import { extrairRotasPhp, extrairSimbolosPhp } from "./php-http.js";
 import { contarIndentacaoPython, extrairRotasFlaskDecoradas, normalizarCaminhoFlask } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
@@ -384,6 +385,51 @@ export async function indexarCpp(diretorios: string[]): Promise<{ simbolos: Simb
   };
 }
 
+export async function indexarPhp(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+  const simbolos = new Map<string, SimboloResolvido>();
+  const rotas: RotaResolvida[] = [];
+  const recursos = new Map<string, RecursoResolvido>();
+
+  for (const diretorio of diretorios) {
+    const arquivos = (await listarArquivosRecursivos(diretorio, [".php"]))
+      .filter((arquivo) => !/(^|[\\/])(vendor|storage|bootstrap[\\/]cache|cache|tests?)([\\/]|$)/i.test(arquivo));
+
+    for (const arquivo of arquivos) {
+      const codigo = await readFile(arquivo, "utf8");
+      const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
+        registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
+      }
+      for (const simbolo of extrairSimbolosPhp(codigo)) {
+        registrarSimboloGenerico(simbolos, "php", basesSimbolicas, arquivo, simbolo.simbolo);
+        for (const alias of simbolo.aliases ?? []) {
+          simbolos.set(alias, {
+            origem: "php",
+            caminho: alias,
+            arquivo,
+            simbolo: simbolo.simbolo,
+          });
+        }
+      }
+      for (const rota of extrairRotasPhp(codigo)) {
+        rotas.push({
+          origem: "php",
+          metodo: rota.metodo,
+          caminho: rota.caminho,
+          arquivo,
+          simbolo: rota.simbolo,
+        });
+      }
+    }
+  }
+
+  return {
+    simbolos: [...simbolos.values()],
+    rotas,
+    recursos: [...recursos.values()],
+  };
+}
+
 export async function indexarLua(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; recursos: RecursoResolvido[] }> {
   const simbolos = new Map<string, SimboloResolvido>();
   const recursos = new Map<string, RecursoResolvido>();
@@ -418,7 +464,7 @@ export async function indexarPersistenciaDeclarativa(diretorios: string[]): Prom
     const arquivos = await listarArquivosRecursivos(diretorio, [
       ".sql", ".psql", ".ddl", ".prisma",
       ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-      ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h",
+      ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h", ".php",
     ]);
 
     for (const arquivo of arquivos) {

@@ -20,6 +20,7 @@ import {
   criarProjetoNextJsAppRouter,
   criarProjetoNextJsConsumer,
   criarProjetoNextJsAppRouterSemantico,
+  criarProjetoPhpLaravel,
   criarProjetoReactViteConsumer,
   criarProjetoRustAxum,
   criarProjetoSpringBoot,
@@ -215,6 +216,28 @@ test("cli importa projeto C++ bridge legado e gera task com impl cpp", async () 
     const arquivo = await readFile(path.join(base, "sema", "runtime.sema"), "utf8");
     assert.match(arquivo, /task process_snapshot/);
     assert.match(arquivo, /cpp: src\.runtime\.RuntimeBridge\.processSnapshot/);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli importa projeto PHP Laravel legado e gera route + task com impl php", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-import-php-"));
+
+  try {
+    await criarProjetoPhpLaravel(base);
+
+    const execucao = executarImportacao(["importar", "php", base, "--saida", path.join(base, "sema"), "--json"]);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.fonte, "php");
+    assert.equal(json.resumo.sucesso, true);
+    assert.equal(json.resumo.rotas >= 2, true);
+
+    const arquivo = await readFile(path.join(base, "sema", "http", "controllers", "health_controller.sema"), "utf8");
+    assert.match(arquivo, /route show_publico/);
+    assert.match(arquivo, /php: app\.http\.controllers\.health_controller\.HealthController\.show/);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

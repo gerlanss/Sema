@@ -30,7 +30,7 @@ import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 import { paraIdentificadorModulo } from "./drift.part04.js";
-export type OrigemCodigoDrift = "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
+export type OrigemCodigoDrift = "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
 export type OrigemSimboloDrift = OrigemCodigoDrift | "sql";
 export interface SimboloResolvido {
   origem: OrigemSimboloDrift;
@@ -40,7 +40,7 @@ export interface SimboloResolvido {
 }
 export type ConsumerFramework = "nextjs-consumer" | "react-vite-consumer" | "angular-consumer" | "flutter-consumer";
 export interface RotaResolvida {
-  origem: "nestjs" | "fastapi" | "flask" | "nextjs" | ConsumerFramework | "firebase" | "dotnet" | "java" | "go" | "rust";
+  origem: "nestjs" | "fastapi" | "flask" | "nextjs" | ConsumerFramework | "firebase" | "dotnet" | "java" | "go" | "rust" | "php";
   metodo: string;
   caminho: string;
   arquivo: string;

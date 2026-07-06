@@ -181,7 +181,7 @@ export function recomporCaminho(campo?: CampoAst): string | undefined {
 
 export function ehUseInterop(
   use: ModuloAst["uses"][number],
-): use is ModuloAst["uses"][number] & { origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" } {
+): use is ModuloAst["uses"][number] & { origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php" } {
   return use.origem !== "sema";
 }
 

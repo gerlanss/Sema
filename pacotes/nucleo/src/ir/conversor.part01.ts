@@ -343,6 +343,10 @@ export function converterImplementacoes(bloco?: BlocoGenericoAst): IrImplementac
     }
     if (origem === "cpp" || origem === "cxx" || origem === "cc" || origem === "c++") {
       implementacoes.push({ origem: "cpp", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
+      continue;
+    }
+    if (origem === "php") {
+      implementacoes.push({ origem: "php", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
     }
   }
   return implementacoes;

@@ -235,7 +235,7 @@ export async function principal(): Promise<void> {
       {
         const fonte = normalizarFonteImportacao(posicionais[0]);
         if (!fonte || !posicionais[1]) {
-          console.error("Uso: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
+          console.error("Uso: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|php|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
           codigoSaida = 1;
           break;
         }

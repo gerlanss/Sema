@@ -82,11 +82,11 @@ export interface ResumoTaskSemantico {
   implementacoes: ImplementacaoTaskSemantica[];
 }
 export interface InteropSemantico {
-  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
   caminho: string;
 }
 export interface ImplementacaoTaskSemantica {
-  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
   caminho: string;
 }
 export interface ContextoSemantico {
@@ -233,6 +233,8 @@ export function normalizarOrigemImplementacao(valor: string): ImplementacaoTaskS
     case "cc":
     case "c++":
       return "cpp";
+    case "php":
+      return "php";
     default:
       return undefined;
   }
@@ -391,7 +393,7 @@ export function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnosti
           `Task "${task.nome}" declarou implementacao externa invalida em impl: "${campo.nome}".`,
           "erro",
           campo.intervalo,
-          "Use apenas ts, js, py, dart, lua, cs, java, go, rust ou cpp dentro do bloco impl.",
+          "Use apenas ts, js, py, dart, lua, cs, java, go, rust, cpp ou php dentro do bloco impl.",
         ),
       );
       continue;

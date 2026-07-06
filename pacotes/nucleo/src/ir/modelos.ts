@@ -48,7 +48,7 @@ export interface IrCampo {
 }
 
 export interface IrImplementacaoTask {
-  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
   caminho: string;
   origemArquivo?: string;
   origemSimbolo?: string;
@@ -181,13 +181,13 @@ export interface IrEnum {
 }
 
 export interface IrUse {
-  origem: "sema" | "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "sema" | "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
   caminho: string;
   externo: boolean;
 }
 
 export interface IrInteropExterno {
-  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp";
+  origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
   caminho: string;
 }
 

@@ -10,6 +10,7 @@ import { extrairSimbolosCpp } from "./cpp-symbols.js";
 import { extrairRotasDotnet, extrairSimbolosDotnet } from "./dotnet-http.js";
 import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
 import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
+import { extrairRotasPhp, extrairSimbolosPhp } from "./php-http.js";
 import { extrairParametrosCaminhoFlask, extrairRotasFlaskDecoradas } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import {
@@ -37,9 +38,10 @@ export type FonteImportacao =
   | "java"
   | "go"
   | "rust"
-  | "cpp";
+  | "cpp"
+  | "php";
 
-export type OrigemInteropImportada = "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp";
+export type OrigemInteropImportada = "ts" | "py" | "dart" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
 
 export interface CampoImportado {
   nome: string;

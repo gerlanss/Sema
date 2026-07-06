@@ -74,6 +74,7 @@ Use these origins before inventing a new one:
 - `go`
 - `rust`
 - `cpp`
+- `php`
 
 Examples:
 

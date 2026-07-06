@@ -389,7 +389,7 @@ export async function listarArquivosRecursivos(diretorio: string, extensoes: str
 
 export const EXTENSOES_ARQUIVOS_RASTREAVEIS_DRIFT = [
   ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-  ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs",
+  ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs", ".php",
   ".cpp", ".cc", ".cxx", ".hpp", ".h",
   ".sql", ".psql", ".ddl", ".prisma",
   ".md", ".mdx", ".txt", ".json", ".jsonl",

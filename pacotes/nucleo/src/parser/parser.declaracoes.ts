@@ -49,6 +49,8 @@ export function normalizarOrigemUse(valor: string): UseAst["origem"] | undefined
     case "cc":
     case "c++":
       return "cpp";
+    case "php":
+      return "php";
     default:
       return undefined;
   }

@@ -57,6 +57,7 @@ export const EXTENSOES_CODIGO = [
   ".cxx",
   ".hpp",
   ".h",
+  ".php",
   ".html",
   ".htm",
   ".css",

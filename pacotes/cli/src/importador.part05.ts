@@ -10,6 +10,7 @@ import { extrairSimbolosCpp } from "./cpp-symbols.js";
 import { extrairRotasDotnet, extrairSimbolosDotnet } from "./dotnet-http.js";
 import { extrairRotasGo, extrairSimbolosGo } from "./go-http.js";
 import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
+import { extrairRotasPhp, extrairSimbolosPhp } from "./php-http.js";
 import { extrairParametrosCaminhoFlask, extrairRotasFlaskDecoradas } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import {
@@ -114,6 +115,15 @@ export function sincronizarRotasComTasks(routes: RotaImportada[], tasks: TarefaI
     if (route.output.length === 0) {
       route.output = task.output.map((campo) => ({ ...campo, obrigatorio: true }));
     }
+    if (route.input.length > 0 && task.input.length > 0) {
+      const camposTask = new Map(task.input.map((campo) => [normalizarNomeCampoImportado(campo.nome), campo]));
+      route.input = route.input.map((campo) => {
+        const correspondente = camposTask.get(normalizarNomeCampoImportado(campo.nome));
+        return correspondente
+          ? { ...campo, tipo: correspondente.tipo, obrigatorio: correspondente.obrigatorio }
+          : campo;
+      });
+    }
     if (route.errors.length === 0) {
       route.errors = task.errors;
     }
@@ -170,6 +180,7 @@ export function renderizarImpl(impl: Partial<Record<OrigemInteropImportada, stri
     ...(impl.go ? [`${indentacao}  go: ${impl.go}`] : []),
     ...(impl.rust ? [`${indentacao}  rust: ${impl.rust}`] : []),
     ...(impl.cpp ? [`${indentacao}  cpp: ${impl.cpp}`] : []),
+    ...(impl.php ? [`${indentacao}  php: ${impl.php}`] : []),
     `${indentacao}}`,
     "",
   ];

@@ -30,7 +30,8 @@ module sema.drift {
     JAVA,
     GO,
     RUST,
-    CPP
+    CPP,
+    PHP
   }
 
   enum StatusImplementacao {

@@ -19,6 +19,7 @@ export type FonteLegado =
   | "java"
   | "go"
   | "rust"
-  | "cpp";
+  | "cpp"
+  | "php";
 
 export type ModoAdocao = "incremental";

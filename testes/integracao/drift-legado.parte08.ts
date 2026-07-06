@@ -21,6 +21,7 @@ import {
   criarProjetoLuaBridge,
   criarProjetoNextJsAppRouter,
   criarProjetoNextJsConsumer,
+  criarProjetoPhpLaravel,
   criarProjetoPythonEstiloFuteBot,
   criarProjetoReactViteConsumer,
   criarProjetoRustAxum,
@@ -268,6 +269,26 @@ test("cli drift resolve impls C++ bridge sem prometer rota HTTP", async () => {
     const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
     assert.equal(caminhos.has("src.runtime.RuntimeBridge.processSnapshot"), true);
     assert.equal(caminhos.has("src.runtime.emitSignal"), true);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("cli drift resolve impls e rotas PHP Laravel em fixture sintetico", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-php-"));
+
+  try {
+    await criarProjetoPhpLaravel(base);
+
+    const execucao = executar(["drift", "--json"], base);
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+
+    const json = JSON.parse(execucao.stdout);
+    assert.equal(json.impls_quebrados.length, 0);
+    assert.equal(json.rotas_divergentes.length, 0);
+    const caminhos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
+    assert.equal(caminhos.has("app.Http.Controllers.HealthController.show"), true);
+    assert.equal(caminhos.has("app.Http.Controllers.HealthController.refresh"), true);
   } finally {
     await rm(base, { recursive: true, force: true });
   }

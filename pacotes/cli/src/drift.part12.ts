@@ -39,7 +39,7 @@ import { analisarDriftLegado } from "./drift.part11.js";
 export const EXTENSOES_BUSCA_IMPACTO = [
   ".sema",
   ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-  ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h",
+  ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h", ".php",
   ".sql", ".psql", ".ddl", ".prisma", ".json",
 ];
 

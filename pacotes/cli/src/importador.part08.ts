@@ -285,12 +285,14 @@ export function criarModuloImportadoSimples(
   vinculos: VinculoImportado[] = [],
   databases: DatabaseImportado[] = [],
 ): ModuloImportado {
-  sincronizarRotasComTasks(routes, tasks);
+  const tasksDeduplicadas = deduplicarTarefas(tasks);
+  const routesDeduplicadas = deduplicarRotas(routes);
+  sincronizarRotasComTasks(routesDeduplicadas, tasksDeduplicadas);
   return {
     nome,
     resumo,
-    tasks: deduplicarTarefas(tasks),
-    routes: deduplicarRotas(routes),
+    tasks: tasksDeduplicadas,
+    routes: routesDeduplicadas,
     entities: [],
     enums: [],
     databases: deduplicarDatabases(databases),

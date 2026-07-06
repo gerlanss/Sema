@@ -49,7 +49,7 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 
 ## Canonical Syntax Lists
 
-- Origins for `use` and `impl`: `ts/typescript`, `js/javascript`, `py/python`, `dart`, `lua`, `cs/dotnet`, `java`, `go`, `rust`, `cpp`.
+- Origins for `use` and `impl`: `ts/typescript`, `js/javascript`, `py/python`, `dart`, `lua`, `cs/dotnet`, `java`, `go`, `rust`, `cpp`, `php`.
 - Frequent `effects` categories: `persistencia`, `consulta`, `evento`, `auditoria`, `db.write`, `queue.publish`, `fs.write`, `network.egress`, `secret.read`, `shell.exec`.
 - Accepted `audit.motivo` values: `obrigatorio`, `opcional`, `dispensado`.
 

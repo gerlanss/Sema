@@ -28,3 +28,4 @@ export { criarProjetoGoHttp } from "./futebot-fixture.go-http.js";
 export { criarProjetoRustAxum } from "./futebot-fixture.rust-axum.js";
 export { criarProjetoCppBridge } from "./futebot-fixture.cpp-bridge.js";
 export { criarProjetoLuaBridge } from "./futebot-fixture.lua-bridge.js";
+export { criarProjetoPhpLaravel } from "./futebot-fixture.php-laravel.js";
