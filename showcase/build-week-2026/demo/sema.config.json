@@ -1,0 +1,17 @@
+{
+  "origens": ["./contracts"],
+  "saida": "./.runtime/generated",
+  "alvos": ["javascript"],
+  "alvoPadrao": "javascript",
+  "estruturaSaida": "modulos",
+  "framework": "base",
+  "modoEstrito": true,
+  "pontuacaoSemanticaMinimaOperacional": 80,
+  "pontuacaoSemanticaAlvo": 85,
+  "pontuacaoSemanticaPasso": 0.5,
+  "diretoriosCodigo": ["./lib", "./project/src"],
+  "diretoriosSaidaPorAlvo": {
+    "javascript": "./.runtime/generated/javascript"
+  },
+  "convencoesGeracaoPorProjeto": "base"
+}

@@ -4,9 +4,18 @@
   <img src="./logo.png" alt="Sema logo" width="240">
 </p>
 
-Sema is a Codex-native, local-first semantic governance CLI for AI-assisted
-software work. It gives Codex a contract-first workflow before it edits code,
-operational docs, generated artifacts, or other governed project files.
+Sema is a Codex-native, local-first semantic governance layer for AI agents.
+Codex is its first native integration, not its product ceiling. Sema turns
+human intent into explicit contracts, constraints, impact analysis, verified
+execution, and evidence instead of asking an agent to rely on prompt context
+alone.
+
+`intent -> context -> contract -> constraints -> impact -> execution -> evidence`
+
+Codex is Sema's first native agent integration, and software is its first
+proving ground. The same governance model already supports workflows,
+operations, games, research, legal review, writing, proposals, conversations,
+and other systems where an agent must preserve intent across a real change.
 
 The official Sema agent surface is Codex through `AGENTS.md`. Codex loads this
 file as durable repository guidance across its CLI, IDE extension, and desktop
@@ -21,11 +30,26 @@ It does not publish private or sensitive operational material.
 
 Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
 
+## OpenAI Build Week 2026
+
+The Build Week showcase presents **Sema — The semantic governance layer for AI
+agents** in the Developer Tools category. It demonstrates a concrete Codex
+workflow in which Sema detects semantic drift, preserves a critical guarantee,
+and verifies the repair end to end.
+
+- [Judge guide](./docs/build-week-2026/judge-guide.md)
+- [What was built during Build Week](./docs/build-week-2026/new-work.md)
+- [Submission copy](./docs/build-week-2026/submission.md)
+- [Reproducible demo harness](./showcase/build-week-2026/demo/README.md)
+- [Demo and recording plan](./docs/build-week-2026/storyboard.md)
+- [Public launch kit](./docs/build-week-2026/launch-kit.md)
+
 ## What Sema Does
 
 Sema uses `.sema` contracts to describe modules, tasks, inputs, outputs, rules,
 guarantees, effects, links to implementation files, and validation expectations.
-The CLI helps Codex answer practical questions before touching a project:
+The current CLI helps Codex answer practical questions before touching a
+project:
 
 - which contract applies to the change;
 - which files are probably affected;

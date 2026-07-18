@@ -25,7 +25,7 @@
     "cli:publicar-npm-dry-run": "npm run release:preparar-publica && node scripts/publicar-cli-npm.mjs --dry-run",
     "cli:publicar-npm": "npm run release:preparar-publica && node scripts/publicar-cli-npm.mjs",
     "release:verificar-versao": "node scripts/verificar-versao-release.mjs",
-    "release:verificar-drift": "node pacotes/cli/dist/index.js drift . --escopo projeto --json",
+    "release:verificar-drift": "node pacotes/cli/dist/index.js drift . --escopo projeto --incluir-consumidores-laterais --json",
     "release:verificar-distribuicao": "node scripts/verificar-distribuicao-publica.mjs --json",
     "release:verificar-publica": "npm run release:preparar-publica",
     "release:preparar-publica": "npm run release:verificar-versao && npm run status:check && npm run repo:verificar-publico && npm run plugin:testar-codex && npm test && npm run release:verificar-drift && npm run cli:empacotar-publica && npm run cli:testar-pacote-publico",

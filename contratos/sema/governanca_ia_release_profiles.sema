@@ -22,6 +22,7 @@ module sema.produto.governanca_ia.release_profiles {
       skill_codex_remota_alinhada: Booleano
       plugin_codex_logo_oficial_alinhada: Booleano
       plugin_codex_remoto_sem_mcp: Booleano
+      drift_consumidores_laterais_incluido: Booleano
     }
     rules {
       versao_esperada deve_ser preenchido
@@ -60,6 +61,7 @@ module sema.produto.governanca_ia.release_profiles {
         skill_codex_remota_alinhada: publico
         plugin_codex_logo_oficial_alinhada: publico
         plugin_codex_remoto_sem_mcp: publico
+        drift_consumidores_laterais_incluido: publico
       }
     }
     audit {
@@ -77,6 +79,7 @@ module sema.produto.governanca_ia.release_profiles {
       aprovar_skill_remota_divergente_da_fonte_versionada
       aprovar_logo_remota_divergente_da_marca_oficial
       registrar_mcp_sema_durante_instalacao_do_plugin
+      aprovar_drift_publico_sem_consumidores_laterais
     }
     impl {
       ts: scripts.verificar_distribuicao_publica.verificarDistribuicaoPublica
@@ -106,12 +109,14 @@ module sema.produto.governanca_ia.release_profiles {
       skill_codex_remota_alinhada == verdadeiro
       plugin_codex_logo_oficial_alinhada == verdadeiro
       plugin_codex_remoto_sem_mcp == verdadeiro
+      drift_consumidores_laterais_incluido == verdadeiro
     }
     error {
       instalador_npm_desalinhado: "README, npm, manifestos ou CLI local nao batem com a versao esperada."
       release_publica_encontrada: "GitHub Release ou asset publico apareceu sem mudanca previa deste contrato."
       estado_github_nao_verificado: "Nao foi possivel confirmar ao vivo o repositorio oficial e a ausencia de releases/assets."
       plugin_codex_remoto_invalido: "O marketplace remoto nao instalou a skill oficial alinhada ou registrou MCP inesperado."
+      drift_publico_incompleto: "O gate de release ignorou consumidores laterais e pode reprovar vinculos validos do showcase."
     }
     tests {
       caso "instalador npm 2.0.1 alinhado sem GitHub Release" {
@@ -133,6 +138,7 @@ module sema.produto.governanca_ia.release_profiles {
           skill_codex_remota_alinhada: verdadeiro
           plugin_codex_logo_oficial_alinhada: verdadeiro
           plugin_codex_remoto_sem_mcp: verdadeiro
+          drift_consumidores_laterais_incluido: verdadeiro
         }
       }
     }
@@ -199,6 +205,7 @@ module sema.produto.governanca_ia.release_profiles {
     }
     vinculos {
       arquivo: "docs/agent-profile-refinements.md"
+      arquivo: "docs/profiles.md"
       arquivo: "pacotes/cli/src/index.ts"
       simbolo: cli.src.index.validarProfileSemantico
     }

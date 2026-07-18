@@ -34,10 +34,12 @@ sema rule-packs --profile software --json
 - `game`: rules, loops, player states, scoring, and playability checks.
 - `author`: creative writing, narrative continuity, cliche review, and style
   guardrails.
-- `proposal`: commercial proposals, scope clarity, deliverables, constraints,
+- `redacao`: editorial and creative writing, narrative structure, voice,
+  clarity, and publication-ready evidence.
+- `propostas`: commercial proposals, scope clarity, deliverables, constraints,
   and client-ready wording.
-- `sales`: customer conversation guardrails, escalation, pricing promises, and
-  channel changes.
+- `conversas`: customer conversation guardrails, escalation, pricing promises,
+  and channel changes.
 
 Profiles are local CLI checks. They do not create or require external service
 accounts.

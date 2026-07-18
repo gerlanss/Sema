@@ -1,0 +1,23 @@
+$ node --test showcase/build-week-2026/demo/project/test/payment.test.mjs
+TAP version 13
+# Subtest: approve_payment returns the contracted receipt_id
+ok 1 - approve_payment returns the contracted receipt_id
+  ---
+  duration_ms: 1.709
+  type: 'test'
+  ...
+# Subtest: approve_payment rejects a non-positive amount
+ok 2 - approve_payment rejects a non-positive amount
+  ---
+  duration_ms: 1.087
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 252.2071

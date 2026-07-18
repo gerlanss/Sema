@@ -6,6 +6,7 @@ module sema.produto.fronteira_repositorios {
   vinculos {
     arquivo: "scripts/verificar-fronteira-publica.mjs"
     arquivo: "scripts/empacotar-cli-publica.mjs"
+    arquivo: "scripts/publicar-cli-npm.mjs"
     arquivo: "scripts/testar-pacote-cli-publico.mjs"
     arquivo: "scripts/testar-plugin-codex.mjs"
     arquivo: "README.md"
@@ -220,6 +221,7 @@ module sema.produto.fronteira_repositorios {
       licenca_nao_comercial_incluida: Booleano
       produto_codex_native: Booleano
       cli_sem_autorizacao_local: Booleano
+      npm_execucao_windows_isolada: Booleano
     }
     rules {
       versao deve_ser preenchido
@@ -247,6 +249,7 @@ module sema.produto.fronteira_repositorios {
         licenca_nao_comercial_incluida: publico
         produto_codex_native: publico
         cli_sem_autorizacao_local: publico
+        npm_execucao_windows_isolada: publico
       }
     }
     audit {
@@ -264,12 +267,14 @@ module sema.produto.fronteira_repositorios {
       incluir_doc_removida
       incluir_preflight_de_autorizacao_local
       incluir_entrypoint_para_cliente_nao_codex
+      usar_wrapper_ou_cache_npm_global_quando_execucao_local_isolada_existe
     }
     impl {
       ts: scripts.empacotar_cli_publica.main
     }
     vinculos {
       arquivo: "scripts/empacotar-cli-publica.mjs"
+      arquivo: "scripts/publicar-cli-npm.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
       arquivo: "pacotes/cli/README.md"
       arquivo: "docs/README.md"
@@ -288,6 +293,7 @@ module sema.produto.fronteira_repositorios {
       licenca_nao_comercial_incluida == verdadeiro
       produto_codex_native == verdadeiro
       cli_sem_autorizacao_local == verdadeiro
+      npm_execucao_windows_isolada == verdadeiro
     }
   }
 }

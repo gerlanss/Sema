@@ -2,12 +2,14 @@
 // Consulte contratos/sema/fronteira_repositorios.sema antes de editar.
 // Descricao: testa o pacote publico local-only da CLI antes de publicacao npm.
 import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
 const raiz = process.cwd();
 const pastaPacotes = path.join(raiz, ".tmp", "pacotes-instalador-npm");
+const cacheNpm = path.join(raiz, ".tmp", "npm-cache");
 
 const MARCADORES_PORTEIRO_LEGADO = [
   { regex: /\bpreflight\b/i, motivo: "legacy preflight terminology" },
@@ -42,7 +44,19 @@ function removerDetectorMigracaoLegada(arquivo, conteudo) {
 
 function executar(comando, argumentos, cwd) {
   if (process.platform === "win32" && (comando === "npm" || comando === "npx")) {
-    execFileSync("powershell", ["-NoProfile", "-Command", [comando, ...argumentos].join(" ")], {
+    const argumentosIsolados = [...argumentos, "--cache", cacheNpm];
+    const cliLocal = path.join(
+      path.dirname(process.execPath),
+      "node_modules",
+      "npm",
+      "bin",
+      `${comando}-cli.js`,
+    );
+    if (existsSync(cliLocal)) {
+      execFileSync(process.execPath, [cliLocal, ...argumentosIsolados], { cwd, stdio: "inherit" });
+      return;
+    }
+    execFileSync("powershell", ["-NoProfile", "-Command", [comando, ...argumentosIsolados].join(" ")], {
       cwd,
       stdio: "inherit",
     });

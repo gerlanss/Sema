@@ -1,0 +1,39 @@
+$ node showcase/build-week-2026/demo/demo.mjs
+
+SEMA / OPENAI BUILD WEEK 2026
+Semantic contracts turn agent changes into verifiable evidence.
+
+[1/6] Use the installed public CLI
+  PASS  sema 2.0.1; no local rebuild
+
+[2/6] Prepare a clean first-contact workspace
+  PASS  no AGENTS.md and no .sema contract before bootstrap
+  workspace: .\showcase\build-week-2026\demo\.runtime\bootstrap-workspace
+
+[3/6] Prove the contracted baseline
+  PASS  approve_payment -> approvePayment is linked and receipt_id is guaranteed
+
+[4/6] Simulate an agent's incomplete rename
+  DETECTED approve_payment still requires approvePayment; code exposes confirmPayment
+  PASS  receipt_id guarantee remained in the untouched contract
+
+[5/6] Complete the semantic rename and prove behavior
+  PASS  contract and code converge on confirmPayment; receipt_id stays guaranteed
+
+[6/6] Close with documentation evidence
+  PASS  finalizar-mudanca accepted the declared evidence
+
+RESULT: VERIFIED
+{
+  "success": true,
+  "mode": "demo",
+  "cli_version": "2.0.1",
+  "bootstrap_workspace_clean": true,
+  "drift_detected": true,
+  "broken_symbol": "approvePayment",
+  "final_symbol": "confirmPayment",
+  "receipt_guarantee_preserved": true,
+  "tests_passed": true,
+  "final_drift_clean": true,
+  "closure_green": true
+}

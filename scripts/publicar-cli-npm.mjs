@@ -3,6 +3,7 @@
 // Descrição: publica somente o pacote instalador @semacode/cli no npm, com dry-run e validações de fronteira.
 
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -11,6 +12,7 @@ const manifest = JSON.parse(await readFile(path.join(raiz, "package.json"), "utf
 const manifestCli = JSON.parse(await readFile(path.join(raiz, "pacotes", "cli", "package.json"), "utf8"));
 const versao = manifestCli.version;
 const tarball = path.join(raiz, ".tmp", "pacotes-instalador-npm", `semacode-cli-${versao}.tgz`);
+const cacheNpm = path.join(raiz, ".tmp", "npm-cache");
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const tagIndex = args.findIndex((arg) => arg === "--tag");
@@ -22,9 +24,24 @@ const otp =
 const nomePacote = manifestCli.name;
 const scopePacote = nomePacote.startsWith("@") ? nomePacote.split("/")[0] : undefined;
 
+function resolverCliNpmLocal() {
+  const cliLocal = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
+  return existsSync(cliLocal) ? cliLocal : undefined;
+}
+
+function argumentosNpmIsolados(argumentos) {
+  return [...argumentos, "--cache", cacheNpm];
+}
+
 function executar(comando, argumentos, cwd) {
   if (process.platform === "win32" && comando === "npm") {
-    execFileSync("powershell", ["-NoProfile", "-Command", [comando, ...argumentos].join(" ")], {
+    const argumentosIsolados = argumentosNpmIsolados(argumentos);
+    const cliLocal = resolverCliNpmLocal();
+    if (cliLocal) {
+      execFileSync(process.execPath, [cliLocal, ...argumentosIsolados], { cwd, stdio: "inherit" });
+      return;
+    }
+    execFileSync("powershell", ["-NoProfile", "-Command", [comando, ...argumentosIsolados].join(" ")], {
       cwd,
       stdio: "inherit",
     });
@@ -40,7 +57,16 @@ function executar(comando, argumentos, cwd) {
 function capturarSaida(comando, argumentos, cwd) {
   try {
     if (process.platform === "win32" && comando === "npm") {
-      return execFileSync("powershell", ["-NoProfile", "-Command", [comando, ...argumentos].join(" ")], {
+      const argumentosIsolados = argumentosNpmIsolados(argumentos);
+      const cliLocal = resolverCliNpmLocal();
+      if (cliLocal) {
+        return execFileSync(process.execPath, [cliLocal, ...argumentosIsolados], {
+          cwd,
+          stdio: "pipe",
+          encoding: "utf8",
+        }).trim();
+      }
+      return execFileSync("powershell", ["-NoProfile", "-Command", [comando, ...argumentosIsolados].join(" ")], {
         cwd,
         stdio: "pipe",
         encoding: "utf8",
