@@ -1,0 +1,4 @@
+Tiny payment service checkout.
+
+This copy intentionally has no AGENTS.md and no .sema contract. It exists only
+to record the first-contact Sema bootstrap in a clean Codex task.

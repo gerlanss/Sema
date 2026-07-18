@@ -164,6 +164,12 @@ function todosIguais(valores, esperado) {
   return valores.every((valor) => valor === esperado);
 }
 
+async function driftPublicoIncluiConsumidoresLaterais() {
+  const root = await lerJson("package.json");
+  const comando = root.scripts?.["release:verificar-drift"];
+  return typeof comando === "string" && comando.includes("--incluir-consumidores-laterais");
+}
+
 async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repoGitHub, json = false } = {}) {
   const versoes = await versoesManifestos();
   const versao = versaoEsperada ?? versoes.cli;
@@ -181,6 +187,7 @@ async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repo
   const githubHeadAlinhado = Boolean(headLocal && headRemoto && headLocal === headRemoto);
   const pluginCodex = await verificarPluginCodexRemoto(repositorio, versao);
   const sinaisDistribuicaoEmitidos = npmAlinhado && github.consultaRealizada;
+  const driftConsumidoresLateraisIncluido = await driftPublicoIncluiConsumidoresLaterais();
   const sucesso =
     manifestosAlinhados &&
     npmAlinhado &&
@@ -194,6 +201,7 @@ async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repo
     pluginCodex.skillAlinhada &&
     pluginCodex.logoAlinhada &&
     pluginCodex.mcpAusente &&
+    driftConsumidoresLateraisIncluido &&
     sinaisDistribuicaoEmitidos;
   const resultado = {
     comando: "verificar-distribuicao-publica",
@@ -217,6 +225,7 @@ async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repo
     skill_codex_remota_alinhada: pluginCodex.skillAlinhada,
     plugin_codex_logo_oficial_alinhada: pluginCodex.logoAlinhada,
     plugin_codex_remoto_sem_mcp: pluginCodex.mcpAusente,
+    drift_consumidores_laterais_incluido: driftConsumidoresLateraisIncluido,
   };
 
   if (json) {

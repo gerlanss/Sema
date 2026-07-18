@@ -1,0 +1,48 @@
+module app.pedidos {
+  entity Pedido {
+    fields {
+      id: Id
+      status: Texto
+      total: Decimal
+    }
+  }
+
+  task criar_pedido {
+    input {
+      cliente_id: Id required
+      total: Decimal required
+    }
+    output {
+      pedido_id: Id
+      status: Texto
+    }
+    rules {
+      total > 0
+    }
+    effects {
+      persistencia Pedido criticidade=alta
+      auditoria pedidos
+    }
+    guarantees {
+      pedido_id existe
+      status existe
+    }
+    tests {
+      caso "pedido valido" {
+        given {
+          cliente_id: "cli-1"
+          total: 10
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route criar_pedido_publico {
+    metodo: POST
+    caminho: /pedidos
+    task: criar_pedido
+  }
+}

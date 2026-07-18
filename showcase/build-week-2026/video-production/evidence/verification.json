@@ -1,0 +1,115 @@
+{
+  "verifiedAt": "2026-07-18T18:12:37.210Z",
+  "approved": true,
+  "checks": {
+    "videoExistsAndNonempty": true,
+    "resolution1920x1080": true,
+    "fps30": true,
+    "codecH264": true,
+    "durationExactly178": true,
+    "durationUnder180": true,
+    "audioPresent": true,
+    "audioAac": true,
+    "audio48kHz": true,
+    "audioLevelValid": true,
+    "captionsPresent": true,
+    "captionsFitTwoLineBudget": true,
+    "captionsHaveNoOrphanCues": true,
+    "captionRenderStyleExact": true,
+    "thumbnail1280x720": true,
+    "productionTimelineExact": true,
+    "nineCanonicalScenes": true,
+    "narrationConfigExact": true,
+    "narrationManifestExact": true,
+    "semanticNavigationExplicit": true,
+    "narrationInputsPresent": true,
+    "narrationDurationsRecorded": true,
+    "narrationNotTimeStretched": true,
+    "creativeAssetsDeclared": true,
+    "zoompanAbsent": true,
+    "movementFiltersAbsent": true,
+    "renderedTimecodeAbsent": true,
+    "retiredCliAbsentBarSourceAbsent": true,
+    "manifestSourcesAreRelative": true,
+    "buildSourcesPresent": true,
+    "realVsCodeCapturesPresent": true,
+    "visualCaptureCropsValid": true,
+    "buildHashesMatch": true,
+    "capturedEvidenceHashesMatch": true,
+    "captureEvidenceGreen": true,
+    "reviewFramesCoverAllScenes": true,
+    "pathsSanitized": true
+  },
+  "failed": [],
+  "media": {
+    "durationSeconds": 178.034,
+    "fileSizeBytes": 7871611,
+    "width": 1920,
+    "height": 1080,
+    "fps": "30/1",
+    "videoCodec": "h264",
+    "audioCodec": "aac",
+    "audioSampleRate": 48000,
+    "audioChannels": 2,
+    "meanVolumeDb": -20.3,
+    "maxVolumeDb": -4.3,
+    "captionCount": 63,
+    "captionCharacterLimit": 42,
+    "captionWordLimit": 8,
+    "captionMaxCharacters": 42,
+    "captionMaxWords": 8
+  },
+  "provenance": {
+    "targetDurationSeconds": 178,
+    "narration": {
+      "provider": "ElevenLabs",
+      "voice": "Dan",
+      "model": "Multilingual v2",
+      "speed": 1.12,
+      "directory": "work/narration-elevenlabs"
+    },
+    "captions": {
+      "fontSize": 18,
+      "marginV": 10,
+      "maxCharactersPerCue": 42,
+      "maxWordsPerCue": 8
+    },
+    "sourceCount": 22,
+    "visualCaptures": [
+      "work/vscode-code-broken-focus.png",
+      "work/vscode-contract-broken-focus-2x.png",
+      "work/vscode-contract-green-focus-2x.png"
+    ],
+    "buildSourceSha256": "a60aa4cb51d30b6d5bc3863e3a31cb454b4df4a69efeddd80fd50cfc00fea8e8"
+  },
+  "visualReview": {
+    "timestampsSeconds": [
+      1,
+      14,
+      31,
+      50,
+      66,
+      88,
+      116,
+      145,
+      171
+    ],
+    "frames": [
+      "evidence/review-frames/frame-001.png",
+      "evidence/review-frames/frame-014.png",
+      "evidence/review-frames/frame-031.png",
+      "evidence/review-frames/frame-050.png",
+      "evidence/review-frames/frame-066.png",
+      "evidence/review-frames/frame-088.png",
+      "evidence/review-frames/frame-116.png",
+      "evidence/review-frames/frame-145.png",
+      "evidence/review-frames/frame-171.png"
+    ],
+    "contactSheet": "evidence/contact-sheet.png",
+    "requiredHumanAssertions": [
+      "No on-screen timecode badge is visible.",
+      "The bootstrap and handshake cuts do not show the retired 'Sema CLI ausente' bar.",
+      "The contract and implementation panels are real VS Code captures and remain legible."
+    ]
+  }
+}

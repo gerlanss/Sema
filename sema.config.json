@@ -15,7 +15,10 @@
     "./pacotes",
     "./scripts",
     "./testes",
-    "./docs"
+    "./docs",
+    "./showcase/build-week-2026/demo/lib",
+    "./showcase/build-week-2026/demo/project/src",
+    "./showcase/build-week-2026/video-production"
   ],
   "diretoriosSaidaPorAlvo": {
     "typescript": "./.tmp/generated/typescript",

@@ -1,19 +1,21 @@
 # Sema Status
 
-Sema is a public Codex-native, local-first project. The CLI is the local engine,
-the official skill bootstraps projects that do not have Sema yet, and the
-generated `AGENTS.md` becomes the automatic workspace protocol afterward.
+Sema is a public Codex-native, local-first semantic governance layer for AI
+agents. The CLI is the local engine; the official skill bootstraps projects
+without Sema, and the generated `AGENTS.md` becomes the automatic workspace protocol afterward.
+Codex is the first native integration and software is the first proving ground,
+not the product boundary.
 
 ## Current Line
 
 - Version: `2.0.1`
 - Package: `@semacode/cli`
-- Last updated: 2026-07-17
-- Reference commit: `f2501cb`
+- Last updated: 2026-07-18
+- Reference commit: `1cf50f7`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, thin Codex bootstrap skill, repo marketplace,
   `AGENTS.md` protocol, contracts, examples, tests, release scripts, and English
-  documentation.
+  documentation, including the reproducible Build Week showcase and judge path.
 - License: public source with non-commercial terms; resale and commercial
   replication require written permission from OtimiTare.
 
@@ -35,6 +37,8 @@ Every public publication must pass:
 - Keep the skill limited to first-contact bootstrap and delegate ongoing
   governance to `AGENTS.md`.
 - Keep public documentation in English.
+- Keep the Build Week harness deterministic, local-only, and reproducible from
+  the published `@semacode/cli@2.0.1` package without rebuilding the CLI.
 - Keep support metadata pointed to `suporte@otimitare.online`.
 - Keep commercial resale and commercial replication blocked unless OtimiTare
   grants written permission.

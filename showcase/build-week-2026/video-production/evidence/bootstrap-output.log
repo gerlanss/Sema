@@ -1,0 +1,13 @@
+$ node showcase/build-week-2026/demo/prepare-bootstrap.mjs
+{
+  "success": true,
+  "workspace_path": ".\\showcase\\build-week-2026\\demo\\.runtime\\bootstrap-workspace",
+  "agents_absent": true,
+  "contracts_absent": true,
+  "next": [
+    "Open workspace_path in a new Codex task",
+    "Invoke $sema or run: sema iniciar --template base",
+    "Run: sema sync-codex --json",
+    "Open another new task so Codex loads AGENTS.md"
+  ]
+}
