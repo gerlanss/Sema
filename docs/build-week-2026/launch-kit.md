@@ -10,12 +10,13 @@ depend on prize eligibility.
 - npm package: https://www.npmjs.com/package/@semacode/cli
 - Current verified public CLI: `@semacode/cli@2.0.1`
 - Submission deadline: July 21, 2026 at 5:00 PM Pacific Time
-  (`2026-07-22T00:00:00Z`, 8:00 PM in Boa Vista/Manaus time)
+  (`2026-07-22T00:00:00Z`, 20:00 UTC-4)
 - Devpost project ID: `1349530`
+- Devpost submission ID: `1102882` (`Submitted`)
 - Devpost project slug: `sema-the-semantic-governance-layer-for-ai-agents`
 - Published Devpost project URL:
   https://devpost.com/software/sema-the-semantic-governance-layer-for-ai-agents
-- Demo video: `[ADD PUBLIC YOUTUBE URL]`
+- Demo video: https://youtu.be/IXkIlC9FxIs
 - Final source snapshot: https://github.com/gerlanss/Sema/tree/build-week-2026
 
 If the final package version changes, replace `2.0.1` everywhere only after the
@@ -98,9 +99,9 @@ Sema 2.0.1 — the Codex route correction built during OpenAI Build Week 2026
 The published npm package remains `@semacode/cli@2.0.1`; the tag versions the
 showcase, documentation, and judge harness around that already verified runtime.
 
-### 2. Publish the YouTube demo
+### 2. YouTube demo — published
 
-Publish on the `gerlanss` channel (`UCHtafZRNuILhpvPmyWY6DYg`) as **Public**,
+Published on the `gerlanss` channel (`UCHtafZRNuILhpvPmyWY6DYg`) as **Public**,
 not made for kids, in **Science & Technology**, using the standard YouTube
 license and `showcase/build-week-2026/video-production/thumbnail.png`.
 
@@ -163,22 +164,20 @@ Sema, AI agents, Codex, GPT-5.6, semantic contracts, semantic governance,
 developer tools, OpenAI Build Week, local-first AI
 ```
 
-### 3. Finish the Devpost project record
+### 3. Devpost project record — submitted
 
-Use published project `1349530` with slug
-`sema-the-semantic-governance-layer-for-ai-agents`. Paste the canonical fields
-from [submission.md](./submission.md). The live project description is exactly
-the text between `<!-- devpost:description:start -->` and
-`<!-- devpost:description:end -->`, without the marker comments. Add the public
+Published project `1349530`, with slug
+`sema-the-semantic-governance-layer-for-ai-agents`, was submitted using the
+canonical fields from [submission.md](./submission.md). The live project
+description is the text between `<!-- devpost:description:start -->` and
+`<!-- devpost:description:end -->`, without the marker comments. The public
 video, repository, package, `Built with` values, and primary `/feedback` Session
-ID, then re-read the rendered page instead of trusting the editor preview.
+ID were included in submission `1102882`.
 
-Brazil is absent from the country list in the published Official Rules while
-Brazil is present in the submission dropdown. Form access does not settle prize
-eligibility. Complete the project page if the platform allows it, but do not say
-that prize eligibility is confirmed unless an organizer or corrected rule says
-so. The repository, package, demo, discussion, and public launch continue either
-way.
+Submission `1102882` records Argentina. Argentina is supported by OpenAI API
+services and is not named in the Build Week exclusion list. The earlier Brazil
+rules/interface mismatch is preserved as a historical audit in
+[questions.md](./questions.md), but it is not the basis of the entry.
 
 ### 4. Start one Devpost discussion
 
@@ -210,7 +209,7 @@ Sema catches the broken link, keeps the `receipt_id` business guarantee intact,
 and refuses to call the change complete until tests, validation, drift, and
 documentation evidence agree.
 
-Demo: [DEMO_URL]
+Demo: https://youtu.be/IXkIlC9FxIs
 Repository: https://github.com/gerlanss/Sema
 Judge path: https://github.com/gerlanss/Sema/blob/main/docs/build-week-2026/judge-guide.md
 
@@ -229,7 +228,7 @@ under the platform limit after inserting the URL.
 **Post 1**
 
 ```text
-Every new Codex task should not have to rediscover the whole repository. Sema gives it a living semantic map of intent, guarantees, docs, and code links—and verifies the result. During Build Week I rebuilt Sema around that workflow. [DEMO_URL]
+Every new Codex task should not have to rediscover the whole repository. Sema gives it a living semantic map of intent, guarantees, docs, and code links—and verifies the result. During Build Week I rebuilt Sema around that workflow. https://youtu.be/IXkIlC9FxIs
 ```
 
 **Post 2**
@@ -275,7 +274,7 @@ semantic drift, and documentation evidence agree.
 That is the larger idea behind Sema: an agent can move quickly without being
 allowed to quietly redefine what “done” means.
 
-Demo: [DEMO_URL]
+Demo: https://youtu.be/IXkIlC9FxIs
 Repository: https://github.com/gerlanss/Sema
 Package: https://www.npmjs.com/package/@semacode/cli
 
@@ -319,7 +318,7 @@ No Sema account, hosted workspace, API key, or runtime model call is required.
 The package and judge demo are public here:
 
 https://github.com/gerlanss/Sema
-[DEMO_URL]
+https://youtu.be/IXkIlC9FxIs
 
 I would especially value criticism of the contract format and whether the
 failure/repair evidence is understandable without knowing Sema first.
@@ -343,7 +342,7 @@ and a thin plugin handles only the first contact. The demo tests the part I care
 about: code is partially renamed, the contract still points to the old symbol,
 and Sema blocks completion without sacrificing the receipt guarantee.
 
-Demo: [DEMO_URL]
+Demo: https://youtu.be/IXkIlC9FxIs
 Code and judge path: https://github.com/gerlanss/Sema
 
 I am looking for technical feedback, especially on whether this kind of
@@ -361,10 +360,10 @@ Independent OtimiTare project; not affiliated with or endorsed by OpenAI.
   evidence exists.
 - Do not call warnings “passed governance”; explain what is syntactically valid
   and what evidence is still missing.
-- Do not argue that the Devpost country dropdown overrides the Official Rules.
-- If an organizer clarifies Brazil eligibility, update
-  [questions.md](./questions.md) and the submission record before repeating the
-  claim elsewhere.
+- Keep the final submission country recorded as `Argentina`; do not expose the
+  entrant's residential street address in public launch material.
+- Treat the earlier Brazil eligibility question as historical context, not as
+  the basis for submission `1102882`.
 - If a channel asks whether Sema is an OpenAI product, use the independence line
   verbatim and then explain the CLI/`AGENTS.md`/plugin architecture.
 - Record final URLs and publication timestamps in the checklist below.
@@ -373,11 +372,11 @@ Independent OtimiTare project; not affiliated with or endorsed by OpenAI.
 
 | Channel | URL | Published at | Status / follow-up |
 |---|---|---|---|
-| GitHub source tag | `https://github.com/gerlanss/Sema/tree/build-week-2026` | `[ADD]` | `[ADD]` |
-| YouTube demo | `[ADD]` | `[ADD]` | `[ADD]` |
-| Devpost project | `[ADD]` | `[ADD]` | `[ADD]` |
-| Devpost discussion | `[ADD]` | `[ADD]` | `[ADD]` |
-| X | `[ADD]` | `[ADD]` | `[ADD]` |
-| LinkedIn | `[ADD]` | `[ADD]` | `[ADD]` |
-| Hacker News | `[ADD]` | `[ADD]` | `[ADD]` |
-| Reddit | `[ADD]` | `[ADD]` | `[ADD]` |
+| GitHub source tag | `https://github.com/gerlanss/Sema/tree/build-week-2026` | After final closeout merge | Publish annotated tag |
+| YouTube demo | `https://youtu.be/IXkIlC9FxIs` | 2026-07-18 | Public |
+| Devpost project | `https://devpost.com/software/sema-the-semantic-governance-layer-for-ai-agents` | `2026-07-18T16:29:41.470-04:00` | Submitted (`1102882`) |
+| Devpost discussion | Not published | — | Optional follow-up |
+| X | Not published | — | Optional launch channel |
+| LinkedIn | Not published | — | Optional launch channel |
+| Hacker News | Not published | — | Optional launch channel |
+| Reddit | Not published | — | Optional launch channel |

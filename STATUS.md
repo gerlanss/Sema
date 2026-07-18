@@ -11,7 +11,9 @@ not the product boundary.
 - Version: `2.0.1`
 - Package: `@semacode/cli`
 - Last updated: 2026-07-18
-- Reference commit: `1cf50f7`
+- Reference commit: `5936352`
+- Build Week entry: Devpost submission `1102882` is `Submitted`; the final
+  source snapshot is `build-week-2026`.
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, thin Codex bootstrap skill, repo marketplace,
   `AGENTS.md` protocol, contracts, examples, tests, release scripts, and English

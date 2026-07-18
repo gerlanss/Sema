@@ -1,16 +1,16 @@
 # OpenAI Build Week Clarifications and Verification
 
-Only the Brazil eligibility contradiction currently warrants an external
-question. The official FAQ already resolves meaningful extensions and
-`/feedback`. Save the exact wording, URL, access date, and interpretation for
-every conclusion; ask the organizers only if a concrete gap remains.
+The earlier Brazil eligibility contradiction was documented and raised publicly,
+but it did not become the basis of the final entry. Submission `1102882` records
+Argentina. The official FAQ already resolves meaningful extensions and
+`/feedback`.
 
-## 1. Eligibility of a resident of Brazil — unresolved for prizes
+## 1. Brazil rules/interface mismatch — historical, not applicable to the entry
 
-The country list in the currently published Official Rules does not include
-Brazil. At the same time, the Devpost submission form offers Brazil as a country
-choice. That is a real interface/rules mismatch, but the dropdown does not amend
-the rules or prove prize eligibility.
+The published Official Rules explicitly exclude Brazil while the Devpost
+submission form still offers Brazil as a country choice. That remains a real
+interface/rules mismatch, but it does not determine this entry: submission
+`1102882` records `Argentina`.
 
 The Devpost connector reproduced the mismatch at `2026-07-18T12:29Z`:
 
@@ -20,32 +20,17 @@ The Devpost connector reproduced the mismatch at `2026-07-18T12:29Z`:
   `Brazil` is one of its options, and its own description says to consult the
   Official Rules for eligible countries.
 
-> I live in Boa Vista, Roraima, Brazil and registered after receiving an
-> invitation by email. The country list in the published Official Rules does
-> not include Brazil, while the Devpost submission form does offer Brazil as a
-> country choice. May a Brazilian resident submit a project and be eligible for
-> judging and prizes? If yes, will the Official Rules be corrected, and may I
-> rely on your written confirmation for this submission?
-
-Required answer: an explicit **yes or no** covering submission, judging, and
-prize eligibility—not only attendance, registration, or form access. The public
-Sema launch, repository, package, demo, and technical discussion do not depend
-on that answer; only claims about event/prize eligibility do.
+The original question asked whether a resident relying on Brazil could submit
+and remain eligible for judging and prizes. An official answer would still be
+useful to other Brazilian residents, but it is no longer required to determine
+the status of Sema's entry.
 
 The question is publicly visible in the [Devpost forum topic about
 Brazil](https://openai.devpost.com/forum_topics/44359-what-about-brazil?page=1).
 As of July 18, 2026, it is awaiting an official organizer answer. The earlier
 reply in that topic came from another participant and is not an official ruling.
-
-### Brazil-only message
-
-> Hi Build Week team — I need a written eligibility clarification. I live in
-> Boa Vista, Roraima, Brazil and registered after receiving an invitation by
-> email. The country list in the published Official Rules does not include
-> Brazil, while the Devpost submission form offers Brazil as a country choice.
-> May a Brazilian resident submit a project and be eligible for judging and
-> prizes? If yes, will the Official Rules be corrected, and may I rely on your
-> written confirmation for this submission? Thank you.
+The historical question must not be represented as the legal basis for Sema's
+Argentina submission.
 
 ## 2. Meaningful extension of a pre-existing project — resolved by FAQ
 
@@ -96,7 +81,7 @@ product decision, not a question for the organizers.
 
 | Item | Status | Source or channel | Date | Permalink or saved evidence | Confirmed interpretation |
 |---|---|---|---|---|---|
-| Brazil eligibility | Question published; awaiting official organizer answer | Official Rules, Devpost submission field `27946`, and Devpost forum | 2026-07-18 | [Official Rules](https://openai.devpost.com/rules); [Brazil topic](https://openai.devpost.com/forum_topics/44359-what-about-brazil?page=1) | Brazil is absent from the rules' included-country list but present in the submission dropdown; neither form access nor a participant reply is an eligibility ruling |
+| Brazil eligibility | Historical question; not applicable to final entry | Official Rules, Devpost submission field `27946`, and Devpost forum | 2026-07-18 | [Official Rules](https://openai.devpost.com/rules); [Brazil topic](https://openai.devpost.com/forum_topics/44359-what-about-brazil?page=1) | Submission `1102882` records Argentina; the Brazil mismatch remains unresolved for entrants relying on Brazil |
 | Meaningful extension | Resolved | Official FAQ | 2026-07-18 | [Build Week FAQ](https://openai.devpost.com/details/faqs) | Clearly document new work during the Submission Period with Codex/GPT-5.6 evidence |
 | `/feedback` / Session ID | Resolved | Official FAQ | 2026-07-18 | [Build Week FAQ](https://openai.devpost.com/details/faqs) | Use one representative core thread; document the rest in README |
 | GPT-5.6 via Codex | Internal decision recorded | Local evidence | 2026-07-18 | — | No cosmetic runtime API integration |
