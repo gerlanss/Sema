@@ -1,8 +1,12 @@
-// SEMA-GOVERNED: sema.produto.governanca_ia.contexto.entrypoints
-// Descrição: renderiza e sincroniza instruções curtas para agentes de IDE e clientes com disciplina variável.
+// SEMA-GOVERNED: sema.produto.governanca_ia.contexto.entrypoints, sema.produto.escrita_segura_workspace
+// Descrição: sincroniza o entrypoint Codex com marcadores estritos e escrita contida no workspace.
 
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { readFile, rm, rmdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import {
+  escreverArquivoWorkspaceSeguro,
+  validarDestinosEscritaWorkspace,
+} from './workspaceWrite.js';
 import {
   LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO,
   LIMITE_AVISO_LINHAS_CONTRATO_SEMA,
@@ -14,13 +18,31 @@ import {
   ARQUIVO_SEMA_BOOT,
   ARQUIVO_SEMA_SMALL_MODEL,
   type AgentContextPack,
-  type CapacidadeIa,
-  type EntryPointClienteIa,
 } from './agentContextTipos.js';
 import { LIMITE_CARACTERES_PAYLOAD_INLINE } from './agentContextPack.js';
 
 const MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO = '<!-- sema:agent-entrypoint:start -->';
 const MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM = '<!-- sema:agent-entrypoint:end -->';
+const ENTRYPOINTS_LEGADOS_NAO_CODEX = [
+  ".clinerules/00-sema.md",
+  ".clinerules",
+  ".github/copilot-instructions.md",
+  ".roo/rules/00-sema.md",
+  ".opencode/instructions.md",
+  ".cursor/rules/sema.mdc",
+  ".claude/CLAUDE.md",
+  ".windsurf/rules.md",
+] as const;
+
+export function listarDestinosEntrypointCodex(entrypointCodex: string): string[] {
+  return [
+    entrypointCodex,
+    "docs/syntax.md",
+    "docs/ai-workflow.md",
+    "docs/commands.md",
+    ...ENTRYPOINTS_LEGADOS_NAO_CODEX,
+  ];
+}
 
 async function statSeguro(caminho: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
   try {
@@ -36,20 +58,77 @@ function pareceEntradaSemaLegada(conteudo: string): boolean {
     /Sema.*Regras obrigatórias para IA/is.test(conteudo);
 }
 
+function contemVestigioSemaLegado(conteudo: string): boolean {
+  const marcadorIncompleto =
+    conteudo.includes(MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO) !==
+    conteudo.includes(MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM);
+  return marcadorIncompleto ||
+    pareceEntradaSemaLegada(conteudo) ||
+    /\bsema\s+(?:preflight|sync-ai-entrypoints)\b|\buse_cli_local\b/i.test(conteudo);
+}
+
 function montarBlocoGerenciadoSema(conteudo: string): string {
   return `${MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO}\n${conteudo.trim()}\n${MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM}\n`;
 }
 
+type StatusArquivoGerenciado = "criado" | "atualizado" | "preservado" | "pendente";
+
+function contarOcorrencias(conteudo: string, marcador: string): number {
+  return conteudo.split(marcador).length - 1;
+}
+
+function removerBlocosGerenciadosCompletos(conteudo: string): {
+  conteudoManual: string;
+  blocosEncontrados: number;
+  marcadorIncompleto: boolean;
+} {
+  const partesManuais: string[] = [];
+  let blocosEncontrados = 0;
+  let cursor = 0;
+  while (true) {
+    const inicio = conteudo.indexOf(MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO, cursor);
+    const fimOrfao = conteudo.indexOf(MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM, cursor);
+    if (inicio < 0 && fimOrfao < 0) {
+      partesManuais.push(conteudo.slice(cursor));
+      break;
+    }
+    if (inicio < 0 || (fimOrfao >= 0 && fimOrfao < inicio)) {
+      return { conteudoManual: conteudo, blocosEncontrados: 0, marcadorIncompleto: true };
+    }
+    const proximoInicio = conteudo.indexOf(
+      MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO,
+      inicio + MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO.length,
+    );
+    const fimMarcador = conteudo.indexOf(
+      MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM,
+      inicio + MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO.length,
+    );
+    if (fimMarcador < 0 || (proximoInicio >= 0 && proximoInicio < fimMarcador)) {
+      return { conteudoManual: conteudo, blocosEncontrados: 0, marcadorIncompleto: true };
+    }
+    partesManuais.push(conteudo.slice(cursor, inicio));
+    cursor = fimMarcador + MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM.length;
+    blocosEncontrados += 1;
+  }
+
+  return {
+    conteudoManual: partesManuais.join(""),
+    blocosEncontrados,
+    marcadorIncompleto: false,
+  };
+}
+
 async function escreverArquivoGerenciadoSema(
-  caminho: string,
+  baseProjeto: string,
+  caminhoRelativo: string,
   conteudo: string,
   substituirLegadoSema = false,
-): Promise<"criado" | "atualizado" | "preservado"> {
+): Promise<StatusArquivoGerenciado> {
+  const caminho = path.join(baseProjeto, caminhoRelativo);
   const bloco = montarBlocoGerenciadoSema(conteudo);
   const atual = await statSeguro(caminho);
   if (!atual) {
-    await mkdir(path.dirname(caminho), { recursive: true });
-    await writeFile(caminho, bloco, "utf8");
+    await escreverArquivoWorkspaceSeguro(baseProjeto, caminhoRelativo, bloco);
     return "criado";
   }
   if (!atual.isFile()) {
@@ -57,22 +136,55 @@ async function escreverArquivoGerenciadoSema(
   }
 
   const textoAtual = await readFile(caminho, "utf8");
-  let proximo: string;
-  if (textoAtual.includes(MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO) && textoAtual.includes(MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM)) {
-    const inicio = textoAtual.indexOf(MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO);
-    const fim = textoAtual.indexOf(MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM, inicio) + MARCADOR_SEMA_AGENT_ENTRYPOINT_FIM.length;
-    proximo = `${textoAtual.slice(0, inicio)}${bloco.trimEnd()}${textoAtual.slice(fim)}`;
-  } else if (substituirLegadoSema && pareceEntradaSemaLegada(textoAtual)) {
-    proximo = bloco;
-  } else {
-    proximo = `${bloco}\n${textoAtual.trimStart()}`;
+  const extraido = removerBlocosGerenciadosCompletos(textoAtual);
+  if (extraido.marcadorIncompleto) {
+    return "pendente";
   }
 
+  const conteudoManual = extraido.conteudoManual.trim();
+  const proximo = conteudoManual ? `${bloco}\n${conteudoManual}\n` : bloco;
+  const legadoManualPendente =
+    (substituirLegadoSema && extraido.blocosEncontrados === 0 && pareceEntradaSemaLegada(textoAtual)) ||
+    contemVestigioSemaLegado(conteudoManual);
+
   if (proximo === textoAtual) {
-    return "preservado";
+    return legadoManualPendente ? "pendente" : "preservado";
   }
-  await writeFile(caminho, proximo.endsWith("\n") ? proximo : `${proximo}\n`, "utf8");
-  return "atualizado";
+  await escreverArquivoWorkspaceSeguro(baseProjeto, caminhoRelativo, proximo, {
+    sobrescrever: true,
+  });
+  return legadoManualPendente ? "pendente" : "atualizado";
+}
+
+async function limparEntrypointLegadoNaoCodex(
+  baseProjeto: string,
+  caminhoRelativo: string,
+): Promise<"removido" | "atualizado" | "preservado" | "pendente" | null> {
+  const caminho = path.join(baseProjeto, caminhoRelativo);
+  const atual = await statSeguro(caminho);
+  if (!atual || !atual.isFile()) {
+    return null;
+  }
+
+  const textoAtual = await readFile(caminho, "utf8");
+  const extraido = removerBlocosGerenciadosCompletos(textoAtual);
+  if (extraido.marcadorIncompleto) {
+    return "pendente";
+  }
+  if (extraido.blocosEncontrados === 0) {
+    return contemVestigioSemaLegado(textoAtual) ? "pendente" : "preservado";
+  }
+
+  const conteudoManual = extraido.conteudoManual.trim();
+  if (!conteudoManual) {
+    await rm(caminho, { force: true });
+    return "removido";
+  }
+
+  await escreverArquivoWorkspaceSeguro(baseProjeto, caminhoRelativo, `${conteudoManual}\n`, {
+    sobrescrever: true,
+  });
+  return contemVestigioSemaLegado(conteudoManual) ? "pendente" : "atualizado";
 }
 
 export function renderizarSemaBoot(agentContextPack: AgentContextPack): string {
@@ -87,15 +199,14 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 
 ## Primeira ação
 
-1. Em IDE local, confirme \`AGENTS.md\` na raiz e rode \`sema --version\`; se o comando não existir, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel.
-2. Chame \`sema preflight resumo --json\`; se \`decisao\` não for \`use_cli_local\`, pare bloqueado.
-3. Use a CLI local para ler o workspace: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
-4. Não use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
-5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
-6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicável.
-7. Antes de editar código existente, rode drift e impacto pelo caminho autorizado da superfície atual.
-8. Antes de criar ou corrigir \`.sema\`, use \`sema exemplos\` na CLI local.
-9. Se qualquer etapa falhar, pare e diga que está bloqueado.
+1. Confirme \`AGENTS.md\` na raiz e rode \`sema --version\`; se o comando não existir, pare e peça a instalação da CLI.
+2. Use a CLI local diretamente para ler o workspace: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
+3. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
+4. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
+5. Antes de criar módulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicável.
+6. Antes de editar código existente, rode drift e impacto pela CLI local.
+7. Antes de criar ou corrigir \`.sema\`, use os exemplos oficiais na CLI local.
+8. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
 Não substitua esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
 
@@ -187,11 +298,11 @@ export function renderizarSemaSmallModel(agentContextPack: AgentContextPack): st
 Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use ou tendência a ignorar instruções longas.
 
 1. Não edite nada antes de chamar Sema.
-2. Em IDE local, rode \`sema --version\`; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode \`sema preflight resumo --json\`; só continue com \`use_cli_local\`; não use fonte externa de workspace para substituir a CLI local.
+2. Em workspace local, rode \`sema --version\`; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não use espelho externo.
 3. Sema não contorna políticas da plataforma: ele governa contrato, escopo, drift, evidência e qualidade.
 4. Se aparecer alerta de política: pare, explique de forma neutra e não tente burlar filtro.
 5. Se não houver workspace local em disco: pare bloqueado e peça o fluxo apropriado; não invente leitura por caminho.
-6. Se for escrever \`.sema\`: use \`sema_exemplos\` antes.
+6. Se for escrever \`.sema\`: leia \`exemplos/\`; se a pasta estiver ausente, rode \`sema instalar-exemplos --json\` antes.
 7. Se não houver contrato ou vínculo semântico do arquivo: inspecione o arquivo, crie ou edite o contrato aplicável e vincule antes do código.
 8. Se não conseguir chamar Sema: pare e declare bloqueio.
 9. Responda no idioma do usuário. Em PT-BR, use vocabulário Sema: pontuação, desvio semântico, pré-checagem, ambiente de execução e perfil; preserve comandos, endpoints e identificadores.
@@ -245,12 +356,31 @@ ${agentContextPack.failClosed.map((regra) => `- ${regra}`).join("\n")}
 export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentContextPack): string {
   const supportedCapacities = Object.keys(agentContextPack.guiaPorCapacidade).join(", ");
   return [
-    "# AI Integration",
+    "# Codex Integration",
     "",
-    "Sema is designed for AI agents with different context sizes and discipline",
-    "levels. The public repository documents the local CLI flow only: agents run the",
-    "CLI inside the project, read contracts, check drift, map impact, and close the",
-    "change with evidence.",
+    "The official Sema agent integration is Codex through the repository-level",
+    "`AGENTS.md`. Codex loads that file automatically and runs the local Sema CLI",
+    "inside the project to read contracts, check drift, map impact, and close changes",
+    "with evidence.",
+    "",
+    "Sema is an independent project and is not affiliated with or endorsed by OpenAI.",
+    "Codex surfaces and `AGENTS.md` behavior are documented at",
+    "https://learn.chatgpt.com/docs/agent-configuration/agents-md.",
+    "",
+    "## Before AGENTS.md Exists",
+    "",
+    "The official Sema skill is the required first-contact bootstrap for Codex in a",
+    "project that does not have Sema yet. Install it explicitly:",
+    "",
+    "```bash",
+    "codex plugin marketplace add gerlanss/Sema",
+    "codex plugin add sema@sema",
+    "```",
+    "",
+    "The skill locates the local CLI, runs `sema iniciar`, generates `AGENTS.md`, and",
+    "then delegates all ongoing workspace governance to that file. It contains no",
+    "MCP server, remote workspace bridge, login, license, billing, token, credit,",
+    "panel, or authorization gate.",
     "",
     `Supported capacity labels: ${supportedCapacities}.`,
     "",
@@ -260,12 +390,12 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "",
     "```bash",
     "sema --version",
-    "sema preflight resumo --json",
     "sema resumo",
     "```",
     "",
-    "Continue only when preflight returns `use_cli_local`. Do not replace the local",
-    "CLI with an external workspace source, external sync, or project-name guessing.",
+    "A successful `sema --version` is enough to use the local CLI directly. Local",
+    "commands require no login, activation key, license check, token, credits, billing",
+    "service, control panel, or external authorization request.",
     "",
     "## Before Editing",
     "",
@@ -279,19 +409,19 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "Read every document listed by `docs-impacto` before changing code, contracts,",
     "operational docs, generated artifacts, workflows, profiles, or release material.",
     "",
-    "## Capacity Tiers",
+    "## Codex Context Tiers",
     "",
-    "Weak agents should start with `" + ARQUIVO_SEMA_BOOT + "`,",
+    "Codex with a small context budget should start with `" + ARQUIVO_SEMA_BOOT + "`,",
     "`" + ARQUIVO_SEMA_SMALL_MODEL + "`, `SEMA_BRIEF.micro.txt`,",
     "`" + ARQUIVO_AGENT_CONTEXT_PACK + "`, and `SEMA_INDEX.json`. They should stop early",
     "when a gate is unclear.",
     "",
-    "Medium agents should start with `" + ARQUIVO_SEMA_BOOT + "`,",
+    "Codex with a medium context budget should start with `" + ARQUIVO_SEMA_BOOT + "`,",
     "`" + ARQUIVO_AGENT_CONTEXT_PACK + "`, `SEMA_BRIEF.curto.txt`,",
     "`SEMA_INDEX.json`, and `AGENTS.md`. They must run docs-impact, drift, and",
     "impact before edits.",
     "",
-    "Strong agents may consume `" + ARQUIVO_AGENT_CONTEXT_PACK + "`, `SEMA_BRIEF.md`,",
+    "Codex with a large context budget may consume `" + ARQUIVO_AGENT_CONTEXT_PACK + "`, `SEMA_BRIEF.md`,",
     "`SEMA_INDEX.json`, AST, IR, drift, and impact outputs, but larger context does",
     "not remove the contract-first rule.",
     "",
@@ -338,24 +468,20 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
   ].join("\n");
 }
 
-function renderizarInstrucaoClienteSema(
-  cliente: EntryPointClienteIa["cliente"],
-  capacidade: CapacidadeIa,
-  agentContextPack: AgentContextPack,
-): string {
+function renderizarInstrucaoCodexSema(agentContextPack: AgentContextPack): string {
+  const capacidade = "media" as const;
   const guia = agentContextPack.guiaPorCapacidade[capacidade];
   const politicaTimeout = agentContextPack.politicaTimeoutResumo;
   const politicaDesign = agentContextPack.politicaDesignVisual;
   const politicaPlataforma = agentContextPack.politicaPlataforma;
-  const tituloCliente = cliente === "generico" ? "agente" : cliente;
-  return `# Sema para ${tituloCliente}
+  return `# Sema para Codex
 
 Este workspace é governado por Sema. Antes de qualquer ação em código, contrato, documentação operacional, workflow, profile ou deploy:
 
 1. Leia \`${ARQUIVO_SEMA_BOOT}\`.
-2. Em IDE local, rode \`sema --version\`; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode \`sema preflight resumo --json\`; se \`decisao\` não for \`use_cli_local\`, pare.
-3. Use CLI local: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
-4. Não use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
+2. Rode \`sema --version\`; se falhar, pare e peça a instalação da CLI.
+3. Use diretamente a CLI local: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
+4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 5. Chame docs-impacto com a intenção declarada antes de agir.
 6. Chame inspecionar no contrato \`.sema\` aplicável.
 7. Antes de editar código existente, rode drift e impacto.
@@ -365,7 +491,8 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 
 É proibido substituir esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 
-Capacidade padrão deste cliente: ${capacidade}.
+Entrypoint oficial do Codex: \`${agentContextPack.entrypointCodex}\`.
+Capacidade padrão do Codex: ${capacidade}.
 Ordem de leitura: ${guia.join(" -> ")}.
 
 Políticas da plataforma:
@@ -411,8 +538,8 @@ Idioma:
 `;
 }
 
-function renderizarDocSintaxeSemaLocal(agentContextPack: AgentContextPack): string {
-  return `# Sema Syntax for AI Agents
+function renderizarDocSintaxeSemaLocal(_agentContextPack: AgentContextPack): string {
+  return `# Sema Syntax for Codex
 
 Use this file as a compact reference before creating or fixing \`.sema\` contracts.
 
@@ -527,36 +654,35 @@ The project can also generate TypeScript, Python, PHP, Dart, Lua, HTML, and CSS 
 
 ## Support Files
 
-- \`AGENTS.md\`: required agent rules.
-- \`${ARQUIVO_SEMA_BOOT}\`: first read for every AI agent.
-- \`${ARQUIVO_SEMA_SMALL_MODEL}\`: short version for weaker agents.
-- \`${ARQUIVO_AGENT_CONTEXT_PACK}\`: structured agent context pack.
+- \`AGENTS.md\`: official Codex repository rules, loaded automatically.
+- \`${ARQUIVO_SEMA_BOOT}\`: first Sema read for Codex.
+- \`${ARQUIVO_SEMA_SMALL_MODEL}\`: compact guidance for a small context budget.
+- \`${ARQUIVO_AGENT_CONTEXT_PACK}\`: structured Codex context pack.
 - \`SEMA_INDEX.json\`: project index.
 - \`docs/commands.md\`: command catalog, gates, and \`--saida\` rule.
 - \`exemplos/\`: official DSL examples.
 
-If an AI agent does not know which shape to use, it must open \`exemplos/calculadora.sema\`, \`exemplos/crud_simples.sema\`, \`exemplos/pagamento.sema\`, or \`exemplos/tratamento_erro.sema\` before inventing syntax.
+If Codex does not know which shape to use, it must open \`exemplos/calculadora.sema\`, \`exemplos/crud_simples.sema\`, \`exemplos/pagamento.sema\`, or \`exemplos/tratamento_erro.sema\` before inventing syntax.
 
-Platform policy: ${agentContextPack.politicaPlataforma.regra}
+Platform policy: Sema governs project contracts, scope, drift, evidence, and quality. It never bypasses platform policies, permissions, security controls, terms, or laws.
 `;
 }
 
-function renderizarDocFluxoPraticoSemaLocal(agentContextPack: AgentContextPack): string {
-  return `# Practical AI + Sema Workflow
+function renderizarDocFluxoPraticoSemaLocal(_agentContextPack: AgentContextPack): string {
+  return `# Practical Codex + Sema Workflow
 
-This is the minimum workflow for agents in a local workspace.
+This is the minimum workflow for Codex in a local workspace.
 
-1. Leia \`${ARQUIVO_SEMA_BOOT}\`.
-2. Rode \`sema --version\`.
-3. Rode \`sema preflight resumo --json\` e continue apenas se retornar \`use_cli_local\`.
-4. Rode \`sema resumo\`.
-5. Rode \`sema docs-impacto --intencao "<acao>" --json\`.
-6. Leia a documentacao obrigatoria retornada.
-7. Antes de escolher comando ou interpretar \`--saida\`, leia \`docs/commands.md\`.
-8. Antes de criar ou editar contrato, use \`exemplos/\` e \`docs/syntax.md\`.
-9. Antes de editar codigo existente, rode \`sema drift\` e \`sema impacto\`.
-10. Depois de alterar \`.sema\`, rode \`sema formatar\` e \`sema validar\`.
-11. Antes de concluir, rode \`sema finalizar-mudanca\` com as docs lidas.
+1. Read \`${ARQUIVO_SEMA_BOOT}\`.
+2. Run \`sema --version\`. Success enables direct local execution; there is no login, license, token, billing, panel, or authorization gate.
+3. Run \`sema resumo\`.
+4. Run \`sema docs-impacto --intencao "<change>" --json\`.
+5. Read every required document returned by the command.
+6. Read \`docs/commands.md\` before selecting a command or interpreting \`--saida\`.
+7. Use \`exemplos/\` and \`docs/syntax.md\` before creating or editing a contract.
+8. Run \`sema drift\` and \`sema impacto\` before editing existing code.
+9. Run \`sema formatar\` and \`sema validar\` after changing a \`.sema\` contract.
+10. Run \`sema finalizar-mudanca\` with the documents read before closure.
 
 Contract edit rule: \`.sema\` has its own size budget. Above ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} lines, plan a split by domain/capability; above ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}, do not create or edit before splitting. Do not use parte_1/parte_2 and do not force a 1:1 contract-to-file relationship; several contracts can govern the same file through \`vinculos\`.
 
@@ -564,11 +690,11 @@ Closing rule: \`sema drift --json\` must return \`sucesso:true\`. If it reports 
 
 UI rule: if the task involves an interface, minimum evidence includes desktop and mobile. On a narrow viewport such as 390px, \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\` must pass; horizontal scroll blocks closure.
 
-## Agent Capacity
+## Codex Context Capacity
 
-- Weak agent: \`${ARQUIVO_SEMA_SMALL_MODEL}\`, \`SEMA_BRIEF.micro.txt\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_INDEX.json\`.
-- Medium agent: \`${ARQUIVO_SEMA_BOOT}\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.curto.txt\`, \`SEMA_INDEX.json\`, \`AGENTS.md\`.
-- Strong agent: \`${ARQUIVO_SEMA_BOOT}\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.md\`, \`SEMA_INDEX.json\`, AST, IR, drift, and impact.
+- Small context: \`${ARQUIVO_SEMA_SMALL_MODEL}\`, \`SEMA_BRIEF.micro.txt\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_INDEX.json\`.
+- Medium context: \`${ARQUIVO_SEMA_BOOT}\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.curto.txt\`, \`SEMA_INDEX.json\`, \`AGENTS.md\`.
+- Large context: \`${ARQUIVO_SEMA_BOOT}\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.md\`, \`SEMA_INDEX.json\`, AST, IR, drift, and impact.
 
 ## When to Generate Code
 
@@ -582,20 +708,22 @@ Replace \`javascript\` with \`typescript\`, \`python\`, \`php\`, \`dart\`, \`lua
 
 ## Fail Closed
 
-${agentContextPack.failClosed.map((regra) => `- ${regra}`).join("\n")}
+- If the local CLI is unavailable, stop before editing governed code or contracts and ask for \`@semacode/cli\` installation.
+- If the applicable contract or semantic link is missing, create or repair it before code.
+- If validation or drift reports failure, broken links, divergent routes, or broken implementations, fix the evidence and run the gate again.
+- A local timeout is not authorization to skip Sema; retry with a larger timeout or a narrower scope.
 `;
 }
 
 function renderizarDocComandosSemaLocal(agentContextPack: AgentContextPack): string {
   return `# Sema Command Catalog
 
-Use this file when an AI agent does not know which command to run. A Sema command is an operational gate; do not replace it with a Markdown report.
+Use this file when Codex does not know which command to run. A Sema command is an operational gate; do not replace it with a Markdown report.
 
 ## Minimum Local Flow
 
 \`\`\`bash
 sema --version
-sema preflight resumo --json
 sema resumo
 sema docs-impacto --intencao "<acao>" --json
 \`\`\`
@@ -604,7 +732,7 @@ Then read every required doc returned by \`docs-impacto\`.
 
 ## Contract and Discovery
 
-- \`sema iniciar --template <template>\`: creates a new Sema project with a contract, docs, examples, and AI kit.
+- \`sema iniciar --template <template> [--force]\`: creates a new Sema project and preserves existing files by default; \`--force\` is the only explicit overwrite path.
 - \`sema validar <arquivo-ou-pasta> --json\`: validates \`.sema\` contracts.
 - \`sema diagnosticos <arquivo.sema> --json\`: details errors and warnings.
 - \`sema formatar <arquivo-ou-pasta>\`: formats contracts.
@@ -643,17 +771,17 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 
 \`sema compilar --alvo javascript\` is a generation target. \`impl { js: ... }\` is the live-code origin. Do not swap one for the other.
 
-## AI and Context
+## Codex and Context
 
-- \`sema ajuda-ia\`: short guidance for agents.
+- \`sema ajuda-ia\`: short guidance for Codex.
 - \`sema starter-ia\`: operational starter.
 - \`sema contexto-ia <arquivo.sema> --saida <dir> --json\`: AI context package.
 - \`sema prompt-curto <arquivo-ou-pasta> --json\`: compact prompt.
-- \`sema sync-ai-entrypoints --json\`: synchronizes AGENTS, boot, pack, and local docs.
+- \`sema sync-codex --json\`: synchronizes the official Codex entrypoint and local support docs.
 - \`sema instalar-exemplos --json\`: installs official examples in the workspace.
 - \`sema exemplos-prompt-ia\`: shows prompt examples, not \`.sema\` examples.
 
-## Profiles e Author
+## Profiles and Author
 
 - \`sema author iniciar|validar|briefing|revisar-cliches|validar-narrativa|validar-proibicoes\`: governs authorial writing.
 - \`sema profile validar <software|workflow|ops|game|legal|research|redacao|propostas|conversas> <arquivo> --json\`: validates an artifact by profile.
@@ -669,19 +797,19 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 - Do not use an external workspace source to inspect a local workspace when \`sema --version\` works.
 - Do not search the entire disk for \`.sema\` syntax; use \`exemplos/\`, \`docs/syntax.md\`, and this catalog.
 - Do not stop after \`sema compilar\` if the contract target files still do not exist.
-- Do not replace \`sema compilar\` with \`sema testar\` when Guard asks for Sema Code.
+- Do not replace \`sema compilar\` with \`sema testar\` when the contract requires generated code.
 - Do not create a Markdown report to pretend a gate ran.
 - Do not say drift passed when \`sema drift --json\` returned \`sucesso:false\`, broken link, divergent route, or broken impl.
 - Do not declare a UI responsive without mobile/desktop proof; horizontal scroll at 390px blocks closure.
 
-Governed code policy: ${agentContextPack.politicaCodigoGovernado.regra}
+Governed code policy: keep the \`SEMA-GOVERNED\` marker, split large code by real responsibility, preserve contract links, and never treat a generated output directory as the final delivery.
 `;
 }
 
-function renderizarAgentStarterLocal(agentContextPack: AgentContextPack): string {
-  return `# Agent Starter
+function renderizarAgentStarterLocal(_agentContextPack: AgentContextPack): string {
+  return `# Codex Starter
 
-You are in a Sema-governed project.
+Codex is operating in a Sema-governed project.
 
 Read in this order:
 
@@ -697,7 +825,6 @@ Basic commands:
 
 \`\`\`bash
 sema --version
-sema preflight resumo --json
 sema resumo
 sema docs-impacto --intencao "<acao>" --json
 sema validar contratos/orders.sema --json
@@ -711,74 +838,96 @@ Closure is not an opinion: \`sema drift --json\` must be green. \`sucesso:false\
 
 Ready UI requires proof: desktop/mobile and a narrow viewport without horizontal overflow (\`scrollWidth <= clientWidth\`).
 
-${agentContextPack.politicaCodigoGovernado.regra}
+Keep \`SEMA-GOVERNED\` markers and follow the applicable contract before editing governed code.
 `;
 }
 
-export async function sincronizarEntryPointsAgentes(
+export async function sincronizarEntrypointCodex(
   baseProjeto: string,
   agentContextPack: AgentContextPack,
 ): Promise<{
-  arquivos: Array<{ caminho: string; status: "criado" | "atualizado" | "preservado" }>;
+  arquivos: Array<{ caminho: string; status: StatusArquivoGerenciado }>;
   criados: string[];
   atualizados: string[];
   preservados: string[];
+  entrypointCodex: "AGENTS.md";
+  codexNativo: true;
+  cliLocalSemAutorizacao: true;
+  skillBootstrapCodexDocumentada: true;
+  idiomaHumanoPreservado: true;
+  retryTimeoutProgressivo: true;
+  politicaPlataformaExplicita: true;
+  politicaSinalVsRitualExplicita: true;
+  divisaoPorResponsabilidadeExplicita: true;
+  contextoLocalSemEspelho: true;
+  destinosEntrypointPrevalidados: true;
+  entrypointsLegados: Array<{
+    caminho: string;
+    status: "removido" | "atualizado" | "preservado" | "pendente";
+  }>;
+  entrypointsLegadosPendentes: string[];
+  entrypointsLegadosLimpos: boolean;
 }> {
-  const resultados: Array<{ caminho: string; status: "criado" | "atualizado" | "preservado" }> = [];
+  const resultados: Array<{ caminho: string; status: StatusArquivoGerenciado }> = [];
+  await validarDestinosEscritaWorkspace(
+    baseProjeto,
+    listarDestinosEntrypointCodex(agentContextPack.entrypointCodex),
+  );
   const registrar = async (relativo: string, conteudo: string, substituirLegadoSema = false): Promise<void> => {
-    const destino = path.join(baseProjeto, relativo);
-    const status = await escreverArquivoGerenciadoSema(destino, conteudo, substituirLegadoSema);
+    const status = await escreverArquivoGerenciadoSema(
+      baseProjeto,
+      relativo,
+      conteudo,
+      substituirLegadoSema,
+    );
     resultados.push({ caminho: relativo, status });
   };
 
-  await registrar("AGENTS.md", renderizarInstrucaoClienteSema("generico", "media", agentContextPack), true);
+  await registrar(agentContextPack.entrypointCodex, renderizarInstrucaoCodexSema(agentContextPack), true);
   await registrar("docs/syntax.md", renderizarDocSintaxeSemaLocal(agentContextPack), true);
   await registrar("docs/ai-workflow.md", renderizarDocFluxoPraticoSemaLocal(agentContextPack), true);
   await registrar("docs/commands.md", renderizarDocComandosSemaLocal(agentContextPack), true);
 
-  await registrar(
-    ".github/copilot-instructions.md",
-    renderizarInstrucaoClienteSema("copilot", "media", agentContextPack),
-    true,
-  );
-
-  const clinePath = path.join(baseProjeto, ".clinerules");
-  const clineStat = await statSeguro(clinePath);
-  if (clineStat?.isFile()) {
-    await registrar(".clinerules", renderizarInstrucaoClienteSema("cline", "fraca", agentContextPack), true);
-  } else {
-    await registrar(".clinerules/00-sema.md", renderizarInstrucaoClienteSema("cline", "fraca", agentContextPack), true);
+  const entrypointsLegados: Array<{
+    caminho: string;
+    status: "removido" | "atualizado" | "preservado" | "pendente";
+  }> = [];
+  for (const relativo of ENTRYPOINTS_LEGADOS_NAO_CODEX) {
+    const status = await limparEntrypointLegadoNaoCodex(baseProjeto, relativo);
+    if (status) {
+      entrypointsLegados.push({ caminho: relativo, status });
+    }
   }
-
-  await registrar(".roo/rules/00-sema.md", renderizarInstrucaoClienteSema("roo", "fraca", agentContextPack), true);
-
-  const opencodeDir = path.join(baseProjeto, ".opencode");
-  const opencodeStat = await statSeguro(opencodeDir);
-  if (opencodeStat?.isDirectory()) {
-    await registrar(".opencode/instructions.md", renderizarInstrucaoClienteSema("opencode", "media", agentContextPack), true);
-  }
-
-  const cursorDir = path.join(baseProjeto, ".cursor");
-  const cursorStat = await statSeguro(cursorDir);
-  if (cursorStat?.isDirectory()) {
-    await registrar(".cursor/rules/sema.mdc", renderizarInstrucaoClienteSema("cursor", "media", agentContextPack), true);
-  }
-
-  const claudeDir = path.join(baseProjeto, ".claude");
-  const claudeStat = await statSeguro(claudeDir);
-  if (claudeStat?.isDirectory()) {
-    await registrar(".claude/CLAUDE.md", renderizarInstrucaoClienteSema("claude", "forte", agentContextPack), true);
-  }
-
-  const windsurfDir = path.join(baseProjeto, ".windsurf");
-  const windsurfStat = await statSeguro(windsurfDir);
-  if (windsurfStat?.isDirectory()) {
-    await registrar(".windsurf/rules.md", renderizarInstrucaoClienteSema("windsurf", "media", agentContextPack), true);
-  }
+  await rmdir(path.join(baseProjeto, ".clinerules")).catch(() => undefined);
 
   const criados = resultados.filter((item) => item.status === "criado").map((item) => item.caminho);
   const atualizados = resultados.filter((item) => item.status === "atualizado").map((item) => item.caminho);
   const preservados = resultados.filter((item) => item.status === "preservado").map((item) => item.caminho);
-  return { arquivos: resultados, criados, atualizados, preservados };
+  const entrypointsLegadosPendentes = [
+    ...resultados.filter((item) => item.status === "pendente").map((item) => item.caminho),
+    ...entrypointsLegados
+    .filter((item) => item.status === "pendente")
+    .map((item) => item.caminho),
+  ];
+  return {
+    arquivos: resultados,
+    criados,
+    atualizados,
+    preservados,
+    entrypointCodex: agentContextPack.entrypointCodex,
+    codexNativo: true,
+    cliLocalSemAutorizacao: true,
+    skillBootstrapCodexDocumentada: true,
+    idiomaHumanoPreservado: true,
+    retryTimeoutProgressivo: true,
+    politicaPlataformaExplicita: true,
+    politicaSinalVsRitualExplicita: true,
+    divisaoPorResponsabilidadeExplicita: true,
+    contextoLocalSemEspelho: true,
+    destinosEntrypointPrevalidados: true,
+    entrypointsLegados,
+    entrypointsLegadosPendentes,
+    entrypointsLegadosLimpos: entrypointsLegadosPendentes.length === 0,
+  };
 }
 

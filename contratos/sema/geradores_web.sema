@@ -9,7 +9,7 @@ module sema.produto.geradores_web {
     arquivo: "pacotes/gerador-css/src/index.ts"
     arquivo: "pacotes/cli/src/index.ts"
     arquivo: "docs/cli.md"
-    arquivo: "docs/da-sema-para-codigo.md"
+    arquivo: "docs/commands.md"
   }
 
   task gerar_contrato_javascript {

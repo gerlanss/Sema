@@ -51,7 +51,6 @@ import {
   LIMITE_BLOQUEIO_LINHAS_ORCAMENTO_SEMANTICO,
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
-import * as billing from "./billing/index.js";
 import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -69,7 +68,7 @@ import {
   renderizarDocumentoAgentesPorCapacidade,
   renderizarSemaBoot,
   renderizarSemaSmallModel,
-  sincronizarEntryPointsAgentes,
+  sincronizarEntrypointCodex,
 } from './agentEntryPoints.js';
 import {
   escreverArquivos,
@@ -91,7 +90,7 @@ import {
   TSX_EXECUTOR_CLI,
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
-import { avaliarPreflightVerificacao, comandoDoctor, imprimirPreflightVerificacao } from './doctorCommand.js';
+import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -156,27 +155,27 @@ export async function comandoPromptCurto(
       : "SEMA_BRIEF.md";
   const contextoProjeto = await readFile(path.join(resumoProjeto.pastaSaida, arquivoResumo), "utf8");
   const capacidade: CapacidadeIa = tamanho === "micro" ? "fraca" : tamanho === "curto" ? "media" : "forte";
-  const prompt = `âš ï¸ REGRA OBRIGATÃ“RIA DE GOVERNANÃ‡A:
+  const prompt = `⚠️ REGRA OBRIGATÓRIA DE GOVERNANÇA:
 
-ANTES DE QUALQUER AÃ‡ÃƒO (editar, criar, deletar, executar, consultar, modificar):
-1. Chame sema_docs_impacto com sua intenÃ§Ã£o declarada
-2. Aguarde a resposta com as docs obrigatÃ³rias
-3. Leia as docs antes de agir
-4. Use sema_finalizar_mudanca para comprovar que leu as docs
+ANTES DE QUALQUER AÇÃO (editar, criar, deletar, executar, consultar ou modificar):
+1. Rode \`sema docs-impacto --intencao "<ação>" --json\` com sua intenção declarada.
+2. Aguarde a resposta com as docs obrigatórias.
+3. Leia as docs antes de agir.
+4. Antes de concluir, rode \`sema finalizar-mudanca --intencao "<ação>" --doc-lida <arquivo> --json\` com todas as docs lidas.
 
-VocÃª estÃ¡ operando Sema em modo IA-first.
+Você está operando Sema em modo IA-first.
 
-Isto e contexto comprimido para IA operar contrato semantico antes de tocar codigo vivo.
+Isto é contexto comprimido para IA operar contrato semântico antes de tocar código vivo.
 
 Capacidade alvo: ${capacidade}
 Modo da tarefa: ${modo}
 
 Regras:
-- ANTES DE TUDO: chame sema_docs_impacto com sua intenÃ§Ã£o declarada
-- comece pelo resumo compacto abaixo
-- se a tarefa pedir mais contexto, abra \`AGENT_CONTEXT_PACK.json\` e depois \`SEMA_INDEX.json\`
-- nao tente ler o repo inteiro se o resumo ja disser onde tocar
-- preserve contrato, risco, lacuna e checks sugeridos
+- ANTES DE TUDO: rode \`sema docs-impacto --intencao "<ação>" --json\`.
+- Comece pelo resumo compacto abaixo.
+- Se a tarefa pedir mais contexto, abra \`AGENT_CONTEXT_PACK.json\` e depois \`SEMA_INDEX.json\`.
+- Não tente ler o repositório inteiro se o resumo já disser onde tocar.
+- Preserve contrato, risco, lacuna e checks sugeridos.
 
 Contexto do projeto:
 ${contextoProjeto.trim()}
@@ -292,9 +291,9 @@ export async function comandoVerificar(
     return 1;
   }
 
-  const preflight = avaliarPreflightVerificacao(configuracoesAlvo);
-  if (!preflight.ok) {
-    imprimirPreflightVerificacao(preflight);
+  const verificacaoDependencias = avaliarDependenciasVerificacao(configuracoesAlvo);
+  if (!verificacaoDependencias.ok) {
+    imprimirFalhaDependenciasVerificacao(verificacaoDependencias);
     return 1;
   }
 
@@ -379,13 +378,13 @@ export async function comandoVerificarJson(
     return 1;
   }
 
-  const preflight = avaliarPreflightVerificacao(configuracoesAlvo);
-  if (!preflight.ok) {
+  const verificacaoDependencias = avaliarDependenciasVerificacao(configuracoesAlvo);
+  if (!verificacaoDependencias.ok) {
     console.log(JSON.stringify({
       comando: "verificar",
       sucesso: false,
       erro: "Dependencias obrigatorias ausentes para executar a verificacao.",
-      preflight,
+      dependencias: verificacaoDependencias,
       modulos: [],
       totais: { modulos: 0, alvos: 0, arquivos: 0, testes: 0 },
     }, null, 2));

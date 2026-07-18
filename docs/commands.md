@@ -1,13 +1,12 @@
 <!-- sema:agent-entrypoint:start -->
 # Sema Command Catalog
 
-Use this file when an AI agent does not know which command to run. A Sema command is an operational gate; do not replace it with a Markdown report.
+Use this file when Codex does not know which command to run. A Sema command is an operational gate; do not replace it with a Markdown report.
 
 ## Minimum Local Flow
 
 ```bash
 sema --version
-sema preflight resumo --json
 sema resumo
 sema docs-impacto --intencao "<acao>" --json
 ```
@@ -16,7 +15,7 @@ Then read every required doc returned by `docs-impacto`.
 
 ## Contract and Discovery
 
-- `sema iniciar --template <template>`: creates a new Sema project with a contract, docs, examples, and AI kit.
+- `sema iniciar --template <template> [--force]`: creates a new Sema project and preserves existing files by default; `--force` is the only explicit overwrite path.
 - `sema validar <arquivo-ou-pasta> --json`: validates `.sema` contracts.
 - `sema diagnosticos <arquivo.sema> --json`: details errors and warnings.
 - `sema formatar <arquivo-ou-pasta>`: formats contracts.
@@ -49,23 +48,23 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 
 ## Canonical Syntax Lists
 
-- Origins for `use` and `impl`: `ts/typescript`, `js/javascript`, `py/python`, `dart`, `lua`, `cs/dotnet`, `java`, `go`, `rust`, `cpp`, `php`.
+- Origins for `use` and `impl`: `ts/typescript`, `js/javascript`, `py/python`, `dart`, `lua`, `cs/dotnet`, `java`, `go`, `rust`, `cpp`.
 - Frequent `effects` categories: `persistencia`, `consulta`, `evento`, `auditoria`, `db.write`, `queue.publish`, `fs.write`, `network.egress`, `secret.read`, `shell.exec`.
 - Accepted `audit.motivo` values: `obrigatorio`, `opcional`, `dispensado`.
 
 `sema compilar --alvo javascript` is a generation target. `impl { js: ... }` is the live-code origin. Do not swap one for the other.
 
-## AI and Context
+## Codex and Context
 
-- `sema ajuda-ia`: short guidance for agents.
+- `sema ajuda-ia`: short guidance for Codex.
 - `sema starter-ia`: operational starter.
 - `sema contexto-ia <arquivo.sema> --saida <dir> --json`: AI context package.
 - `sema prompt-curto <arquivo-ou-pasta> --json`: compact prompt.
-- `sema sync-ai-entrypoints --json`: synchronizes AGENTS, boot, pack, and local docs.
+- `sema sync-codex --json`: synchronizes the official Codex entrypoint and local support docs.
 - `sema instalar-exemplos --json`: installs official examples in the workspace.
 - `sema exemplos-prompt-ia`: shows prompt examples, not `.sema` examples.
 
-## Profiles e Author
+## Profiles and Author
 
 - `sema author iniciar|validar|briefing|revisar-cliches|validar-narrativa|validar-proibicoes`: governs authorial writing.
 - `sema profile validar <software|workflow|ops|game|legal|research|redacao|propostas|conversas> <arquivo> --json`: validates an artifact by profile.
@@ -81,10 +80,10 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 - Do not use an external workspace source to inspect a local workspace when `sema --version` works.
 - Do not search the entire disk for `.sema` syntax; use `exemplos/`, `docs/syntax.md`, and this catalog.
 - Do not stop after `sema compilar` if the contract target files still do not exist.
-- Do not replace `sema compilar` with `sema testar` when Guard asks for Sema Code.
+- Do not replace `sema compilar` with `sema testar` when the contract requires generated code.
 - Do not create a Markdown report to pretend a gate ran.
 - Do not say drift passed when `sema drift --json` returned `sucesso:false`, broken link, divergent route, or broken impl.
 - Do not declare a UI responsive without mobile/desktop proof; horizontal scroll at 390px blocks closure.
 
-Governed code policy: Arquivos de codigo gerados ou governados pela Sema devem manter cabecalho curto com modulo de origem, contrato .sema aplicavel e descricao humana. Validacao inline prova apenas o payload enviado; o arquivo fisico ainda precisa de SEMA-GOVERNED para orientar a proxima IA. Codigo governado avisa acima de 1000 linhas e bloqueia acima de 2000. Contrato .sema avisa acima de 300 linhas e bloqueia criacao, edicao, drift, finalizacao, geracao e snapshot acima de 500. O split de .sema deve ser por dominio/capacidade, nunca parte_1/parte_2; varios contratos podem governar o mesmo arquivo de codigo via vinculos. Sema Codigo deve preservar essa rastreabilidade em cabecalhos e saidas geradas. Documentacao Markdown nao entra nesse limite de codigo; continua governada por docs-impacto, limite de bytes e verificacao de segredos. Payload inline acima de 262144 caracteres nao e caso de aumentar timeout: divida por responsabilidade ou use anexo/caminho de servidor autorizado.
+Governed code policy: keep the `SEMA-GOVERNED` marker, split large code by real responsibility, preserve contract links, and never treat a generated output directory as the final delivery.
 <!-- sema:agent-entrypoint:end -->

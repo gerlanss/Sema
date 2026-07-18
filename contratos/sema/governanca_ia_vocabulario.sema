@@ -1,6 +1,6 @@
 module sema.produto.governanca_ia.vocabulario {
   docs {
-    resumo: "Vocabulario canonico da Sema para agentes IA: conceito de produto em PT-BR ou termo canonico Sema; ingles somente para comando, identificador, endpoint, variavel, pacote, marca, protocolo ou nome externo."
+    resumo: "Vocabulario canonico da Sema para Codex: conceito de produto em PT-BR ou termo canonico Sema; ingles somente para comando, identificador, endpoint, variavel, pacote, marca, protocolo ou nome externo."
     arquivo: "docs/vocabulary.md"
   }
 
@@ -61,6 +61,8 @@ module sema.produto.governanca_ia.vocabulario {
       usar_gate_quando_trava_for_texto_humano
       usar_runtime_quando_ambiente_execucao_for_texto_humano
       usar_profile_quando_perfil_for_texto_humano
+      chamar_execucao_local_direta_de_preflight_ou_autorizacao
+      chamar_codex_de_cliente_generico
     }
     impl {
       ts: cli.src.agent_context_pack.criarAgentContextPack

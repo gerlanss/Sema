@@ -23,6 +23,7 @@ module sema.produto.governanca_ia.documentacao {
       arquivos_alvo deve_ser usados_com_nome_relevante
       arquivos_alvo deve_ser sem_tokens_de_diretorio_genericos
       intencao deve_ser usada_para_filtrar_contratos
+      criar_ausentes deve_ser preflight_integral_antes_de_fs_write
     }
     authz {
       escopo: sema.docs.resolver
@@ -59,11 +60,16 @@ module sema.produto.governanca_ia.documentacao {
       relacionar_contrato_por_pasta_contratos
       exigir_catalogo_inteiro_por_arquivo_em_contratos_sema
       usar_token_de_diretorio_comum_como_match
+      criar_documento_antes_de_validar_todos_os_destinos
+      seguir_symlink_ou_junction_em_documentacao
     }
     impl {
       ts: cli.src.docs.resolverDocumentacaoObrigatoria
     }
     vinculos {
+      arquivo: "pacotes/cli/src/docs.part02.ts"
+      arquivo: "pacotes/cli/src/workspaceWrite.ts"
+      arquivo: "testes/integracao/docs-impacto-seguro.test.ts"
       arquivo: "pacotes/cli/src/docs.ts"
       arquivo: "pacotes/cli/src/index.ts"
       simbolo: cli.src.docs.resolverDocumentacaoObrigatoria

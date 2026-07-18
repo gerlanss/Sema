@@ -11,11 +11,11 @@ import {
   ALIASES_CAPACIDADE_IA,
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
+  ARQUIVO_ENTRYPOINT_CODEX,
   ARQUIVO_SEMA_BOOT,
   ARQUIVO_SEMA_SMALL_MODEL,
   EXEMPLOS_OFICIAIS_AGENT_CONTEXT,
   type AgentContextPack,
-  type EntryPointClienteIa,
   type FonteAgentContextPack,
   type GuiaCapacidadeIa,
   type GuiaCapacidadeIaMap,
@@ -31,21 +31,21 @@ export const LIMITE_CARACTERES_PAYLOAD_INLINE = 262144;
 export function criarGuiaCapacidadeIa(): GuiaCapacidadeIaMap {
   const fraca: GuiaCapacidadeIa = {
     descricao: "IA fraca, gratuita, local pequena ou com disciplina baixa. Leia o boot card, pare cedo e chame Sema antes de agir.",
-    artefatos: [ARQUIVO_SEMA_BOOT, ARQUIVO_SEMA_SMALL_MODEL, "agent-context-pack.json", "resumo.micro.txt", "briefing.min.json", "prompt-curto.txt"],
-    ordemLeitura: [ARQUIVO_SEMA_BOOT, ARQUIVO_SEMA_SMALL_MODEL, "agent-context-pack.json", "resumo.micro.txt", "briefing.min.json", "resumo.curto.txt"],
+    artefatos: [ARQUIVO_SEMA_BOOT, ARQUIVO_SEMA_SMALL_MODEL, ARQUIVO_AGENT_CONTEXT_PACK, "SEMA_BRIEF.micro.txt", "SEMA_INDEX.json", "AGENTS.md"],
+    ordemLeitura: [ARQUIVO_SEMA_BOOT, ARQUIVO_SEMA_SMALL_MODEL, ARQUIVO_AGENT_CONTEXT_PACK, "SEMA_BRIEF.micro.txt", "SEMA_INDEX.json", "AGENTS.md"],
     evitar: ["ast.json", "ir.json", "diagnosticos.json"],
   };
   const media: GuiaCapacidadeIa = {
     descricao: "IA média. Aguenta boot, resumo expandido, briefing mínimo, drift e documentação curta.",
-    artefatos: [ARQUIVO_SEMA_BOOT, "agent-context-pack.json", "resumo.curto.txt", "briefing.min.json", "drift.json", "prompt-curto.txt"],
-    ordemLeitura: [ARQUIVO_SEMA_BOOT, "agent-context-pack.json", "resumo.curto.txt", "briefing.min.json", "drift.json", "resumo.md"],
+    artefatos: [ARQUIVO_SEMA_BOOT, ARQUIVO_AGENT_CONTEXT_PACK, "SEMA_BRIEF.curto.txt", "SEMA_INDEX.json", "AGENTS.md", "README.md"],
+    ordemLeitura: [ARQUIVO_SEMA_BOOT, ARQUIVO_AGENT_CONTEXT_PACK, "SEMA_BRIEF.curto.txt", "SEMA_INDEX.json", "AGENTS.md", "README.md"],
     evitar: ["ast.json"],
   };
   const forte: GuiaCapacidadeIa = {
     descricao: "IA forte, com tool use bom e contexto grande. Pode consumir o pacote completo, mas ainda deve começar pelo boot e pelos gates Sema.",
-    artefatos: [ARQUIVO_SEMA_BOOT, "agent-context-pack.json", "README.md", "resumo.md", "briefing.json", "drift.json", "ir.json", "ast.json"],
-    ordemLeitura: [ARQUIVO_SEMA_BOOT, "agent-context-pack.json", "README.md", "resumo.md", "briefing.json", "drift.json", "ir.json", "ast.json"],
-    evitar: [],
+    artefatos: [ARQUIVO_SEMA_BOOT, ARQUIVO_AGENT_CONTEXT_PACK, "SEMA_BRIEF.md", "SEMA_INDEX.json", "AGENTS.md", "README.md"],
+    ordemLeitura: [ARQUIVO_SEMA_BOOT, ARQUIVO_AGENT_CONTEXT_PACK, "SEMA_BRIEF.md", "SEMA_INDEX.json", "AGENTS.md", "README.md"],
+    evitar: ["ast.json", "ir.json", "drift.json"],
   };
   return {
     fraca,
@@ -90,7 +90,7 @@ function criarPoliticaCodigoGovernadoAgentContext(): PoliticaCodigoGovernadoAgen
 
 function criarPoliticaTimeoutResumoAgentContext(): PoliticaTimeoutResumoAgentContext {
   return {
-    regra: "Timeout definido pelo agente não é falha do Sema. Se `sema resumo`, `inspecionar`, `drift` ou `sync-ai-entrypoints` estourar por timeout local, aumente o timeout e tente de novo com escopo menor quando possível.",
+    regra: "Timeout definido pelo agente não é falha do Sema. Se `sema resumo`, `inspecionar`, `drift` ou `sync-codex` estourar por timeout local, aumente o timeout e tente de novo com escopo menor quando possível.",
     timeoutInicialSegundos: 120,
     escalonamentoSegundos: [120, 300, 600],
     timeoutDoAgenteNaoEhFalhaSema: true,
@@ -193,67 +193,14 @@ function criarPoliticaPlataformaAgentContext(): PoliticaPlataformaAgentContext {
   };
 }
 
-function criarEntrypointsClientesIa(): EntryPointClienteIa[] {
-  return [
-    {
-      cliente: "copilot",
-      arquivos: [".github/copilot-instructions.md", "AGENTS.md", ARQUIVO_SEMA_BOOT],
-      capacidadePadrao: "media",
-      observacao: "VS Code/Copilot deve receber uma instrução curta e repetida no arquivo próprio, sem depender só do AGENTS.md.",
-    },
-    {
-      cliente: "cline",
-      arquivos: [".clinerules/00-sema.md", ".clinerules", ARQUIVO_SEMA_BOOT],
-      capacidadePadrao: "fraca",
-      observacao: "Cline costuma obedecer melhor quando o gate Sema vem em arquivo curto; se .clinerules for arquivo legado, o Sema atualiza esse fallback.",
-    },
-    {
-      cliente: "roo",
-      arquivos: [".roo/rules/00-sema.md", "AGENTS.md", ARQUIVO_SEMA_BOOT],
-      capacidadePadrao: "fraca",
-      observacao: "Roo Code deve começar por uma regra dedicada em .roo/rules antes de abrir arquivos longos.",
-    },
-    {
-      cliente: "opencode",
-      arquivos: [".opencode/instructions.md", "AGENTS.md", ARQUIVO_SEMA_BOOT],
-      capacidadePadrao: "media",
-      observacao: "OpenCode deve receber a mesma regra curta em instructions.md quando a pasta .opencode já existir.",
-    },
-    {
-      cliente: "cursor",
-      arquivos: [".cursor/rules/sema.mdc", "AGENTS.md", ARQUIVO_SEMA_BOOT],
-      capacidadePadrao: "media",
-      observacao: "Cursor deve receber uma regra curta própria para não depender de leitura completa do AGENTS.md.",
-    },
-    {
-      cliente: "claude",
-      arquivos: [".claude/CLAUDE.md", "AGENTS.md", ARQUIVO_SEMA_BOOT],
-      capacidadePadrao: "forte",
-      observacao: "Claude costuma seguir gates longos, mas ainda precisa de entrypoint explícito e repetido no workspace.",
-    },
-    {
-      cliente: "windsurf",
-      arquivos: [".windsurf/rules.md", "AGENTS.md", ARQUIVO_SEMA_BOOT],
-      capacidadePadrao: "media",
-      observacao: "Windsurf deve receber regra curta dedicada para evitar cair direto no código sem Sema.",
-    },
-    {
-      cliente: "generico",
-      arquivos: [ARQUIVO_SEMA_BOOT, ARQUIVO_SEMA_SMALL_MODEL, ARQUIVO_AGENT_CONTEXT_PACK],
-      capacidadePadrao: "fraca",
-      observacao: "Qualquer agente sem integração específica começa pelo boot card e só sobe contexto se passar pelos gates.",
-    },
-  ];
-}
-
 function criarFailClosedAgentContext(): string[] {
   return [
     "Se não conseguir chamar Sema, pare e declare bloqueio em vez de editar código ou contrato.",
     "Se não houver contrato aplicável ou vínculo semântico do arquivo, inspecione o arquivo, descubra ou crie o .sema aplicável e vincule antes do código.",
-    "Em IDE local, rode sema --version; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode sema preflight <comando> --json; só continue com use_cli_local; não use fonte externa de workspace para substituir a CLI local.",
+    "Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não substitua essa fonte por espelho externo ou inferência.",
     "Se não houver workspace local em disco, pare bloqueado e peça o fluxo apropriado; não invente caminho nem substitua a CLI local por ferramenta paralela.",
     `Se arquivos_codigo.conteudo ou conteudo inline passar de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres, não aumente timeout para forçar: divida por responsabilidade ou use anexo/caminho de servidor autorizado.`,
-    "Se for criar ou corrigir .sema, use sema_exemplos antes de escrever sintaxe.",
+    "Se for criar ou corrigir .sema, leia `exemplos/`; se a pasta estiver ausente, rode `sema instalar-exemplos --json` antes de escrever sintaxe.",
     "Se a resposta humana estiver em PT-BR, use vocabulário Sema canônico e preserve acentos mesmo que a DSL use ASCII.",
     "Se um arquivo de código tiver SEMA-GOVERNED, consulte Sema e o contrato aplicável antes de editar.",
     `Se codigo governado passar de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} linhas, planeje divisao; se passar de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO}, pare e divida antes de concluir. Documentacao Markdown nao entra nesse limite de codigo.`,
@@ -286,21 +233,13 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       tipo: "entrypoint",
       prioridade: 2,
       obrigatorio: true,
-      quandoUsar: "IA fraca, Copilot, modelo local pequeno, Cline/Roo com pouco contexto ou tarefa curta",
+      quandoUsar: "Codex operando com pouco contexto, tarefa curta ou necessidade de instrução compacta",
       incluirTextoBrutoQuando: "a IA tende a ignorar instruções longas ou copiar a estética ASCII da DSL",
-    },
-    {
-      caminho: "llms.txt",
-      tipo: "entrypoint",
-      prioridade: 3,
-      obrigatorio: true,
-      quandoUsar: "sempre no primeiro contato com o projeto",
-      incluirTextoBrutoQuando: "a IA precisa de orientação compacta para operar o repositório",
     },
     {
       caminho: ARQUIVO_AGENT_CONTEXT_PACK,
       tipo: "entrypoint",
-      prioridade: 4,
+      prioridade: 3,
       obrigatorio: true,
       quandoUsar: "sempre antes de decidir quais documentos ou exemplos abrir",
       incluirTextoBrutoQuando: "a IA precisa auditar regras, proibições, prioridades e fontes de verdade",
@@ -308,7 +247,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: "SEMA_BRIEF.micro.txt",
       tipo: "resumo",
-      prioridade: 5,
+      prioridade: 4,
       obrigatorio: true,
       quandoUsar: "IA fraca, onboarding, chat remoto ou primeiro triage",
       incluirTextoBrutoQuando: "a tarefa cabe em contexto curto",
@@ -316,7 +255,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: "SEMA_BRIEF.curto.txt",
       tipo: "resumo",
-      prioridade: 6,
+      prioridade: 5,
       obrigatorio: true,
       quandoUsar: "IA média, mudança pequena ou review rápido",
       incluirTextoBrutoQuando: "o módulo alvo ainda não está claro pelo micro",
@@ -324,7 +263,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: "SEMA_INDEX.json",
       tipo: "indice",
-      prioridade: 7,
+      prioridade: 6,
       obrigatorio: true,
       quandoUsar: "antes de abrir código cru ou escolher contrato alvo",
       incluirTextoBrutoQuando: "a IA precisa mapear módulos, lacunas, riscos ou arquivos prováveis",
@@ -332,7 +271,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: "AGENTS.md",
       tipo: "operacional",
-      prioridade: 8,
+      prioridade: 7,
       obrigatorio: true,
       quandoUsar: "antes de editar código, contrato, docs operacionais, release ou deploy",
       incluirTextoBrutoQuando: "a IA precisa confirmar regras locais obrigatórias e prioridades do projeto",
@@ -340,7 +279,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: "docs/commands.md",
       tipo: "docs",
-      prioridade: 9,
+      prioridade: 8,
       obrigatorio: true,
       quandoUsar: "antes de escolher comando Sema, interpretar --saida de sema compilar ou destravar Sema Codigo",
       incluirTextoBrutoQuando: "a IA precisa entender comandos, gates, saida gerada e proximo passo governado",
@@ -348,7 +287,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: "exemplos/",
       tipo: "exemplos",
-      prioridade: 10,
+      prioridade: 9,
       obrigatorio: true,
       quandoUsar: "antes de criar ou corrigir arquivo .sema, profile, Author, workflow, ops, game, legal ou research",
       incluirTextoBrutoQuando: "a IA vai escrever sintaxe Sema ou comparar um contrato com formato oficial",
@@ -356,15 +295,15 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: ARQUIVO_DOC_AGENTES_CAPACIDADE,
       tipo: "docs",
-      prioridade: 11,
+      prioridade: 10,
       obrigatorio: false,
-      quandoUsar: "configurar Copilot, Cline, Roo Code, OpenCode ou outro agente com disciplina variável",
+      quandoUsar: "configurar o Codex para operar com diferentes capacidades de contexto",
       incluirTextoBrutoQuando: "a IA precisa entender tiers fraca/média/forte e política de idioma",
     },
     {
       caminho: "docs/syntax.md",
       tipo: "docs",
-      prioridade: 12,
+      prioridade: 11,
       obrigatorio: false,
       quandoUsar: "dúvida de gramática, blocos ou formato do DSL",
       incluirTextoBrutoQuando: "a IA vai editar contrato e os exemplos não bastam",
@@ -372,7 +311,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     {
       caminho: "contratos/",
       tipo: "contrato",
-      prioridade: 13,
+      prioridade: 12,
       obrigatorio: true,
       quandoUsar: "antes de qualquer implementação ou alteração de comportamento",
       incluirTextoBrutoQuando: "a tarefa toca uma capacidade governada por contrato",
@@ -381,11 +320,10 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
 
   return {
     nome: "Agent Context Pack",
-    versao: 5,
+    versao: 6,
     objetivo: "Dar a agentes IA uma entrada curta, estruturada e auditável antes de abrir código cru ou inventar contexto.",
     ordemLeitura: [
       ARQUIVO_SEMA_BOOT,
-      "llms.txt",
       ARQUIVO_AGENT_CONTEXT_PACK,
       ARQUIVO_SEMA_SMALL_MODEL,
       "SEMA_BRIEF.micro.txt",
@@ -398,9 +336,9 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       "Contrato vem antes da ação.",
       "Leia SEMA_BOOT.md antes de qualquer outro artefato de IA.",
       "Leia AGENTS.md antes de editar código, contrato, docs operacionais, release ou deploy.",
-      "Leia docs/commands.md antes de escolher comando Sema, interpretar bloqueio do Guard ou usar --saida de sema compilar.",
-        "Em IDE local, rode sema --version; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois chame sema preflight <comando> --json e use a CLI somente com use_cli_local; não use fonte externa de workspace para substituir a CLI local.",
-      "Antes de editar, chame sema_inspecionar no contrato aplicável e rode sema_drift e sema_impacto.",
+      "Leia docs/commands.md antes de escolher comando Sema, interpretar um gate ou usar --saida de sema compilar.",
+      "Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, use diretamente sema resumo, docs-impacto, inspecionar, drift e impacto sobre a pasta local.",
+      "Antes de editar, rode `sema inspecionar <contrato.sema> --json`, `sema drift <contrato.sema> --escopo modulo --json` e `sema impacto <contrato.sema> --alvo <token> --mudanca \"<descricao>\" --json`.",
       "Use exemplos oficiais antes de criar ou corrigir sintaxe .sema.",
       "Use SEMA_INDEX.json para escolher contrato, módulo e arquivos prováveis antes de abrir código cru.",
       "Valide .sema alterado e rode drift antes de concluir.",
@@ -422,11 +360,11 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     proibicoes: [
       "Não inventar sintaxe Sema fora da gramática e dos exemplos oficiais.",
       "Não tratar README, texto livre ou código como fonte superior ao contrato.",
-      "Não substituir contexto Sema por AGENTS.md, README.md, busca local, inferência pelo nome do projeto ou bom senso sem preflight/autorização Sema.",
+      "Não substituir os gates da CLI Sema por README.md, busca local, inferência pelo nome do projeto ou bom senso.",
       "Não tratar a pasta --saida de sema compilar como entrega final; entrega são os arquivos alvo/vínculos do contrato.",
       "Não sincronizar segredos, .env, node_modules, builds, caches, uploads ou artefatos privados fora do escopo.",
       "Não publicar, deployar ou remover capacidade sem contrato, drift e verificação.",
-        "Não assumir repositório público, GitHub Release pública, fonte externa de workspace ou acesso da IA ao painel; em IDE local prove CLI com sema --version.",
+      "Não assumir repositório público, GitHub Release pública ou fonte externa de workspace; em ambiente local, prove a CLI com sema --version.",
       "Não usar a estética ASCII da DSL nem inglês de produto como desculpa para fugir do vocabulário Sema em PT-BR.",
       "Não remover SEMA-GOVERNED nem substituir drift por comentário dentro do código.",
       "Não copiar o contrato inteiro para comentário de código; mantenha descrição humana curta.",
@@ -444,7 +382,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     ],
     prioridades: [
       "Menor artefato suficiente primeiro.",
-        "IDE local: sema --version, preflight, resumo, docs-impacto, inspecionar, drift e impacto pela CLI; se sema não existir, pare. A IA não acessa o painel Sema: peça ao humano instalar pelo painel; sem fonte externa de workspace.",
+      "Workspace local: sema --version, resumo, docs-impacto, inspecionar, drift e impacto pela CLI; se sema não existir, pare e peça a instalação da CLI.",
       "Contrato, índice e AGENTS complementam o contexto Sema; não substituem chamada Sema.",
       "Exemplos oficiais antes de nova sintaxe.",
       "Diagnóstico estruturado antes de opinião livre.",
@@ -470,7 +408,9 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       grande: guiaPorCapacidade.grande.ordemLeitura,
     },
     aliasesCapacidade: { ...ALIASES_CAPACIDADE_IA },
-    entrypointsClientes: criarEntrypointsClientesIa(),
+    entrypointCodex: ARQUIVO_ENTRYPOINT_CODEX,
+    codexNativo: true,
+    cliLocalSemAutorizacao: true,
     politicaIdioma: criarPoliticaIdiomaAgentContext(),
     politicaCodigoGovernado: criarPoliticaCodigoGovernadoAgentContext(),
     politicaTimeoutResumo: criarPoliticaTimeoutResumoAgentContext(),

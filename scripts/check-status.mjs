@@ -6,18 +6,10 @@ import { spawnSync } from "node:child_process";
 
 const caminhoStatus = new URL("../STATUS.md", import.meta.url);
 const secoesObrigatorias = [
-  "## Quadro-resumo",
-  "## Legenda",
-  "## Em Andamento Nesta Sprint",
-  "## Fundacao do Projeto",
-  "## Nucleo do Compilador",
-  "## Semantica da Linguagem",
-  "## Geracao de Codigo",
-  "## CLI",
-  "## Exemplos Obrigatorios",
-  "## Documentacao",
-  "## Testes e Verificacao",
-  "## Proximos Passos do MVP",
+  "# Sema Status",
+  "## Current Line",
+  "## Release Gate",
+  "## Maintenance Focus",
 ];
 
 function executarGit(args, aceitarFalha = false) {
@@ -53,14 +45,14 @@ for (const secao of secoesObrigatorias) {
 }
 
 const conteudoSemAcentos = normalizar(conteudo);
-const linhaData = conteudoSemAcentos.match(/- ultima atualizacao: (\d{4}-\d{2}-\d{2})/iu);
+const linhaData = conteudoSemAcentos.match(/- last updated: (\d{4}-\d{2}-\d{2})/iu);
 if (!linhaData) {
-  falhar("linha de ultima atualizacao ausente ou fora do formato YYYY-MM-DD.");
+  falhar("linha Last updated ausente ou fora do formato YYYY-MM-DD.");
 }
 
-const linhaCommit = conteudoSemAcentos.match(/- ultimo commit de referencia: `?([0-9a-f]{7,40})`?/iu);
+const linhaCommit = conteudoSemAcentos.match(/- reference commit: `?([0-9a-f]{7,40})`?/iu);
 if (!linhaCommit) {
-  falhar("linha de ultimo commit de referencia ausente ou invalida.");
+  falhar("linha Reference commit ausente ou invalida.");
 }
 
 const commitReferencia = linhaCommit[1];
@@ -69,9 +61,11 @@ if (commitExiste.codigo !== 0) {
   falhar(`o commit de referencia ${commitReferencia} nao existe neste repositorio.`);
 }
 
-const marcadores = ["[x]", "[-]", "[ ]", "[!]"];
-if (!marcadores.some((marcador) => conteudo.includes(marcador))) {
-  falhar("nenhum marcador de status foi encontrado.");
+if (!conteudo.includes("Version: `2.0.0`") || !conteudo.includes("Package: `@semacode/cli`")) {
+  falhar("versao ou pacote publico 2.0.0 ausente.");
+}
+if (!conteudo.includes("official skill bootstraps") || !conteudo.includes("generated `AGENTS.md` becomes the automatic workspace protocol")) {
+  falhar("fronteira Skill -> AGENTS.md -> CLI nao esta explicita.");
 }
 
 function obterArquivosAlteradosNoRange() {
@@ -118,6 +112,10 @@ const arquivosAlterados = [...new Set([
 const statusAlterado = arquivosAlterados.includes("STATUS.md");
 const mudancasRelevantes = arquivosAlterados.some((arquivo) =>
   arquivo.startsWith("pacotes/") ||
+  arquivo.startsWith("contratos/") ||
+  arquivo.startsWith("plugins/") ||
+  arquivo.startsWith(".agents/") ||
+  arquivo.startsWith("docs/") ||
   arquivo.startsWith("exemplos/") ||
   arquivo.startsWith("scripts/") ||
   arquivo === "package.json" ||

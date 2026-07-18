@@ -1,66 +1,43 @@
 module sema.produto.governanca_ia.contexto.agent_pack {
   docs {
-    resumo: "Geracao do Agent Context Pack, regras canonicas e evidencias que guiam agentes antes de abrir codigo cru."
+    resumo: "Geracao do Agent Context Pack oficial para Codex, com regras canonicas e evidencias locais antes de abrir codigo cru, sem autorizacao, licenca, credito, token ou painel."
   }
 
   task gerar_agent_context_pack {
     input {
-      base_projeto: Texto required
-      capacidade_ia: Texto required
-      fontes_disponiveis: Texto
-      timeout_local: Texto
+      guiaPorCapacidade: Objeto required
     }
     output {
-      agent_context_pack: Texto
-      regras_obrigatorias: Texto
-      proibicoes: Texto
-      prioridades: Texto
-      fontes_citadas: Texto
-      tiers_operacionais: Texto
-      entrypoints_clientes: Texto
-      politica_idioma_humano: Texto
-      fail_closed: Texto
-      exemplos_visiveis: Booleano
-      texto_bruto_sob_demanda: Booleano
-      keywords_canonicas_explicitas: Booleano
-      escopo_evidencia_explicitado: Booleano
-      conclusao_codigo_bloqueada_quando_nao_verificado: Booleano
-      proxima_acao_verificacao: Texto
-      cabecalho_codigo_governado: Texto
-      comentarios_codigo_por_capacidade: Texto
-      descricao_humana_codigo: Texto
-      politica_timeout_resumo: Texto
-      retry_timeout_progressivo: Booleano
-      politica_plataforma: Texto
-      bloqueio_plataforma_tratado_como_externo: Booleano
-      politica_sinal_vs_ritual: Texto
-      divisao_por_responsabilidade: Texto
-      prova_inline_nao_substitui_cabecalho: Texto
-      politica_payload_inline: Texto
-      contexto_local_sem_espelho: Texto
+      nome: Texto
+      versao: Numero
+      objetivo: Texto
+      ordemLeitura: Lista
+      regrasObrigatorias: Lista
+      proibicoes: Lista
+      prioridades: Lista
+      fontes: Lista
+      exemplosOficiais: Lista
+      textoBrutoSobDemanda: Objeto
+      guiaPorCapacidade: Objeto
+      aliasesCapacidade: Objeto
+      entrypointCodex: Texto
+      codexNativo: Booleano
+      cliLocalSemAutorizacao: Booleano
+      politicaIdioma: Objeto
+      politicaCodigoGovernado: Objeto
+      politicaTimeoutResumo: Objeto
+      politicaDesignVisual: Objeto
+      politicaPlataforma: Objeto
+      failClosed: Lista
     }
     rules {
-      base_projeto deve_ser preenchido
-      capacidade_ia deve_ser em [fraca, media, forte, pequena, grande]
-      fontes_disponiveis deve_ser incluir_agents_md
-      fontes_disponiveis deve_ser incluir_exemplos_oficiais
-      fontes_disponiveis deve_ser lembrar_keywords_canonicas
-      fontes_disponiveis deve_ser declarar_modo_verificacao_codigo
-      fontes_disponiveis deve_ser separar_contrato_valido_de_codigo_verificado
-      fontes_disponiveis deve_ser incluir_sema_boot
-      fontes_disponiveis deve_ser incluir_politica_idioma_humano
-      fontes_disponiveis deve_ser incluir_cabecalho_sema_codigo
-      fontes_disponiveis deve_ser incluir_descricao_humana_codigo
-      fontes_disponiveis deve_ser cobrir_ia_fraca_media_forte
-      fontes_disponiveis deve_ser incluir_politica_timeout_resumo
-      fontes_disponiveis deve_ser incluir_politica_plataforma
-      fontes_disponiveis deve_ser incluir_score_como_sinal_nao_prova_unica
-      fontes_disponiveis deve_ser exigir_evidencia_substantiva_alem_de_palavra_chave
-      fontes_disponiveis deve_ser incluir_divisao_por_responsabilidade
-      fontes_disponiveis deve_ser rejeitar_fatiamento_artificial
-      fontes_disponiveis deve_ser explicar_limite_payload_inline
-      fontes_disponiveis deve_ser exigir_workspace_local_cli
-      timeout_local deve_ser retry_progressivo_antes_de_falha
+      guiaPorCapacidade deve_ser preenchido
+      guiaPorCapacidade deve_ser incluir_fraca
+      guiaPorCapacidade deve_ser incluir_pequena
+      guiaPorCapacidade deve_ser incluir_media
+      guiaPorCapacidade deve_ser incluir_forte
+      guiaPorCapacidade deve_ser incluir_grande
+      guiaPorCapacidade deve_ser incluir_descricao_artefatos_ordemLeitura_e_evitar_por_capacidade
     }
     effects {
       fs.write contexto_ia criticidade = media
@@ -74,39 +51,30 @@ module sema.produto.governanca_ia.contexto.agent_pack {
       classificacao_padrao: interno
       redacao_log: parcial
       input {
-        base_projeto: interno
-        capacidade_ia: interno
-        fontes_disponiveis: interno
-        timeout_local: interno
+        guiaPorCapacidade: interno
       }
       output {
-        agent_context_pack: interno
-        regras_obrigatorias: publico
+        nome: publico
+        versao: publico
+        objetivo: publico
+        ordemLeitura: publico
+        regrasObrigatorias: publico
         proibicoes: publico
         prioridades: publico
-        fontes_citadas: publico
-        tiers_operacionais: publico
-        entrypoints_clientes: publico
-        politica_idioma_humano: publico
-        fail_closed: publico
-        exemplos_visiveis: publico
-        texto_bruto_sob_demanda: publico
-        keywords_canonicas_explicitas: publico
-        escopo_evidencia_explicitado: publico
-        conclusao_codigo_bloqueada_quando_nao_verificado: publico
-        proxima_acao_verificacao: publico
-        cabecalho_codigo_governado: publico
-        comentarios_codigo_por_capacidade: publico
-        descricao_humana_codigo: publico
-        politica_timeout_resumo: publico
-        retry_timeout_progressivo: publico
-        politica_plataforma: publico
-        bloqueio_plataforma_tratado_como_externo: publico
-        politica_sinal_vs_ritual: publico
-        divisao_por_responsabilidade: publico
-        prova_inline_nao_substitui_cabecalho: publico
-        politica_payload_inline: publico
-        contexto_local_sem_espelho: publico
+        fontes: publico
+        exemplosOficiais: publico
+        textoBrutoSobDemanda: interno
+        guiaPorCapacidade: publico
+        aliasesCapacidade: publico
+        entrypointCodex: publico
+        codexNativo: publico
+        cliLocalSemAutorizacao: publico
+        politicaIdioma: publico
+        politicaCodigoGovernado: publico
+        politicaTimeoutResumo: publico
+        politicaDesignVisual: publico
+        politicaPlataforma: publico
+        failClosed: publico
       }
     }
     audit {
@@ -135,7 +103,11 @@ module sema.produto.governanca_ia.contexto.agent_pack {
       usar_sema_como_bypass_de_politica_da_plataforma
       tratar_bloqueio_plataforma_como_falha_sema
       tentar_burlar_filtro_plataforma
-      fingir_acesso_ia_ao_painel_para_instalar_cli
+      exigir_preflight_de_autorizacao_local
+      exigir_chave_licenca_token_credito_ou_painel
+      gerar_matriz_de_entrypoints_para_clientes_nao_codex
+      citar_artefato_inexistente_como_leitura_obrigatoria
+      ensinar_nome_de_tool_mcp_em_workspace_cli_local
       passar_check_por_palavra_chave_sem_evidencia
       tratar_score_regex_como_prova_semantica_suficiente
       tratar_validacao_inline_como_dispensa_de_cabecalho_codigo
@@ -158,94 +130,44 @@ module sema.produto.governanca_ia.contexto.agent_pack {
       idempotencia: verdadeiro
       timeout: "120s"
       retry: "progressivo_por_timeout_local"
-      compensacao: "regenerar entrypoints IA-first"
+      compensacao: "regenerar entrypoint Codex e contexto IA-first"
       criticidade_operacional: media
     }
     guarantees {
-      agent_context_pack existe
-      regras_obrigatorias existe
+      nome existe
+      versao == 6
+      objetivo existe
+      ordemLeitura existe
+      regrasObrigatorias existe
       proibicoes existe
       prioridades existe
-      fontes_citadas existe
-      tiers_operacionais existe
-      entrypoints_clientes existe
-      politica_idioma_humano existe
-      politica_idioma_humano deve_ser preservar_idioma_do_usuario
-      politica_idioma_humano deve_ser preservar_acentos_ptbr
-      fail_closed existe
-      tiers_operacionais deve_ser mapear_alias_pequena_para_fraca
-      tiers_operacionais deve_ser mapear_alias_grande_para_forte
-      exemplos_visiveis == verdadeiro
-      texto_bruto_sob_demanda == verdadeiro
-      keywords_canonicas_explicitas == verdadeiro
-      escopo_evidencia_explicitado == verdadeiro
-      conclusao_codigo_bloqueada_quando_nao_verificado == verdadeiro
-      proxima_acao_verificacao existe
-      cabecalho_codigo_governado existe
-      cabecalho_codigo_governado deve_ser lembrar_chamar_sema
-      comentarios_codigo_por_capacidade deve_ser cobrir_fraca_media_forte
-      descricao_humana_codigo deve_ser preservar_idioma_do_usuario
-      politica_timeout_resumo existe
-      politica_timeout_resumo deve_ser distinguir_lentidao_de_falha_sema
-      retry_timeout_progressivo == verdadeiro
-      politica_plataforma existe
-      politica_plataforma deve_ser explicita_para_ia_fraca_media_forte
-      politica_plataforma deve_ser declarar_que_sema_nao_contorna_politicas
-      bloqueio_plataforma_tratado_como_externo == verdadeiro
-      politica_sinal_vs_ritual existe
-      politica_sinal_vs_ritual deve_ser orientar_evidencia_concreta
-      divisao_por_responsabilidade existe
-      divisao_por_responsabilidade deve_ser proibir_fatiamento_artificial
-      prova_inline_nao_substitui_cabecalho existe
-      politica_payload_inline deve_ser cobrir_fraca_media_forte
-      contexto_local_sem_espelho existe
+      fontes existe
+      exemplosOficiais existe
+      textoBrutoSobDemanda existe
+      guiaPorCapacidade existe
+      aliasesCapacidade existe
+      entrypointCodex existe
+      codexNativo == verdadeiro
+      cliLocalSemAutorizacao == verdadeiro
+      politicaIdioma existe
+      politicaCodigoGovernado existe
+      politicaTimeoutResumo existe
+      politicaDesignVisual existe
+      politicaPlataforma existe
+      failClosed existe
     }
     tests {
-      caso "agente recebe regras fontes e exemplos antes de codigo" {
+      caso "gera pack a partir do guia completo por capacidade" {
         given {
-          base_projeto: "."
-          capacidade_ia: "media"
-          fontes_disponiveis: "llms.txt AGENT_CONTEXT_PACK.json SEMA_INDEX.json AGENTS.md exemplos/ politica_plataforma"
+          guiaPorCapacidade: "fraca, pequena, media, forte e grande com descricao, artefatos, ordemLeitura e evitar"
         }
+
         expect {
           sucesso: verdadeiro
-          exemplos_visiveis: verdadeiro
-          texto_bruto_sob_demanda: verdadeiro
-          keywords_canonicas_explicitas: verdadeiro
-          escopo_evidencia_explicitado: verdadeiro
-          conclusao_codigo_bloqueada_quando_nao_verificado: verdadeiro
-          retry_timeout_progressivo: verdadeiro
-          bloqueio_plataforma_tratado_como_externo: verdadeiro
-        }
-      }
-      caso "agente fraco recebe boot e idioma humano preservado" {
-        given {
-          base_projeto: "."
-          capacidade_ia: "fraca"
-          fontes_disponiveis: "SEMA_BOOT.md SEMA_SMALL_MODEL.md AGENT_CONTEXT_PACK.json SEMA_INDEX.json AGENTS.md sema_exemplos politica_idioma_humano politica_plataforma"
-        }
-        expect {
-          sucesso: verdadeiro
-          exemplos_visiveis: verdadeiro
-          texto_bruto_sob_demanda: verdadeiro
-          keywords_canonicas_explicitas: verdadeiro
-          retry_timeout_progressivo: verdadeiro
-          bloqueio_plataforma_tratado_como_externo: verdadeiro
-        }
-      }
-      caso "codigo governado lembra todos os niveis de ia" {
-        given {
-          base_projeto: "."
-          capacidade_ia: "forte"
-          fontes_disponiveis: "SEMA_BOOT.md SEMA_SMALL_MODEL.md AGENT_CONTEXT_PACK.json docs/ai-integration.md cabecalho_sema_codigo descricao_humana_codigo politica_plataforma fraca media forte"
-        }
-        expect {
-          sucesso: verdadeiro
-          exemplos_visiveis: verdadeiro
-          texto_bruto_sob_demanda: verdadeiro
-          keywords_canonicas_explicitas: verdadeiro
-          retry_timeout_progressivo: verdadeiro
-          bloqueio_plataforma_tratado_como_externo: verdadeiro
+          versao: 6
+          entrypointCodex: "AGENTS.md"
+          codexNativo: verdadeiro
+          cliLocalSemAutorizacao: verdadeiro
         }
       }
     }

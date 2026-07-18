@@ -1,12 +1,11 @@
 module sema.produto.governanca_ia.contexto.entrypoints {
   docs {
-    resumo: "Sincronizacao dos entrypoints de agentes por cliente, capacidade e falha fechada no workspace local."
+    resumo: "Sincronizacao do entrypoint oficial do Codex para governanca Sema local, com a skill oficial limitada ao bootstrap antes de AGENTS.md existir, sem matriz de clientes e sem gate de autorizacao, licenca, credito, token ou painel."
   }
 
-  task sincronizar_entrypoints_agentes {
+  task sincronizar_entrypoint_codex {
     input {
       base_projeto: Texto required
-      clientes: Texto
       capacidade_padrao: Texto
     }
     output {
@@ -15,33 +14,30 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       agents_md: Texto
       docs_sintaxe: Texto
       docs_fluxo_pratico: Texto
-      copilot_instructions: Texto
-      cline_rules: Texto
-      roo_rules: Texto
-      opencode_instructions: Texto
-      cursor_rules: Texto
-      claude_rules: Texto
-      windsurf_rules: Texto
+      codex_entrypoint: Texto
+      codex_nativo: Booleano
+      cli_local_sem_autorizacao: Booleano
+      entrypoints_legados_limpos: Booleano
+      entrypoints_legados_pendentes: Lista
+      skill_bootstrap_codex_documentada: Booleano
       idioma_humano_preservado: Booleano
-      fallback_clinerules_arquivo: Booleano
       retry_timeout_progressivo: Booleano
       politica_plataforma_explicita: Booleano
       politica_sinal_vs_ritual_explicita: Booleano
-      ide_local_cli_preflight_explicito: Booleano
       divisao_por_responsabilidade_explicita: Booleano
       contexto_local_sem_espelho: Booleano
+      destinos_entrypoint_prevalidados: Booleano
     }
     rules {
       base_projeto deve_ser preenchido
       capacidade_padrao deve_ser em [fraca, media, forte]
-      clientes deve_ser incluir_entrypoints_suportados
     }
     effects {
-      fs.write entrypoints_agentes criticidade = media
-      auditoria sync_ai_entrypoints criticidade = media
+      fs.write entrypoint_codex criticidade = media
+      auditoria sync_codex_entrypoint criticidade = media
     }
     authz {
-      escopo: sema.contexto.agent_entrypoints
+      escopo: sema.codex.entrypoint.write
       tenant: opcional
     }
     dados {
@@ -49,7 +45,6 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       redacao_log: parcial
       input {
         base_projeto: interno
-        clientes: interno
         capacidade_padrao: publico
       }
       output {
@@ -58,33 +53,37 @@ module sema.produto.governanca_ia.contexto.entrypoints {
         agents_md: publico
         docs_sintaxe: publico
         docs_fluxo_pratico: publico
-        copilot_instructions: publico
-        cline_rules: publico
-        roo_rules: publico
-        opencode_instructions: publico
-        cursor_rules: publico
-        claude_rules: publico
-        windsurf_rules: publico
+        codex_entrypoint: publico
+        codex_nativo: publico
+        cli_local_sem_autorizacao: publico
+        entrypoints_legados_limpos: publico
+        entrypoints_legados_pendentes: publico
+        skill_bootstrap_codex_documentada: publico
         idioma_humano_preservado: publico
-        fallback_clinerules_arquivo: publico
         retry_timeout_progressivo: publico
         politica_plataforma_explicita: publico
         politica_sinal_vs_ritual_explicita: publico
-        ide_local_cli_preflight_explicito: publico
         divisao_por_responsabilidade_explicita: publico
         contexto_local_sem_espelho: publico
+        destinos_entrypoint_prevalidados: publico
       }
     }
     audit {
-      evento: sema.ia.sync_entrypoints_agentes
+      evento: sema.codex.entrypoint_sincronizado
       ator: agente.sema
       correlacao: request_id
       retencao: "90d"
       motivo: obrigatorio
     }
     forbidden {
+      gerar_entrypoint_para_cliente_nao_codex
+      omitir_skill_de_bootstrap_antes_de_agents_md
+      duplicar_governanca_do_agents_md_na_skill
+      exigir_preflight_de_autorizacao_local
+      exigir_chave_licenca_token_credito_ou_painel
       sobrescrever_customizacao_manual_sem_bloco_gerenciado
-      apagar_configuracao_local_do_cliente
+      apagar_configuracao_local_fora_do_bloco_gerenciado
+      declarar_limpo_com_entrypoint_legado_pendente
       pedir_para_runtime_remoto_ler_pasta_local
       instruir_ia_fraca_com_documento_longo_primeiro
       omitir_politica_de_idioma
@@ -96,19 +95,24 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       sugerir_fatiamento_artificial_de_arquivo
       dispensar_cabecalho_por_validacao_inline
       tratar_path_linux_remoto_como_pasta_local_do_usuario
+      citar_artefato_nao_materializado_no_bootstrap
+      ensinar_nome_de_tool_mcp_em_protocolo_cli_local
+      escrever_entrypoint_antes_de_prevalidar_todos_os_destinos
     }
     impl {
-      ts: cli.src.agent_entry_points.sincronizarEntryPointsAgentes
+      ts: cli.src.index_part06.comandoSyncCodex
     }
     vinculos {
       arquivo: "pacotes/cli/src/agentEntryPoints.ts"
-      simbolo: cli.src.agent_entry_points.sincronizarEntryPointsAgentes
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "testes/integracao/codex_runtime.test.ts"
+      simbolo: cli.src.index_part06.comandoSyncCodex
     }
     execucao {
       idempotencia: verdadeiro
       timeout: "120s"
       retry: "progressivo_por_timeout_local"
-      compensacao: "regenerar entrypoints IA-first"
+      compensacao: "regenerar entrypoint oficial do Codex"
       criticidade_operacional: media
     }
     guarantees {
@@ -119,31 +123,37 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       agents_md existe
       docs_sintaxe existe
       docs_fluxo_pratico existe
-      copilot_instructions existe
-      cline_rules existe
-      roo_rules existe
-      opencode_instructions existe
-      cursor_rules existe
-      claude_rules existe
-      windsurf_rules existe
+      codex_entrypoint existe
+      codex_nativo == verdadeiro
+      cli_local_sem_autorizacao == verdadeiro
+      entrypoints_legados_limpos == verdadeiro
+      entrypoints_legados_pendentes deve_ser vazio
+      skill_bootstrap_codex_documentada == verdadeiro
       idioma_humano_preservado == verdadeiro
-      fallback_clinerules_arquivo existe
       retry_timeout_progressivo == verdadeiro
       politica_plataforma_explicita == verdadeiro
       politica_sinal_vs_ritual_explicita == verdadeiro
-      ide_local_cli_preflight_explicito == verdadeiro
       divisao_por_responsabilidade_explicita == verdadeiro
       contexto_local_sem_espelho == verdadeiro
+      agents_md deve_ser referenciar_somente_artefatos_materializados
+      destinos_entrypoint_prevalidados == verdadeiro
+      agents_md deve_ser usar_comandos_cli_locais
+      sema_boot deve_ser usar_comandos_cli_locais
     }
     tests {
-      caso "sincroniza entrypoints sem depender so do AGENTS" {
+      caso "sincroniza apenas o entrypoint oficial do Codex" {
         given {
           base_projeto: "."
-          clientes: "copilot cline roo opencode cursor claude windsurf generico"
-          capacidade_padrao: "fraca"
+          capacidade_padrao: "media"
         }
+
         expect {
           sucesso: verdadeiro
+          codex_nativo: verdadeiro
+          cli_local_sem_autorizacao: verdadeiro
+          entrypoints_legados_limpos: verdadeiro
+          entrypoints_legados_pendentes: ""
+          skill_bootstrap_codex_documentada: verdadeiro
           idioma_humano_preservado: verdadeiro
           retry_timeout_progressivo: verdadeiro
           politica_plataforma_explicita: verdadeiro

@@ -11,11 +11,16 @@ module sema.produto.governanca_ia.release_profiles {
     output {
       manifestos_alinhados: Booleano
       npm_alinhado: Booleano
-      github_release_bloqueado: Booleano
-      assets_release_bloqueados: Booleano
+      github_release_ausente: Booleano
+      assets_release_ausentes: Booleano
       ferramentas_locais_alinhadas: Booleano
       sinais_distribuicao_emitidos: Booleano
-      repositorio_publico_ausente: Booleano
+      repositorio_publico_confirmado: Booleano
+      github_head_alinhado: Booleano
+      plugin_codex_remoto_consultado: Booleano
+      plugin_codex_remoto_instalado: Booleano
+      skill_codex_remota_alinhada: Booleano
+      plugin_codex_remoto_sem_mcp: Booleano
     }
     rules {
       versao_esperada deve_ser preenchido
@@ -23,7 +28,10 @@ module sema.produto.governanca_ia.release_profiles {
     }
     effects {
       consulta npm_registry criticidade = media
+      consulta github_api criticidade = media
+      consulta marketplace_codex_remoto criticidade = media
       auditoria instalador_npm criticidade = media
+      auditoria plugin_codex_remoto criticidade = media
       auditoria bloqueio_release_publica criticidade = media
     }
     authz {
@@ -40,11 +48,16 @@ module sema.produto.governanca_ia.release_profiles {
       output {
         manifestos_alinhados: publico
         npm_alinhado: publico
-        github_release_bloqueado: publico
-        assets_release_bloqueados: publico
+        github_release_ausente: publico
+        assets_release_ausentes: publico
         ferramentas_locais_alinhadas: interno
         sinais_distribuicao_emitidos: publico
-        repositorio_publico_ausente: publico
+        repositorio_publico_confirmado: publico
+        github_head_alinhado: publico
+        plugin_codex_remoto_consultado: publico
+        plugin_codex_remoto_instalado: publico
+        skill_codex_remota_alinhada: publico
+        plugin_codex_remoto_sem_mcp: publico
       }
     }
     audit {
@@ -53,6 +66,14 @@ module sema.produto.governanca_ia.release_profiles {
       correlacao: request_id
       retencao: "30d"
       motivo: obrigatorio
+    }
+    forbidden {
+      afirmar_estado_github_sem_consulta_real
+      publicar_github_release_ou_asset_sem_mudar_contrato
+      tratar_repositorio_publico_oficial_como_ausente
+      aprovar_plugin_codex_sem_instalacao_remota_isolada
+      aprovar_skill_remota_divergente_da_fonte_versionada
+      registrar_mcp_sema_durante_instalacao_do_plugin
     }
     impl {
       ts: scripts.verificar_distribuicao_publica.verificarDistribuicaoPublica
@@ -63,7 +84,7 @@ module sema.produto.governanca_ia.release_profiles {
     }
     execucao {
       idempotencia: verdadeiro
-      timeout: "60s"
+      timeout: "180s"
       retry: "manual"
       compensacao: "corrigir instalador npm antes de anunciar instalacao"
       criticidade_operacional: alta
@@ -71,30 +92,42 @@ module sema.produto.governanca_ia.release_profiles {
     guarantees {
       manifestos_alinhados existe
       npm_alinhado existe
-      github_release_bloqueado existe
-      assets_release_bloqueados existe
+      github_release_ausente == verdadeiro
+      assets_release_ausentes == verdadeiro
       ferramentas_locais_alinhadas existe
       sinais_distribuicao_emitidos existe
-      repositorio_publico_ausente existe
+      repositorio_publico_confirmado == verdadeiro
+      github_head_alinhado == verdadeiro
+      plugin_codex_remoto_consultado == verdadeiro
+      plugin_codex_remoto_instalado == verdadeiro
+      skill_codex_remota_alinhada == verdadeiro
+      plugin_codex_remoto_sem_mcp == verdadeiro
     }
     error {
       instalador_npm_desalinhado: "README, npm, manifestos ou CLI local nao batem com a versao esperada."
-      release_publica_desbloqueada: "GitHub Release publica, asset aberto de produto ou repositorio publico apareceu onde deveria estar bloqueado."
+      release_publica_encontrada: "GitHub Release ou asset publico apareceu sem mudanca previa deste contrato."
+      estado_github_nao_verificado: "Nao foi possivel confirmar ao vivo o repositorio oficial e a ausencia de releases/assets."
+      plugin_codex_remoto_invalido: "O marketplace remoto nao instalou a skill oficial alinhada ou registrou MCP inesperado."
     }
     tests {
-      caso "instalador npm 1.5.35 alinhado sem release publica" {
+      caso "instalador npm 2.0.0 alinhado sem GitHub Release" {
         given {
-          versao_esperada: "1.5.35"
-          repositorio: "privado"
+          versao_esperada: "2.0.0"
+          repositorio: "gerlanss/Sema"
         }
 
         expect {
           sucesso: verdadeiro
           manifestos_alinhados: verdadeiro
           npm_alinhado: verdadeiro
-          github_release_bloqueado: verdadeiro
-          assets_release_bloqueados: verdadeiro
-          repositorio_publico_ausente: verdadeiro
+          github_release_ausente: verdadeiro
+          assets_release_ausentes: verdadeiro
+          repositorio_publico_confirmado: verdadeiro
+          github_head_alinhado: verdadeiro
+          plugin_codex_remoto_consultado: verdadeiro
+          plugin_codex_remoto_instalado: verdadeiro
+          skill_codex_remota_alinhada: verdadeiro
+          plugin_codex_remoto_sem_mcp: verdadeiro
         }
       }
     }

@@ -1,8 +1,8 @@
 # Contributing To Sema
 
-Sema is a public local CLI project for semantic governance in AI-assisted
-software work. Contributions should keep the repository local-first,
-contract-first, and safe to publish.
+Sema is a public Codex-native local CLI project for semantic governance in
+AI-assisted software work. Contributions should keep the repository
+local-first, contract-first, and safe to publish.
 
 ## Before You Start
 
@@ -24,11 +24,17 @@ For governed changes, use the Sema CLI before editing behavior:
 
 ```bash
 sema --version
-sema preflight resumo --json
+sema resumo
 sema docs-impacto --intencao "describe the change" --json
 sema inspecionar contratos/sema/software.sema --json
 sema drift contratos/sema/software.sema --escopo modulo --json
 ```
+
+Do not add login, user-authorization, activation, license, token, credit,
+billing, or panel gates to local CLI execution. `AGENTS.md` is the official
+Codex entrypoint for Sema-governed repositories. The official Sema skill only
+bootstraps projects before that file exists; do not duplicate the governed
+workflow or add an MCP server to the plugin.
 
 ## Quality Rules
 
@@ -38,6 +44,8 @@ sema drift contratos/sema/software.sema --escopo modulo --json
 - Do not add public docs in Portuguese unless the project explicitly changes
   its public documentation language policy.
 - Add focused tests when behavior changes.
+- Run `npm run plugin:testar-codex` when the marketplace, plugin manifest, skill,
+  or first-contact flow changes.
 - Update [STATUS.md](./STATUS.md) when the real public state changes.
 
 ## Commercial Boundary

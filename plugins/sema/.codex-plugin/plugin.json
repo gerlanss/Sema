@@ -1,0 +1,45 @@
+{
+  "name": "sema",
+  "version": "2.0.0",
+  "description": "Codex bootstrap for discovering @semacode/cli and initializing Sema before a workspace has its AGENTS.md protocol.",
+  "author": {
+    "name": "OtimiTare",
+    "email": "suporte@otimitare.online",
+    "url": "https://www.otimitare.online/"
+  },
+  "homepage": "https://github.com/gerlanss/Sema",
+  "repository": "https://github.com/gerlanss/Sema",
+  "license": "Sema-Public-Non-Commercial-1.0",
+  "keywords": [
+    "sema",
+    "codex",
+    "bootstrap",
+    "contracts",
+    "semantic-governance",
+    "local-first"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sema",
+    "shortDescription": "Required bootstrap before AGENTS.md exists",
+    "longDescription": "Provides the required first-contact instructions for Codex to find the local @semacode/cli, initialize Sema, and generate AGENTS.md. Once AGENTS.md exists, the skill delegates all workspace governance to that protocol and the local CLI.",
+    "developerName": "OtimiTare",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/gerlanss/Sema",
+    "termsOfServiceURL": "https://github.com/gerlanss/Sema/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Initialize Sema in this project and prepare its AGENTS.md protocol for Codex",
+      "Install or locate the Sema CLI and bootstrap this workspace",
+      "Repair a missing Sema AGENTS.md handshake in this project"
+    ],
+    "brandColor": "#111827",
+    "composerIcon": "./assets/sema.svg",
+    "logo": "./assets/sema.svg",
+    "screenshots": []
+  }
+}

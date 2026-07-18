@@ -1,6 +1,6 @@
 # Documentation Governance
 
-Documentation is part of every governed change. An agent must use
+Documentation is part of every governed change. Codex must use
 `sema docs-impacto` before editing contracts, code, operational docs, workflows,
 profiles, generated artifacts, or release material.
 
@@ -16,7 +16,7 @@ The result lists:
 
 - `leituraObrigatoria`: files that must be read before the change;
 - `docsAusentes`: missing docs that block the change;
-- `docsCriadas`: generated draft docs that must be completed by the agent;
+- `docsCriadas`: generated draft docs that must be completed by Codex;
 - `bloqueios`: blocking diagnostics.
 
 Before closing the change, prove the required docs were read:

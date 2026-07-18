@@ -1,12 +1,12 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.contexto
-// Descrição: tipos e constantes compartilhadas para entrada IA-first e entrypoints de agentes.
+// Descrição: tipos e constantes compartilhadas para a entrada IA-first nativa do Codex.
 
 export type CapacidadeIa = "fraca" | "media" | "forte";
 export type CapacidadeIaLegada = "pequena" | "grande";
 export type ChaveGuiaCapacidadeIa = CapacidadeIa | CapacidadeIaLegada;
 export type GuiaCapacidadeIaMap = Record<ChaveGuiaCapacidadeIa, GuiaCapacidadeIa>;
 
-export type TipoFonteAgentContext = "entrypoint" | "resumo" | "indice" | "operacional" | "exemplos" | "docs" | "contrato" | "cliente";
+export type TipoFonteAgentContext = "entrypoint" | "resumo" | "indice" | "operacional" | "exemplos" | "docs" | "contrato";
 
 export interface GuiaCapacidadeIa {
   descricao: string;
@@ -22,13 +22,6 @@ export interface FonteAgentContextPack {
   obrigatorio: boolean;
   quandoUsar: string;
   incluirTextoBrutoQuando: string;
-}
-
-export interface EntryPointClienteIa {
-  cliente: "copilot" | "cline" | "roo" | "opencode" | "cursor" | "claude" | "windsurf" | "generico";
-  arquivos: string[];
-  capacidadePadrao: CapacidadeIa;
-  observacao: string;
 }
 
 export interface PoliticaIdiomaAgentContext {
@@ -88,7 +81,9 @@ export interface AgentContextPack {
   textoBrutoSobDemanda: Record<string, string>;
   guiaPorCapacidade: Record<ChaveGuiaCapacidadeIa, string[]>;
   aliasesCapacidade: Record<CapacidadeIaLegada, CapacidadeIa>;
-  entrypointsClientes: EntryPointClienteIa[];
+  entrypointCodex: "AGENTS.md";
+  codexNativo: true;
+  cliLocalSemAutorizacao: true;
   politicaIdioma: PoliticaIdiomaAgentContext;
   politicaCodigoGovernado: PoliticaCodigoGovernadoAgentContext;
   politicaTimeoutResumo: PoliticaTimeoutResumoAgentContext;
@@ -100,17 +95,18 @@ export interface AgentContextPack {
 export const ARQUIVO_SEMA_BOOT = "SEMA_BOOT.md";
 export const ARQUIVO_SEMA_SMALL_MODEL = "SEMA_SMALL_MODEL.md";
 export const ARQUIVO_AGENT_CONTEXT_PACK = "AGENT_CONTEXT_PACK.json";
+export const ARQUIVO_ENTRYPOINT_CODEX = "AGENTS.md";
 export const ARQUIVO_DOC_AGENTES_CAPACIDADE = "docs/ai-integration.md";
 export const ARQUIVOS_CANONICOS_IA_RAIZ = [
   ARQUIVO_SEMA_BOOT,
-  "llms.txt",
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_SEMA_SMALL_MODEL,
+  "SEMA_BRIEF.micro.txt",
+  "SEMA_BRIEF.curto.txt",
   "SEMA_BRIEF.md",
   "SEMA_INDEX.json",
-  "AGENTS.md",
+  ARQUIVO_ENTRYPOINT_CODEX,
   "README.md",
-  "llms-full.txt",
 ] as const;
 export const CAPACIDADES_IA_OPERACIONAIS = ["fraca", "media", "forte"] as const;
 export const ALIASES_CAPACIDADE_IA: Record<CapacidadeIaLegada, CapacidadeIa> = {

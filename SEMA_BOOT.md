@@ -4,15 +4,14 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 
 ## Primeira ação
 
-1. Em IDE local, confirme `AGENTS.md` na raiz e rode `sema --version`; se o comando não existir, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel.
-2. Chame `sema preflight resumo --json`; se `decisao` não for `use_cli_local`, pare bloqueado.
-3. Use a CLI local para ler o workspace: `sema resumo`, `sema docs-impacto`, `sema inspecionar`, `sema drift` e `sema impacto`.
-4. Não use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
-5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
-6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato `.sema` aplicável.
-7. Antes de editar código existente, rode drift e impacto pelo caminho autorizado da superfície atual.
-8. Antes de criar ou corrigir `.sema`, use `sema exemplos` na CLI local.
-9. Se qualquer etapa falhar, pare e diga que está bloqueado.
+1. Confirme `AGENTS.md` na raiz e rode `sema --version`; se o comando não existir, pare e peça a instalação da CLI.
+2. Use a CLI local diretamente para ler o workspace: `sema resumo`, `sema docs-impacto`, `sema inspecionar`, `sema drift` e `sema impacto`.
+3. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
+4. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
+5. Antes de criar módulo, rota, task ou contrato, inspecione o contrato `.sema` aplicável.
+6. Antes de editar código existente, rode drift e impacto pela CLI local.
+7. Antes de criar ou corrigir `.sema`, use os exemplos oficiais na CLI local.
+8. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
 Não substitua esse fluxo por leitura manual de `AGENTS.md`, `README.md`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
 
@@ -71,7 +70,7 @@ Quando a tarefa envolve site, sistema, app, interface, dashboard, painel, formul
 
 ## Timeout e retry
 
-Timeout definido pelo agente não é falha do Sema. Se `sema resumo`, `inspecionar`, `drift` ou `sync-ai-entrypoints` estourar por timeout local, aumente o timeout e tente de novo com escopo menor quando possível.
+Timeout definido pelo agente não é falha do Sema. Se `sema resumo`, `inspecionar`, `drift` ou `sync-codex` estourar por timeout local, aumente o timeout e tente de novo com escopo menor quando possível.
 
 - Timeout inicial recomendado para projeto inteiro: 120s.
 - Escalonamento: 120s -> 300s -> 600s.
@@ -93,10 +92,10 @@ A linguagem humana da resposta deve seguir o idioma do usuário e preservar acen
 
 - Se não conseguir chamar Sema, pare e declare bloqueio em vez de editar código ou contrato.
 - Se não houver contrato aplicável ou vínculo semântico do arquivo, inspecione o arquivo, descubra ou crie o .sema aplicável e vincule antes do código.
-- Em IDE local, rode sema --version; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode sema preflight <comando> --json; só continue com use_cli_local; não use fonte externa de workspace para substituir a CLI local.
+- Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não substitua essa fonte por espelho externo ou inferência.
 - Se não houver workspace local em disco, pare bloqueado e peça o fluxo apropriado; não invente caminho nem substitua a CLI local por ferramenta paralela.
 - Se arquivos_codigo.conteudo ou conteudo inline passar de 262144 caracteres, não aumente timeout para forçar: divida por responsabilidade ou use anexo/caminho de servidor autorizado.
-- Se for criar ou corrigir .sema, use sema_exemplos antes de escrever sintaxe.
+- Se for criar ou corrigir .sema, leia `exemplos/`; se a pasta estiver ausente, rode `sema instalar-exemplos --json` antes de escrever sintaxe.
 - Se a resposta humana estiver em PT-BR, use vocabulário Sema canônico e preserve acentos mesmo que a DSL use ASCII.
 - Se um arquivo de código tiver SEMA-GOVERNED, consulte Sema e o contrato aplicável antes de editar.
 - Se codigo governado passar de 1000 linhas, planeje divisao; se passar de 2000, pare e divida antes de concluir. Documentacao Markdown nao entra nesse limite de codigo.

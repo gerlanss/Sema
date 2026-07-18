@@ -10,7 +10,8 @@ identifiers.
 - impact map
 - governed code
 - traceability
-- preflight
+- Codex-native
+- local runtime
 - finalization
 - evidence
 - local CLI

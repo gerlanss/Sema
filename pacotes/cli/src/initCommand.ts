@@ -1,51 +1,98 @@
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descri??o: comandos de inicializa??o de projeto e sincroniza??o de exemplos oficiais da CLI.
+// SEMA-GOVERNED: sema.produto.cli_init_templates, sema.produto.escrita_segura_workspace
+// Descrição: inicializa projetos preservando arquivos existentes e bloqueando escapes do workspace.
 
 import * as fs from "node:fs";
 import path from "node:path";
 import { escreverArquivos } from "./fsGovernado.js";
 import { arquivosTemplateIniciar, type TemplateIniciar } from "./initTemplatesBase.js";
-import { materializarExemplosOficiais } from "./exemplosOficiais.js";
+import { materializarExemplosOficiais, planejarExemplosOficiais } from "./exemplosOficiais.js";
+import { validarDestinosEscritaWorkspace } from "./workspaceWrite.js";
 
 async function sincronizarKitIaInicial(cwd: string): Promise<{
   artefatos: string[];
-  clientes: { criados: string[]; atualizados: string[]; preservados: string[] };
+  codex: {
+    arquivos: Array<{ caminho: string; status: "criado" | "atualizado" | "preservado" | "pendente" }>;
+    criados: string[];
+    atualizados: string[];
+    preservados: string[];
+    entrypointCodex: "AGENTS.md";
+    codexNativo: true;
+    cliLocalSemAutorizacao: true;
+    entrypointsLegadosPendentes: string[];
+    entrypointsLegadosLimpos: boolean;
+  };
 }> {
-  const [{ gerarResumoProjetoIa }, { sincronizarEntryPointsAgentes }] = await Promise.all([
+  const [{ gerarResumoProjetoIa }, { sincronizarEntrypointCodex }] = await Promise.all([
     import("./index.part04.js"),
     import("./agentEntryPoints.js"),
   ]);
   const resumoProjeto = await gerarResumoProjetoIa(cwd, undefined, true);
   const indexJson = JSON.parse(fs.readFileSync(path.join(resumoProjeto.pastaSaida, "SEMA_INDEX.json"), "utf8"));
-  const clientes = await sincronizarEntryPointsAgentes(
+  const codex = await sincronizarEntrypointCodex(
     resumoProjeto.baseProjeto,
     indexJson.agentContextPack,
   );
   return {
     artefatos: [...new Set([
       ...resumoProjeto.artefatos,
-      ...clientes.arquivos.map((item) => item.caminho),
+      ...codex.arquivos.map((item) => item.caminho),
     ])],
-    clientes,
+    codex,
   };
 }
 
-export async function comandoIniciar(cwd: string, template: TemplateIniciar): Promise<number> {
+export async function comandoIniciar(
+  cwd: string,
+  template: TemplateIniciar,
+  opcoes: { force?: boolean } = {},
+): Promise<number> {
   const arquivos = arquivosTemplateIniciar(template);
+  const planoExemplos = await planejarExemplosOficiais();
+  if (!planoExemplos.origem) {
+    console.error("Diretorio de exemplos oficiais nao foi encontrado no pacote da CLI.");
+    return 1;
+  }
+  const [{ ARQUIVOS_RESUMO_PROJETO_IA }, { listarDestinosEntrypointCodex }] = await Promise.all([
+    import("./index.part04.js"),
+    import("./agentEntryPoints.js"),
+  ]);
+  const caminhosTemplate = new Set(arquivos.map((arquivo) => arquivo.caminhoRelativo));
+  const destinos = await validarDestinosEscritaWorkspace(
+    cwd,
+    [
+      ...caminhosTemplate,
+      ...planoExemplos.arquivos.map((arquivo) => arquivo.caminhoRelativo),
+      ...ARQUIVOS_RESUMO_PROJETO_IA,
+      ...listarDestinosEntrypointCodex("AGENTS.md"),
+    ],
+  );
+  const existentes = new Set(
+    destinos
+      .filter((destino) => caminhosTemplate.has(destino.caminhoRelativo) && destino.existe)
+      .map((destino) => destino.caminhoRelativo),
+  );
+  const arquivosParaEscrever = opcoes.force
+    ? arquivos
+    : arquivos.filter((arquivo) => !existentes.has(arquivo.caminhoRelativo));
 
-
-  await escreverArquivos(cwd, arquivos, { inserirCabecalhoGovernado: true });
+  await escreverArquivos(cwd, arquivosParaEscrever, { inserirCabecalhoGovernado: true });
   const exemplos = await materializarExemplosOficiais(cwd, true);
   if (!exemplos.sucesso) {
     console.error(exemplos.erro);
     return 1;
   }
   const kitIa = await sincronizarKitIaInicial(cwd);
+  if (!kitIa.codex.entrypointsLegadosLimpos) {
+    console.error("Entrypoints Sema pendentes de revisão manual:");
+    for (const caminho of kitIa.codex.entrypointsLegadosPendentes) {
+      console.error(`- ${caminho}`);
+    }
+    return 1;
+  }
   console.log(`Projeto Sema inicializado com template ${template}.`);
+  console.log(`Arquivos do projeto: ${arquivosParaEscrever.length} escritos, ${opcoes.force ? 0 : existentes.size} preservados.`);
   console.log(`Exemplos oficiais sincronizados em ${exemplos.destino} (${exemplos.criados.length} criados, ${exemplos.preservados.length} preservados).`);
-  console.log(`Kit IA sincronizado (${kitIa.artefatos.length} artefatos; clientes ${kitIa.clientes.criados.length} criados, ${kitIa.clientes.atualizados.length} atualizados, ${kitIa.clientes.preservados.length} preservados).`);
+  console.log(`Kit IA Codex-native sincronizado (${kitIa.artefatos.length} artefatos; entrypoint ${kitIa.codex.entrypointCodex}; ${kitIa.codex.criados.length} criados, ${kitIa.codex.atualizados.length} atualizados, ${kitIa.codex.preservados.length} preservados).`);
   return 0;
 }
 

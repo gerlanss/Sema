@@ -3,6 +3,14 @@
 The public Sema repository must not contain private or sensitive operational
 material.
 
+Local Sema execution does not need a credential, login, activation key, license
+token, billing token, or control-panel session. Do not introduce one as a
+condition for reading or governing a local workspace.
+
+The official Codex bootstrap skill contains instructions only. It must not
+bundle an MCP server, app connector, remote workspace bridge, credential flow,
+or a second copy of the repository governance that belongs in `AGENTS.md`.
+
 Do not publish:
 
 - real credentials or secret material;

@@ -1,0 +1,231 @@
+module sema.produto.cli_runtime_local {
+  docs {
+    resumo: "Execucao direta da CLI local do Sema. O comando resumo possui dois payloads JSON reais e distintos: um para modulo .sema e outro para projeto. Nenhuma variante exige autenticacao, autorizacao de produto, licenca, credito, token, billing, painel ou consulta externa."
+  }
+
+  task resumir_modulo_local {
+    input {
+      arquivo: Texto required
+      tamanho: Texto required
+    }
+    output {
+      comando: Texto
+      modo: Texto
+      tamanho: Texto
+      geradoEm: Texto
+      arquivo: Texto
+      modulo: Texto
+      pastaSaida: Opcional<Texto>
+      artefatosCompactos: Lista
+      guiaPorCapacidade: Objeto
+      resumo: Objeto
+      texto: Texto
+    }
+    rules {
+      arquivo deve_ser arquivo_sema
+      tamanho deve_ser micro_curto_ou_medio
+    }
+    effects {
+      consulta contrato_local criticidade = media
+      auditoria resumo_modulo_local criticidade = baixa
+    }
+    authz {
+      escopo: sema.cli.workspace.local
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        arquivo: interno
+        tamanho: publico
+      }
+      output {
+        comando: publico
+        modo: publico
+        tamanho: publico
+        geradoEm: publico
+        arquivo: interno
+        modulo: publico
+        pastaSaida: interno
+        artefatosCompactos: interno
+        guiaPorCapacidade: publico
+        resumo: interno
+        texto: interno
+      }
+    }
+    audit {
+      evento: sema.cli.resumo_modulo.executado
+      ator: agente.codex
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      comando_preflight_de_autorizacao
+      modulo_billing_para_execucao_local
+      exigir_login_chave_licenca_credito_token_ou_painel
+      consultar_servico_externo_para_liberar_comando_local
+      bloquear_workspace_local_por_identidade_do_usuario
+      emitir_nome_de_tool_mcp_em_saida_cli
+      emitir_texto_visivel_com_mojibake
+      emitir_baseProjeto_artefatos_ou_modulos_na_variante_modulo
+    }
+    impl {
+      ts: cli.src.index_part06.comandoResumo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "testes/integracao/codex_runtime.test.ts"
+      simbolo: cli.src.index_part06.comandoResumo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      comando existe
+      modo existe
+      tamanho existe
+      geradoEm existe
+      arquivo existe
+      modulo existe
+      artefatosCompactos existe
+      guiaPorCapacidade existe
+      resumo existe
+      texto existe
+    }
+    tests {
+      caso "emite payload real do resumo de modulo" {
+        given {
+          arquivo: "exemplos/calculadora.sema"
+          tamanho: "micro"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          comando: "resumo"
+          modo: "resumo"
+          tamanho: "micro"
+          modulo: "exemplos.calculadora"
+        }
+      }
+    }
+  }
+
+  task resumir_projeto_local {
+    input {
+      baseProjeto: Texto required
+      tamanho: Texto required
+    }
+    output {
+      comando: Texto
+      modo: Texto
+      tamanho: Texto
+      geradoEm: Texto
+      baseProjeto: Texto
+      pastaSaida: Texto
+      artefatos: Lista
+      guiaPorCapacidade: Objeto
+      modulos: Lista
+      texto: Texto
+    }
+    rules {
+      baseProjeto deve_ser pasta_workspace_local
+      tamanho deve_ser micro_curto_ou_medio
+    }
+    effects {
+      consulta contratos_workspace_local criticidade = media
+      fs.write resumo_projeto_local criticidade = media
+      auditoria resumo_projeto_local criticidade = baixa
+    }
+    authz {
+      escopo: sema.cli.workspace.local
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        baseProjeto: interno
+        tamanho: publico
+      }
+      output {
+        comando: publico
+        modo: publico
+        tamanho: publico
+        geradoEm: publico
+        baseProjeto: interno
+        pastaSaida: interno
+        artefatos: interno
+        guiaPorCapacidade: publico
+        modulos: interno
+        texto: interno
+      }
+    }
+    audit {
+      evento: sema.cli.resumo_projeto.executado
+      ator: agente.codex
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      comando_preflight_de_autorizacao
+      modulo_billing_para_execucao_local
+      exigir_login_chave_licenca_credito_token_ou_painel
+      consultar_servico_externo_para_liberar_comando_local
+      bloquear_workspace_local_por_identidade_do_usuario
+      emitir_nome_de_tool_mcp_em_saida_cli
+      emitir_texto_visivel_com_mojibake
+      emitir_arquivo_modulo_resumo_ou_artefatosCompactos_na_variante_projeto
+    }
+    impl {
+      ts: cli.src.index_part06.comandoResumo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "testes/integracao/codex_runtime.test.ts"
+      simbolo: cli.src.index_part06.comandoResumo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      comando existe
+      modo existe
+      tamanho existe
+      geradoEm existe
+      baseProjeto existe
+      pastaSaida existe
+      artefatos existe
+      guiaPorCapacidade existe
+      modulos existe
+      texto existe
+    }
+    tests {
+      caso "emite payload real do resumo de projeto" {
+        given {
+          baseProjeto: "."
+          tamanho: "micro"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          comando: "resumo"
+          modo: "resumo"
+          tamanho: "micro"
+        }
+      }
+    }
+  }
+}

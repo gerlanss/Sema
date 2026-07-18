@@ -1,7 +1,7 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace
+// Descrição: gera contexto local e grava artefatos somente dentro da base validada.
 
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -53,7 +53,6 @@ import {
   LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA,
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
-import * as billing from "./billing/index.js";
 import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -71,9 +70,10 @@ import {
   renderizarDocumentoAgentesPorCapacidade,
   renderizarSemaBoot,
   renderizarSemaSmallModel,
-  sincronizarEntryPointsAgentes,
+  sincronizarEntrypointCodex,
 } from './agentEntryPoints.js';
 import { escreverArquivos, caminhoExiste } from './fsGovernado.js';
+import { escreverArquivoWorkspaceSeguro, validarDestinosEscritaWorkspace } from './workspaceWrite.js';
 import { localizarDiretorioExemplosOficiais, materializarExemplosOficiais } from './exemplosOficiais.js';
 import { comandoIniciar, comandoInstalarExemplos } from './initCommand.js';
 import type { TemplateIniciar } from './initTemplatesBase.js';
@@ -89,7 +89,7 @@ import {
   TSX_EXECUTOR_CLI,
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
-import { avaliarPreflightVerificacao, comandoDoctor, imprimirPreflightVerificacao } from './doctorCommand.js';
+import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -110,7 +110,18 @@ import {
 
 import { ContextoIaGerado, ResumoSemanticoModuloIa, VERSAO_CLI } from "./index.part01.js";
 import { coletarResumoSemanticoModulo, descreverFontesConclusao, detectarFontesConclusaoSnapshot, detectarModoVerificacaoCodigo } from "./index.part02.js";
-import { carregarContextoModuloIa, criarBriefingAgente, gerarArquivosResumoModuloIa, renderizarResumoProjetoMarkdown, resumirDriftPorModulo } from "./index.part03.js";
+import { ARQUIVOS_RESUMO_MODULO_IA, carregarContextoModuloIa, criarBriefingAgente, gerarArquivosResumoModuloIa, renderizarResumoProjetoMarkdown, resumirDriftPorModulo } from "./index.part03.js";
+
+export const ARQUIVOS_RESUMO_PROJETO_IA = [
+  ARQUIVO_SEMA_BOOT,
+  ARQUIVO_SEMA_SMALL_MODEL,
+  "SEMA_BRIEF.md",
+  "SEMA_BRIEF.micro.txt",
+  "SEMA_BRIEF.curto.txt",
+  "SEMA_INDEX.json",
+  ARQUIVO_AGENT_CONTEXT_PACK,
+  ARQUIVO_DOC_AGENTES_CAPACIDADE,
+] as const;
 
 async function listarTopArquivosCodigoDetectados(diretoriosCodigo: string[], limite = 24): Promise<string[]> {
   const encontrados = new Set<string>();
@@ -266,22 +277,35 @@ export async function gerarResumoProjetoIa(
     "",
   ].join("\n");
 
-  await writeFile(path.join(pastaSaida, "SEMA_BRIEF.md"), semaBrief, "utf8");
-  await writeFile(path.join(pastaSaida, ARQUIVO_SEMA_BOOT), semaBoot, "utf8");
-  await writeFile(path.join(pastaSaida, ARQUIVO_SEMA_SMALL_MODEL), semaSmallModel, "utf8");
-  await writeFile(path.join(pastaSaida, "SEMA_BRIEF.micro.txt"), micro, "utf8");
-  await writeFile(path.join(pastaSaida, "SEMA_BRIEF.curto.txt"), curto, "utf8");
-  await writeFile(path.join(pastaSaida, "SEMA_INDEX.json"), `${JSON.stringify(indexJson, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaSaida, ARQUIVO_AGENT_CONTEXT_PACK), `${JSON.stringify(agentContextPack, null, 2)}\n`, "utf8");
-  await mkdir(path.dirname(path.join(pastaSaida, ARQUIVO_DOC_AGENTES_CAPACIDADE)), { recursive: true });
-  await writeFile(path.join(pastaSaida, ARQUIVO_DOC_AGENTES_CAPACIDADE), docAgentesCapacidade, "utf8");
+  const artefatosResumo = [
+    { caminhoRelativo: "SEMA_BRIEF.md", conteudo: semaBrief },
+    { caminhoRelativo: ARQUIVO_SEMA_BOOT, conteudo: semaBoot },
+    { caminhoRelativo: ARQUIVO_SEMA_SMALL_MODEL, conteudo: semaSmallModel },
+    { caminhoRelativo: "SEMA_BRIEF.micro.txt", conteudo: micro },
+    { caminhoRelativo: "SEMA_BRIEF.curto.txt", conteudo: curto },
+    { caminhoRelativo: "SEMA_INDEX.json", conteudo: `${JSON.stringify(indexJson, null, 2)}\n` },
+    { caminhoRelativo: ARQUIVO_AGENT_CONTEXT_PACK, conteudo: `${JSON.stringify(agentContextPack, null, 2)}\n` },
+    { caminhoRelativo: ARQUIVO_DOC_AGENTES_CAPACIDADE, conteudo: docAgentesCapacidade },
+  ];
+  await validarDestinosEscritaWorkspace(
+    pastaSaida,
+    artefatosResumo.map((artefato) => artefato.caminhoRelativo),
+  );
+  for (const artefato of artefatosResumo) {
+    await escreverArquivoWorkspaceSeguro(
+      pastaSaida,
+      artefato.caminhoRelativo,
+      artefato.conteudo,
+      { sobrescrever: true },
+    );
+  }
 
   return {
     geradoEm,
     baseProjeto,
     pastaSaida,
     modoVerificacaoCodigo,
-    artefatos: [ARQUIVO_SEMA_BOOT, ARQUIVO_SEMA_SMALL_MODEL, "SEMA_BRIEF.md", "SEMA_BRIEF.micro.txt", "SEMA_BRIEF.curto.txt", "SEMA_INDEX.json", ARQUIVO_AGENT_CONTEXT_PACK, ARQUIVO_DOC_AGENTES_CAPACIDADE],
+    artefatos: [...ARQUIVOS_RESUMO_PROJETO_IA],
     modulos,
     guiaPorCapacidade,
   };
@@ -295,12 +319,30 @@ export async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional
 
   await mkdir(pastaBase, { recursive: true });
 
-  await writeFile(path.join(pastaBase, "validar.json"), `${JSON.stringify(contexto.validar, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "diagnosticos.json"), `${JSON.stringify(contexto.diagnosticosJson, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "ast.json"), `${JSON.stringify(contexto.ast, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "ir.json"), `${JSON.stringify(contexto.irJson, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "drift.json"), `${JSON.stringify(contexto.drift, null, 2)}\n`, "utf8");
-  await writeFile(path.join(pastaBase, "briefing.json"), `${JSON.stringify(contexto.briefing, null, 2)}\n`, "utf8");
+  const artefatosContexto = [
+    { caminhoRelativo: "validar.json", conteudo: `${JSON.stringify(contexto.validar, null, 2)}\n` },
+    { caminhoRelativo: "diagnosticos.json", conteudo: `${JSON.stringify(contexto.diagnosticosJson, null, 2)}\n` },
+    { caminhoRelativo: "ast.json", conteudo: `${JSON.stringify(contexto.ast, null, 2)}\n` },
+    { caminhoRelativo: "ir.json", conteudo: `${JSON.stringify(contexto.irJson, null, 2)}\n` },
+    { caminhoRelativo: "drift.json", conteudo: `${JSON.stringify(contexto.drift, null, 2)}\n` },
+    { caminhoRelativo: "briefing.json", conteudo: `${JSON.stringify(contexto.briefing, null, 2)}\n` },
+  ];
+  await validarDestinosEscritaWorkspace(
+    pastaBase,
+    [
+      ...artefatosContexto.map((artefato) => artefato.caminhoRelativo),
+      ...ARQUIVOS_RESUMO_MODULO_IA,
+      "README.md",
+    ],
+  );
+  for (const artefato of artefatosContexto) {
+    await escreverArquivoWorkspaceSeguro(
+      pastaBase,
+      artefato.caminhoRelativo,
+      artefato.conteudo,
+      { sobrescrever: true },
+    );
+  }
   const resumoGerado = await gerarArquivosResumoModuloIa(contexto, pastaBase);
 
   const resumo = `# Contexto de IA para ${contexto.modulo}
@@ -401,7 +443,9 @@ Antes de escolher arquivo de código, leia \`${ARQUIVO_SEMA_BOOT}\` e \`agent-co
 - \`sema prompt-ia\`
 `;
 
-  await writeFile(path.join(pastaBase, "README.md"), resumo, "utf8");
+  await escreverArquivoWorkspaceSeguro(pastaBase, "README.md", resumo, {
+    sobrescrever: true,
+  });
 
   return {
     sucesso: contexto.sucesso,

@@ -1,10 +1,15 @@
 # Sema Documentation
 
-These docs describe the public local CLI distribution of Sema.
+These docs describe the public Codex-native local CLI distribution of Sema.
 
-Sema is local-first: agents run the CLI inside a project folder, read `.sema`
-contracts, check drift, map impact, and close changes with documentation
-evidence. Public docs are written in English.
+Sema is local-first: Codex runs the CLI inside a project folder, reads `.sema`
+contracts, checks drift, maps impact, and closes changes with documentation
+evidence. `AGENTS.md` is the official Codex entrypoint. Public docs are written
+in English.
+
+Sema is an independent product and is not affiliated with or endorsed by
+OpenAI. Codex-native describes Sema's product direction, not an official OpenAI
+program or submission.
 
 Start here:
 
@@ -15,5 +20,6 @@ Start here:
 - [Documentation Governance](./documentation.md)
 - [Repository Boundary](./repositories.md)
 - [Security](./security.md)
+- [Codex Integration](./ai-integration.md)
 
 Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)

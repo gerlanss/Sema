@@ -1,9 +1,13 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.governanca_ia.documentacao, sema.produto.escrita_segura_workspace
+// Descricao: resolve e cria documentacao obrigatoria sem escapar do workspace nem gravar lotes parcialmente.
 
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
+import {
+  escreverArquivoWorkspaceSeguro,
+  validarDestinosEscritaWorkspace,
+} from "./workspaceWrite.js";
 
 import { BloqueioDocumentacaoMudanca, DocumentoObrigatorioMudanca, DocumentoPlanejado, REGRAS_DOCUMENTACAO, ResultadoDocumentacaoObrigatoria, ResultadoVerificacaoDocumentacaoMudanca, adicionarDocsRaizExistentes, adicionarReadmesDeArquivos, caminhoEstaDentro, caminhoExiste, criarTemplateDoc, documentoPareceTemplateCriadoPelaSema, inferirCategorias, listarArquivosRecursivo, normalizarRelativo, normalizarTexto, resumoConteudo, termosRelacionamentoContratos } from "./docs.part01.js";
 
@@ -81,19 +85,37 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
   await adicionarReadmesDeArquivos(baseProjeto, arquivosAlvo, registrar);
   await adicionarContratosRelacionados(baseProjeto, intencao, arquivosAlvo, registrar);
 
+  const documentosPreparados = await Promise.all(docs.map(async (doc) => {
+    const caminho = path.resolve(baseProjeto, doc.relativo);
+    return {
+      doc,
+      caminho,
+      existe: await caminhoExiste(caminho),
+      template: criarTemplateDoc(doc, intencao, categorias, arquivosAlvo),
+    };
+  }));
+  if (documentosPreparados.length > 0) {
+    await validarDestinosEscritaWorkspace(
+      baseProjeto,
+      documentosPreparados.map(({ doc }) => doc.relativo),
+    );
+  }
+
   const leituraObrigatoria: DocumentoObrigatorioMudanca[] = [];
 
-  for (const doc of docs) {
-    const caminho = path.resolve(baseProjeto, doc.relativo);
-    let existe = await caminhoExiste(caminho);
+  for (const preparado of documentosPreparados) {
+    const { doc, caminho, template } = preparado;
+    let existe = preparado.existe;
     let criado = false;
-    const template = criarTemplateDoc(doc, intencao, categorias, arquivosAlvo);
 
     if (!existe && opcoes.criarAusentes && doc.permitirCriacao) {
-      await mkdir(path.dirname(caminho), { recursive: true });
-      await writeFile(caminho, template, "utf8");
+      const resultado = await escreverArquivoWorkspaceSeguro(
+        baseProjeto,
+        doc.relativo,
+        template,
+      );
       existe = true;
-      criado = true;
+      criado = resultado.status === "criado";
     }
 
     const item: DocumentoObrigatorioMudanca = {

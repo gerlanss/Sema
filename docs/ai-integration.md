@@ -1,9 +1,28 @@
-# AI Integration
+# Codex Integration
 
-Sema is designed for AI agents with different context sizes and discipline
-levels. The public repository documents the local CLI flow only: agents run the
-CLI inside the project, read contracts, check drift, map impact, and close the
-change with evidence.
+The official Sema agent integration is Codex through the repository-level
+`AGENTS.md`. Codex loads that file automatically and runs the local Sema CLI
+inside the project to read contracts, check drift, map impact, and close changes
+with evidence.
+
+Sema is an independent project and is not affiliated with or endorsed by OpenAI.
+Codex surfaces and `AGENTS.md` behavior are documented at
+https://learn.chatgpt.com/docs/agent-configuration/agents-md.
+
+## Before AGENTS.md Exists
+
+The official Sema skill is the required first-contact bootstrap for Codex in a
+project that does not have Sema yet. Install it explicitly:
+
+```bash
+codex plugin marketplace add gerlanss/Sema
+codex plugin add sema@sema
+```
+
+The skill locates the local CLI, runs `sema iniciar`, generates `AGENTS.md`, and
+then delegates all ongoing workspace governance to that file. It contains no
+MCP server, remote workspace bridge, login, license, billing, token, credit,
+panel, or authorization gate.
 
 Supported capacity labels: fraca, pequena, media, forte, grande.
 
@@ -13,12 +32,12 @@ For a local workspace, use the local CLI:
 
 ```bash
 sema --version
-sema preflight resumo --json
 sema resumo
 ```
 
-Continue only when preflight returns `use_cli_local`. Do not replace the local
-CLI with an external workspace source, external sync, or project-name guessing.
+A successful `sema --version` is enough to use the local CLI directly. Local
+commands require no login, activation key, license check, token, credits, billing
+service, control panel, or external authorization request.
 
 ## Before Editing
 
@@ -32,19 +51,19 @@ sema impacto contratos/example.sema --alvo app.example --mudanca "describe the c
 Read every document listed by `docs-impacto` before changing code, contracts,
 operational docs, generated artifacts, workflows, profiles, or release material.
 
-## Capacity Tiers
+## Codex Context Tiers
 
-Weak agents should start with `SEMA_BOOT.md`,
+Codex with a small context budget should start with `SEMA_BOOT.md`,
 `SEMA_SMALL_MODEL.md`, `SEMA_BRIEF.micro.txt`,
 `AGENT_CONTEXT_PACK.json`, and `SEMA_INDEX.json`. They should stop early
 when a gate is unclear.
 
-Medium agents should start with `SEMA_BOOT.md`,
+Codex with a medium context budget should start with `SEMA_BOOT.md`,
 `AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.curto.txt`,
 `SEMA_INDEX.json`, and `AGENTS.md`. They must run docs-impact, drift, and
 impact before edits.
 
-Strong agents may consume `AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.md`,
+Codex with a large context budget may consume `AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.md`,
 `SEMA_INDEX.json`, AST, IR, drift, and impact outputs, but larger context does
 not remove the contract-first rule.
 

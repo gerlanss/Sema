@@ -1,0 +1,110 @@
+module sema.produto.cli_toolchain_local {
+  docs {
+    resumo: "Verificacao local das dependencias de toolchain necessarias para gerar e testar cada alvo. Nao autentica usuario, nao autoriza produto e nao consulta servico externo."
+  }
+
+  task verificar_dependencias_toolchain_local {
+    input {
+      configuracoes_alvo: Lista required
+    }
+    output {
+      ok: Booleano
+      dependencias: Lista
+      faltando: Lista
+    }
+    rules {
+      configuracoes_alvo deve_ser preenchido
+    }
+    effects {
+      consulta executaveis_toolchain_local criticidade = media
+      auditoria dependencias_toolchain_verificadas criticidade = baixa
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        configuracoes_alvo: interno
+      }
+      output {
+        ok: publico
+        dependencias: interno
+        faltando: interno
+      }
+    }
+    audit {
+      evento: sema.cli.toolchain.verificada
+      ator: agente.codex
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      autenticar_usuario
+      autorizar_execucao_do_produto
+      consultar_billing_licenca_credito_token_ou_painel
+      consultar_servico_remoto_para_liberar_comando
+      emitir_campo_json_de_autorizacao_legado
+      exigir_npm_para_verificacao_normal
+      exigir_python_quando_alvo_nao_for_python
+      gerar_arquivos_antes_de_detectar_php_ausente
+    }
+    impl {
+      ts: cli.src.doctor_command.avaliarDependenciasVerificacao
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/doctorCommand.ts"
+      arquivo: "pacotes/cli/src/index.part07.ts"
+      simbolo: cli.src.doctor_command.avaliarDependenciasVerificacao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      ok existe
+      dependencias existe
+      faltando existe
+      faltando deve_ser somente_dependencia_local_ausente
+    }
+    tests {
+      caso "aprova toolchain local disponivel" {
+        given {
+          configuracoes_alvo: "typescript"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          ok: verdadeiro
+        }
+      }
+
+      caso "nao exige npm para verificar projeto" {
+        given {
+          configuracoes_alvo: "javascript"
+          npm_disponivel: falso
+          node_disponivel: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          ok: verdadeiro
+        }
+      }
+
+      caso "bloqueia php ausente antes da geracao" {
+        given {
+          configuracoes_alvo: "php"
+          php_disponivel: falso
+        }
+
+        expect {
+          sucesso: verdadeiro
+          ok: falso
+          faltando_contem: "verificar/php:php"
+        }
+      }
+    }
+  }
+}

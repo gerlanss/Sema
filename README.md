@@ -4,9 +4,17 @@
   <img src="./logo.png" alt="Sema logo" width="240">
 </p>
 
-Sema is a local-first semantic governance CLI for AI-assisted software work.
-It gives agents a contract-first workflow before they edit code, operational
-docs, generated artifacts, or other governed project files.
+Sema is a Codex-native, local-first semantic governance CLI for AI-assisted
+software work. It gives Codex a contract-first workflow before it edits code,
+operational docs, generated artifacts, or other governed project files.
+
+The official Sema agent surface is Codex through `AGENTS.md`. Codex loads this
+file as durable repository guidance across its CLI, IDE extension, and desktop
+app workflows. See the [Codex `AGENTS.md` documentation](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+
+Sema is an independent product and is not affiliated with or endorsed by
+OpenAI. "Official" in this repository means the official product direction of
+Sema, not an official OpenAI program, integration, or submission.
 
 This public repository is intentionally scoped to the local CLI experience.
 It does not publish private or sensitive operational material.
@@ -17,7 +25,7 @@ Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
 
 Sema uses `.sema` contracts to describe modules, tasks, inputs, outputs, rules,
 guarantees, effects, links to implementation files, and validation expectations.
-The CLI helps an agent answer practical questions before touching a project:
+The CLI helps Codex answer practical questions before touching a project:
 
 - which contract applies to the change;
 - which files are probably affected;
@@ -33,7 +41,15 @@ judgment. It is a local governance layer for scope, evidence, drift, and quality
 
 ```bash
 npm install -g @semacode/cli
+codex plugin marketplace add gerlanss/Sema
+codex plugin add sema@sema
 ```
+
+After `codex plugin add`, open a new Codex task in the target repository. Plugin
+and skill catalogs are loaded when a task starts, so an already-open task will
+not gain `$sema` retroactively. In the new task, invoke `$sema` or ask Codex to
+initialize Sema. The skill creates the handshake, reads the generated
+`AGENTS.md`, and subsequent tasks load that protocol automatically.
 
 Requirements:
 
@@ -41,13 +57,52 @@ Requirements:
 - a local project folder;
 - at least one `.sema` contract before implementation work.
 
+The CLI runs directly after installation. It does not require a Sema login,
+user authorization, product-license check, activation key, token, credits, or
+control panel. The repository license still governs use and redistribution; it
+is not a runtime activation gate.
+
+## Codex Setup
+
+The CLI is the local engine and source of truth. `AGENTS.md` is the automatic
+workspace protocol with Codex. The Sema skill is the required bootstrap for a
+project that does not have that protocol yet: it teaches Codex to locate the
+CLI, run initialization, generate `AGENTS.md`, and then delegate to it.
+
+For a new project:
+
+```bash
+sema iniciar --template base
+```
+
+Initialization preserves existing project files. `--force` is available only
+for an explicit overwrite and is never used automatically by the bootstrap
+skill. Symlinks and junctions below the workspace boundary are rejected.
+
+For an existing Sema project:
+
+```bash
+sema sync-codex --json
+```
+
+Skill installation is explicit and separate: the npm package does not write
+into `CODEX_HOME` or silently modify Codex.
+
+## Codex-Native Architecture
+
+- `AGENTS.md` is the only official client entrypoint.
+- Agent Context Pack schema version 6 uses `entrypointCodex`, `codexNativo`, and
+  `cliLocalSemAutorizacao`.
+- Install the Sema Codex skill for first contact in projects that do not yet
+  have Sema. Once initialized, the generated `AGENTS.md` owns the governed
+  workflow and the skill does not duplicate it.
+
 ## Local Workflow
 
 Use the CLI from the project root:
 
 ```bash
 sema --version
-sema preflight resumo --json
 sema resumo
 sema docs-impacto --intencao "describe the change" --json
 sema inspecionar contratos/sema/software.sema --json
@@ -91,7 +146,10 @@ contract.
 
 The public Sema CLI is local-only:
 
-- local preflight runs without external service credentials;
+- commands execute directly against the local workspace filesystem;
+- no login, user authorization, product-license check, activation key, token,
+  credits, billing service, or control panel is required to run them;
+- `AGENTS.md` is the official Codex entrypoint;
 - the public package ships without secrets or private operational state;
 - docs should be written in English for public distribution.
 

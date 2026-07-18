@@ -268,7 +268,7 @@ export const REGRAS_DOCUMENTACAO: RegraDocumentacao[] = [
   },
   {
     categoria: "integracao_ia",
-    padroes: [/tool/, /ferramenta/, /agent/, /agente/, /copilot/, /cursor/, /cline/, /roo/, /opencode/],
+    padroes: [/codex/, /agent/, /agente/, /tool/, /ferramenta/],
     docs: [
       { relativo: "docs/ai-integration.md", tipo: "documentacao", motivo: "integracao do Sema com agentes IA", permitirCriacao: false },
     ],

@@ -1,7 +1,5 @@
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descri??o: contrato base e dispatcher de templates de inicializa??o.
+// SEMA-GOVERNED: sema.produto.cli_init_templates
+// Descrição: contrato base e dispatcher dos templates Codex-native de inicialização.
 
 
 import type { FrameworkGeracao } from "@sema/padroes";
@@ -91,21 +89,21 @@ function arquivosApoioIaIniciar(): ArquivosTemplateIniciar {
 
 Este projeto foi inicializado com Sema.
 
-## Entrada para IA
+## Entrada oficial do Codex
 
 Antes de alterar codigo, contrato ou documentacao:
 
 1. leia \`AGENTS.md\`;
 2. rode \`sema --version\`;
-3. rode \`sema preflight resumo --json\`;
-4. rode \`sema resumo\`;
-5. rode \`sema docs-impacto --intencao "<acao>" --json\`;
-6. leia \`docs/commands.md\` antes de escolher comando ou interpretar \`--saida\`;
-7. use \`exemplos/\` e \`docs/syntax.md\` antes de criar ou corrigir \`.sema\`.
+3. rode \`sema resumo\`;
+4. rode \`sema docs-impacto --intencao "<acao>" --json\`;
+5. leia \`docs/commands.md\` antes de escolher comando ou interpretar \`--saida\`;
+6. use \`exemplos/\` e \`docs/syntax.md\` antes de criar ou corrigir \`.sema\`.
 
 ## Estrutura criada
 
 - \`contratos/\`: contratos semanticamente governados.
+- \`AGENTS.md\`: entrypoint oficial do Codex.
 - \`exemplos/\`: exemplos oficiais da DSL Sema.
 - \`docs/commands.md\`: catalogo de comandos, gates e regra de \`--saida\`.
 - \`docs/syntax.md\`: referencia curta para escrever \`.sema\`.

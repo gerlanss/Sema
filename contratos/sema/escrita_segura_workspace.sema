@@ -1,0 +1,198 @@
+module sema.produto.escrita_segura_workspace {
+  docs {
+    resumo: "Primitivas locais de escrita que ancoram a base real, mantem handles dos diretorios, recusam symlink ou junction, revalidam identidade antes e depois de cada commit e permitem preservar colisoes."
+  }
+
+  comments {
+    limite_toctou: "Node fs nao oferece openat ou renameat portavel. Um processo externo capaz de trocar componentes do caminho entre a ultima verificacao e a syscall ainda pode causar uma mutacao fora da arvore antes da deteccao. A implementacao nao declara eliminacao absoluta desse risco."
+    mitigacao_portavel: "A protecao fecha corridas cooperativas e detecta trocas adversariais com handles de diretorio, comparacao dev/ino, criacao de pastas por etapa, arquivo temporario exclusivo, escrita por FileHandle, nlink unitario e verificacao pre e pos rename."
+  }
+
+  task validar_destinos_workspace {
+    input {
+      base: Texto required
+      caminhos_relativos: Lista required
+    }
+    output {
+      seguro: Booleano
+      destinos: Lista
+      existentes: Lista
+      lote_validado_antes_da_primeira_escrita: Booleano
+    }
+    rules {
+      base deve_ser preenchido
+      caminhos_relativos deve_ser nao_vazio
+    }
+    effects {
+      consulta filesystem_local criticidade = media
+      auditoria destinos_workspace_verificados criticidade = baixa
+    }
+    authz {
+      escopo: sema.workspace.validar_destinos
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        base: interno
+        caminhos_relativos: interno
+      }
+      output {
+        seguro: publico
+        destinos: interno
+        existentes: interno
+        lote_validado_antes_da_primeira_escrita: publico
+      }
+    }
+    audit {
+      evento: sema.workspace.destinos_verificados
+      ator: agente.codex
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aceitar_caminho_absoluto_como_relativo
+      aceitar_traversal_fora_da_base
+      seguir_symlink_ou_junction_em_componente_do_destino
+      validar_destino_depois_de_iniciar_escritas_do_lote
+      sobrescrever_conteudo_de_hardlink_externo
+      confiar_em_checagem_unica_antes_da_mutacao
+      declarar_eliminacao_total_toctou_com_fs_baseado_em_caminhos
+    }
+    impl {
+      ts: cli.src.workspace_write.validarDestinosEscritaWorkspace
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/workspaceWrite.ts"
+      arquivo: "pacotes/cli/src/index.part03.ts"
+      arquivo: "pacotes/cli/src/index.part04.ts"
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "pacotes/cli/src/docs.part02.ts"
+      arquivo: "testes/integracao/bootstrap-seguro.test.ts"
+      arquivo: "testes/integracao/docs-impacto-seguro.test.ts"
+      arquivo: "testes/integracao/workspace-write-toctou.test.ts"
+      simbolo: cli.src.workspace_write.validarDestinosEscritaWorkspace
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      seguro existe
+      destinos existe
+      existentes existe
+      lote_validado_antes_da_primeira_escrita == verdadeiro
+    }
+    tests {
+      caso "aprova lote local sem links" {
+        given {
+          base: "repo"
+          caminhos_relativos: "README.md, contratos/pedidos.sema"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          seguro: verdadeiro
+        }
+      }
+    }
+  }
+
+  task escrever_arquivo_workspace_seguro {
+    input {
+      base: Texto required
+      caminho_relativo: Texto required
+      conteudo: Texto required
+      sobrescrever: Booleano required
+    }
+    output {
+      status: Texto
+      caminho: Texto
+      sobrescrita_atomica: Booleano
+    }
+    rules {
+      base deve_ser preenchido
+      caminho_relativo deve_ser preenchido
+      conteudo deve_ser preenchido
+    }
+    effects {
+      persistencia arquivo_workspace criticidade = alta
+      auditoria arquivo_workspace_escrito criticidade = media
+    }
+    authz {
+      escopo: sema.workspace.escrever
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: proibida
+      input {
+        base: interno
+        caminho_relativo: interno
+        conteudo: interno
+        sobrescrever: publico
+      }
+      output {
+        status: publico
+        caminho: interno
+        sobrescrita_atomica: publico
+      }
+    }
+    audit {
+      evento: sema.workspace.arquivo_escrito
+      ator: agente.codex
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      escrever_fora_da_base
+      seguir_symlink_ou_junction
+      sobrescrever_quando_sobrescrever_for_falso
+      modificar_alvo_externo_por_hardlink
+      confirmar_sucesso_apos_troca_de_identidade_no_commit
+      remover_caminho_temporario_sem_provar_mesmo_inode
+    }
+    impl {
+      ts: cli.src.workspace_write.escreverArquivoWorkspaceSeguro
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/workspaceWrite.ts"
+      arquivo: "pacotes/cli/src/index.part03.ts"
+      arquivo: "testes/integracao/bootstrap-seguro.test.ts"
+      arquivo: "testes/integracao/workspace-write-toctou.test.ts"
+      simbolo: cli.src.workspace_write.escreverArquivoWorkspaceSeguro
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      status em [criado, atualizado, preservado]
+      caminho existe
+      sobrescrita_atomica existe
+    }
+    tests {
+      caso "preserva colisao sem force" {
+        given {
+          base: "repo"
+          caminho_relativo: "README.md"
+          conteudo: "novo"
+          sobrescrever: falso
+          arquivo_existente: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          status: "preservado"
+        }
+      }
+    }
+  }
+}

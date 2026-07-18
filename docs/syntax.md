@@ -1,5 +1,5 @@
 <!-- sema:agent-entrypoint:start -->
-# Sema Syntax for AI Agents
+# Sema Syntax for Codex
 
 Use this file as a compact reference before creating or fixing `.sema` contracts.
 
@@ -74,7 +74,6 @@ Use these origins before inventing a new one:
 - `go`
 - `rust`
 - `cpp`
-- `php`
 
 Examples:
 
@@ -105,7 +104,7 @@ impl {
 
 ## JavaScript Is Supported
 
-The CLI supports JavaScript and PHP generation:
+The CLI supports JavaScript generation:
 
 ```bash
 sema compilar contratos/orders.sema --alvo javascript --saida ./generated/javascript
@@ -115,15 +114,15 @@ The project can also generate TypeScript, Python, PHP, Dart, Lua, HTML, and CSS 
 
 ## Support Files
 
-- `AGENTS.md`: required agent rules.
-- `SEMA_BOOT.md`: first read for every AI agent.
-- `SEMA_SMALL_MODEL.md`: short version for weaker agents.
-- `AGENT_CONTEXT_PACK.json`: structured agent context pack.
+- `AGENTS.md`: official Codex repository rules, loaded automatically.
+- `SEMA_BOOT.md`: first Sema read for Codex.
+- `SEMA_SMALL_MODEL.md`: compact guidance for a small context budget.
+- `AGENT_CONTEXT_PACK.json`: structured Codex context pack.
 - `SEMA_INDEX.json`: project index.
 - `docs/commands.md`: command catalog, gates, and `--saida` rule.
 - `exemplos/`: official DSL examples.
 
-If an AI agent does not know which shape to use, it must open `exemplos/calculadora.sema`, `exemplos/crud_simples.sema`, `exemplos/pagamento.sema`, or `exemplos/tratamento_erro.sema` before inventing syntax.
+If Codex does not know which shape to use, it must open `exemplos/calculadora.sema`, `exemplos/crud_simples.sema`, `exemplos/pagamento.sema`, or `exemplos/tratamento_erro.sema` before inventing syntax.
 
-Platform policy: O Sema governa contrato, escopo, drift, evidência e qualidade do projeto. Ele não pede, não autoriza e não contorna políticas da plataforma, termos de uso, permissões, segurança ou leis.
+Platform policy: Sema governs project contracts, scope, drift, evidence, and quality. It never bypasses platform policies, permissions, security controls, terms, or laws.
 <!-- sema:agent-entrypoint:end -->

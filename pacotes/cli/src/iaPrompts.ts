@@ -31,7 +31,7 @@ Regras:
 - nao invente sintaxe fora da gramatica e dos exemplos oficiais
 - antes de qualquer acao, crie, edite ou remova o contrato .sema aplicavel; isso vale para Software, Author, Workflow, Ops, Game, Legal e Research
 - se a IA for fraca, nao tente abrir tudo de uma vez
-- use \`sema resumo\` e \`briefing.min.json\` antes de subir para o pacote completo
+- use \`sema resumo <arquivo> --micro --json\` pelo stdout antes de subir para o pacote completo
 - se \`sema resumo . --micro\` estourar timeout local, repita com timeout maior ou escopo menor; nao avance com codigo
 - trate \`ir --json\` como fonte de verdade semantica
 - trate \`briefing.json\` como plano de intervencao antes de editar projeto vivo
@@ -60,7 +60,7 @@ Comandos essenciais:
 
 Antes de editar:
 1. leia README, docs de IA e um exemplo oficial parecido
-2. se a IA for fraca, rode \`sema resumo <arquivo> --micro\` e leia \`briefing.min.json\`
+2. se a IA for fraca, rode \`sema resumo <arquivo> --micro --json\` e use o stdout compacto
    - se timeout local estourar, aumente o timeout e tente de novo; timeout nao significa Sema inativo
 3. se a IA aguentar mais, rode \`sema drift\` para medir impls, vinculos, rotas, score e lacunas
 4. se a tarefa for pesada, rode \`sema contexto-ia\` e leia \`briefing.json\`
@@ -109,7 +109,7 @@ Fontes de verdade, em ordem:
 6. README do projeto
 7. gramatica e documentacao de sintaxe da Sema
 8. exemplos oficiais, com prioridade para o vertical de pagamento
-9. \`sema resumo\` e \`briefing.min.json\` quando a IA for fraca
+9. \`sema resumo <arquivo> --micro --json\` e o stdout compacto quando a IA for fraca
 10. AST, IR e diagnosticos exportados pela CLI em JSON quando a capacidade aguentar
 
 Regras de operacao:

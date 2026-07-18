@@ -1,8 +1,12 @@
-// SEMA-GOVERNED: sema.produto.orcamento_semantico
-// Descricao: escrita governada de arquivos da CLI; consulte contratos/sema/orcamento_semantico.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.orcamento_semantico, sema.produto.escrita_segura_workspace
+// Descrição: escrita governada e contida no workspace; consulte os contratos aplicáveis antes de editar.
 
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
+import {
+  escreverArquivoWorkspaceSeguro,
+  validarDestinosEscritaWorkspace,
+} from "./workspaceWrite.js";
 import {
   avaliarOrcamentoArquivo,
   conteudoTemCabecalhoSemaGoverned,
@@ -70,6 +74,10 @@ export async function escreverArquivos(
   };
 
   await mkdir(base, { recursive: true });
+  await validarDestinosEscritaWorkspace(
+    base,
+    arquivos.map((arquivo) => arquivo.caminhoRelativo),
+  );
   for (const arquivo of arquivos) {
     const deveInserirCabecalho = opcoes.inserirCabecalhoGovernado
       && tipoArquivoOrcamento(arquivo.caminhoRelativo) === "codigo"
@@ -97,9 +105,9 @@ export async function escreverArquivos(
     if (diagnosticoBloqueante) {
       throw new Error(diagnosticoBloqueante.mensagem);
     }
-    const destino = path.join(base, arquivo.caminhoRelativo);
-    await mkdir(path.dirname(destino), { recursive: true });
-    await writeFile(destino, conteudo, "utf8");
+    await escreverArquivoWorkspaceSeguro(base, arquivo.caminhoRelativo, conteudo, {
+      sobrescrever: true,
+    });
     resultado.arquivosEscritos += 1;
   }
 

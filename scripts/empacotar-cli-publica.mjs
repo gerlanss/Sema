@@ -1,7 +1,7 @@
 // SEMA-GOVERNED: sema.produto.fronteira_repositorios
 // Consulte contratos/sema/fronteira_repositorios.sema antes de editar.
 // Descricao: empacota a CLI local publica sem artefatos privados do workspace.
-import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -51,7 +51,31 @@ const PACOTES_RUNTIME = [
 const DIST_NAO_PUBLICAVEL = [
   /(?:^|[/\\])[^/\\]*\.(?:map|pem|key|p12|pfx)$/i,
   /(?:^|[/\\])\.env(?:\.|$)/i,
+  /(?:^|[/\\])billing(?:[/\\]|\.|$)/i,
 ];
+
+const MARCADORES_PORTEIRO_LEGADO = [
+  { regex: /\bpreflight\b/i, motivo: "terminologia preflight legada" },
+  { regex: /\bsema\s+preflight\b/i, motivo: "comando de autorizacao legado" },
+  { regex: /\b(?:comando|executar)PreflightCli\b/, motivo: "handler de autorizacao legado" },
+  { regex: /\buse_cli_local\b/, motivo: "decisao de autorizacao legada" },
+  { regex: /\borigemCobranca\b/, motivo: "marcador de billing legado" },
+  { regex: /\boperationCode\b/, motivo: "codigo de operacao do porteiro legado" },
+];
+
+const MARCADOR_NOME_TOOL_MCP_LEGADO = /\bsema_(?:docs_impacto|finalizar_mudanca|inspecionar|drift|impacto|exemplos)\b/i;
+const MARCADOR_MOJIBAKE_VISIVEL = /\uFFFD|\u00C3[\u0080-\u00BF]|\u00C2[\u0080-\u00BF]|Ã¢Å¡|Ã¯Â¸/u;
+const ARQUIVO_RUNTIME_VISIVEL = /^dist\/(?:agentContext|agentContextPack|agentContextTipos|agentEntryPoints|doctorCommand|docs\.part01|exemplosOficiais|fsGovernado|index\.part0[1-8]|initCommand|initTemplatesBase|workspaceWrite)\.(?:js|d\.ts|json)$/i;
+
+function removerDetectorMigracaoLegada(arquivo, conteudo) {
+  if (!/^dist\/agentEntryPoints\.js$/i.test(arquivo)) {
+    return conteudo;
+  }
+  return conteudo.replace(
+    /function contemVestigioSemaLegado\([^)]*\) \{[\s\S]*?\n\}/u,
+    "",
+  );
+}
 
 function executar(comando, argumentos, cwd) {
   if (process.platform === "win32" && (comando === "npm" || comando === "npx")) {
@@ -77,6 +101,7 @@ async function prepararStageBase() {
 
   await cp(path.join(origemCli, "dist"), path.join(stageDir, "dist"), { recursive: true });
   await removerDistNaoPublicavel();
+  await validarDistLocalDireto();
   await cp(path.join(raiz, "logo.png"), path.join(stageDir, "logo.png"));
   await cp(path.join(raiz, "LICENSE"), path.join(stageDir, "LICENSE"));
 
@@ -97,13 +122,42 @@ async function removerArquivosNaoPublicaveis(dir) {
     const caminho = path.join(dir, arquivo);
     const relativo = path.relative(stageDir, caminho).replaceAll(path.sep, "/");
     if (DIST_NAO_PUBLICAVEL.some((padrao) => padrao.test(relativo))) {
-      await rm(caminho, { force: true });
+      await rm(caminho, { recursive: true, force: true });
       return;
     }
     if ((await stat(caminho)).isDirectory()) {
       await removerArquivosNaoPublicaveis(caminho);
     }
   }));
+}
+
+async function validarDistLocalDireto(dir = path.join(stageDir, "dist")) {
+  const entradas = await readdir(dir, { withFileTypes: true });
+  for (const entrada of entradas) {
+    const caminho = path.join(dir, entrada.name);
+    const relativo = path.relative(stageDir, caminho).replaceAll(path.sep, "/");
+    if (/(?:^|\/)billing(?:\/|\.|$)/i.test(relativo)) {
+      throw new Error(`Public package stage still contains removed billing artifact: ${relativo}`);
+    }
+    if (entrada.isDirectory()) {
+      await validarDistLocalDireto(caminho);
+      continue;
+    }
+    if (!/\.(?:js|d\.ts|json)$/i.test(entrada.name)) {
+      continue;
+    }
+    const conteudo = removerDetectorMigracaoLegada(relativo, await readFile(caminho, "utf8"));
+    const marcador = MARCADORES_PORTEIRO_LEGADO.find(({ regex }) => regex.test(conteudo));
+    if (marcador) {
+      throw new Error(`Public package stage contains ${marcador.motivo} in ${relativo}.`);
+    }
+    if (MARCADOR_NOME_TOOL_MCP_LEGADO.test(conteudo)) {
+      throw new Error(`Public package stage contains a legacy Sema MCP tool name in ${relativo}.`);
+    }
+    if (ARQUIVO_RUNTIME_VISIVEL.test(relativo) && MARCADOR_MOJIBAKE_VISIVEL.test(conteudo)) {
+      throw new Error(`Public package stage contains visible mojibake in ${relativo}.`);
+    }
+  }
 }
 
 async function prepararPacotesRuntime() {
@@ -133,13 +187,22 @@ async function prepararPacotesRuntime() {
 
 async function prepararManifestPublico() {
   const manifestCli = JSON.parse(await readFile(path.join(origemCli, "package.json"), "utf8"));
+  const versoesRuntime = new Map(await Promise.all(PACOTES_RUNTIME.map(async (pacote) => {
+    const manifest = JSON.parse(await readFile(path.join(raiz, "pacotes", pacote, "package.json"), "utf8"));
+    return [manifest.name, manifest.version];
+  })));
   const dependenciasOriginais = manifestCli.dependencies ?? {};
   const dependencias = Object.fromEntries(
     Object.entries(dependenciasOriginais).map(([nome, versao]) => [
       nome,
-      nome.startsWith("@sema/") ? manifestCli.version : versao,
+      nome.startsWith("@sema/") ? versoesRuntime.get(nome) : versao,
     ]),
   );
+  for (const [nome, versao] of Object.entries(dependencias).filter(([nome]) => nome.startsWith("@sema/"))) {
+    if (!versao) {
+      throw new Error(`Missing runtime package version for ${nome}.`);
+    }
+  }
   const dependenciasInternas = Object.keys(dependencias).filter((nome) => nome.startsWith("@sema/"));
 
   const manifestPublico = {
@@ -208,10 +271,36 @@ async function main() {
   console.log("Packing the CLI tarball...");
   executar("npm", ["pack", "--pack-destination", saidaDir], stageDir);
   console.log(`CLI package generated in ${saidaDir}`);
+
+  const manifest = JSON.parse(await readFile(path.join(stageDir, "package.json"), "utf8"));
+  const readme = await readFile(path.join(stageDir, "README.md"), "utf8");
+  const license = await readFile(path.join(stageDir, "LICENSE"), "utf8");
+  const caminhoPacote = path.join(saidaDir, `semacode-cli-${manifest.version}.tgz`);
+  await access(caminhoPacote);
+  const dependenciasFileRemovidas = Object.values(manifest.dependencies ?? {})
+    .every((versao) => typeof versao !== "string" || !versao.startsWith("file:"));
+  const resultado = {
+    pacote_gerado: true,
+    dependencias_file_removidas: dependenciasFileRemovidas,
+    metadados_suporte_email: manifest.bugs?.email === "suporte@otimitare.online" && readme.includes("suporte@otimitare.online"),
+    licenca_nao_comercial_incluida: license.includes("commercial replica") && license.includes("resale permission"),
+    produto_codex_native: String(manifest.description ?? "").includes("Codex-native") && readme.includes("AGENTS.md"),
+    cli_sem_autorizacao_local: true,
+  };
+  if (Object.values(resultado).some((valor) => valor !== true)) {
+    throw new Error(`Public package evidence failed: ${JSON.stringify(resultado)}`);
+  }
+  return resultado;
 }
 
-main().catch((erro) => {
+main().then((resultado) => {
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify(resultado, null, 2));
+  }
+}).catch((erro) => {
   console.error("Failed to package the public local-only Sema CLI.");
   console.error(erro instanceof Error ? erro.stack ?? erro.message : erro);
   process.exit(1);
 });
+
+export { main };

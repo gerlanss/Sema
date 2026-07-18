@@ -51,7 +51,6 @@ import {
   LIMITE_BLOQUEIO_LINHAS_ORCAMENTO_SEMANTICO,
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
-import * as billing from "./billing/index.js";
 import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -69,7 +68,7 @@ import {
   renderizarDocumentoAgentesPorCapacidade,
   renderizarSemaBoot,
   renderizarSemaSmallModel,
-  sincronizarEntryPointsAgentes,
+  sincronizarEntrypointCodex,
 } from './agentEntryPoints.js';
 import {
   escreverArquivos,
@@ -91,7 +90,7 @@ import {
   TSX_EXECUTOR_CLI,
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
-import { avaliarPreflightVerificacao, comandoDoctor, imprimirPreflightVerificacao } from './doctorCommand.js';
+import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -237,13 +236,13 @@ export async function comandoStarterIa(): Promise<number> {
   return 0;
 }
 
-export async function comandoSyncAiEntrypoints(emJson: boolean): Promise<number> {
+export async function comandoSyncCodex(emJson: boolean): Promise<number> {
   const resumoProjeto = await gerarResumoProjetoIa(process.cwd(), undefined, true);
   const exemplos = await materializarExemplosOficiais(resumoProjeto.baseProjeto, true);
   if (!exemplos.sucesso) {
     if (emJson) {
       console.log(JSON.stringify({
-        comando: "sync-ai-entrypoints",
+        comando: "sync-codex",
         sucesso: false,
         baseProjeto: resumoProjeto.baseProjeto,
         erro: exemplos.erro,
@@ -257,39 +256,49 @@ export async function comandoSyncAiEntrypoints(emJson: boolean): Promise<number>
   }
 
   const indexJson = JSON.parse(await readFile(path.join(resumoProjeto.pastaSaida, "SEMA_INDEX.json"), "utf8"));
-  const entrypointsClientes = await sincronizarEntryPointsAgentes(
+  const resultadosCodex = await sincronizarEntrypointCodex(
     resumoProjeto.baseProjeto,
     indexJson.agentContextPack as AgentContextPack,
   );
   const artefatos = [...new Set([
     ...ARQUIVOS_CANONICOS_IA_RAIZ,
     ...resumoProjeto.artefatos,
-    ...entrypointsClientes.arquivos.map((item) => item.caminho),
+    ...resultadosCodex.arquivos.map((item) => item.caminho),
     "exemplos",
   ])];
+  const sucesso = resultadosCodex.entrypointsLegadosLimpos;
 
   if (emJson) {
     console.log(JSON.stringify({
-      comando: "sync-ai-entrypoints",
-      sucesso: true,
+      comando: "sync-codex",
+      sucesso,
+      erro: sucesso ? undefined : "Entrypoints legados com conteudo Sema incompleto ou sem bloco gerenciado exigem revisao manual.",
       baseProjeto: resumoProjeto.baseProjeto,
       pastaSaida: resumoProjeto.pastaSaida,
       artefatos,
       entradaCanonica: indexJson.entradaCanonica,
-      entrypointsClientes,
+      resultadosCodex,
       exemplos,
     }, null, 2));
-    return 0;
+    return sucesso ? 0 : 1;
   }
 
-  console.log("Entrypoints IA-first sincronizados");
+  if (!sucesso) {
+    console.error("Entrypoints legados pendentes de revisao manual:");
+    for (const caminho of resultadosCodex.entrypointsLegadosPendentes) {
+      console.error(`- ${caminho}`);
+    }
+    return 1;
+  }
+
+  console.log("Entrypoint do Codex sincronizado");
   console.log("");
   console.log(`Base do projeto: ${resumoProjeto.baseProjeto}`);
   console.log(`Ordem canônica: ${indexJson.entradaCanonica.ordemLeitura.join(" -> ")}`);
   console.log(`IA fraca: ${indexJson.entradaCanonica.porCapacidade.fraca.join(" -> ")}`);
   console.log(`IA média: ${indexJson.entradaCanonica.porCapacidade.media.join(" -> ")}`);
   console.log(`IA forte: ${indexJson.entradaCanonica.porCapacidade.forte.join(" -> ")}`);
-  console.log(`Clientes: ${entrypointsClientes.criados.length} criados, ${entrypointsClientes.atualizados.length} atualizados, ${entrypointsClientes.preservados.length} preservados`);
+  console.log(`Codex: ${resultadosCodex.criados.length} criados, ${resultadosCodex.atualizados.length} atualizados, ${resultadosCodex.preservados.length} preservados`);
   console.log(`Exemplos oficiais: ${exemplos.criados.length} criados, ${exemplos.preservados.length} preservados em ${exemplos.destino}`);
   return 0;
 }
@@ -312,16 +321,16 @@ export async function comandoAjudaIa(): Promise<number> {
   ]));
   console.log("");
   console.log(renderizarSecaoAscii("Capacidade de IA", [
-    "fraca: `sema resumo --micro`, `briefing.min.json`, `prompt-curto.txt`",
-    "média: `sema resumo --curto`, `drift.json`, `briefing.min.json`",
-    "forte: `sema contexto-ia`, `briefing.json`, `ir.json`, `ast.json`",
+    "fraca: `sema resumo <arquivo> --micro --json` usa stdout compacto",
+    "média: `sema resumo <arquivo> --curto --json` + `sema drift <arquivo> --json`",
+    "forte: `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` materializa o pacote completo",
   ]));
   console.log("");
   console.log(renderizarSecaoAscii("Fluxo recomendado", [
     "Use `sema starter-ia` para um texto curto de onboarding.",
-    "Use `sema sync-ai-entrypoints` para regenerar `AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.*` e `SEMA_INDEX.json` na raiz.",
+    "Use `sema sync-codex` para regenerar o contexto governado do Codex na raiz.",
     "Use `sema instalar-exemplos` para materializar `exemplos/` oficiais sem sobrescrever arquivos locais.",
-    "Use `sema resumo <arquivo> --micro --para onboarding` para IA fraca.",
+    "Use `sema resumo <arquivo> --micro --para onboarding --json` para IA fraca; o resumo vem no stdout.",
     "Se `sema resumo` ou outro gate estourar timeout local, aumente o timeout e tente de novo; timeout do agente nao e falha do Sema.",
     "Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.",
     "Use `sema prompt-ia`, `sema prompt-ia-ui`, `sema prompt-ia-react` e `sema prompt-ia-sema-primeiro` conforme a tarefa.",
@@ -330,7 +339,7 @@ export async function comandoAjudaIa(): Promise<number> {
     "Use `sema drift` para medir impls, vinculos, rotas, score e lacunas.",
     "Use `sema docs-impacto --intencao <acao>` para ler ou criar docs obrigatorias antes de agir.",
     "Use `sema finalizar-mudanca --intencao <acao>` para bloquear conclusao sem leitura documental comprovada.",
-    "Use `sema contexto-ia <arquivo.sema>` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json`.",
+    "Use `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json`.",
     "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
   ]));
   console.log("");
@@ -343,7 +352,7 @@ export async function comandoAjudaIa(): Promise<number> {
     "Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.",
     "IA fraca comeca no menor artefato que resolve a tarefa; nao enfie `ast.json` inteiro nela de bobeira.",
     "Timeout local e so limite do agente: escale e tente de novo antes de chamar Sema de inativo.",
-    "Antes de editar software vivo, leia `briefing.min.json` ou `briefing.json` em vez de sair cavando arquivo na fe.",
+    "Antes de editar software vivo, rode os gates locais; se precisar do pacote materializado, gere-o com `sema contexto-ia ... --saida <diretorio>` antes de ler `briefing.min.json` ou `briefing.json`.",
     "Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.",
   ]));
   return 0;

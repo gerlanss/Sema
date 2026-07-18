@@ -33,7 +33,6 @@ import {
   LIMITE_BLOQUEIO_LINHAS_ORCAMENTO_SEMANTICO,
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
-import * as billing from "./billing/index.js";
 import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -51,7 +50,7 @@ import {
   renderizarDocumentoAgentesPorCapacidade,
   renderizarSemaBoot,
   renderizarSemaSmallModel,
-  sincronizarEntryPointsAgentes,
+  sincronizarEntrypointCodex,
 } from './agentEntryPoints.js';
 import { escreverArquivos, caminhoExiste } from './fsGovernado.js';
 import { localizarDiretorioExemplosOficiais, materializarExemplosOficiais } from './exemplosOficiais.js';
@@ -68,7 +67,7 @@ import {
   TSX_EXECUTOR_CLI,
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
-import { avaliarPreflightVerificacao, comandoDoctor, imprimirPreflightVerificacao } from './doctorCommand.js';
+import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -111,9 +110,8 @@ export type Comando =
   | "formatar"
   | "ajuda-ia"
   | "starter-ia"
-  | "sync-ai-entrypoints"
+  | "sync-codex"
   | "instalar-exemplos"
-  | "preflight"
   | "rule-packs"
   | "docs-impacto"
   | "finalizar-mudanca"
@@ -264,7 +262,8 @@ export function ajuda(): string {
     "",
     renderizarSecaoAscii("Fluxos rápidos", [
       "[1] Projeto novo / produção inicial",
-      "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer>",
+      "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer> [--force]",
+      "Arquivos existentes sao preservados; use --force somente para sobrescrita explicita.",
       "sema validar contratos/<modulo>.sema --json",
       "sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css> --saida <diretorio>",
       "sema verificar <arquivo-ou-pasta> --json",
@@ -303,9 +302,9 @@ export function ajuda(): string {
     ]),
     "",
     renderizarSecaoAscii("IA por capacidade", [
-      "fraca: sema resumo --micro + briefing.min.json + prompt-curto.txt",
-      "média: sema resumo --curto + drift.json + briefing.min.json",
-      "forte: sema contexto-ia + briefing.json + ir.json + ast.json",
+      "fraca: sema resumo <arquivo> --micro --json (stdout compacto)",
+      "média: sema resumo <arquivo> --curto --json + sema drift <arquivo> --json",
+      "forte: sema contexto-ia <arquivo.sema> --saida <diretorio> --json",
     ]),
     "",
     renderizarSecaoAscii("Comandos principais", [
@@ -337,9 +336,8 @@ export function ajuda(): string {
       "sema prompt-ia-sema-primeiro",
       "sema exemplos-prompt-ia",
       "sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--json]",
-      "sema sync-ai-entrypoints [--json]",
+      "sema sync-codex [--json]",
       "sema instalar-exemplos [--json]",
-      "sema preflight [comando] [--operation-code <codigo>] [--json]",
       "sema docs-impacto --intencao <acao> [--arquivo <caminho>] [--criar-ausentes] [--json]",
       "sema finalizar-mudanca --intencao <acao> [--arquivo <caminho>] [--doc-lida <caminho>] [--json]",
       "sema author briefing <arquivo.sema> [--json]",

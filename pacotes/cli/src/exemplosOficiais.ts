@@ -1,14 +1,14 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: codigo governado pelo Sema; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descricao: localiza??o e materializa??o dos exemplos oficiais sem depender de caminho local externo.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace
+// Descrição: localiza e materializa exemplos oficiais sem sobrescrever ou escapar do workspace.
 
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { caminhoEhDiretorio, caminhoExiste } from "./fsGovernado.js";
+import { caminhoEhDiretorio } from "./fsGovernado.js";
+import {
+  escreverArquivoWorkspaceSeguro,
+  validarDestinosEscritaWorkspace,
+} from "./workspaceWrite.js";
 
 const DIRETORIO_CLI_ATUAL = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,7 +18,17 @@ export interface ResultadoMaterializacaoExemplos {
   destino: string;
   criados: string[];
   preservados: string[];
+  destinosExemplosPrevalidados: boolean;
   erro?: string;
+}
+
+export interface PlanoExemplosOficiais {
+  origem: string | undefined;
+  arquivos: Array<{
+    nome: string;
+    origemArquivo: string;
+    caminhoRelativo: string;
+  }>;
 }
 
 
@@ -37,11 +47,30 @@ export async function localizarDiretorioExemplosOficiais(): Promise<string | und
   return undefined;
 }
 
+export async function planejarExemplosOficiais(): Promise<PlanoExemplosOficiais> {
+  const origem = await localizarDiretorioExemplosOficiais();
+  if (!origem) {
+    return { origem: undefined, arquivos: [] };
+  }
+  const entradas = (await readdir(origem, { withFileTypes: true }))
+    .filter((entrada) => entrada.isFile() && entrada.name.endsWith(".sema"))
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return {
+    origem,
+    arquivos: entradas.map((entrada) => ({
+      nome: entrada.name,
+      origemArquivo: path.join(origem, entrada.name),
+      caminhoRelativo: path.join("exemplos", entrada.name),
+    })),
+  };
+}
+
 export async function materializarExemplosOficiais(
   baseProjeto = process.cwd(),
   preservarExistentes = true,
 ): Promise<ResultadoMaterializacaoExemplos> {
-  const origem = await localizarDiretorioExemplosOficiais();
+  const plano = await planejarExemplosOficiais();
+  const origem = plano.origem;
   const destino = path.resolve(baseProjeto, "exemplos");
 
   if (!origem) {
@@ -51,32 +80,30 @@ export async function materializarExemplosOficiais(
       destino,
       criados: [],
       preservados: [],
+      destinosExemplosPrevalidados: false,
       erro: "Diretorio de exemplos oficiais nao foi encontrado no pacote da CLI.",
     };
   }
 
-  await mkdir(destino, { recursive: true });
-
   const criados: string[] = [];
   const preservados: string[] = [];
-  const entradas = await readdir(origem, { withFileTypes: true });
+  await validarDestinosEscritaWorkspace(
+    baseProjeto,
+    plano.arquivos.map((arquivo) => arquivo.caminhoRelativo),
+  );
 
-  for (const entrada of entradas.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))) {
-    if (!entrada.isFile() || !entrada.name.endsWith(".sema")) {
+  for (const arquivo of plano.arquivos) {
+    const resultado = await escreverArquivoWorkspaceSeguro(
+      baseProjeto,
+      arquivo.caminhoRelativo,
+      await readFile(arquivo.origemArquivo, "utf8"),
+      { sobrescrever: !preservarExistentes },
+    );
+    if (resultado.status === "preservado") {
+      preservados.push(arquivo.nome);
       continue;
     }
-
-    const origemArquivo = path.join(origem, entrada.name);
-    const destinoArquivo = path.join(destino, entrada.name);
-    const jaExiste = await caminhoExiste(destinoArquivo);
-
-    if (jaExiste && preservarExistentes) {
-      preservados.push(entrada.name);
-      continue;
-    }
-
-    await writeFile(destinoArquivo, await readFile(origemArquivo, "utf8"), "utf8");
-    criados.push(entrada.name);
+    criados.push(arquivo.nome);
   }
 
   return {
@@ -85,5 +112,6 @@ export async function materializarExemplosOficiais(
     destino,
     criados,
     preservados,
+    destinosExemplosPrevalidados: true,
   };
 }

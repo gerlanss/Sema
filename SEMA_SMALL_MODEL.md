@@ -3,11 +3,11 @@
 Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use ou tendência a ignorar instruções longas.
 
 1. Não edite nada antes de chamar Sema.
-2. Em IDE local, rode `sema --version`; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode `sema preflight resumo --json`; só continue com `use_cli_local`; não use fonte externa de workspace para substituir a CLI local.
+2. Em workspace local, rode `sema --version`; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não use espelho externo.
 3. Sema não contorna políticas da plataforma: ele governa contrato, escopo, drift, evidência e qualidade.
 4. Se aparecer alerta de política: pare, explique de forma neutra e não tente burlar filtro.
 5. Se não houver workspace local em disco: pare bloqueado e peça o fluxo apropriado; não invente leitura por caminho.
-6. Se for escrever `.sema`: use `sema_exemplos` antes.
+6. Se for escrever `.sema`: leia `exemplos/`; se a pasta estiver ausente, rode `sema instalar-exemplos --json` antes.
 7. Se não houver contrato ou vínculo semântico do arquivo: inspecione o arquivo, crie ou edite o contrato aplicável e vincule antes do código.
 8. Se não conseguir chamar Sema: pare e declare bloqueio.
 9. Responda no idioma do usuário. Em PT-BR, use vocabulário Sema: pontuação, desvio semântico, pré-checagem, ambiente de execução e perfil; preserve comandos, endpoints e identificadores.
@@ -56,10 +56,10 @@ Fail-closed:
 
 - Se não conseguir chamar Sema, pare e declare bloqueio em vez de editar código ou contrato.
 - Se não houver contrato aplicável ou vínculo semântico do arquivo, inspecione o arquivo, descubra ou crie o .sema aplicável e vincule antes do código.
-- Em IDE local, rode sema --version; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode sema preflight <comando> --json; só continue com use_cli_local; não use fonte externa de workspace para substituir a CLI local.
+- Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não substitua essa fonte por espelho externo ou inferência.
 - Se não houver workspace local em disco, pare bloqueado e peça o fluxo apropriado; não invente caminho nem substitua a CLI local por ferramenta paralela.
 - Se arquivos_codigo.conteudo ou conteudo inline passar de 262144 caracteres, não aumente timeout para forçar: divida por responsabilidade ou use anexo/caminho de servidor autorizado.
-- Se for criar ou corrigir .sema, use sema_exemplos antes de escrever sintaxe.
+- Se for criar ou corrigir .sema, leia `exemplos/`; se a pasta estiver ausente, rode `sema instalar-exemplos --json` antes de escrever sintaxe.
 - Se a resposta humana estiver em PT-BR, use vocabulário Sema canônico e preserve acentos mesmo que a DSL use ASCII.
 - Se um arquivo de código tiver SEMA-GOVERNED, consulte Sema e o contrato aplicável antes de editar.
 - Se codigo governado passar de 1000 linhas, planeje divisao; se passar de 2000, pare e divida antes de concluir. Documentacao Markdown nao entra nesse limite de codigo.

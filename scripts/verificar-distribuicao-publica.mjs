@@ -1,9 +1,10 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.release_profiles
 // Consulte contratos/sema/governanca_ia_release_profiles.sema antes de editar.
 // Descricao: verifica alinhamento publico de distribuicao npm da CLI Sema.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,6 +27,114 @@ function executarNpm(args) {
     }).trim();
   } catch {
     return "";
+  }
+}
+
+function executarGh(args) {
+  try {
+    return execFileSync("gh", args, {
+      cwd: raiz,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function executarGit(args) {
+  try {
+    return execFileSync("git", args, {
+      cwd: raiz,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function executarCodexIsolado(args, codexHome) {
+  const resultado = spawnSync("codex", args, {
+    cwd: raiz,
+    env: {
+      ...process.env,
+      CODEX_HOME: codexHome,
+    },
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+    shell: true,
+  });
+  return {
+    ok: !resultado.error && resultado.status === 0,
+    saida: `${resultado.stdout ?? ""}${resultado.stderr ?? ""}`,
+  };
+}
+
+async function verificarPluginCodexRemoto(repositorio, versao) {
+  const temporario = await mkdtemp(path.join(os.tmpdir(), "sema-plugin-codex-remoto-"));
+  const codexHome = path.join(temporario, "codex-home");
+  await mkdir(codexHome, { recursive: true });
+
+  try {
+    const marketplace = executarCodexIsolado(["plugin", "marketplace", "add", repositorio], codexHome);
+    if (!marketplace.ok) {
+      return { consultaRealizada: false, instalado: false, skillAlinhada: false, mcpAusente: false };
+    }
+    const instalacao = executarCodexIsolado(["plugin", "add", "sema@sema"], codexHome);
+    const listagem = executarCodexIsolado(["plugin", "list"], codexHome);
+    const mcp = executarCodexIsolado(["mcp", "list"], codexHome);
+    const instalado = path.join(codexHome, "plugins", "cache", "sema", "sema", versao);
+    const manifesto = JSON.parse(await readFile(path.join(instalado, ".codex-plugin", "plugin.json"), "utf8"));
+    const skillFonte = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "SKILL.md"), "utf8");
+    const skillInstalada = await readFile(path.join(instalado, "skills", "sema", "SKILL.md"), "utf8");
+    const pluginEsperado =
+      instalacao.ok &&
+      listagem.ok &&
+      new RegExp(`sema@sema\\s+installed, enabled\\s+${versao.replaceAll(".", "\\.")}`, "u").test(listagem.saida) &&
+      manifesto.name === "sema" &&
+      manifesto.version === versao &&
+      !manifesto.apps &&
+      !manifesto.mcpServers;
+    return {
+      consultaRealizada: true,
+      instalado: pluginEsperado,
+      skillAlinhada: skillFonte === skillInstalada,
+      mcpAusente: mcp.ok && !/^sema\s+/imu.test(mcp.saida),
+    };
+  } catch {
+    return { consultaRealizada: true, instalado: false, skillAlinhada: false, mcpAusente: false };
+  } finally {
+    await rm(temporario, { recursive: true, force: true });
+  }
+}
+
+function consultarEstadoGitHub(repositorio) {
+  const repoRaw = executarGh(["repo", "view", repositorio, "--json", "visibility"]);
+  const releasesRaw = executarGh(["api", `repos/${repositorio}/releases`, "--paginate", "--slurp"]);
+  if (!repoRaw || !releasesRaw) {
+    return {
+      consultaRealizada: false,
+      repositorioPublico: false,
+      releases: [],
+    };
+  }
+
+  try {
+    const repo = JSON.parse(repoRaw);
+    const paginas = JSON.parse(releasesRaw);
+    const releases = Array.isArray(paginas) ? paginas.flat() : [];
+    return {
+      consultaRealizada: true,
+      repositorioPublico: repo.visibility === "PUBLIC",
+      releases,
+    };
+  } catch {
+    return {
+      consultaRealizada: false,
+      repositorioPublico: false,
+      releases: [],
+    };
   }
 }
 
@@ -52,10 +161,29 @@ async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repo
   const npmVersion = executarNpm(["view", "@semacode/cli", "version"]);
   const npmAlinhado = npmVersion === versao;
   const ferramentasLocaisAlinhadas = executarNpm(["run", "--silent", "release:verificar-versao"]).includes(versao);
-  const githubReleaseBloqueado = true;
-  const assetsReleaseBloqueados = true;
-  const repositorioPublicoAusente = repositorio !== repoGitHub;
-  const sucesso = manifestosAlinhados && npmAlinhado && ferramentasLocaisAlinhadas;
+  const github = consultarEstadoGitHub(repositorio);
+  const assetsEncontrados = github.releases.flatMap((release) => Array.isArray(release.assets) ? release.assets : []);
+  const githubReleaseAusente = github.consultaRealizada && github.releases.length === 0;
+  const assetsReleaseAusentes = github.consultaRealizada && assetsEncontrados.length === 0;
+  const repositorioPublicoConfirmado = github.consultaRealizada && github.repositorioPublico && repositorio === repoGitHub;
+  const headLocal = executarGit(["rev-parse", "HEAD"]);
+  const headRemoto = executarGh(["api", `repos/${repositorio}/commits/main`, "--jq", ".sha"]);
+  const githubHeadAlinhado = Boolean(headLocal && headRemoto && headLocal === headRemoto);
+  const pluginCodex = await verificarPluginCodexRemoto(repositorio, versao);
+  const sinaisDistribuicaoEmitidos = npmAlinhado && github.consultaRealizada;
+  const sucesso =
+    manifestosAlinhados &&
+    npmAlinhado &&
+    ferramentasLocaisAlinhadas &&
+    githubReleaseAusente &&
+    assetsReleaseAusentes &&
+    repositorioPublicoConfirmado &&
+    githubHeadAlinhado &&
+    pluginCodex.consultaRealizada &&
+    pluginCodex.instalado &&
+    pluginCodex.skillAlinhada &&
+    pluginCodex.mcpAusente &&
+    sinaisDistribuicaoEmitidos;
   const resultado = {
     comando: "verificar-distribuicao-publica",
     sucesso,
@@ -64,11 +192,19 @@ async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repo
     manifestos_alinhados: manifestosAlinhados,
     npm_alinhado: npmAlinhado,
     npm_version: npmVersion || null,
-    github_release_bloqueado: githubReleaseBloqueado,
-    assets_release_bloqueados: assetsReleaseBloqueados,
+    github_consulta_realizada: github.consultaRealizada,
+    github_releases_encontradas: github.releases.length,
+    github_release_ausente: githubReleaseAusente,
+    assets_release_encontrados: assetsEncontrados.length,
+    assets_release_ausentes: assetsReleaseAusentes,
     ferramentas_locais_alinhadas: ferramentasLocaisAlinhadas,
-    sinais_distribuicao_emitidos: npmAlinhado,
-    repositorio_publico_ausente: repositorioPublicoAusente,
+    sinais_distribuicao_emitidos: sinaisDistribuicaoEmitidos,
+    repositorio_publico_confirmado: repositorioPublicoConfirmado,
+    github_head_alinhado: githubHeadAlinhado,
+    plugin_codex_remoto_consultado: pluginCodex.consultaRealizada,
+    plugin_codex_remoto_instalado: pluginCodex.instalado,
+    skill_codex_remota_alinhada: pluginCodex.skillAlinhada,
+    plugin_codex_remoto_sem_mcp: pluginCodex.mcpAusente,
   };
 
   if (json) {

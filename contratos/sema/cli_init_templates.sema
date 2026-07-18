@@ -1,6 +1,6 @@
 module sema.produto.cli_init_templates {
   docs {
-    resumo: "Comando sema init --template para reduzir curva de aprendizado. Gera esqueletos de contrato prontos para validar, minimizando linhas iniciais e erros de sintaxe."
+    resumo: "Superficies distintas da CLI: sema init gera um contrato a partir de template e sema iniciar prepara um projeto Sema Codex-native com contratos, exemplos e AGENTS.md, sem gate de autorizacao local ou matriz de outros clientes."
     versao: "1.0.0"
     status: "MODELADA"
   }
@@ -49,6 +49,7 @@ module sema.produto.cli_init_templates {
     input {
       template_nome: Texto required
       base_projeto: Texto required
+      sobrescrever_existentes: Booleano optional
     }
     output {
       contrato_inicial: Booleano
@@ -57,7 +58,12 @@ module sema.produto.cli_init_templates {
       docs_comandos: Booleano
       docs_sintaxe: Booleano
       agent_context_pack: Booleano
+      codex_entrypoint: Booleano
+      cli_local_sem_autorizacao: Booleano
+      entrypoints_legados_limpos: Booleano
       alvo_javascript_visivel: Booleano
+      arquivos_preservados: Lista
+      destinos_bootstrap_prevalidados: Booleano
     }
     rules {
       template_nome deve_ser preenchido
@@ -79,6 +85,7 @@ module sema.produto.cli_init_templates {
       input {
         template_nome: publico
         base_projeto: interno
+        sobrescrever_existentes: publico
       }
       output {
         contrato_inicial: publico
@@ -87,12 +94,17 @@ module sema.produto.cli_init_templates {
         docs_comandos: publico
         docs_sintaxe: publico
         agent_context_pack: publico
+        codex_entrypoint: publico
+        cli_local_sem_autorizacao: publico
+        entrypoints_legados_limpos: publico
         alvo_javascript_visivel: publico
+        arquivos_preservados: publico
+        destinos_bootstrap_prevalidados: publico
       }
     }
     audit {
       evento: sema.init.projeto_iniciado
-      ator: auth.agente
+      ator: agente.codex
       correlacao: request_id
       retencao: "30d"
       motivo: obrigatorio
@@ -103,6 +115,12 @@ module sema.produto.cli_init_templates {
       iniciar_sem_docs_comandos
       iniciar_sem_docs_sintaxe
       esconder_alvo_javascript_no_template_base
+      iniciar_com_preflight_de_autorizacao_local
+      iniciar_com_entrypoint_de_cliente_nao_codex
+      retornar_sucesso_com_entrypoint_legado_pendente
+      sobrescrever_arquivo_existente_sem_force_explicito
+      escrever_bootstrap_antes_de_validar_todos_os_destinos
+      seguir_symlink_ou_junction_fora_do_workspace
     }
     impl {
       ts: cli.src.init_command.comandoIniciar
@@ -112,6 +130,7 @@ module sema.produto.cli_init_templates {
       arquivo: "pacotes/cli/src/initTemplatesBase.ts"
       arquivo: "pacotes/cli/src/agentEntryPoints.ts"
       arquivo: "pacotes/cli/src/exemplosOficiais.ts"
+      arquivo: "testes/integracao/bootstrap-seguro.test.ts"
       simbolo: cli.src.init_command.comandoIniciar
     }
     execucao {
@@ -127,7 +146,15 @@ module sema.produto.cli_init_templates {
       docs_comandos existe
       docs_sintaxe existe
       agent_context_pack existe
+      codex_entrypoint == verdadeiro
+      cli_local_sem_autorizacao == verdadeiro
+      entrypoints_legados_limpos == verdadeiro
       alvo_javascript_visivel existe
+      arquivos_preservados existe
+      destinos_bootstrap_prevalidados == verdadeiro
+    }
+    error {
+      destino_inseguro: "Destino de bootstrap atravessa symlink, junction ou a base do workspace."
     }
     tests {
       caso "inicia base com kit ia e javascript" {
@@ -143,8 +170,26 @@ module sema.produto.cli_init_templates {
           agents_md: verdadeiro
           docs_sintaxe: verdadeiro
           alvo_javascript_visivel: verdadeiro
+          codex_entrypoint: verdadeiro
+          cli_local_sem_autorizacao: verdadeiro
+          entrypoints_legados_limpos: verdadeiro
         }
       }
+
+      caso "preserva arquivos existentes sem force" {
+        given {
+          template_nome: "base"
+          base_projeto: "."
+          sobrescrever_existentes: falso
+          arquivos_existentes: "README.md, sema.config.json, contratos/pedidos.sema"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          arquivos_preservados: "README.md, sema.config.json, contratos/pedidos.sema"
+        }
+      }
+
     }
   }
 

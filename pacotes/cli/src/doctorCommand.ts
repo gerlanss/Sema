@@ -1,7 +1,7 @@
 // SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descri??o: comando doctor e preflight de depend?ncias externas por alvo de gera??o.
+// Módulo: sema.produto.cli_toolchain_local
+// Contrato: contratos/sema/cli_toolchain_local.sema
+// Descrição: comando doctor e verificação local de dependências por alvo de geração.
 
 import type { AlvoGeracao, FrameworkGeracao } from "@sema/padroes";
 import {
@@ -25,7 +25,7 @@ interface DependenciaComandoDoctor {
   itens: ItemDependenciaComando[];
 }
 
-interface PreflightVerificacao {
+interface VerificacaoDependencias {
   ok: boolean;
   dependencias: DependenciaComandoDoctor[];
   faltando: Array<{
@@ -51,8 +51,8 @@ function coletarDependenciasDoctor(): DependenciaComandoDoctor[] {
       comando: "base",
       itens: [
         criarItemDependencia("node", comandoDisponivel("node"), "runtime principal da CLI"),
-        criarItemDependencia("npm", comandoDisponivel("npm"), "instalacao, pack e publish"),
-        criarItemDependencia("python", Boolean(python), python?.rotulo ? `resolvido via ${python.rotulo}` : "python ou py"),
+        criarItemDependencia("npm", comandoDisponivel("npm"), "instalacao, pack e publish", false),
+        criarItemDependencia("python", Boolean(python), python?.rotulo ? `resolvido via ${python.rotulo}` : "python ou py", false),
         criarItemDependencia("dotnet", comandoDisponivel("dotnet"), "ecosistema ASP.NET", false),
         criarItemDependencia("go", comandoDisponivel("go"), "ecosistema Go", false),
         criarItemDependencia("cargo", comandoDisponivel("cargo"), "ecosistema Rust", false),
@@ -94,6 +94,12 @@ function coletarDependenciasDoctor(): DependenciaComandoDoctor[] {
         criarItemDependencia("lua", comandoDisponivel("lua", ["-v"]), "runner de testes Lua"),
       ],
     },
+    {
+      comando: "verificar/php",
+      itens: [
+        criarItemDependencia("php", comandoDisponivel("php", ["-v"]), "runner de testes PHP"),
+      ],
+    },
   ];
 }
 
@@ -107,11 +113,11 @@ function renderizarCaixaAscii(linhas: string[]): string {
   ].join("\n");
 }
 
-export function avaliarPreflightVerificacao(
+export function avaliarDependenciasVerificacao(
   configuracoesAlvo: Array<{ alvo: AlvoGeracao; framework: FrameworkGeracao }>,
-): PreflightVerificacao {
+): VerificacaoDependencias {
   const dependencias: DependenciaComandoDoctor[] = [];
-  const faltando: PreflightVerificacao["faltando"] = [];
+  const faltando: VerificacaoDependencias["faltando"] = [];
 
   const registrar = (comando: string, itens: ItemDependenciaComando[]) => {
     dependencias.push({ comando, itens });
@@ -128,7 +134,6 @@ export function avaliarPreflightVerificacao(
 
   registrar("base", [
     criarItemDependencia("node", comandoDisponivel("node"), "runtime principal da CLI"),
-    criarItemDependencia("npm", comandoDisponivel("npm"), "instalacao e empacotamento"),
   ]);
 
   for (const configuracao of configuracoesAlvo) {
@@ -173,6 +178,13 @@ export function avaliarPreflightVerificacao(
       registrar("verificar/lua", [
         criarItemDependencia("lua", comandoDisponivel("lua", ["-v"]), "runner de testes Lua"),
       ]);
+      continue;
+    }
+
+    if (configuracao.alvo === "php") {
+      registrar("verificar/php", [
+        criarItemDependencia("php", comandoDisponivel("php", ["-v"]), "runner de testes PHP"),
+      ]);
     }
   }
 
@@ -193,12 +205,12 @@ function imprimirDependenciasDoctor(dependencias: DependenciaComandoDoctor[]): v
   }
 }
 
-export function imprimirPreflightVerificacao(preflight: PreflightVerificacao): void {
+export function imprimirFalhaDependenciasVerificacao(verificacao: VerificacaoDependencias): void {
   console.error(renderizarCaixaAscii([
-    "Preflight de verificacao falhou",
+    "Verificacao de dependencias falhou",
     "a CLI sabe o que falta antes de gerar e testar",
   ]));
-  for (const item of preflight.faltando) {
+  for (const item of verificacao.faltando) {
     const detalhe = item.detalhe ? ` (${item.detalhe})` : "";
     console.error(`- ${item.comando}: ${item.nome} faltando${detalhe}`);
   }

@@ -51,7 +51,6 @@ import {
   LIMITE_BLOQUEIO_LINHAS_ORCAMENTO_SEMANTICO,
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
-import * as billing from "./billing/index.js";
 import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -69,7 +68,7 @@ import {
   renderizarDocumentoAgentesPorCapacidade,
   renderizarSemaBoot,
   renderizarSemaSmallModel,
-  sincronizarEntryPointsAgentes,
+  sincronizarEntrypointCodex,
 } from './agentEntryPoints.js';
 import { escreverArquivos, caminhoExiste } from './fsGovernado.js';
 import { localizarDiretorioExemplosOficiais, materializarExemplosOficiais } from './exemplosOficiais.js';
@@ -86,7 +85,7 @@ import {
   TSX_EXECUTOR_CLI,
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
-import { avaliarPreflightVerificacao, comandoDoctor, imprimirPreflightVerificacao } from './doctorCommand.js';
+import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -108,7 +107,7 @@ import {
 import { VERSAO_CLI, ajuda, obterArgumentos } from "./index.part01.js";
 import { comandoDocsImpacto, comandoFinalizarMudanca, comandoValidar, comandoValidarJson } from "./index.part04.js";
 import { comandoAst, comandoAstJson, comandoDrift, comandoImpacto, comandoImportar, comandoInspecionar, comandoIr, comandoIrJson, comandoRenomearSemantico } from "./index.part05.js";
-import { comandoAjudaIa, comandoCompilar, comandoDiagnosticos, comandoExemplosPromptIa, comandoFormatar, comandoPromptIa, comandoPromptIaReact, comandoPromptIaSemaPrimeiro, comandoPromptIaUi, comandoResumo, comandoStarterIa, comandoSyncAiEntrypoints } from "./index.part06.js";
+import { comandoAjudaIa, comandoCompilar, comandoDiagnosticos, comandoExemplosPromptIa, comandoFormatar, comandoPromptIa, comandoPromptIaReact, comandoPromptIaSemaPrimeiro, comandoPromptIaUi, comandoResumo, comandoStarterIa, comandoSyncCodex } from "./index.part06.js";
 import { comandoContextoIa, comandoPromptCurto, comandoTestar, comandoVerificar, comandoVerificarJson } from "./index.part07.js";
 
 export async function principal(): Promise<void> {
@@ -136,7 +135,11 @@ export async function principal(): Promise<void> {
 
   switch (comando) {
     case "iniciar":
-      codigoSaida = await comandoIniciar(cwd, normalizarTemplateIniciar(obterOpcao(resto, "--template")));
+      codigoSaida = await comandoIniciar(
+        cwd,
+        normalizarTemplateIniciar(obterOpcao(resto, "--template")),
+        { force: possuiFlag(resto, "--force") },
+      );
       break;
     case "author":
       codigoSaida = await comandoAuthor(posicionais, resto, possuiFlag(resto, "--json"));
@@ -264,14 +267,11 @@ export async function principal(): Promise<void> {
     case "starter-ia":
       codigoSaida = await comandoStarterIa();
       break;
-    case "sync-ai-entrypoints":
-      codigoSaida = await comandoSyncAiEntrypoints(possuiFlag(resto, "--json"));
+    case "sync-codex":
+      codigoSaida = await comandoSyncCodex(possuiFlag(resto, "--json"));
       break;
     case "instalar-exemplos":
       codigoSaida = await comandoInstalarExemplos(possuiFlag(resto, "--json"));
-      break;
-    case "preflight":
-      codigoSaida = await billing.comandoPreflightCli(resto, possuiFlag(resto, "--json"));
       break;
     case "docs-impacto":
       codigoSaida = await comandoDocsImpacto(posicionais, resto, possuiFlag(resto, "--json"));

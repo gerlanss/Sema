@@ -1,12 +1,12 @@
 <!-- sema:agent-entrypoint:start -->
-# Sema para agente
+# Sema para Codex
 
 Este workspace é governado por Sema. Antes de qualquer ação em código, contrato, documentação operacional, workflow, profile ou deploy:
 
 1. Leia `SEMA_BOOT.md`.
-2. Em IDE local, rode `sema --version`; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode `sema preflight resumo --json`; se `decisao` não for `use_cli_local`, pare.
-3. Use CLI local: `sema resumo`, `sema docs-impacto`, `sema inspecionar`, `sema drift` e `sema impacto`.
-4. Não use fonte externa de workspace para substituir a CLI local quando a CLI estiver operacional.
+2. Rode `sema --version`; se falhar, pare e peça a instalação da CLI.
+3. Use diretamente a CLI local: `sema resumo`, `sema docs-impacto`, `sema inspecionar`, `sema drift` e `sema impacto`.
+4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 5. Chame docs-impacto com a intenção declarada antes de agir.
 6. Chame inspecionar no contrato `.sema` aplicável.
 7. Antes de editar código existente, rode drift e impacto.
@@ -16,8 +16,9 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 
 É proibido substituir esse fluxo por leitura manual de `AGENTS.md`, `README.md`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 
-Capacidade padrão deste cliente: media.
-Ordem de leitura: SEMA_BOOT.md -> agent-context-pack.json -> resumo.curto.txt -> briefing.min.json -> drift.json -> resumo.md.
+Entrypoint oficial do Codex: `AGENTS.md`.
+Capacidade padrão do Codex: media.
+Ordem de leitura: SEMA_BOOT.md -> AGENT_CONTEXT_PACK.json -> SEMA_BRIEF.curto.txt -> SEMA_INDEX.json -> AGENTS.md -> README.md.
 
 Políticas da plataforma:
 - O Sema governa contrato, escopo, drift, evidência e qualidade do projeto. Ele não pede, não autoriza e não contorna políticas da plataforma, termos de uso, permissões, segurança ou leis.
@@ -27,10 +28,10 @@ Políticas da plataforma:
 Falha fechada:
 - Se não conseguir chamar Sema, pare e declare bloqueio em vez de editar código ou contrato.
 - Se não houver contrato aplicável ou vínculo semântico do arquivo, inspecione o arquivo, descubra ou crie o .sema aplicável e vincule antes do código.
-- Em IDE local, rode sema --version; se falhar, pare. A IA não acessa o painel Sema: peça ao humano para instalar a CLI pelo painel. Depois rode sema preflight <comando> --json; só continue com use_cli_local; não use fonte externa de workspace para substituir a CLI local.
+- Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não substitua essa fonte por espelho externo ou inferência.
 - Se não houver workspace local em disco, pare bloqueado e peça o fluxo apropriado; não invente caminho nem substitua a CLI local por ferramenta paralela.
 - Se arquivos_codigo.conteudo ou conteudo inline passar de 262144 caracteres, não aumente timeout para forçar: divida por responsabilidade ou use anexo/caminho de servidor autorizado.
-- Se for criar ou corrigir .sema, use sema_exemplos antes de escrever sintaxe.
+- Se for criar ou corrigir .sema, leia `exemplos/`; se a pasta estiver ausente, rode `sema instalar-exemplos --json` antes de escrever sintaxe.
 - Se a resposta humana estiver em PT-BR, use vocabulário Sema canônico e preserve acentos mesmo que a DSL use ASCII.
 - Se um arquivo de código tiver SEMA-GOVERNED, consulte Sema e o contrato aplicável antes de editar.
 - Se codigo governado passar de 1000 linhas, planeje divisao; se passar de 2000, pare e divida antes de concluir. Documentacao Markdown nao entra nesse limite de codigo.

@@ -1,6 +1,8 @@
 # Environment
 
-The public Sema CLI should work without private service credentials.
+The public Sema CLI works without private service credentials. No environment
+variable unlocks local execution: there is no login, activation, product
+authorization, license-key, billing, credit, token, or panel gate.
 
 Allowed public examples may use placeholders:
 

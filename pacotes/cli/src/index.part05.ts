@@ -50,7 +50,6 @@ import {
   LIMITE_BLOQUEIO_LINHAS_ORCAMENTO_SEMANTICO,
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
-import * as billing from "./billing/index.js";
 import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -68,7 +67,7 @@ import {
   renderizarDocumentoAgentesPorCapacidade,
   renderizarSemaBoot,
   renderizarSemaSmallModel,
-  sincronizarEntryPointsAgentes,
+  sincronizarEntrypointCodex,
 } from './agentEntryPoints.js';
 import {
   escreverArquivos,
@@ -89,7 +88,7 @@ import {
   TSX_EXECUTOR_CLI,
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
-import { avaliarPreflightVerificacao, comandoDoctor, imprimirPreflightVerificacao } from './doctorCommand.js';
+import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -284,7 +283,7 @@ export async function comandoImpacto(
 ): Promise<number> {
   const alvoSemantico = obterOpcao(args, "--alvo");
   if (!alvoSemantico) {
-    console.error("Uso: sema impacto <arquivo-ou-pasta> --alvo <token-semÃ¢ntico> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]");
+    console.error("Uso: sema impacto <arquivo-ou-pasta> --alvo <token-semântico> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]");
     return 1;
   }
   const contextoProjeto = await carregarProjeto(entrada, cwd);

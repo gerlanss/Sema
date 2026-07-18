@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sema"
+  short_description: "Required bootstrap before AGENTS.md exists"
+  default_prompt: "Use $sema to initialize Sema in this workspace and generate its AGENTS.md protocol for Codex."

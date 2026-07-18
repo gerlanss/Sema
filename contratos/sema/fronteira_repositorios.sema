@@ -1,17 +1,22 @@
 module sema.produto.fronteira_repositorios {
   docs {
-    resumo: "Contrato de fronteira publica local-only do Sema. O repositorio publico contem CLI local, pacotes de runtime local, contratos, exemplos, testes locais e documentacao em ingles. Materiais privados ou sensiveis ficam fora da distribuicao publica. A fonte e publica, mas nao pode ser replicada para venda comercial sem permissao escrita da OtimiTare."
+    resumo: "Contrato de fronteira publica Codex-native e local-only do Sema. O repositorio publico contem CLI local sem autorizacao, licenca, credito, token ou painel, alem da skill oficial de bootstrap do Codex, contratos, exemplos, testes locais e documentacao em ingles. A skill apresenta o Sema em projetos ainda nao inicializados; depois de sema iniciar, AGENTS.md e o protocolo automatico e fonte de governanca do Codex. Matrizes de outros clientes ficam fora da distribuicao. Materiais privados ou sensiveis ficam fora da distribuicao publica. A fonte e publica, mas nao pode ser replicada para venda comercial sem permissao escrita da OtimiTare."
   }
 
   vinculos {
     arquivo: "scripts/verificar-fronteira-publica.mjs"
     arquivo: "scripts/empacotar-cli-publica.mjs"
     arquivo: "scripts/testar-pacote-cli-publico.mjs"
+    arquivo: "scripts/testar-plugin-codex.mjs"
     arquivo: "README.md"
     arquivo: "LICENSE"
     arquivo: "docs/repositories.md"
     arquivo: "docs/security.md"
     arquivo: "pacotes/cli/package.json"
+    arquivo: ".agents/plugins/marketplace.json"
+    arquivo: "plugins/sema/.codex-plugin/plugin.json"
+    arquivo: "plugins/sema/skills/sema/SKILL.md"
+    arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
     simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
   }
 
@@ -34,6 +39,7 @@ module sema.produto.fronteira_repositorios {
       licenca_nao_comercial: Booleano required
     }
     output {
+      sucesso: Booleano
       resultado: ResultadoFronteiraPublica
       materiais_privados_ausentes: Booleano
       artefatos_sensiveis_ausentes: Booleano
@@ -41,11 +47,19 @@ module sema.produto.fronteira_repositorios {
       docs_publicas_em_ingles: Booleano
       suporte_email_oficial: Booleano
       revenda_comercial_bloqueada: Booleano
+      produto_codex_native: Booleano
+      cli_sem_autorizacao_local: Booleano
+      skill_bootstrap_codex_oficial: Booleano
+      skill_delega_ao_agents_md: Booleano
+      plugin_sem_mcp_auth: Booleano
+      protocolo_sem_nomes_mcp: Booleano
+      artefatos_bootstrap_existentes: Booleano
+      texto_publico_sem_mojibake: Booleano
       decisao_agente: Texto
     }
     rules {
       repositorio deve_ser preenchido
-      suporte_oficial == "suporte@otimitare.online"
+      suporte_oficial deve_ser preenchido
       licenca_nao_comercial == verdadeiro
     }
     effects {
@@ -65,6 +79,7 @@ module sema.produto.fronteira_repositorios {
         licenca_nao_comercial: publico
       }
       output {
+        sucesso: publico
         resultado: publico
         materiais_privados_ausentes: publico
         artefatos_sensiveis_ausentes: publico
@@ -72,6 +87,14 @@ module sema.produto.fronteira_repositorios {
         docs_publicas_em_ingles: publico
         suporte_email_oficial: publico
         revenda_comercial_bloqueada: publico
+        produto_codex_native: publico
+        cli_sem_autorizacao_local: publico
+        skill_bootstrap_codex_oficial: publico
+        skill_delega_ao_agents_md: publico
+        plugin_sem_mcp_auth: publico
+        protocolo_sem_nomes_mcp: publico
+        artefatos_bootstrap_existentes: publico
+        texto_publico_sem_mojibake: publico
         decisao_agente: publico
       }
     }
@@ -92,6 +115,16 @@ module sema.produto.fronteira_repositorios {
       usar_site_como_email_de_suporte
       usar_mit_com_permissao_de_revenda
       permitir_replicacao_para_venda_comercial
+      publicar_preflight_de_autorizacao_local
+      publicar_billing_licenca_credito_token_ou_painel
+      publicar_entrypoint_para_cliente_nao_codex
+      publicar_skill_codex_como_opcional
+      duplicar_governanca_do_agents_md_na_skill
+      publicar_plugin_com_mcp_app_token_ou_auth_propria
+      publicar_plugin_sem_smoke_de_instalacao_codex
+      publicar_protocolo_com_nome_de_tool_mcp
+      publicar_handshake_com_artefato_inexistente
+      publicar_texto_visivel_com_mojibake
     }
     impl {
       ts: scripts.verificar_fronteira_publica.verificarFronteiraPublica
@@ -100,11 +133,16 @@ module sema.produto.fronteira_repositorios {
       arquivo: "scripts/verificar-fronteira-publica.mjs"
       arquivo: "scripts/empacotar-cli-publica.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "scripts/testar-plugin-codex.mjs"
       arquivo: "package.json"
       arquivo: "pacotes/cli/package.json"
       arquivo: "README.md"
       arquivo: "LICENSE"
       arquivo: "docs/repositories.md"
+      arquivo: ".agents/plugins/marketplace.json"
+      arquivo: "plugins/sema/.codex-plugin/plugin.json"
+      arquivo: "plugins/sema/skills/sema/SKILL.md"
+      arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
       simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
     }
     execucao {
@@ -115,6 +153,7 @@ module sema.produto.fronteira_repositorios {
       criticidade_operacional: alta
     }
     guarantees {
+      sucesso == verdadeiro
       resultado existe
       materiais_privados_ausentes == verdadeiro
       artefatos_sensiveis_ausentes == verdadeiro
@@ -122,6 +161,14 @@ module sema.produto.fronteira_repositorios {
       docs_publicas_em_ingles == verdadeiro
       suporte_email_oficial == verdadeiro
       revenda_comercial_bloqueada == verdadeiro
+      produto_codex_native == verdadeiro
+      cli_sem_autorizacao_local == verdadeiro
+      skill_bootstrap_codex_oficial == verdadeiro
+      skill_delega_ao_agents_md == verdadeiro
+      plugin_sem_mcp_auth == verdadeiro
+      protocolo_sem_nomes_mcp == verdadeiro
+      artefatos_bootstrap_existentes == verdadeiro
+      texto_publico_sem_mojibake == verdadeiro
       decisao_agente em [continuar, parar]
     }
     tests {
@@ -139,6 +186,14 @@ module sema.produto.fronteira_repositorios {
           segredos_ausentes: verdadeiro
           suporte_email_oficial: verdadeiro
           revenda_comercial_bloqueada: verdadeiro
+          produto_codex_native: verdadeiro
+          cli_sem_autorizacao_local: verdadeiro
+          skill_bootstrap_codex_oficial: verdadeiro
+          skill_delega_ao_agents_md: verdadeiro
+          plugin_sem_mcp_auth: verdadeiro
+          protocolo_sem_nomes_mcp: verdadeiro
+          artefatos_bootstrap_existentes: verdadeiro
+          texto_publico_sem_mojibake: verdadeiro
         }
       }
     }
@@ -154,6 +209,8 @@ module sema.produto.fronteira_repositorios {
       dependencias_file_removidas: Booleano
       metadados_suporte_email: Booleano
       licenca_nao_comercial_incluida: Booleano
+      produto_codex_native: Booleano
+      cli_sem_autorizacao_local: Booleano
     }
     rules {
       versao deve_ser preenchido
@@ -179,6 +236,8 @@ module sema.produto.fronteira_repositorios {
         dependencias_file_removidas: publico
         metadados_suporte_email: publico
         licenca_nao_comercial_incluida: publico
+        produto_codex_native: publico
+        cli_sem_autorizacao_local: publico
       }
     }
     audit {
@@ -194,6 +253,8 @@ module sema.produto.fronteira_repositorios {
       incluir_artefato_sensivel
       incluir_dependencia_file_no_tarball_publico
       incluir_doc_removida
+      incluir_preflight_de_autorizacao_local
+      incluir_entrypoint_para_cliente_nao_codex
     }
     impl {
       ts: scripts.empacotar_cli_publica.main
@@ -216,6 +277,8 @@ module sema.produto.fronteira_repositorios {
       dependencias_file_removidas == verdadeiro
       metadados_suporte_email == verdadeiro
       licenca_nao_comercial_incluida == verdadeiro
+      produto_codex_native == verdadeiro
+      cli_sem_autorizacao_local == verdadeiro
     }
   }
 }

@@ -20,11 +20,12 @@ function executarGit(args) {
 }
 
 function obterDataLocal() {
-  const agora = new Date();
-  const ano = String(agora.getFullYear());
-  const mes = String(agora.getMonth() + 1).padStart(2, "0");
-  const dia = String(agora.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Manaus",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 const commitAtual = executarGit(["rev-parse", "--short", "HEAD"]);
@@ -32,8 +33,8 @@ const dataAtual = obterDataLocal();
 
 const conteudoAtual = await readFile(caminhoStatus, "utf8");
 const conteudoAtualizado = conteudoAtual
-  .replace(/- Ultima atualizacao: .*/u, `- Ultima atualizacao: ${dataAtual}`)
-  .replace(/- Ultimo commit de referencia: `.*`/u, `- Ultimo commit de referencia: \`${commitAtual}\``);
+  .replace(/- Last updated: .*/u, `- Last updated: ${dataAtual}`)
+  .replace(/- Reference commit: `.*`/u, `- Reference commit: \`${commitAtual}\``);
 
 if (conteudoAtualizado !== conteudoAtual) {
   await writeFile(caminhoStatus, conteudoAtualizado, "utf8");

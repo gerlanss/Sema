@@ -53,7 +53,6 @@ import {
   LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA,
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
-import * as billing from "./billing/index.js";
 import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -71,7 +70,7 @@ import {
   renderizarDocumentoAgentesPorCapacidade,
   renderizarSemaBoot,
   renderizarSemaSmallModel,
-  sincronizarEntryPointsAgentes,
+  sincronizarEntrypointCodex,
 } from './agentEntryPoints.js';
 import { escreverArquivos, caminhoExiste } from './fsGovernado.js';
 import { localizarDiretorioExemplosOficiais, materializarExemplosOficiais } from './exemplosOficiais.js';
@@ -88,7 +87,7 @@ import {
   TSX_EXECUTOR_CLI,
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
-import { avaliarPreflightVerificacao, comandoDoctor, imprimirPreflightVerificacao } from './doctorCommand.js';
+import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -472,7 +471,7 @@ Regras:
 - não invente sintaxe nem bloco fora da gramática oficial
 - preserve a intenção do contrato
 - use este resumo como fonte compacta inicial
-- se a tarefa pedir mais contexto, suba para \`briefing.min.json\`, \`drift.json\` e depois \`ir.json\`
+- se a tarefa pedir mais contexto, rode \`sema contexto-ia <arquivo.sema> --saida <diretorio> --json\` e então abra \`briefing.min.json\`, \`drift.json\` e \`ir.json\` nessa saída
 - não saia editando software vivo sem olhar risco, lacuna e checks sugeridos
 - se abrir código com \`SEMA-GOVERNED\`, volte ao contrato e chame Sema antes de editar
 - não crie nem conclua código governado acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas; acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO}, planeje divisão; documentação Markdown não entra nesse limite de código

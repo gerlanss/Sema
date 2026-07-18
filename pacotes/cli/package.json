@@ -1,17 +1,25 @@
 {
   "name": "@semacode/cli",
-  "version": "1.5.55",
+  "version": "2.0.0",
   "type": "module",
-  "description": "Local semantic governance CLI for AI agents: contracts, drift, impact, documentation gates, and code generation.",
+  "description": "Codex-native local semantic governance CLI for contracts, drift, impact, documentation gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gerlanss/Sema.git"
+  },
   "homepage": "https://otimitare.online",
   "bugs": {
-    "url": "https://otimitare.online",
+    "url": "https://github.com/gerlanss/Sema/issues",
     "email": "suporte@otimitare.online"
   },
   "keywords": [
     "sema",
     "ai",
+    "codex",
+    "ai-agents",
+    "semantic-governance",
+    "local-first",
     "contracts",
     "governance",
     "backend",
