@@ -20,6 +20,7 @@ module sema.produto.governanca_ia.release_profiles {
       plugin_codex_remoto_consultado: Booleano
       plugin_codex_remoto_instalado: Booleano
       skill_codex_remota_alinhada: Booleano
+      plugin_codex_logo_oficial_alinhada: Booleano
       plugin_codex_remoto_sem_mcp: Booleano
     }
     rules {
@@ -57,6 +58,7 @@ module sema.produto.governanca_ia.release_profiles {
         plugin_codex_remoto_consultado: publico
         plugin_codex_remoto_instalado: publico
         skill_codex_remota_alinhada: publico
+        plugin_codex_logo_oficial_alinhada: publico
         plugin_codex_remoto_sem_mcp: publico
       }
     }
@@ -73,6 +75,7 @@ module sema.produto.governanca_ia.release_profiles {
       tratar_repositorio_publico_oficial_como_ausente
       aprovar_plugin_codex_sem_instalacao_remota_isolada
       aprovar_skill_remota_divergente_da_fonte_versionada
+      aprovar_logo_remota_divergente_da_marca_oficial
       registrar_mcp_sema_durante_instalacao_do_plugin
     }
     impl {
@@ -101,6 +104,7 @@ module sema.produto.governanca_ia.release_profiles {
       plugin_codex_remoto_consultado == verdadeiro
       plugin_codex_remoto_instalado == verdadeiro
       skill_codex_remota_alinhada == verdadeiro
+      plugin_codex_logo_oficial_alinhada == verdadeiro
       plugin_codex_remoto_sem_mcp == verdadeiro
     }
     error {
@@ -127,6 +131,7 @@ module sema.produto.governanca_ia.release_profiles {
           plugin_codex_remoto_consultado: verdadeiro
           plugin_codex_remoto_instalado: verdadeiro
           skill_codex_remota_alinhada: verdadeiro
+          plugin_codex_logo_oficial_alinhada: verdadeiro
           plugin_codex_remoto_sem_mcp: verdadeiro
         }
       }

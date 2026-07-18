@@ -83,7 +83,7 @@ async function verificarPluginCodexRemoto(repositorio, versao) {
   try {
     const marketplace = executarCodexIsolado(["plugin", "marketplace", "add", repositorio], codexHome);
     if (!marketplace.ok) {
-      return { consultaRealizada: false, instalado: false, skillAlinhada: false, mcpAusente: false };
+      return { consultaRealizada: false, instalado: false, skillAlinhada: false, logoAlinhada: false, mcpAusente: false };
     }
     const instalacao = executarCodexIsolado(["plugin", "add", "sema@sema"], codexHome);
     const listagem = executarCodexIsolado(["plugin", "list"], codexHome);
@@ -92,6 +92,8 @@ async function verificarPluginCodexRemoto(repositorio, versao) {
     const manifesto = JSON.parse(await readFile(path.join(instalado, ".codex-plugin", "plugin.json"), "utf8"));
     const skillFonte = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "SKILL.md"), "utf8");
     const skillInstalada = await readFile(path.join(instalado, "skills", "sema", "SKILL.md"), "utf8");
+    const logoFonte = await readFile(path.join(raiz, "logo.png"));
+    const logoInstalada = await readFile(path.join(instalado, "assets", "sema.png"));
     const pluginEsperado =
       instalacao.ok &&
       listagem.ok &&
@@ -104,10 +106,14 @@ async function verificarPluginCodexRemoto(repositorio, versao) {
       consultaRealizada: true,
       instalado: pluginEsperado,
       skillAlinhada: normalizarQuebrasLinha(skillFonte) === normalizarQuebrasLinha(skillInstalada),
+      logoAlinhada:
+        manifesto.interface?.composerIcon === "./assets/sema.png" &&
+        manifesto.interface?.logo === "./assets/sema.png" &&
+        logoFonte.equals(logoInstalada),
       mcpAusente: mcp.ok && !/^sema\s+/imu.test(mcp.saida),
     };
   } catch {
-    return { consultaRealizada: true, instalado: false, skillAlinhada: false, mcpAusente: false };
+    return { consultaRealizada: true, instalado: false, skillAlinhada: false, logoAlinhada: false, mcpAusente: false };
   } finally {
     await rm(temporario, { recursive: true, force: true });
   }
@@ -186,6 +192,7 @@ async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repo
     pluginCodex.consultaRealizada &&
     pluginCodex.instalado &&
     pluginCodex.skillAlinhada &&
+    pluginCodex.logoAlinhada &&
     pluginCodex.mcpAusente &&
     sinaisDistribuicaoEmitidos;
   const resultado = {
@@ -208,6 +215,7 @@ async function verificarDistribuicaoPublica({ versaoEsperada, repositorio = repo
     plugin_codex_remoto_consultado: pluginCodex.consultaRealizada,
     plugin_codex_remoto_instalado: pluginCodex.instalado,
     skill_codex_remota_alinhada: pluginCodex.skillAlinhada,
+    plugin_codex_logo_oficial_alinhada: pluginCodex.logoAlinhada,
     plugin_codex_remoto_sem_mcp: pluginCodex.mcpAusente,
   };
 
