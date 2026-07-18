@@ -110,9 +110,9 @@ module sema.produto.governanca_ia.release_profiles {
       plugin_codex_remoto_invalido: "O marketplace remoto nao instalou a skill oficial alinhada ou registrou MCP inesperado."
     }
     tests {
-      caso "instalador npm 2.0.0 alinhado sem GitHub Release" {
+      caso "instalador npm 2.0.1 alinhado sem GitHub Release" {
         given {
-          versao_esperada: "2.0.0"
+          versao_esperada: "2.0.1"
           repositorio: "gerlanss/Sema"
         }
 

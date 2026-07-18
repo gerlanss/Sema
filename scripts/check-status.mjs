@@ -61,8 +61,8 @@ if (commitExiste.codigo !== 0) {
   falhar(`o commit de referencia ${commitReferencia} nao existe neste repositorio.`);
 }
 
-if (!conteudo.includes("Version: `2.0.0`") || !conteudo.includes("Package: `@semacode/cli`")) {
-  falhar("versao ou pacote publico 2.0.0 ausente.");
+if (!conteudo.includes("Version: `2.0.1`") || !conteudo.includes("Package: `@semacode/cli`")) {
+  falhar("versao ou pacote publico 2.0.1 ausente.");
 }
 if (!conteudo.includes("official skill bootstraps") || !conteudo.includes("generated `AGENTS.md` becomes the automatic workspace protocol")) {
   falhar("fronteira Skill -> AGENTS.md -> CLI nao esta explicita.");

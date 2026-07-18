@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Sema">
-  <rect width="128" height="128" rx="24" fill="#111827"/>
-  <path d="M34 38h60v12H48v12h34c12 0 20 7 20 18s-8 20-22 20H34V88h45c6 0 10-3 10-8s-4-7-10-7H54c-13 0-21-7-21-18s8-17 21-17Z" fill="#f9fafb"/>
-  <circle cx="33" cy="33" r="7" fill="#38bdf8"/>
-  <circle cx="95" cy="95" r="7" fill="#22c55e"/>
-</svg>

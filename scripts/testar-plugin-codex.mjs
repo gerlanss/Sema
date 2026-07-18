@@ -29,6 +29,9 @@ function executarCodex(argumentos, codexHome) {
 }
 
 async function main() {
+  const pacote = JSON.parse(await readFile(path.join(raiz, "package.json"), "utf8"));
+  const versao = pacote.version;
+  const versaoRegex = versao.replaceAll(".", "\\.");
   const temporario = await mkdtemp(path.join(os.tmpdir(), "sema-plugin-codex-"));
   const codexHome = path.join(temporario, "codex-home");
   await mkdir(codexHome, { recursive: true });
@@ -37,24 +40,33 @@ async function main() {
     executarCodex(["plugin", "marketplace", "add", raiz], codexHome);
     executarCodex(["plugin", "add", "sema@sema"], codexHome);
     const listagem = executarCodex(["plugin", "list"], codexHome);
-    if (!/sema@sema\s+installed, enabled\s+2\.0\.0/u.test(listagem)) {
-      throw new Error("The isolated Codex installation did not enable sema@sema 2.0.0.");
+    if (!new RegExp(`sema@sema\\s+installed, enabled\\s+${versaoRegex}`, "u").test(listagem)) {
+      throw new Error(`The isolated Codex installation did not enable sema@sema ${versao}.`);
     }
 
     const fonte = path.join(raiz, "plugins", "sema");
-    const instalado = path.join(codexHome, "plugins", "cache", "sema", "sema", "2.0.0");
+    const instalado = path.join(codexHome, "plugins", "cache", "sema", "sema", versao);
     await access(path.join(instalado, ".codex-plugin", "plugin.json"));
     await access(path.join(instalado, "skills", "sema", "SKILL.md"));
 
     const skillFonte = await readFile(path.join(fonte, "skills", "sema", "SKILL.md"), "utf8");
     const skillInstalada = await readFile(path.join(instalado, "skills", "sema", "SKILL.md"), "utf8");
-    if (skillFonte !== skillInstalada) {
+    if (skillFonte.replaceAll("\r\n", "\n") !== skillInstalada.replaceAll("\r\n", "\n")) {
       throw new Error("The installed Sema skill differs from the versioned source.");
     }
 
     const manifesto = JSON.parse(await readFile(path.join(instalado, ".codex-plugin", "plugin.json"), "utf8"));
-    if (manifesto.name !== "sema" || manifesto.version !== "2.0.0" || manifesto.apps || manifesto.mcpServers) {
-      throw new Error("The installed Sema plugin manifest is not the expected skill-only 2.0.0 bootstrap.");
+    if (manifesto.name !== "sema" || manifesto.version !== versao || manifesto.apps || manifesto.mcpServers) {
+      throw new Error(`The installed Sema plugin manifest is not the expected skill-only ${versao} bootstrap.`);
+    }
+    if (manifesto.interface?.composerIcon !== "./assets/sema.png" || manifesto.interface?.logo !== "./assets/sema.png") {
+      throw new Error("The installed Sema plugin manifest does not use the official PNG logo.");
+    }
+
+    const logoFonte = await readFile(path.join(raiz, "logo.png"));
+    const logoInstalada = await readFile(path.join(instalado, "assets", "sema.png"));
+    if (!logoFonte.equals(logoInstalada)) {
+      throw new Error("The installed Sema plugin logo differs from the official repository logo.");
     }
 
     const mcp = executarCodex(["mcp", "list"], codexHome);
@@ -68,6 +80,7 @@ async function main() {
       plugin: "sema@sema",
       versao: manifesto.version,
       skill_bootstrap_instalada: true,
+      logo_oficial_instalada: true,
       mcp_sema_ausente: true,
     };
     console.log(JSON.stringify(resultado, null, 2));

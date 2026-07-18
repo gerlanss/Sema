@@ -41,7 +41,8 @@ const arquivosObrigatorios = [
   "scripts/testar-pacote-cli-publico.mjs",
   ".agents/plugins/marketplace.json",
   "plugins/sema/.codex-plugin/plugin.json",
-  "plugins/sema/assets/sema.svg",
+  "logo.png",
+  "plugins/sema/assets/sema.png",
   "plugins/sema/skills/sema/SKILL.md",
   "plugins/sema/skills/sema/agents/openai.yaml",
 ];
@@ -352,7 +353,14 @@ async function verificarFronteiraPublica({ json = false } = {}) {
   const manifestPlugin = JSON.parse(await readFile(path.join(raiz, "plugins", "sema", ".codex-plugin", "plugin.json"), "utf8").catch(() => "{}"));
   const skillSema = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "SKILL.md"), "utf8").catch(() => "");
   const openaiYaml = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "agents", "openai.yaml"), "utf8").catch(() => "");
+  const logoOficial = await readFile(path.join(raiz, "logo.png")).catch(() => Buffer.alloc(0));
+  const logoPlugin = await readFile(path.join(raiz, "plugins", "sema", "assets", "sema.png")).catch(() => Buffer.alloc(0));
   const entradaMarketplace = (marketplace.plugins ?? []).find((item) => item?.name === "sema");
+  const pluginMarcaOficial =
+    logoOficial.length > 0 &&
+    logoOficial.equals(logoPlugin) &&
+    manifestPlugin.interface?.composerIcon === "./assets/sema.png" &&
+    manifestPlugin.interface?.logo === "./assets/sema.png";
   const skillBootstrapCodexOficial =
     marketplace.name === "sema" &&
     entradaMarketplace?.source?.source === "local" &&
@@ -360,8 +368,7 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     manifestPlugin.name === "sema" &&
     manifestPlugin.version === manifestCli.version &&
     manifestPlugin.skills === "./skills/" &&
-    manifestPlugin.interface?.composerIcon === "./assets/sema.svg" &&
-    manifestPlugin.interface?.logo === "./assets/sema.svg" &&
+    pluginMarcaOficial &&
     String(manifestPlugin.description ?? "").includes("bootstrap") &&
     !/\boptional\b/i.test(JSON.stringify(manifestPlugin)) &&
     skillSema.includes("sema iniciar --template base") &&
@@ -370,6 +377,9 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     /^interface:\r?\n  display_name: "Sema"\r?\n  short_description: ".+"\r?\n  default_prompt: ".*\$sema.*"\r?\n?$/u.test(openaiYaml);
   if (!skillBootstrapCodexOficial) {
     registrar(bloqueios, "plugins/sema", "skill oficial precisa cobrir o bootstrap Codex, compartilhar a versao da CLI e nao se declarar opcional");
+  }
+  if (!pluginMarcaOficial) {
+    registrar(bloqueios, "plugins/sema/assets/sema.png", "plugin precisa usar uma copia byte a byte da logo oficial do Sema");
   }
 
   const skillDelegaAoAgentsMd =
@@ -421,6 +431,7 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     entrypoint_codex_oficial: produtoCodexNative && entrypointsNaoCodex.every((caminho) => !bloqueios.some((item) => item.caminho === caminho)),
     cli_sem_autorizacao_local: cliSemAutorizacaoLocal && artefatosRuntimeProibidos.every((caminho) => !bloqueios.some((item) => item.caminho === caminho)),
     skill_bootstrap_codex_oficial: skillBootstrapCodexOficial,
+    plugin_marca_oficial: pluginMarcaOficial,
     skill_delega_ao_agents_md: skillDelegaAoAgentsMd,
     plugin_sem_mcp_auth: pluginSemMcpAuth,
     protocolo_sem_nomes_mcp: protocoloSemNomesMcp,

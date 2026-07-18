@@ -15,6 +15,8 @@ module sema.produto.fronteira_repositorios {
     arquivo: "pacotes/cli/package.json"
     arquivo: ".agents/plugins/marketplace.json"
     arquivo: "plugins/sema/.codex-plugin/plugin.json"
+    arquivo: "logo.png"
+    arquivo: "plugins/sema/assets/sema.png"
     arquivo: "plugins/sema/skills/sema/SKILL.md"
     arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
     simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
@@ -50,6 +52,7 @@ module sema.produto.fronteira_repositorios {
       produto_codex_native: Booleano
       cli_sem_autorizacao_local: Booleano
       skill_bootstrap_codex_oficial: Booleano
+      plugin_marca_oficial: Booleano
       skill_delega_ao_agents_md: Booleano
       plugin_sem_mcp_auth: Booleano
       protocolo_sem_nomes_mcp: Booleano
@@ -90,6 +93,7 @@ module sema.produto.fronteira_repositorios {
         produto_codex_native: publico
         cli_sem_autorizacao_local: publico
         skill_bootstrap_codex_oficial: publico
+        plugin_marca_oficial: publico
         skill_delega_ao_agents_md: publico
         plugin_sem_mcp_auth: publico
         protocolo_sem_nomes_mcp: publico
@@ -121,6 +125,7 @@ module sema.produto.fronteira_repositorios {
       publicar_skill_codex_como_opcional
       duplicar_governanca_do_agents_md_na_skill
       publicar_plugin_com_mcp_app_token_ou_auth_propria
+      publicar_plugin_com_icone_provisorio
       publicar_plugin_sem_smoke_de_instalacao_codex
       publicar_protocolo_com_nome_de_tool_mcp
       publicar_handshake_com_artefato_inexistente
@@ -141,6 +146,8 @@ module sema.produto.fronteira_repositorios {
       arquivo: "docs/repositories.md"
       arquivo: ".agents/plugins/marketplace.json"
       arquivo: "plugins/sema/.codex-plugin/plugin.json"
+      arquivo: "logo.png"
+      arquivo: "plugins/sema/assets/sema.png"
       arquivo: "plugins/sema/skills/sema/SKILL.md"
       arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
       simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
@@ -164,6 +171,7 @@ module sema.produto.fronteira_repositorios {
       produto_codex_native == verdadeiro
       cli_sem_autorizacao_local == verdadeiro
       skill_bootstrap_codex_oficial == verdadeiro
+      plugin_marca_oficial == verdadeiro
       skill_delega_ao_agents_md == verdadeiro
       plugin_sem_mcp_auth == verdadeiro
       protocolo_sem_nomes_mcp == verdadeiro
@@ -189,6 +197,7 @@ module sema.produto.fronteira_repositorios {
           produto_codex_native: verdadeiro
           cli_sem_autorizacao_local: verdadeiro
           skill_bootstrap_codex_oficial: verdadeiro
+          plugin_marca_oficial: verdadeiro
           skill_delega_ao_agents_md: verdadeiro
           plugin_sem_mcp_auth: verdadeiro
           protocolo_sem_nomes_mcp: verdadeiro

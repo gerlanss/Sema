@@ -6,7 +6,7 @@ generated `AGENTS.md` becomes the automatic workspace protocol afterward.
 
 ## Current Line
 
-- Version: `2.0.0`
+- Version: `2.0.1`
 - Package: `@semacode/cli`
 - Last updated: 2026-07-17
 - Reference commit: `f2501cb`

@@ -1,6 +1,6 @@
 {
   "name": "sema",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Codex bootstrap for discovering @semacode/cli and initializing Sema before a workspace has its AGENTS.md protocol.",
   "author": {
     "name": "OtimiTare",
@@ -38,8 +38,8 @@
       "Repair a missing Sema AGENTS.md handshake in this project"
     ],
     "brandColor": "#111827",
-    "composerIcon": "./assets/sema.svg",
-    "logo": "./assets/sema.svg",
+    "composerIcon": "./assets/sema.png",
+    "logo": "./assets/sema.png",
     "screenshots": []
   }
 }
