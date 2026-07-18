@@ -71,6 +71,10 @@ function executarCodexIsolado(args, codexHome) {
   };
 }
 
+function normalizarQuebrasLinha(texto) {
+  return texto.replaceAll("\r\n", "\n");
+}
+
 async function verificarPluginCodexRemoto(repositorio, versao) {
   const temporario = await mkdtemp(path.join(os.tmpdir(), "sema-plugin-codex-remoto-"));
   const codexHome = path.join(temporario, "codex-home");
@@ -99,7 +103,7 @@ async function verificarPluginCodexRemoto(repositorio, versao) {
     return {
       consultaRealizada: true,
       instalado: pluginEsperado,
-      skillAlinhada: skillFonte === skillInstalada,
+      skillAlinhada: normalizarQuebrasLinha(skillFonte) === normalizarQuebrasLinha(skillInstalada),
       mcpAusente: mcp.ok && !/^sema\s+/imu.test(mcp.saida),
     };
   } catch {
