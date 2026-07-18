@@ -1,11 +1,10 @@
 # OpenAI Build Week 2026 Submission
 
-This is the canonical English submission draft for Sema. The administrative
+This is the canonical English submission record for Sema. The administrative
 track is **Developer Tools**; that track describes the first proving ground,
-not the product's ceiling. Before pasting it, Gerlan should read it once in his
-own voice and change any sentence he would not actually say. The organizer's
-July 17 announcement explicitly warns against submitting generic AI-written
-descriptions unchanged.
+not the product's ceiling. The final copy was reviewed in Gerlan's own voice
+before submission, following the organizer's July 17 guidance against generic
+AI-written descriptions.
 
 ## Paste-ready fields
 
@@ -31,7 +30,7 @@ https://www.npmjs.com/package/@semacode/cli
 
 **Demo video**
 
-`[ADD PUBLIC YOUTUBE URL BEFORE SUBMISSION]`
+https://youtu.be/IXkIlC9FxIs
 
 **Primary Codex `/feedback` Session ID**
 
@@ -41,7 +40,9 @@ https://www.npmjs.com/package/@semacode/cli
 
 - Project ID: `1349530`
 - Slug: `sema-the-semantic-governance-layer-for-ai-agents`
-- Canonical URL after publication:
+- Submission ID: `1102882`
+- Submission status: `Submitted`
+- Canonical URL:
   https://devpost.com/software/sema-the-semantic-governance-layer-for-ai-agents
 
 **Built with**
@@ -62,7 +63,7 @@ IDs to keep the final submission automation deterministic.
 | Field ID | Form status | Final answer |
 |---|---|---|
 | `27945` — Submitter Type | Required | `Individual` (the project currently has one author) |
-| `27946` — Country of Residence | Required | `Brazil` |
+| `27946` — Country of Residence | Required | `Argentina` |
 | `27947` — Category | Required | `Developer Tools` |
 | `27948` — Code repository | Required | `https://github.com/gerlanss/Sema` |
 | `27949` — Project/test link | Optional; complete it | Use the judge-only test-path answer below |
@@ -71,19 +72,18 @@ IDs to keep the final submission automation deterministic.
 
 The deliverables require a video and do not require a website or zip file.
 
-### Live project state at the documentation audit
+### Live submission state
 
-After the canonical copy update on July 18, 2026, the Devpost connector reported
-project `1349530` as:
+After the final submission on July 18, 2026, the Devpost connector confirmed:
 
-- state: `published`;
-- video URL: not set;
-- hackathon submissions: none;
-- title, tagline, description, `Built with`, and repository link: aligned with
-  the canonical fields in this document.
-
-After adding the public video and thumbnail, fetch the live project again and
-compare the rendered fields before any hackathon submission step.
+- project `1349530` is `published`;
+- submission `1102882` is `Submitted` to OpenAI Build Week;
+- the account relationships are both `registered` and `submitted`;
+- country of residence: `Argentina`;
+- category: `Developer Tools`;
+- video URL: https://youtu.be/IXkIlC9FxIs;
+- repository URL: https://github.com/gerlanss/Sema;
+- submitted at: `2026-07-18T16:29:41.470-04:00`.
 
 **Field `27949` — judge-only project/test path**
 
@@ -133,21 +133,17 @@ environment, the CLI-only fallback in the judge guide creates the same durable
 
 ## Final submission checklist
 
-- Select only the **Developer Tools** track.
-- Replace the demo-video and primary-Session-ID placeholders throughout this
-  document.
-- Keep the public YouTube demo under three minutes and include spoken audio
-  explaining both what works and how Codex with GPT-5.6 was used to build it.
-- Use the single most representative core Codex task as the primary `/feedback`
-  Session ID, as directed by the FAQ; describe supporting tasks in the README.
-- Keep the pre-existing/new-work boundary explicit and backed by the dated
-  commit range in [new-work.md](./new-work.md).
-- Link the public repository and keep the installation/test path available free
-  of charge through the judging period.
-- Confirm that the final repository README links this submission copy, the
-  new-work boundary, and the judge guide.
-- Re-run the public release and remote-distribution checks after the final
-  submission-period commit.
+- [x] Submitted only to the **Developer Tools** track.
+- [x] Added the public demo video and primary `/feedback` Session ID.
+- [x] Kept the narrated public YouTube demo under three minutes.
+- [x] Used the single most representative core Codex task as the primary
+  `/feedback` Session ID and documented the broader contribution in the README.
+- [x] Preserved the pre-existing/new-work boundary in
+  [new-work.md](./new-work.md).
+- [x] Linked the public repository and no-rebuild judge path.
+- [x] Linked the submission copy, new-work boundary, and judge guide from the
+  repository README.
+- [x] Submitted successfully as Devpost submission `1102882`.
 
 ## Short description
 
