@@ -12,6 +12,28 @@ alone.
 
 `intent -> context -> contract -> constraints -> impact -> execution -> evidence`
 
+## Watch Sema Work in 2:58
+
+<p align="center">
+  <a href="https://youtu.be/IXkIlC9FxIs">
+    <img
+      src="https://img.youtube.com/vi/IXkIlC9FxIs/maxresdefault.jpg"
+      alt="Sema demo: Codex follows a semantic contract from intent to verified execution"
+      width="960"
+    >
+  </a>
+</p>
+
+You tell Codex what you want. Instead of rediscovering the whole repository on
+every task, Codex uses Sema's living semantic map to reach the relevant code.
+In this real red-to-green demo, Sema catches a partial payment rename, preserves
+the `receipt_id` guarantee, and verifies contract, code, tests, drift, and
+documentation before closing the change.
+
+**[Watch the demo](https://youtu.be/IXkIlC9FxIs)** |
+**[Run the deterministic proof](./docs/build-week-2026/judge-guide.md)** |
+[See what changed during Build Week](./docs/build-week-2026/new-work.md)
+
 Codex is Sema's first native agent integration, and software is its first
 proving ground. The same governance model already supports workflows,
 operations, games, research, legal review, writing, proposals, conversations,
@@ -32,7 +54,7 @@ Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
 
 ## OpenAI Build Week 2026
 
-The Build Week showcase presents **Sema — The semantic governance layer for AI
+The Build Week showcase presents **Sema â€” The semantic governance layer for AI
 agents** in the Developer Tools category. It demonstrates a concrete Codex
 workflow in which Sema detects semantic drift, preserves a critical guarantee,
 and verifies the repair end to end.
@@ -203,3 +225,4 @@ sema verificar contratos/sema/software.sema --saida .tmp/verificacao --json
 
 See [LICENSE](./LICENSE). The license allows public non-commercial use and
 prohibits commercial resale or commercial replicas without written permission.
+
