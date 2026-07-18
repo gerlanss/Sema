@@ -14,15 +14,7 @@ alone.
 
 ## Watch Sema Work in 2:58
 
-<p align="center">
-  <a href="https://youtu.be/IXkIlC9FxIs">
-    <img
-      src="https://img.youtube.com/vi/IXkIlC9FxIs/maxresdefault.jpg"
-      alt="Sema demo: Codex follows a semantic contract from intent to verified execution"
-      width="960"
-    >
-  </a>
-</p>
+https://github.com/user-attachments/assets/62308e14-7e57-4073-8945-c1801bf81498
 
 You tell Codex what you want. Instead of rediscovering the whole repository on
 every task, Codex uses Sema's living semantic map to reach the relevant code.
@@ -30,7 +22,7 @@ In this real red-to-green demo, Sema catches a partial payment rename, preserves
 the `receipt_id` guarantee, and verifies contract, code, tests, drift, and
 documentation before closing the change.
 
-**[Watch the demo](https://youtu.be/IXkIlC9FxIs)** |
+**[Watch on YouTube](https://youtu.be/IXkIlC9FxIs)** |
 **[Run the deterministic proof](./docs/build-week-2026/judge-guide.md)** |
 [See what changed during Build Week](./docs/build-week-2026/new-work.md)
 
