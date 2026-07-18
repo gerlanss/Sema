@@ -54,7 +54,7 @@ Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
 
 ## OpenAI Build Week 2026
 
-The Build Week showcase presents **Sema â€” The semantic governance layer for AI
+The Build Week showcase presents **Sema — The semantic governance layer for AI
 agents** in the Developer Tools category. It demonstrates a concrete Codex
 workflow in which Sema detects semantic drift, preserves a critical guarantee,
 and verifies the repair end to end.
@@ -225,4 +225,3 @@ sema verificar contratos/sema/software.sema --saida .tmp/verificacao --json
 
 See [LICENSE](./LICENSE). The license allows public non-commercial use and
 prohibits commercial resale or commercial replicas without written permission.
-
