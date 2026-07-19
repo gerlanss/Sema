@@ -110,7 +110,7 @@ The CLI supports JavaScript generation:
 sema compilar contratos/orders.sema --alvo javascript --saida ./generated/javascript
 ```
 
-The project can also generate TypeScript, Python, PHP, Dart, Lua, HTML, and CSS when those targets are enabled in `sema.config.json`.
+The project can also generate TypeScript, Python, PHP, Dart, Lua, HTML, CSS, C#/.NET (`dotnet`), and C++ (`cpp`) when those targets are enabled in `sema.config.json`.
 
 ## Support Files
 

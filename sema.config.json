@@ -28,7 +28,9 @@
     "javascript": "./.tmp/generated/javascript",
     "html": "./.tmp/generated/html",
     "css": "./.tmp/generated/css",
-    "php": "./.tmp/generated/php"
+    "php": "./.tmp/generated/php",
+    "dotnet": "./.tmp/generated/dotnet",
+    "cpp": "./.tmp/generated/cpp"
   },
   "convencoesGeracaoPorProjeto": "base"
 }

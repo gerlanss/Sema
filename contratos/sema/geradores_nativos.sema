@@ -1,0 +1,293 @@
+module sema.produto.geradores_nativos {
+  docs {
+    resumo: "Geracao e teste local de codigo C#/.NET e C++ derivados do IR Sema, com projetos nativos autocontidos e rastreabilidade SEMA-GOVERNED."
+  }
+
+  vinculos {
+    arquivo: "pacotes/gerador-dotnet/src/index.ts"
+    arquivo: "pacotes/gerador-dotnet/package.json"
+    arquivo: "pacotes/gerador-dotnet/tsconfig.json"
+    arquivo: "pacotes/gerador-cpp/src/index.ts"
+    arquivo: "pacotes/gerador-cpp/package.json"
+    arquivo: "pacotes/gerador-cpp/tsconfig.json"
+    arquivo: "pacotes/cli/src/geracaoCore.ts"
+    arquivo: "pacotes/cli/src/doctorCommand.ts"
+    arquivo: "pacotes/cli/src/projetoConfig.ts"
+    arquivo: "pacotes/cli/src/projetoResolucao.ts"
+    arquivo: "pacotes/cli/src/nativeToolchains.ts"
+    arquivo: "pacotes/cli/src/index.part01.ts"
+    arquivo: "testes/integracao/geradores-nativos.test.ts"
+  }
+
+  task gerar_codigo_dotnet {
+    input {
+      modulo_ir: Json required
+      alvo: Texto required
+    }
+    output {
+      arquivos_gerados: Lista
+      projeto_dotnet_presente: Booleano
+      codigo_csharp_presente: Booleano
+      testes_dotnet_presentes: Booleano
+      cabecalho_sema_governado: Booleano
+    }
+    rules {
+      modulo_ir deve_ser preenchido
+      alvo deve_ser em [dotnet, cs, csharp]
+    }
+    effects {
+      fs.write codigo_dotnet_gerado criticidade = media
+      auditoria geracao_dotnet criticidade = media
+    }
+    authz {
+      escopo: sema.geradores.nativos
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        modulo_ir: interno
+        alvo: publico
+      }
+      output {
+        arquivos_gerados: interno
+        projeto_dotnet_presente: publico
+        codigo_csharp_presente: publico
+        testes_dotnet_presentes: publico
+        cabecalho_sema_governado: publico
+      }
+    }
+    audit {
+      evento: sema.geracao.dotnet
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      depender_de_pacote_nuget_externo_para_teste_basico
+      gerar_codigo_sem_cabecalho_sema
+      perder_tipos_entidades_enums_tasks_regras_garantias_ou_testes
+    }
+    impl {
+      ts: gerador_dotnet.src.index.gerarDotNet
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-dotnet/src/index.ts"
+      simbolo: gerador_dotnet.src.index.gerarDotNet
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "nenhum"
+      compensacao: "regenerar projeto .NET a partir do contrato Sema"
+      criticidade_operacional: media
+    }
+    guarantees {
+      arquivos_gerados existe
+      projeto_dotnet_presente == verdadeiro
+      codigo_csharp_presente == verdadeiro
+      testes_dotnet_presentes == verdadeiro
+      cabecalho_sema_governado == verdadeiro
+    }
+    tests {
+      caso "gera projeto dotnet autocontido" {
+        given {
+          alvo: "dotnet"
+          modulo_ir {
+            nome: exemplos.calculadora
+          }
+        }
+
+        expect {
+          sucesso: verdadeiro
+          projeto_dotnet_presente: verdadeiro
+          codigo_csharp_presente: verdadeiro
+          testes_dotnet_presentes: verdadeiro
+        }
+      }
+    }
+  }
+
+  task gerar_codigo_cpp {
+    input {
+      modulo_ir: Json required
+      alvo: Texto required
+    }
+    output {
+      arquivos_gerados: Lista
+      cmake_presente: Booleano
+      codigo_cpp_presente: Booleano
+      testes_cpp_presentes: Booleano
+      cabecalho_sema_governado: Booleano
+    }
+    rules {
+      modulo_ir deve_ser preenchido
+      alvo deve_ser em [cpp, c + +, cxx, cc]
+    }
+    effects {
+      fs.write codigo_cpp_gerado criticidade = media
+      auditoria geracao_cpp criticidade = media
+    }
+    authz {
+      escopo: sema.geradores.nativos
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        modulo_ir: interno
+        alvo: publico
+      }
+      output {
+        arquivos_gerados: interno
+        cmake_presente: publico
+        codigo_cpp_presente: publico
+        testes_cpp_presentes: publico
+        cabecalho_sema_governado: publico
+      }
+    }
+    audit {
+      evento: sema.geracao.cpp
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      depender_de_framework_cpp_externo_para_teste_basico
+      gerar_codigo_sem_cabecalho_sema
+      perder_tipos_entidades_enums_tasks_regras_garantias_ou_testes
+    }
+    impl {
+      ts: gerador_cpp.src.index.gerarCpp
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-cpp/src/index.ts"
+      simbolo: gerador_cpp.src.index.gerarCpp
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "nenhum"
+      compensacao: "regenerar projeto C++ a partir do contrato Sema"
+      criticidade_operacional: media
+    }
+    guarantees {
+      arquivos_gerados existe
+      cmake_presente == verdadeiro
+      codigo_cpp_presente == verdadeiro
+      testes_cpp_presentes == verdadeiro
+      cabecalho_sema_governado == verdadeiro
+    }
+    tests {
+      caso "gera projeto cpp autocontido" {
+        given {
+          alvo: "cpp"
+          modulo_ir {
+            nome: exemplos.calculadora
+          }
+        }
+
+        expect {
+          sucesso: verdadeiro
+          cmake_presente: verdadeiro
+          codigo_cpp_presente: verdadeiro
+          testes_cpp_presentes: verdadeiro
+        }
+      }
+    }
+  }
+
+  task executar_testes_codigo_nativo {
+    input {
+      alvo: Texto required
+      pasta_saida: Texto required
+      arquivos_gerados: Lista required
+    }
+    output {
+      codigo_saida: Inteiro
+      quantidade_testes: Inteiro
+      toolchain_detectada: Booleano
+    }
+    rules {
+      alvo deve_ser em [dotnet, cpp]
+      pasta_saida deve_ser preenchido
+      arquivos_gerados deve_ser preenchido
+    }
+    effects {
+      shell.exec compilador_local criticidade = alta
+      auditoria testes_nativos_executados criticidade = media
+    }
+    authz {
+      escopo: sema.geradores.nativos.testar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.teste.codigo_nativo
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      executar_compilador_remoto
+      baixar_dependencia_durante_teste_basico
+      declarar_sucesso_sem_compilar_e_executar
+    }
+    impl {
+      ts: cli.src.geracao_core.executarTestesGerados
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/geracaoCore.ts"
+      arquivo: "pacotes/cli/src/doctorCommand.ts"
+      arquivo: "pacotes/cli/src/nativeToolchains.ts"
+      simbolo: cli.src.geracao_core.executarTestesGerados
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      codigo_saida == 0
+      quantidade_testes >= 1
+      toolchain_detectada == verdadeiro
+    }
+    tests {
+      caso "executa testes dotnet locais" {
+        given {
+          alvo: "dotnet"
+          pasta_saida: ".tmp/dotnet"
+          arquivos_gerados: "projeto gerado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          codigo_saida: 0
+          toolchain_detectada: verdadeiro
+        }
+      }
+      caso "executa testes cpp locais" {
+        given {
+          alvo: "cpp"
+          pasta_saida: ".tmp/cpp"
+          arquivos_gerados: "projeto gerado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          codigo_saida: 0
+          toolchain_detectada: verdadeiro
+        }
+      }
+    }
+  }
+}

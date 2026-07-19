@@ -91,6 +91,8 @@ explicit human decision; the Codex bootstrap skill never adds it.
 sema compilar contratos/app.sema --alvo typescript --saida .tmp/app-ts --estrutura modulos
 sema compilar contratos/app.sema --alvo python --saida .tmp/app-py --estrutura modulos
 sema compilar contratos/app.sema --alvo php --saida .tmp/app-php --estrutura modulos
+sema compilar contratos/app.sema --alvo dotnet --saida .tmp/app-dotnet --estrutura modulos
+sema compilar contratos/app.sema --alvo cpp --saida .tmp/app-cpp --estrutura modulos
 ```
 
 Generated artifacts include `SEMA-GOVERNED` headers and must stay aligned with
@@ -102,6 +104,8 @@ the source contract.
 sema validar contratos/app.sema --json
 sema diagnosticos contratos/app.sema --json
 sema testar contratos/app.sema --alvo typescript --saida .tmp/app-tests
+sema testar contratos/app.sema --alvo dotnet --saida .tmp/app-dotnet-tests
+sema testar contratos/app.sema --alvo cpp --saida .tmp/app-cpp-tests
 sema verificar contratos/app.sema --saida .tmp/app-check --json
 ```
 

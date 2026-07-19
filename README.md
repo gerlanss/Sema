@@ -177,8 +177,11 @@ sema compilar contratos/sema/software.sema \
 ```
 
 Supported generation targets include TypeScript, JavaScript, Python, PHP, Dart,
-Lua, HTML, and CSS. Generated code remains governed by the source `.sema`
-contract.
+Lua, HTML, CSS, C#/.NET, and C++. The native targets emit self-contained
+projects and executable contract tests: `dotnet` uses the local .NET SDK, while
+`cpp` uses GCC, Clang, or MSVC. They are opt-in for project-wide verification,
+so projects that do not use native toolchains keep a portable default. Generated
+code remains governed by the source `.sema` contract.
 
 ## Public Boundary
 

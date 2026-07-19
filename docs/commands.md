@@ -35,7 +35,7 @@ Honest closure: treat drift JSON as the source of truth. `sucesso:false`, `vincu
 
 ## Sema Code
 
-- `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css> --saida <diretorio>`: generates starter/support artifacts from the contract.
+- `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>`: generates starter/support artifacts from the contract.
 - `sema testar <arquivo.sema> --alvo <alvo> --saida <diretorio-temporario>`: generates and runs local tests when the target supports it.
 - `sema importar <fonte> <diretorio> --saida <diretorio> --json`: imports a legacy project into initial contracts.
 - `sema renomear-semantico <arquivo-ou-pasta> --de <nome> --para <nome> --json`: helps rename symbols semantically.

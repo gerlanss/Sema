@@ -34,7 +34,7 @@ If the delivery includes code derived from a contract, run `sema compilar`.
 sema compilar contratos/orders.sema --alvo javascript --saida ./generated/javascript
 ```
 
-Replace `javascript` with `typescript`, `python`, `php`, `dart`, `lua`, `html`, or `css` when appropriate.
+Replace `javascript` with `typescript`, `python`, `php`, `dart`, `lua`, `html`, `css`, `dotnet`, or `cpp` when appropriate.
 
 ## Fail Closed
 

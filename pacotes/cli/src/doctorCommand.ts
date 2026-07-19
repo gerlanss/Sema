@@ -12,6 +12,7 @@ import {
   TSX_IMPORTADOR_CLI,
   type ExecucaoComandoExterno,
 } from "./execucoesExternas.js";
+import { resolverToolchainCpp } from "./nativeToolchains.js";
 
 interface ItemDependenciaComando {
   nome: string;
@@ -46,6 +47,7 @@ function criarItemDependencia(
 function coletarDependenciasDoctor(): DependenciaComandoDoctor[] {
   const python = resolverExecucaoPython();
   const pytest = resolverExecucaoPytest();
+  const toolchainCpp = resolverToolchainCpp();
   return [
     {
       comando: "base",
@@ -54,6 +56,7 @@ function coletarDependenciasDoctor(): DependenciaComandoDoctor[] {
         criarItemDependencia("npm", comandoDisponivel("npm"), "instalacao, pack e publish", false),
         criarItemDependencia("python", Boolean(python), python?.rotulo ? `resolvido via ${python.rotulo}` : "python ou py", false),
         criarItemDependencia("dotnet", comandoDisponivel("dotnet"), "ecosistema ASP.NET", false),
+        criarItemDependencia("compilador_cpp", Boolean(toolchainCpp), toolchainCpp?.rotulo ?? "GCC, Clang ou MSVC", false),
         criarItemDependencia("go", comandoDisponivel("go"), "ecosistema Go", false),
         criarItemDependencia("cargo", comandoDisponivel("cargo"), "ecosistema Rust", false),
         criarItemDependencia("java", comandoDisponivel("java"), "ecosistema Java/Spring", false),
@@ -98,6 +101,18 @@ function coletarDependenciasDoctor(): DependenciaComandoDoctor[] {
       comando: "verificar/php",
       itens: [
         criarItemDependencia("php", comandoDisponivel("php", ["-v"]), "runner de testes PHP"),
+      ],
+    },
+    {
+      comando: "verificar/dotnet",
+      itens: [
+        criarItemDependencia("dotnet", comandoDisponivel("dotnet"), "dotnet SDK para compilar e executar testes C#"),
+      ],
+    },
+    {
+      comando: "verificar/cpp",
+      itens: [
+        criarItemDependencia("compilador_cpp", Boolean(toolchainCpp), toolchainCpp?.rotulo ?? "GCC, Clang ou MSVC"),
       ],
     },
   ];
@@ -184,6 +199,21 @@ export function avaliarDependenciasVerificacao(
     if (configuracao.alvo === "php") {
       registrar("verificar/php", [
         criarItemDependencia("php", comandoDisponivel("php", ["-v"]), "runner de testes PHP"),
+      ]);
+      continue;
+    }
+
+    if (configuracao.alvo === "dotnet") {
+      registrar("verificar/dotnet", [
+        criarItemDependencia("dotnet", comandoDisponivel("dotnet"), "dotnet SDK para compilar e executar testes C#"),
+      ]);
+      continue;
+    }
+
+    if (configuracao.alvo === "cpp") {
+      const toolchainCpp = resolverToolchainCpp();
+      registrar("verificar/cpp", [
+        criarItemDependencia("compilador_cpp", Boolean(toolchainCpp), toolchainCpp?.rotulo ?? "GCC, Clang ou MSVC"),
       ]);
     }
   }

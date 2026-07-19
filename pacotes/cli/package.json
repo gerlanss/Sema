@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "description": "Codex-native local semantic governance CLI for contracts, drift, impact, documentation gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",
@@ -60,6 +60,8 @@
     "@sema/gerador-html": "file:../gerador-html",
     "@sema/gerador-css": "file:../gerador-css",
     "@sema/gerador-php": "file:../gerador-php",
+    "@sema/gerador-dotnet": "file:../gerador-dotnet",
+    "@sema/gerador-cpp": "file:../gerador-cpp",
     "@sema/padroes": "file:../padroes",
     "typescript": "^5.8.3"
   },
@@ -76,6 +78,8 @@
     "@sema/gerador-javascript",
     "@sema/gerador-html",
     "@sema/gerador-css",
-    "@sema/gerador-php"
+    "@sema/gerador-php",
+    "@sema/gerador-dotnet",
+    "@sema/gerador-cpp"
   ]
 }

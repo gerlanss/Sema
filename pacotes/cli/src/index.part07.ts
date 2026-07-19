@@ -226,6 +226,17 @@ export async function comandoTestar(
     console.error(incompatibilidade);
     return 1;
   }
+  if (framework === "base") {
+    const configuracaoAlvo = {
+      alvo,
+      ...resolverConfiguracaoVerificacaoPorAlvo(alvo),
+    };
+    const verificacaoDependencias = avaliarDependenciasVerificacao([configuracaoAlvo]);
+    if (!verificacaoDependencias.ok) {
+      imprimirFalhaDependenciasVerificacao(verificacaoDependencias);
+      return 1;
+    }
+  }
   const codigo = await lerArquivoTexto(arquivo);
   const resultado = compilarCodigo(codigo, arquivo);
   if (temErros(resultado.diagnosticos)) {

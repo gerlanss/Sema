@@ -11,6 +11,8 @@
     { "path": "./pacotes/gerador-html" },
     { "path": "./pacotes/gerador-css" },
     { "path": "./pacotes/gerador-php" },
+    { "path": "./pacotes/gerador-dotnet" },
+    { "path": "./pacotes/gerador-cpp" },
     { "path": "./pacotes/cli" }
   ]
 }

@@ -47,6 +47,8 @@ module sema.produto.cli_toolchain_local {
       exigir_npm_para_verificacao_normal
       exigir_python_quando_alvo_nao_for_python
       gerar_arquivos_antes_de_detectar_php_ausente
+      gerar_arquivos_antes_de_detectar_dotnet_ausente
+      gerar_arquivos_antes_de_detectar_compilador_cpp_ausente
     }
     impl {
       ts: cli.src.doctor_command.avaliarDependenciasVerificacao
@@ -79,7 +81,6 @@ module sema.produto.cli_toolchain_local {
           ok: verdadeiro
         }
       }
-
       caso "nao exige npm para verificar projeto" {
         given {
           configuracoes_alvo: "javascript"
@@ -92,7 +93,6 @@ module sema.produto.cli_toolchain_local {
           ok: verdadeiro
         }
       }
-
       caso "bloqueia php ausente antes da geracao" {
         given {
           configuracoes_alvo: "php"
@@ -103,6 +103,30 @@ module sema.produto.cli_toolchain_local {
           sucesso: verdadeiro
           ok: falso
           faltando_contem: "verificar/php:php"
+        }
+      }
+      caso "bloqueia dotnet ausente antes da geracao" {
+        given {
+          configuracoes_alvo: "dotnet"
+          dotnet_disponivel: falso
+        }
+
+        expect {
+          sucesso: verdadeiro
+          ok: falso
+          faltando_contem: "verificar/dotnet:dotnet"
+        }
+      }
+      caso "bloqueia cpp sem compilador local" {
+        given {
+          configuracoes_alvo: "cpp"
+          compilador_cpp_disponivel: falso
+        }
+
+        expect {
+          sucesso: verdadeiro
+          ok: falso
+          faltando_contem: "verificar/cpp:compilador_cpp"
         }
       }
     }

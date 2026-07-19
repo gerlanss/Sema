@@ -62,11 +62,17 @@ export function normalizarFrameworkGeracao(valor?: string): FrameworkGeracao {
 }
 
 export function normalizarAlvo(valor?: string): AlvoGeracao | undefined {
-  if (valor === "typescript" || valor === "python" || valor === "dart" || valor === "lua" || valor === "javascript" || valor === "html" || valor === "css" || valor === "php") {
+  if (valor === "typescript" || valor === "python" || valor === "dart" || valor === "lua" || valor === "javascript" || valor === "html" || valor === "css" || valor === "php" || valor === "dotnet" || valor === "cpp") {
     return valor;
   }
   if (valor === "js") {
     return "javascript";
+  }
+  if (valor === "cs" || valor === "csharp") {
+    return "dotnet";
+  }
+  if (valor === "c++" || valor === "cxx" || valor === "cc") {
+    return "cpp";
   }
   return undefined;
 }

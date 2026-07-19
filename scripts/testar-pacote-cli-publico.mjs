@@ -294,15 +294,21 @@ async function validarHandshakeCodexMaterializado(projetoCodex, agents, packCode
 
 async function validarGeradoresInstalados(semaBin, basePacote, sandbox) {
   const contrato = path.join(basePacote, "exemplos", "calculadora.sema");
-  for (const alvo of ["typescript", "php"]) {
+  const alvos = [
+    { alvo: "typescript", argumento: "typescript" },
+    { alvo: "php", argumento: "php" },
+    { alvo: "dotnet", argumento: "cs" },
+    { alvo: "cpp", argumento: "c++" },
+  ];
+  for (const { alvo, argumento } of alvos) {
     const saida = path.join(sandbox, `gerado-${alvo}`);
     executarComSaida(
       process.execPath,
-      [semaBin, "compilar", contrato, "--alvo", alvo, "--saida", saida, "--estrutura", "modulos"],
+      [semaBin, "compilar", contrato, "--alvo", argumento, "--saida", saida, "--estrutura", "modulos"],
       sandbox,
     );
     const arquivos = await listarArquivosRecursivos(saida);
-    const extensao = alvo === "php" ? ".php" : ".ts";
+    const extensao = alvo === "php" ? ".php" : alvo === "dotnet" ? ".cs" : alvo === "cpp" ? ".cpp" : ".ts";
     const gerados = arquivos.filter((arquivo) => arquivo.endsWith(extensao));
     if (gerados.length === 0) {
       throw new Error(`The installed CLI did not generate any ${extensao} file for ${alvo}.`);
@@ -318,6 +324,15 @@ async function validarGeradoresInstalados(semaBin, basePacote, sandbox) {
         throw new Error("The installed PHP generator did not emit its executable test artifact.");
       }
       executarComSaida("php", [testePhp], path.dirname(testePhp));
+    }
+
+    if (alvo === "dotnet" || alvo === "cpp") {
+      const saidaTeste = path.join(sandbox, `testado-${alvo}`);
+      executarComSaida(
+        process.execPath,
+        [semaBin, "testar", contrato, "--alvo", argumento, "--saida", saidaTeste, "--estrutura", "modulos"],
+        sandbox,
+      );
     }
   }
 }
@@ -527,7 +542,7 @@ async function main() {
       }
     }
   } finally {
-    await rm(sandbox, { recursive: true, force: true });
+    await rm(sandbox, { recursive: true, force: true, maxRetries: 10, retryDelay: 150 });
   }
 }
 

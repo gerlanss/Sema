@@ -7,15 +7,20 @@ import path from "node:path";
 const raiz = process.cwd();
 const manifestRaiz = JSON.parse(await readFile(path.join(raiz, "package.json"), "utf8"));
 const manifestCli = JSON.parse(await readFile(path.join(raiz, "pacotes", "cli", "package.json"), "utf8"));
+const lock = JSON.parse(await readFile(path.join(raiz, "package-lock.json"), "utf8"));
+const manifestPlugin = JSON.parse(await readFile(path.join(raiz, "plugins", "sema", ".codex-plugin", "plugin.json"), "utf8"));
 
 const versoes = new Map([
   ["raiz", manifestRaiz.version],
   ["cli", manifestCli.version],
+  ["package-lock raiz", lock.version],
+  ["package-lock cli", lock.packages?.["pacotes/cli"]?.version],
+  ["plugin Codex", manifestPlugin.version],
 ]);
 
 const unicas = [...new Set(versoes.values())];
-if (unicas.length !== 1) {
-  console.error("Release check failed: root and CLI versions are not aligned.");
+if (unicas.length !== 1 || unicas[0] === undefined) {
+  console.error("Release check failed: root, CLI, lockfile, and Codex plugin versions are not aligned.");
   for (const [nome, versao] of versoes) {
     console.error(`- ${nome}: ${versao}`);
   }

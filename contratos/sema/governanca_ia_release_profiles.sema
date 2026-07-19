@@ -86,6 +86,7 @@ module sema.produto.governanca_ia.release_profiles {
     }
     vinculos {
       arquivo: "scripts/verificar-distribuicao-publica.mjs"
+      arquivo: "scripts/verificar-versao-release.mjs"
       simbolo: scripts.verificar_distribuicao_publica.verificarDistribuicaoPublica
     }
     execucao {
@@ -119,9 +120,9 @@ module sema.produto.governanca_ia.release_profiles {
       drift_publico_incompleto: "O gate de release ignorou consumidores laterais e pode reprovar vinculos validos do showcase."
     }
     tests {
-      caso "instalador npm 2.0.1 alinhado sem GitHub Release" {
+      caso "instalador npm 2.1.0 alinhado sem GitHub Release" {
         given {
-          versao_esperada: "2.0.1"
+          versao_esperada: "2.1.0"
           repositorio: "gerlanss/Sema"
         }
 

@@ -16,10 +16,13 @@ import { gerarJavaScript } from "@sema/gerador-javascript";
 import { gerarHtml } from "@sema/gerador-html";
 import { gerarCss } from "@sema/gerador-css";
 import { gerarPhp } from "@sema/gerador-php";
+import { gerarDotNet } from "@sema/gerador-dotnet";
+import { gerarCpp } from "@sema/gerador-cpp";
 import type { FonteImportacao } from "./importador.js";
 import type { EstruturaSaida } from "./tipos.js";
 import type { TemplateIniciar } from "./initTemplatesBase.js";
 import { comandoDisponivel, resolverExecucaoPytest, TSX_EXECUTOR_CLI } from "./execucoesExternas.js";
+import { compilarCpp, executarBinarioNativo, resolverToolchainCpp } from "./nativeToolchains.js";
 import {
   carregarConfiguracaoProjeto,
   resolverEstruturaSaidaPadrao,
@@ -197,6 +200,12 @@ export function gerarArquivosPorAlvo(ir: IrModulo, alvo: AlvoGeracao, framework:
   if (alvo === "php") {
     return gerarPhp(ir);
   }
+  if (alvo === "dotnet") {
+    return gerarDotNet(ir);
+  }
+  if (alvo === "cpp") {
+    return gerarCpp(ir);
+  }
   return gerarTypeScript(ir, { framework });
 }
 
@@ -294,6 +303,10 @@ export function contarCasosDeTesteGerados(alvo: AlvoGeracao, arquivos: Array<{ c
     return (arquivoTeste.conteudo.match(/\btest\(/g) ?? []).length;
   }
 
+  if (alvo === "dotnet" || alvo === "cpp") {
+    return arquivos.reduce((total, arquivo) => total + (arquivo.conteudo.match(/SEMA-TEST:/g) ?? []).length, 0);
+  }
+
   const arquivoTeste = arquivos.find((item) => path.basename(item.caminhoRelativo).startsWith("test_"));
   if (!arquivoTeste) {
     return 0;
@@ -308,9 +321,17 @@ export function executarTestesGerados(
   silencioso = false,
 ): SaidaTesteCapturada {
   const quantidadeTestes = contarCasosDeTesteGerados(alvo, arquivos);
+  if (quantidadeTestes === 0 && (alvo === "dotnet" || alvo === "cpp")) {
+    return {
+      codigoSaida: 1,
+      quantidadeTestes,
+      saidaPadrao: "",
+      saidaErro: `O alvo ${alvo} nao gerou casos SEMA-TEST; a execucao nativa foi bloqueada.`,
+    };
+  }
   if (quantidadeTestes === 0) {
     if (!silencioso) {
-      const nomesAlvo: Record<AlvoGeracao, string> = { typescript: "TypeScript", python: "Python", lua: "Lua", dart: "Dart", javascript: "JavaScript", html: "HTML", css: "CSS", php: "PHP" };
+      const nomesAlvo: Record<AlvoGeracao, string> = { typescript: "TypeScript", python: "Python", lua: "Lua", dart: "Dart", javascript: "JavaScript", html: "HTML", css: "CSS", php: "PHP", dotnet: ".NET", cpp: "C++" };
       console.log(`Nenhum teste ${nomesAlvo[alvo] ?? alvo} foi gerado.`);
     }
     return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
@@ -426,6 +447,84 @@ export function executarTestesGerados(
       quantidadeTestes,
       saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
       saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : "",
+    };
+  }
+
+  if (alvo === "dotnet") {
+    const projetoTeste = arquivos.find((item) => item.caminhoRelativo.endsWith(".Tests.csproj"))?.caminhoRelativo;
+    if (!projetoTeste) {
+      return {
+        codigoSaida: 1,
+        quantidadeTestes,
+        saidaPadrao: "",
+        saidaErro: "O gerador .NET nao produziu um projeto de testes *.Tests.csproj.",
+      };
+    }
+    if (!comandoDisponivel("dotnet")) {
+      return {
+        codigoSaida: 1,
+        quantidadeTestes,
+        saidaPadrao: "",
+        saidaErro: "Nao foi possivel localizar o dotnet SDK para executar os testes C# gerados.",
+      };
+    }
+    const execucao = spawnSync("dotnet", [
+      "run",
+      "--project",
+      path.join(baseSaida, projetoTeste),
+      "--configuration",
+      "Release",
+      "--nologo",
+      "--property:RestoreIgnoreFailedSources=true",
+    ], {
+      stdio: silencioso ? "pipe" : "inherit",
+      cwd: baseSaida,
+      encoding: silencioso ? "utf8" : undefined,
+      timeout: 120_000,
+      windowsHide: true,
+    });
+    return {
+      codigoSaida: execucao.status ?? 1,
+      quantidadeTestes,
+      saidaPadrao: typeof execucao.stdout === "string" ? execucao.stdout : "",
+      saidaErro: typeof execucao.stderr === "string" ? execucao.stderr : execucao.error?.message ?? "",
+    };
+  }
+
+  if (alvo === "cpp") {
+    const arquivoTeste = arquivos.find((item) => item.caminhoRelativo.endsWith(".test.cpp") || (item.caminhoRelativo.endsWith(".cpp") && item.conteudo.includes("SEMA-TEST:")));
+    const fontes = arquivos
+      .filter((item) => item.caminhoRelativo.endsWith(".cpp"))
+      .map((item) => path.join(baseSaida, item.caminhoRelativo));
+    if (!arquivoTeste || fontes.length === 0) {
+      return {
+        codigoSaida: 1,
+        quantidadeTestes,
+        saidaPadrao: "",
+        saidaErro: "O gerador C++ nao produziu fontes e um arquivo *.test.cpp executavel.",
+      };
+    }
+    const toolchain = resolverToolchainCpp();
+    if (!toolchain) {
+      return {
+        codigoSaida: 1,
+        quantidadeTestes,
+        saidaPadrao: "",
+        saidaErro: "Nao foi possivel localizar GCC, Clang ou MSVC para compilar os testes C++ gerados.",
+      };
+    }
+    const diretorioTeste = path.dirname(path.join(baseSaida, arquivoTeste.caminhoRelativo));
+    const executavel = path.join(diretorioTeste, process.platform === "win32" ? ".sema-cpp-tests.exe" : ".sema-cpp-tests");
+    const compilacao = compilarCpp(toolchain, fontes, diretorioTeste, executavel, silencioso);
+    if (compilacao.codigoSaida !== 0) {
+      return { ...compilacao, quantidadeTestes };
+    }
+    const execucao = executarBinarioNativo(executavel, silencioso);
+    return {
+      codigoSaida: execucao.codigoSaida,
+      quantidadeTestes,
+      saidaPadrao: `${compilacao.saidaPadrao}${execucao.saidaPadrao}`,
+      saidaErro: `${compilacao.saidaErro}${execucao.saidaErro}`,
     };
   }
 

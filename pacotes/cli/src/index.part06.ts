@@ -340,7 +340,7 @@ export async function comandoAjudaIa(): Promise<number> {
     "Use `sema docs-impacto --intencao <acao>` para ler ou criar docs obrigatorias antes de agir.",
     "Use `sema finalizar-mudanca --intencao <acao>` para bloquear conclusao sem leitura documental comprovada.",
     "Use `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json`.",
-    "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
+    "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
   ]));
   console.log("");
   console.log(renderizarSecaoAscii("Regras praticas", [

@@ -8,6 +8,7 @@ Run the complete public gate:
 
 ```bash
 npm run build
+npm run codex:sync-entrypoint
 npm run status:check
 npm run repo:verificar-publico
 npm run plugin:testar-codex
@@ -16,6 +17,10 @@ npm run release:verificar-drift
 npm run release:preparar-publica
 npm run release:publicar-npm-dry-run
 ```
+
+`release:preparar-publica` performs the Codex entrypoint sync before checking
+the public boundary, so a clean clone does not depend on ignored generated
+handshake files left by a previous local run.
 
 The plugin smoke installs the repo marketplace into an isolated `CODEX_HOME`,
 installs `sema@sema`, compares the cached skill with the versioned source, and

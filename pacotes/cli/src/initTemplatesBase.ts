@@ -139,7 +139,7 @@ export function arquivosTemplateIniciar(template: TemplateIniciar): ArquivosTemp
     ?? [
       {
         caminhoRelativo: "sema.config.json",
-        conteudo: "{\n  \"origens\": [\"./contratos\"],\n  \"saida\": \"./generated\",\n  \"alvos\": [\"typescript\", \"javascript\", \"python\", \"php\", \"dart\", \"lua\", \"html\", \"css\"],\n  \"alvoPadrao\": \"typescript\",\n  \"estruturaSaida\": \"modulos\",\n  \"framework\": \"base\",\n  \"modoEstrito\": true,\n  \"diretoriosSaidaPorAlvo\": {\n    \"typescript\": \"./generated/typescript\",\n    \"javascript\": \"./generated/javascript\",\n    \"python\": \"./generated/python\",\n    \"php\": \"./generated/php\",\n    \"dart\": \"./generated/dart\",\n    \"lua\": \"./generated/lua\",\n    \"html\": \"./generated/html\",\n    \"css\": \"./generated/css\"\n  },\n  \"convencoesGeracaoPorProjeto\": \"base\"\n}\n",
+        conteudo: "{\n  \"origens\": [\"./contratos\"],\n  \"saida\": \"./generated\",\n  \"alvos\": [\"typescript\", \"javascript\", \"python\", \"php\", \"dart\", \"lua\", \"html\", \"css\"],\n  \"alvoPadrao\": \"typescript\",\n  \"estruturaSaida\": \"modulos\",\n  \"framework\": \"base\",\n  \"modoEstrito\": true,\n  \"diretoriosSaidaPorAlvo\": {\n    \"typescript\": \"./generated/typescript\",\n    \"javascript\": \"./generated/javascript\",\n    \"python\": \"./generated/python\",\n    \"php\": \"./generated/php\",\n    \"dart\": \"./generated/dart\",\n    \"lua\": \"./generated/lua\",\n    \"html\": \"./generated/html\",\n    \"css\": \"./generated/css\",\n    \"dotnet\": \"./generated/dotnet\",\n    \"cpp\": \"./generated/cpp\"\n  },\n  \"convencoesGeracaoPorProjeto\": \"base\"\n}\n",
       },
       ...arquivosBase,
     ];

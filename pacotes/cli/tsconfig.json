@@ -16,6 +16,8 @@
     { "path": "../gerador-html" },
     { "path": "../gerador-css" },
     { "path": "../gerador-php" },
+    { "path": "../gerador-dotnet" },
+    { "path": "../gerador-cpp" },
     { "path": "../padroes" }
   ],
   "include": ["src/**/*"]

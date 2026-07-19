@@ -7,14 +7,28 @@ import type { EstruturaSaida } from './tipos.js';
 import type { ConfiguracaoProjetoCarregada } from './projetoTipos.js';
 import { normalizarAlvo, normalizarEstruturaSaida, normalizarFrameworkGeracao } from './projetoConfig.js';
 
+function normalizarAlvoObrigatorio(valor: string, origem: string): AlvoGeracao {
+  const normalizado = normalizarAlvo(valor);
+  if (!normalizado) {
+    throw new Error(`Alvo de geração inválido em ${origem}: ${valor}`);
+  }
+  return normalizado;
+}
+
 export function resolverAlvoPadrao(
   alvoExplicito: string | undefined,
   configCarregada?: ConfiguracaoProjetoCarregada,
 ): AlvoGeracao {
-  return normalizarAlvo(alvoExplicito)
-    ?? configCarregada?.config.alvoPadrao
-    ?? configCarregada?.config.alvos?.[0]
-    ?? "typescript";
+  if (alvoExplicito !== undefined) {
+    return normalizarAlvoObrigatorio(alvoExplicito, "--alvo");
+  }
+  if (configCarregada?.config.alvoPadrao !== undefined) {
+    return normalizarAlvoObrigatorio(configCarregada.config.alvoPadrao, `alvoPadrao de ${configCarregada.caminho}`);
+  }
+  const primeiroAlvo = configCarregada?.config.alvos?.[0];
+  return primeiroAlvo !== undefined
+    ? normalizarAlvoObrigatorio(primeiroAlvo, `alvos[0] de ${configCarregada!.caminho}`)
+    : "typescript";
 }
 
 export function resolverFrameworkPadrao(
@@ -61,8 +75,10 @@ export function resolverSaidaPadrao(
 }
 
 export function resolverAlvosVerificacao(configCarregada?: ConfiguracaoProjetoCarregada): AlvoGeracao[] {
-  const alvos: AlvoGeracao[] = configCarregada?.config.alvos?.length
-    ? configCarregada.config.alvos
+  const configurados = configCarregada?.config.alvos;
+  const origemConfig = configCarregada?.caminho ?? "sema.config.json";
+  const alvos: AlvoGeracao[] = configurados?.length
+    ? configurados.map((alvo, indice) => normalizarAlvoObrigatorio(alvo, `alvos[${indice}] de ${origemConfig}`))
     : ["typescript", "python"];
   return [...new Set(alvos)];
 }

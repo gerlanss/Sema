@@ -62,9 +62,16 @@ install or repair the npm package; there is no separate authorization gate.
 - `sema docs-impacto`: identify docs that must be read or updated.
 - `sema finalizar-mudanca`: close the governed change with evidence.
 - `sema compilar`: generate code from contracts.
+- `sema testar`: generate, compile, and execute local contract tests, including `dotnet` and `cpp`.
 - `sema verificar`: run the final local verification bundle.
 - `sema contexto-ia`: build local AI context from a contract.
 - `sema sync-codex`: create or refresh the official `AGENTS.md` entrypoint.
+
+Generation targets are `typescript`, `python`, `php`, `dart`, `lua`,
+`javascript`, `html`, `css`, `dotnet`, and `cpp`. The aliases `cs` and
+`csharp` select `dotnet`; `c++`, `cxx`, and `cc` select `cpp`.
+Native targets are opt-in in `sema.config.json.alvos` for project-wide
+verification because they require local compiler toolchains.
 
 ## Public Boundary
 

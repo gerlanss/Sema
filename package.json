@@ -1,6 +1,6 @@
 {
   "name": "sema",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
   "description": "Sema is a Codex-native local semantic governance layer for contract-first work across software, workflows, documents, and operational systems.",
   "license": "SEE LICENSE IN LICENSE",
@@ -28,7 +28,7 @@
     "release:verificar-drift": "node pacotes/cli/dist/index.js drift . --escopo projeto --incluir-consumidores-laterais --json",
     "release:verificar-distribuicao": "node scripts/verificar-distribuicao-publica.mjs --json",
     "release:verificar-publica": "npm run release:preparar-publica",
-    "release:preparar-publica": "npm run release:verificar-versao && npm run status:check && npm run repo:verificar-publico && npm run plugin:testar-codex && npm test && npm run release:verificar-drift && npm run cli:empacotar-publica && npm run cli:testar-pacote-publico",
+    "release:preparar-publica": "npm run codex:sync-entrypoint && npm run release:verificar-versao && npm run status:check && npm run repo:verificar-publico && npm run plugin:testar-codex && npm test && npm run release:verificar-drift && npm run cli:empacotar-publica && npm run cli:testar-pacote-publico",
     "release:publicar-npm-dry-run": "npm run cli:publicar-npm-dry-run",
     "release:publicar-npm": "npm run cli:publicar-npm",
     "repo:verificar-publico": "node scripts/verificar-fronteira-publica.mjs",
