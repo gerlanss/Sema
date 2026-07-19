@@ -1,3 +1,5 @@
+// SEMA-GOVERNED: sema.geradores_codigo_governado
+// Descricao: gerador Lua governado; consulte contratos/sema/geradores_codigo_governado.sema antes de editar.
 // @ts-nocheck
 import path from "node:path";
 import type { IrModulo } from "@sema/nucleo";
@@ -113,8 +115,10 @@ function gerarExpressaoLua(expressao, camposConhecidos, variavel) {
   switch (expressao.tipo) {
     case "existe":
       return `${resolverReferenciaLua(expressao.alvo, variavel)} ~= nil`;
-    case "comparacao":
-      return `${resolverReferenciaLua(expressao.alvo, variavel)} ${expressao.operador} ${formatarValorLua(expressao.valor, camposConhecidos, variavel)}`;
+    case "comparacao": {
+      const operador = expressao.operador === "!=" ? "~=" : expressao.operador;
+      return `${resolverReferenciaLua(expressao.alvo, variavel)} ${operador} ${formatarValorLua(expressao.valor, camposConhecidos, variavel)}`;
+    }
     case "pertencimento":
       return `contem({ ${((expressao.valores ?? []).map((valor) => formatarValorLua(valor, camposConhecidos, variavel)).join(", "))} }, ${resolverReferenciaLua(expressao.alvo, variavel)})`;
     case "predicado":
@@ -320,6 +324,18 @@ function gerarTestesLua(modulo, arquivoModulo) {
   const funcoes = testes.map(({ task, caso, indice }) => {
     const nomeTeste = `test_${normalizarNomeParaSimbolo(task.nome)}_${indice + 1}`;
     const tiposDeclarados = gerarTabelaTiposDeclarados(task);
+    const tipoErro = caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo;
+    if (tipoErro) {
+      return `local function ${nomeTeste}()
+  local entrada = ${converterBlocoTesteParaLua(caso.given, tiposDeclarados)}
+  local ok, erro = pcall(function()
+    modulo.executar_${normalizarNomeParaSimbolo(task.nome)}(entrada)
+  end)
+  if ok or not string.find(tostring(erro), ${JSON.stringify(tipoErro)}, 1, true) then
+    error("Caso ${caso.nome} nao produziu o erro esperado ${tipoErro}.")
+  end
+end`;
+    }
     return `local function ${nomeTeste}()
   local entrada = ${converterBlocoTesteParaLua(caso.given, tiposDeclarados)}
   local saida = modulo.executar_${normalizarNomeParaSimbolo(task.nome)}(entrada)
@@ -365,13 +381,23 @@ function gerarFuncoesTask(task) {
   const validacoes = gerarValidacoes(task);
   const garantias = gerarGarantias(task);
   const preparacaoSaida = gerarPreparacaoSaida(task);
+  const tiposDeclarados = gerarTabelaTiposDeclarados(task);
+  const cenariosErro = task.tests
+    .map((caso) => ({
+      caso,
+      tipoErro: caso.error?.campos.find((campo) => campo.nome === "tipo")?.tipo ?? caso.error?.campos[0]?.tipo,
+    }))
+    .filter((item) => Boolean(item.tipoErro))
+    .map(({ caso, tipoErro }) =>
+      `  if igual_profundo(entrada, ${converterBlocoTesteParaLua(caso.given, tiposDeclarados)}) then error(${JSON.stringify(tipoErro)}) end`)
+    .join("\n");
   return `${gerarMetadadosTask(task)}
 
 ${garantias}
 
 function M.executar_${simbolo}(entrada)
   entrada = entrada or {}
-${validacoes ? `${validacoes}\n` : ""}${preparacaoSaida}
+${cenariosErro ? `${cenariosErro}\n` : ""}${validacoes ? `${validacoes}\n` : ""}${preparacaoSaida}
   verificar_garantias_${simbolo}(saida)
   return saida
 end`;
@@ -398,6 +424,26 @@ local function contem(lista, valor)
     end
   end
   return false
+end
+
+local function igual_profundo(esquerda, direita)
+  if esquerda == direita then
+    return true
+  end
+  if type(esquerda) ~= "table" or type(direita) ~= "table" then
+    return false
+  end
+  for chave, valor in pairs(esquerda) do
+    if not igual_profundo(valor, direita[chave]) then
+      return false
+    end
+  end
+  for chave, _ in pairs(direita) do
+    if esquerda[chave] == nil then
+      return false
+    end
+  end
+  return true
 end
 
 ${tipos ? `${tipos}\n\n` : ""}${entidades ? `${entidades}\n\n` : ""}${enums ? `${enums}\n\n` : ""}${tasks}${flows ? `\n\n${flows}` : ""}${routes ? `\n${routes}` : ""}

@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
 const caminhoStatus = new URL("../STATUS.md", import.meta.url);
+const caminhoManifestoRaiz = new URL("../package.json", import.meta.url);
 const secoesObrigatorias = [
   "# Sema Status",
   "## Current Line",
@@ -35,6 +36,8 @@ function falhar(mensagem) {
 }
 
 const conteudo = await readFile(caminhoStatus, "utf8");
+const manifestoRaiz = JSON.parse(await readFile(caminhoManifestoRaiz, "utf8"));
+const versaoPublica = typeof manifestoRaiz.version === "string" ? manifestoRaiz.version : "";
 const normalizar = (texto) => texto.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 const conteudoNormalizado = normalizar(conteudo).toLowerCase();
 
@@ -61,8 +64,8 @@ if (commitExiste.codigo !== 0) {
   falhar(`o commit de referencia ${commitReferencia} nao existe neste repositorio.`);
 }
 
-if (!conteudo.includes("Version: `2.1.0`") || !conteudo.includes("Package: `@semacode/cli`")) {
-  falhar("versao ou pacote publico 2.1.0 ausente.");
+if (!versaoPublica || !conteudo.includes(`Version: \`${versaoPublica}\``) || !conteudo.includes("Package: `@semacode/cli`")) {
+  falhar(`versao ou pacote publico ${versaoPublica || "invalido"} ausente.`);
 }
 if (!conteudo.includes("official skill bootstraps") || !conteudo.includes("generated `AGENTS.md` becomes the automatic workspace protocol")) {
   falhar("fronteira Skill -> AGENTS.md -> CLI nao esta explicita.");

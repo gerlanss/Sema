@@ -183,6 +183,37 @@ async function executarTestesPhpGeradosTemporario(
   }
 }
 
+async function executarLuaGeradoTemporario(
+  arquivos: Array<{ caminhoRelativo: string; conteudo: string }>,
+  scriptAdicional?: string,
+): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-run-lua-"));
+
+  try {
+    let arquivoTeste = "";
+    for (const arquivo of arquivos) {
+      const destino = path.join(base, arquivo.caminhoRelativo);
+      await mkdir(path.dirname(destino), { recursive: true });
+      await writeFile(destino, arquivo.conteudo, "utf8");
+      if (path.basename(arquivo.caminhoRelativo).startsWith("test_") && arquivo.caminhoRelativo.endsWith(".lua")) {
+        arquivoTeste = arquivo.caminhoRelativo;
+      }
+    }
+    if (scriptAdicional !== undefined) {
+      arquivoTeste = "probe.lua";
+      await writeFile(path.join(base, arquivoTeste), scriptAdicional, "utf8");
+    }
+
+    return spawnSync(
+      "lua",
+      [arquivoTeste],
+      { stdio: "pipe", encoding: "utf8", cwd: base, shell: process.platform === "win32" },
+    );
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+}
+
 test("geradores produzem artefatos para o exemplo de calculadora", async () => {
   const caminho = path.resolve("exemplos/calculadora.sema");
   const codigo = await readFile(caminho, "utf8");
@@ -238,6 +269,46 @@ test("gerador PHP produz teste executavel pelo runner PHP", async () => {
 
   assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
   assert.match(execucao.stdout, /ok 2 testes/);
+});
+
+test("gerador PHP materializa given de Lista como array executavel", async () => {
+  const codigo = `
+module exemplo.lista_php {
+  task publicar {
+    input {
+      destinos: Lista<Texto> required
+    }
+    output {
+      processados: Lista<Texto>
+    }
+    guarantees {
+      processados existe
+    }
+    tests {
+      caso "publica em dois destinos" {
+        given {
+          destinos: "site-a,site-b"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+  const resultado = compilarCodigo(codigo, "lista_php.sema");
+
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosPhp = gerarPhp(resultado.ir!);
+  const arquivoTeste = arquivosPhp.find((arquivo) => path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  const execucao = await executarTestesPhpGeradosTemporario(arquivosPhp);
+
+  assert.match(arquivoTeste?.conteudo ?? "", /\["site-a", "site-b"\]/);
+  assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+  assert.match(execucao.stdout, /ok 1 testes/);
 });
 
 test("geradores refletem interoperabilidade externa e alvo Dart", () => {
@@ -414,12 +485,32 @@ test("geradores refletem contrato executavel de erro e fluxo estruturado", async
   assert.equal(temErros(resultadoErro.diagnosticos), false);
   const arquivosTsErro = gerarTypeScript(resultadoErro.ir!);
   const arquivosPyErro = gerarPython(resultadoErro.ir!);
+  const arquivosLuaErro = gerarLua(resultadoErro.ir!);
   assert.ok(arquivosTsErro[0]?.conteudo.includes("acesso_negadoErro"));
   assert.ok(arquivosPyErro[0]?.conteudo.includes("acesso_negadoErro"));
   assert.ok(arquivosTsErro[1]?.conteudo.includes("assert.rejects"));
   assert.ok(arquivosPyErro[1]?.conteudo.includes("pytest.raises"));
   assert.ok(arquivosTsErro[0]?.conteudo.includes("rotas_erro=2"));
   assert.ok(arquivosPyErro[0]?.conteudo.includes("rotas_erro=2"));
+  const moduloLuaErro = arquivosLuaErro.find((arquivo) => !path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  const testesLuaErro = arquivosLuaErro.find((arquivo) => path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  assert.ok(moduloLuaErro);
+  assert.ok(testesLuaErro);
+  assert.doesNotMatch(arquivosLuaErro.map((arquivo) => arquivo.conteudo).join("\n"), /erro_esperado/);
+  assert.match(moduloLuaErro.conteudo, /igual_profundo\(entrada, \{[\s\S]*chave = "sem_permissao"/);
+  const execucaoLuaErro = await executarLuaGeradoTemporario(arquivosLuaErro);
+  assert.equal(execucaoLuaErro.status, 0, execucaoLuaErro.stderr || execucaoLuaErro.stdout);
+  assert.match(execucaoLuaErro.stdout, /ok 5 testes/);
+  const probeLua = `local modulo = assert(loadfile(${JSON.stringify(moduloLuaErro.caminhoRelativo)}))()
+local ok, saida = pcall(function()
+  return modulo.executar_executar_operacao_sensivel({ chave = "permitida" })
+end)
+if not ok or saida == nil then error("entrada alternativa nao deveria falhar") end
+io.write("probe ok\\n")
+`;
+  const execucaoProbeLua = await executarLuaGeradoTemporario(arquivosLuaErro, probeLua);
+  assert.equal(execucaoProbeLua.status, 0, execucaoProbeLua.stderr || execucaoProbeLua.stdout);
+  assert.match(execucaoProbeLua.stdout, /probe ok/);
 
   const caminhoFlow = path.resolve("exemplos/automacao.sema");
   const codigoFlow = await readFile(caminhoFlow, "utf8");
@@ -474,4 +565,47 @@ module exemplo.geracao.negacao {
 
   assert.ok(arquivosTs[0]?.conteudo.includes("!("));
   assert.ok(arquivosPy[0]?.conteudo.includes("not ("));
+});
+
+test("gerador Lua materializa desigualdade com operador executavel", async () => {
+  const codigo = `
+module exemplo.geracao.desigualdade_lua {
+  task validar {
+    input {
+      esquerda: Texto required
+      direita: Texto required
+    }
+    output {
+      valido: Booleano
+    }
+    rules {
+      esquerda != direita
+    }
+    guarantees {
+      valido existe
+    }
+    tests {
+      caso "valores diferentes" {
+        given {
+          esquerda: "a"
+          direita: "b"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+  const resultado = compilarCodigo(codigo, "desigualdade_lua.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+  const arquivosLua = gerarLua(resultado.ir);
+  const moduloLua = arquivosLua.find((arquivo) => !path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  assert.match(moduloLua?.conteudo ?? "", /entrada\["esquerda"\] ~= entrada\["direita"\]/);
+  assert.doesNotMatch(moduloLua?.conteudo ?? "", /if not \([^\n]* != [^\n]*\) then/);
+  const execucao = await executarLuaGeradoTemporario(arquivosLua);
+  assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+  assert.match(execucao.stdout, /ok 1 testes/);
 });

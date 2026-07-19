@@ -4,6 +4,7 @@
 import { comandoDev } from "./dev/index.js";
 import { comandoInit } from "./init/index.js";
 import { comandoSyncPrisma } from "./sync/index.js";
+import { comandoPipelineConteudo } from "./pipelineConteudo/command.js";
 
 export type HandlerComando = (
   posicionais: string[],
@@ -86,4 +87,5 @@ export const REGISTRO_COMANDOS: Record<string, HandlerComando> = {
   init: comandoInitHandler,
   dev: comandoDevHandler,
   sync: comandoSyncPrismaHandler,
+  conteudo: comandoPipelineConteudo,
 };

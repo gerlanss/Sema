@@ -1,7 +1,6 @@
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descri??o: detec??o de comandos externos usados por doctor, testes gerados e runners opcionais.
+// SEMA-GOVERNED: sema.produto.cli_toolchain_local
+// Contrato: contratos/sema/cli_toolchain_local.sema
+// Descrição: detecção de comandos externos usados por doctor, testes gerados e runners opcionais.
 
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -25,15 +24,31 @@ export interface ExecucaoComandoExterno {
   rotulo: string;
 }
 const TIMEOUT_CHECAGEM_COMANDO_MS = 5_000;
+const disponibilidadeComandosNoProcesso = new Map<string, boolean>();
 
 export function comandoDisponivel(comando: string, argumentos: string[] = ["--version"]): boolean {
+  const chaveSondagem = JSON.stringify({
+    comando,
+    argumentos,
+    cwd: process.cwd(),
+    path: process.env.PATH ?? "",
+    pathExt: process.env.PATHEXT ?? "",
+    comSpec: process.env.COMSPEC ?? "",
+  });
+  const resultadoMemorizado = disponibilidadeComandosNoProcesso.get(chaveSondagem);
+  if (resultadoMemorizado !== undefined) {
+    return resultadoMemorizado;
+  }
+
   const execucao = spawnSync(comando, argumentos, {
     stdio: "ignore",
     shell: process.platform === "win32",
     timeout: TIMEOUT_CHECAGEM_COMANDO_MS,
     windowsHide: true,
   });
-  return !execucao.error && execucao.signal === null && (execucao.status ?? 1) === 0;
+  const disponivel = !execucao.error && execucao.signal === null && (execucao.status ?? 1) === 0;
+  disponibilidadeComandosNoProcesso.set(chaveSondagem, disponivel);
+  return disponivel;
 }
 
 export function resolverExecucaoPython(): ExecucaoComandoExterno | undefined {

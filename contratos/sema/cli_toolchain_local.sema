@@ -49,14 +49,19 @@ module sema.produto.cli_toolchain_local {
       gerar_arquivos_antes_de_detectar_php_ausente
       gerar_arquivos_antes_de_detectar_dotnet_ausente
       gerar_arquivos_antes_de_detectar_compilador_cpp_ausente
+      repetir_sondagem_identica_no_mesmo_processo
+      reutilizar_sondagem_apos_mudanca_do_ambiente_de_execucao
     }
     impl {
       ts: cli.src.doctor_command.avaliarDependenciasVerificacao
     }
     vinculos {
       arquivo: "pacotes/cli/src/doctorCommand.ts"
+      arquivo: "pacotes/cli/src/execucoesExternas.ts"
       arquivo: "pacotes/cli/src/index.part07.ts"
+      arquivo: "testes/unidade/execucoes-externas.test.ts"
       simbolo: cli.src.doctor_command.avaliarDependenciasVerificacao
+      simbolo: cli.src.execucoes_externas.comandoDisponivel
     }
     execucao {
       idempotencia: verdadeiro
@@ -127,6 +132,28 @@ module sema.produto.cli_toolchain_local {
           sucesso: verdadeiro
           ok: falso
           faltando_contem: "verificar/cpp:compilador_cpp"
+        }
+      }
+      caso "reutiliza sondagem identica no mesmo processo" {
+        given {
+          configuracoes_alvo: "python"
+          mesma_sondagem_repetida: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          execucoes_sondagem: 1
+        }
+      }
+      caso "refaz sondagem quando o PATH muda" {
+        given {
+          configuracoes_alvo: "python"
+          path_alterado: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          execucoes_sondagem: 2
         }
       }
     }

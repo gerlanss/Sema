@@ -17,6 +17,9 @@ Start here:
 - [Commands](./commands.md)
 - [Syntax](./syntax.md)
 - [Profiles](./profiles.md)
+- [AI-native Content Pipeline](./pipeline-conteudo.md) — signed-policy,
+  multi-channel and multi-format orchestration for external AI runners, with
+  canonical ledger replay and no native human-review path.
 - [Documentation Governance](./documentation.md)
 - [Repository Boundary](./repositories.md)
 - [Security](./security.md)

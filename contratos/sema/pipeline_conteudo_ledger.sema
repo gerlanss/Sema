@@ -1,0 +1,261 @@
+module sema.produto.pipeline_conteudo.ledger {
+  docs {
+    resumo: "Ledger hash-chained do pipeline de conteudo. Eventos carregam envelopes assinados; checkpoints externos detectam truncamento; armazenamento protegido continua sendo responsabilidade da fronteira de confianca."
+    arquivo: "docs/pipeline-conteudo.md"
+  }
+
+  use sema.produto.pipeline_conteudo.confianca
+
+  type EventoLedgerConteudo {
+    fields {
+      schema_version: Texto
+      ledger_id: Texto
+      sequence: Inteiro
+      event_id: Texto
+      recorded_at: Timestamp
+      previous_hash: Texto
+      envelope: EnvelopeAssinadoConteudo
+      hash: Texto
+    }
+    invariants {
+      ledger_id existe
+      sequence deve_ser nao_negativo
+      event_id existe
+      recorded_at existe
+      envelope existe
+      hash existe
+    }
+  }
+
+  task validar_ledger_conteudo {
+    input {
+      eventos: Lista<EventoLedgerConteudo> required
+      ledger_id: Texto required
+      expected_head: Texto required
+      configuracao_confianca: ConfiguracaoConfiancaConteudo required
+      trust_root_digest_esperado: Texto required
+      revocation_digest_esperado: Texto required
+      contexto_esperado: ContextoAssinadoEventoConteudo required
+      envelope_politica: EnvelopeAssinadoConteudo required
+    }
+    output {
+      valido: Booleano
+      head: Texto
+      eventos_validos: Inteiro
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      eventos deve_ser sequencia_continua_e_monotona
+      eventos deve_ser ligado_por_previous_hash
+      eventos deve_ser derivado_de_hash_canonico
+      eventos deve_ser ter_wrapper_e_envelope_com_campos_exatos_sem_campos_extras
+      eventos deve_ser estruturalmente_exaustivos_e_sem_campos_extras_por_payload_type
+      eventos deve_ser ligado_ao_contexto_esperado_obrigatorio_com_run_da_politica_trust_domain_trust_root_ledger_policy_e_definition_exatos
+      envelope_politica deve_ser TRUST_POLICY_assinado_e_ligado_ao_contexto_esperado_obrigatorio
+      eventos deve_ser ter_cada_recorded_at_maior_ou_igual_a_issued_at_e_menor_ou_igual_a_expires_at_da_politica
+      eventos deve_ser rejeitado_no_replay_canonico_se_qualquer_recorded_at_estiver_fora_da_janela_assinada
+      eventos deve_ser ligar_RUN_STARTED_ao_trust_domain_da_configuracao_trust_root_digest_esperado_e_ledger_id_de_entrada
+      eventos deve_ser rejeitar_metadata_de_target_ou_artefato_e_data_publica_com_chaves_valores_segredos_ou_material_privado
+      eventos deve_ser rejeitar_credencial_token_senha_secret_ou_chave_privada_em_reason_de_condicao_operacional
+      eventos deve_ser exigir_metadata_vazia_em_ARTIFACT_REGISTERED_ate_schema_assinado_proprio
+      eventos deve_ser composto_por_envelopes_validos_e_autorizados
+      eventos deve_ser sem_replay_de_nonce
+      expected_head deve_ser checkpoint_externo_obrigatorio_e_igual_ao_head_calculado
+      configuracao_confianca deve_ser corresponder_aos_digests_externos_pinado_de_raiz_e_revogacoes
+      eventos deve_ser preservar_verificacao_historica_contra_a_raiz_sem_apagar_historico_por_revogacao_posterior_sem_reabilitar_politica_atual
+    }
+    effects {
+      auditoria ledger_conteudo_validado criticidade = critica
+    }
+    authz {
+      escopo: sema.conteudo.ledger.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.ledger_validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      reescrever_evento
+      apagar_evento
+      aceitar_chain_truncada_contra_checkpoint
+      aceitar_evento_sem_assinatura
+      aceitar_payload_apenas_por_kind
+      aceitar_campo_extra_no_wrapper_do_evento_ou_envelope
+      aceitar_contexto_assinado_parcial
+      aceitar_contexto_esperado_ausente_ou_autoancorado_pelo_payload_genesis
+      politica_expirada_autorizar_novo_evento
+      replay_canonico_aceitar_evento_fora_de_issued_at_expires_at
+      metadata_de_ARTIFACT_REGISTERED_sem_schema_assinado_proprio
+      aceitar_expected_head_ausente
+      derivar_checkpoint_do_mesmo_arquivo_que_sera_validado
+      runner_escrever_veredito_calculado
+      declarar_arquivo_local_como_append_only_forte
+      persistir_reason_livre_com_possivel_credencial_em_condicao_operacional
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.ledger.validarLedgerConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/ledger.ts"
+      simbolo: cli.src.pipeline_conteudo.ledger.validarLedgerConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: critica
+    }
+    guarantees {
+      valido existe
+      head existe
+      eventos_validos existe
+      bloqueios existe
+      valido != falso ou bloqueios existe
+    }
+    tests {
+      caso "detecta reescrita do ledger" {
+        given {
+          eventos: "evento zero evento um alterado"
+          ledger_id: "ledger-content-1"
+          expected_head: "sha256:head-confiavel"
+          configuracao_confianca: "principals autorizados e revogacoes atuais"
+          trust_root_digest_esperado: "sha256:root"
+          revocation_digest_esperado: "sha256:revogacoes"
+          contexto_esperado: "run trust-domain trust-root ledger policy definition pinados"
+          envelope_politica: "TRUST_POLICY assinado vigente em toda a janela dos eventos"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: falso
+          bloqueios: "hash_invalido"
+        }
+      }
+    }
+  }
+
+  task anexar_evento_ledger_conteudo {
+    input {
+      eventos: Lista<EventoLedgerConteudo> required
+      ledger_id: Texto required
+      expected_head: Texto required
+      schema_version: Texto required
+      event_id: Texto required
+      recorded_at: Timestamp required
+      envelope: EnvelopeAssinadoConteudo required
+      envelope_politica: EnvelopeAssinadoConteudo required
+      configuracao_confianca: ConfiguracaoConfiancaConteudo required
+      trust_root_digest_esperado: Texto required
+      revocation_digest_esperado: Texto required
+    }
+    output {
+      eventos_atualizados: Lista<EventoLedgerConteudo>
+      evento: EventoLedgerConteudo
+      head: Texto
+    }
+    rules {
+      eventos deve_ser ledger_valido_no_expected_head_externo
+      envelope deve_ser assinado_por_principal_com_papel_capability_e_scope_do_payload
+      envelope deve_ser ligado_ao_contexto_assinado_completo
+      envelope deve_ser ter_wrapper_e_payload_estruturalmente_exatos_sem_campos_extras
+      envelope deve_ser emitido_por_key_id_nao_revogado_no_append_atual
+      envelope_politica deve_ser TRUST_POLICY_assinado_e_ligado_ao_contexto_esperado_obrigatorio
+      recorded_at deve_ser validado_contra_relogio_atual_confiavel_da_plataforma
+      envelope deve_ser ter_frescura_validada_contra_relogio_atual_confiavel_da_plataforma
+      recorded_at deve_ser maior_ou_igual_a_issued_at_e_menor_ou_igual_a_expires_at_da_politica
+      envelope_politica deve_ser incapaz_de_autorizar_novo_evento_apos_expires_at
+      envelope_politica deve_ser ativado_no_RUN_STARTED_dentro_de_max_envelope_age
+      envelope deve_ser rejeitar_metadata_de_target_ou_artefato_e_data_publica_com_chaves_valores_segredos_ou_material_privado
+      envelope deve_ser rejeitar_credencial_token_senha_secret_ou_chave_privada_em_reason_de_condicao_operacional
+      envelope deve_ser rejeitar_metadata_nao_vazia_em_ARTIFACT_REGISTERED_ate_schema_assinado_proprio
+      configuracao_confianca deve_ser corresponder_aos_digests_externos_pinado_de_raiz_e_revogacoes
+      eventos deve_ser originar_evento_ligado_ao_head_anterior_e_hash_canonico
+      eventos deve_ser originar_chain_candidata_revalidada_antes_do_retorno
+    }
+    effects {
+      auditoria evento_ledger_conteudo_anexado criticidade = critica
+    }
+    authz {
+      escopo: sema.conteudo.ledger.anexar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.evento_anexado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      anexar_sem_expected_head
+      anexar_sem_envelope_de_politica_assinado_ou_sem_contexto_esperado
+      anexar_sobre_chain_invalida_ou_truncada
+      aceitar_assinatura_papel_capability_ou_scope_incorretos
+      aceitar_key_id_atualmente_revogado
+      usar_recorded_at_controlado_pelo_chamador_como_relogio_de_frescura
+      anexar_evento_fora_de_issued_at_expires_at_da_politica
+      anexar_ARTIFACT_REGISTERED_com_metadata_sem_schema_assinado_proprio
+      retornar_chain_candidata_sem_revalidacao
+      runner_escrever_veredito_calculado
+      anexar_condicao_operacional_com_reason_contendo_possivel_credencial
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.ledger.anexarEventoLedgerConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/ledger.ts"
+      simbolo: cli.src.pipeline_conteudo.ledger.anexarEventoLedgerConteudo
+    }
+    execucao {
+      idempotencia: condicional
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: critica
+    }
+    guarantees {
+      eventos_atualizados existe
+      evento existe
+      head existe
+      head deve_ser diferente_do_expected_head
+      evento deve_ser ligado_ao_hash_anterior
+      eventos_atualizados deve_ser ledger_valido
+    }
+    tests {
+      caso "rejeita append contra checkpoint divergente" {
+        given {
+          eventos: "ledger valido em outro head"
+          ledger_id: "ledger-content-1"
+          expected_head: "sha256:checkpoint-externo"
+          schema_version: "content-ledger-event/v1"
+          event_id: "evt-checkpoint-divergente"
+          recorded_at: "2026-07-19T00:00:00Z"
+          envelope: "evento assinado e autorizado"
+          envelope_politica: "TRUST_POLICY assinado e ainda valido"
+          configuracao_confianca: "principals autorizados e revogacoes atuais"
+          trust_root_digest_esperado: "sha256:root"
+          revocation_digest_esperado: "sha256:revogacoes"
+        }
+
+        expect {
+          sucesso: falso
+        }
+
+        error {
+          tipo: "checkpoint_divergente"
+        }
+      }
+    }
+  }
+}

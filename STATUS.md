@@ -8,9 +8,9 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.1.0`
+- Version: `2.2.0`
 - Package: `@semacode/cli`
-- Last updated: 2026-07-18
+- Last updated: 2026-07-19
 - Reference commit: `5936352`
 - Build Week entry: Devpost submission `1102882` is `Submitted`; the final
   source snapshot is `build-week-2026`.

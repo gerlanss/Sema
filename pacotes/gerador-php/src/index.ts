@@ -428,6 +428,14 @@ ${gerarPreparacaoSaida(task)}
 
 function formatarLiteralTestePhp(valor: string, tipoDeclarado?: string): string {
   const texto = valor.trim().replace(/^["']|["']$/g, "");
+  const tipoLista = tipoDeclarado?.match(/^Lista(?:<(.+)>)?$/);
+  if (tipoLista) {
+    const tipoItem = tipoLista[1]?.trim();
+    const itens = texto.length === 0
+      ? []
+      : texto.split(texto.includes(",") ? /\s*,\s*/u : /\s+/u).filter(Boolean);
+    return `[${itens.map((item) => formatarLiteralTestePhp(item, tipoItem)).join(", ")}]`;
+  }
   if (["Texto", "Id", "Email", "Url", "Data", "DataHora"].includes(tipoDeclarado ?? "")) {
     return literalPhp(texto);
   }

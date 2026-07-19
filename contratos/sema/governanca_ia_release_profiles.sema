@@ -26,6 +26,7 @@ module sema.produto.governanca_ia.release_profiles {
     }
     rules {
       versao_esperada deve_ser preenchido
+      versao_esperada deve_ser lida_dos_manifestos_por_validadores_de_status_sem_literal_de_release_fixado
       repositorio deve_ser preenchido
     }
     effects {
@@ -79,6 +80,7 @@ module sema.produto.governanca_ia.release_profiles {
       aprovar_skill_remota_divergente_da_fonte_versionada
       aprovar_logo_remota_divergente_da_marca_oficial
       registrar_mcp_sema_durante_instalacao_do_plugin
+      fixar_versao_publica_em_scripts_de_status
       aprovar_drift_publico_sem_consumidores_laterais
     }
     impl {
@@ -87,6 +89,7 @@ module sema.produto.governanca_ia.release_profiles {
     vinculos {
       arquivo: "scripts/verificar-distribuicao-publica.mjs"
       arquivo: "scripts/verificar-versao-release.mjs"
+      arquivo: "scripts/check-status.mjs"
       simbolo: scripts.verificar_distribuicao_publica.verificarDistribuicaoPublica
     }
     execucao {
@@ -120,9 +123,9 @@ module sema.produto.governanca_ia.release_profiles {
       drift_publico_incompleto: "O gate de release ignorou consumidores laterais e pode reprovar vinculos validos do showcase."
     }
     tests {
-      caso "instalador npm 2.1.0 alinhado sem GitHub Release" {
+      caso "instalador npm 2.2.0 alinhado sem GitHub Release" {
         given {
-          versao_esperada: "2.1.0"
+          versao_esperada: "2.2.0"
           repositorio: "gerlanss/Sema"
         }
 

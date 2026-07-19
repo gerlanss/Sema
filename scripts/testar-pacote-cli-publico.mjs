@@ -112,6 +112,15 @@ async function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperada
   if (!String(json.description ?? "").includes("Codex-native")) {
     throw new Error("The public package manifest must describe Sema as Codex-native.");
   }
+  const exportRaiz = json.exports?.["."];
+  if (
+    Object.keys(json.exports ?? {}).length !== 1 ||
+    exportRaiz?.types !== "./dist/index.d.ts" ||
+    exportRaiz?.import !== "./dist/index.js" ||
+    exportRaiz?.default !== "./dist/index.js"
+  ) {
+    throw new Error("The public package must preserve the root-only exports map from the CLI manifest.");
+  }
   for (const keyword of ["codex", "ai-agents", "semantic-governance"]) {
     if (!(json.keywords ?? []).includes(keyword)) {
       throw new Error(`The public package manifest is missing keyword ${keyword}.`);
@@ -365,9 +374,42 @@ async function main() {
     executar("npm", ["install", caminhoTarball], sandbox);
     const basePacote = path.join(sandbox, "node_modules", "@semacode", "cli");
     const semaBin = path.join(basePacote, "dist", "index.js");
+    const deepImport = spawnSync(
+      process.execPath,
+      ["--input-type=module", "--eval", "await import('@semacode/cli/dist/pipelineConteudo/trust.js')"],
+      { cwd: sandbox, encoding: "utf8" },
+    );
+    if (deepImport.status === 0 || !/ERR_PACKAGE_PATH_NOT_EXPORTED/u.test(deepImport.stderr)) {
+      throw new Error(`The installed public CLI did not block the internal pipeline deep import: ${deepImport.stderr}`);
+    }
     const ajuda = executarComSaida(process.execPath, [semaBin, "--help"], sandbox);
     if (/\bpreflight\b/i.test(ajuda)) {
       throw new Error("The installed public CLI help still exposes the removed preflight command.");
+    }
+    if (!ajuda.includes("sema conteudo capabilities --json") || !ajuda.includes("sema conteudo status")) {
+      throw new Error("The installed public CLI help does not expose the AI-native content pipeline.");
+    }
+
+    const ajudaConteudo = executarComSaida(process.execPath, [semaBin, "conteudo", "--help"], sandbox);
+    for (const uso of ["sema conteudo validar", "sema conteudo validar-envelope", "sema conteudo registrar", "sema conteudo projetar"]) {
+      if (!ajudaConteudo.includes(uso)) {
+        throw new Error(`The installed content pipeline help is missing ${uso}.`);
+      }
+    }
+    if (!ajudaConteudo.includes("Não existe revisão humana nativa") || !ajudaConteudo.includes("nextActions")) {
+      throw new Error("The installed content pipeline help does not state its AI-native runner boundary.");
+    }
+
+    const capabilitiesConteudo = JSON.parse(
+      executarComSaida(process.execPath, [semaBin, "conteudo", "capabilities", "--json"], sandbox),
+    );
+    if (
+      capabilitiesConteudo.sucesso !== true ||
+      capabilitiesConteudo.nativeHumanReview !== false ||
+      capabilitiesConteudo.runner !== "external" ||
+      capabilitiesConteudo.canonicalState !== "signed_hash_chained_ledger"
+    ) {
+      throw new Error("The installed content pipeline capabilities do not preserve the contracted AI-native boundary.");
     }
 
     const versao = executarComSaida(process.execPath, [semaBin, "--version"], sandbox).trim();
@@ -470,6 +512,7 @@ async function main() {
       "docs/cli.md",
       "docs/commands.md",
       "docs/documentation.md",
+      "docs/pipeline-conteudo.md",
       "docs/security.md",
       "docs/support.md",
     ]) {

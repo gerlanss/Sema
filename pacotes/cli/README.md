@@ -109,6 +109,22 @@ sema testar contratos/app.sema --alvo cpp --saida .tmp/app-cpp-tests
 sema verificar contratos/app.sema --saida .tmp/app-check --json
 ```
 
+## AI-native Content Pipeline
+
+`sema conteudo` validates and plans multi-channel, multi-format content work,
+verifies signed policies and evidence, replays canonical state, and projects
+non-authoritative manifests. Producer agents, specialized AI evaluators,
+creative tools, and delivery adapters run in an external runner; there is no
+native human-review transition.
+
+```bash
+sema conteudo validar exemplos/pipeline-conteudo/definicao.json --json
+sema conteudo planejar exemplos/pipeline-conteudo/definicao.json --alvos-arquivo exemplos/pipeline-conteudo/alvos.json --json
+```
+
+See `docs/pipeline-conteudo.md` for the signed trust, quorum, ledger, target,
+adapter, and projection model.
+
 ## Public Boundary
 
 The npm package is for local CLI usage only. It must not contain private or

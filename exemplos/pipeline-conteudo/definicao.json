@@ -1,0 +1,136 @@
+{
+  "schemaVersion": "sema.content.pipeline/v1",
+  "pipelineId": "conteudo-multidestino-exemplo",
+  "version": "1.0.0",
+  "stages": [
+    {
+      "stageId": "pauta",
+      "capability": "content.topic.plan",
+      "scope": "GLOBAL",
+      "adapterPolicy": "NONE",
+      "dependsOn": [],
+      "produces": ["briefing-editorial"],
+      "gateIds": []
+    },
+    {
+      "stageId": "pesquisa",
+      "capability": "content.research.collect",
+      "scope": "GLOBAL",
+      "adapterPolicy": "NONE",
+      "dependsOn": ["pauta"],
+      "produces": ["dossie-fontes"],
+      "gateIds": []
+    },
+    {
+      "stageId": "conteudo-mestre",
+      "capability": "content.master.compose",
+      "scope": "GLOBAL",
+      "adapterPolicy": "NONE",
+      "dependsOn": ["pesquisa"],
+      "produces": ["conteudo-mestre"],
+      "gateIds": ["qa-mestre"]
+    },
+    {
+      "stageId": "adaptacao",
+      "capability": "content.target.adapt",
+      "scope": "POR_ALVO",
+      "adapterPolicy": "CONSTRAINTS",
+      "dependsOn": ["conteudo-mestre"],
+      "produces": ["conteudo-adaptado"],
+      "gateIds": ["qa-destino"]
+    },
+    {
+      "stageId": "entrega",
+      "capability": "content.target.deliver",
+      "scope": "POR_ALVO",
+      "adapterPolicy": "CONFIRMATION",
+      "dependsOn": ["adaptacao"],
+      "produces": ["confirmacao-entrega"],
+      "gateIds": ["confirmacao-externa"]
+    }
+  ],
+  "gates": [
+    {
+      "gateId": "qa-mestre",
+      "stageId": "conteudo-mestre",
+      "scope": "GLOBAL",
+      "evaluationMode": "IA_ESPECIALIZADA",
+      "requiredEvidence": ["artifact.digest.observed"],
+      "evaluatorCapabilities": ["content.qa.factual", "content.qa.editorial"],
+      "minAttestationsPerEvidence": 1,
+      "minDistinctAttesterControlDomains": 1,
+      "minApprovals": 2,
+      "minDistinctControlDomains": 2,
+      "producerDisjoint": true,
+      "rejectionIsBinding": true,
+      "rubricDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "gateId": "qa-destino",
+      "stageId": "adaptacao",
+      "scope": "POR_ALVO",
+      "evaluationMode": "HIBRIDA",
+      "requiredEvidence": ["adapter.constraints.passed"],
+      "evaluatorCapabilities": ["content.qa.target-fit"],
+      "minAttestationsPerEvidence": 1,
+      "minDistinctAttesterControlDomains": 1,
+      "minApprovals": 1,
+      "minDistinctControlDomains": 1,
+      "producerDisjoint": true,
+      "rejectionIsBinding": true,
+      "rubricDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "gateId": "confirmacao-externa",
+      "stageId": "entrega",
+      "scope": "POR_ALVO",
+      "evaluationMode": "DETERMINISTICA",
+      "requiredEvidence": ["destination.delivery.observed"],
+      "evaluatorCapabilities": [],
+      "minAttestationsPerEvidence": 1,
+      "minDistinctAttesterControlDomains": 1,
+      "minApprovals": 1,
+      "minDistinctControlDomains": 1,
+      "producerDisjoint": true,
+      "rejectionIsBinding": true,
+      "rubricDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "adapters": [
+    {
+      "adapterId": "destination.document",
+      "version": "1.0.0",
+      "capabilities": ["content.target.deliver", "content.target.confirm"],
+      "acceptedMediaTypes": ["text/html", "text/markdown"],
+      "formatProfiles": ["long-form"],
+      "deterministicConstraints": [
+        {
+          "constraintId": "document-non-empty",
+          "kind": "artifact.bytes.min",
+          "config": { "minimum": 1 }
+        }
+      ],
+      "requiredMetadata": ["title"],
+      "optionalMetadata": [],
+      "confirmationPredicates": ["destination.delivery.observed"]
+    },
+    {
+      "adapterId": "destination.audio-feed",
+      "version": "1.0.0",
+      "capabilities": ["content.target.deliver", "content.target.confirm"],
+      "acceptedMediaTypes": ["audio/mpeg", "audio/mp4"],
+      "formatProfiles": ["spoken-episode"],
+      "deterministicConstraints": [
+        {
+          "constraintId": "audio-duration-positive",
+          "kind": "media.duration.min",
+          "config": { "minimum": 1 }
+        }
+      ],
+      "requiredMetadata": ["title", "description"],
+      "optionalMetadata": [],
+      "confirmationPredicates": ["destination.delivery.observed"]
+    }
+  ],
+  "requiredCompletionGates": ["qa-mestre", "qa-destino", "confirmacao-externa"]
+}

@@ -1,0 +1,164 @@
+module sema.produto.pipeline_conteudo.avaliacao {
+  docs {
+    resumo: "Composicao interna de gates vinculados a politica assinada e ao replay canonico. A superficie autoritativa e derivarEstadoPipelineConteudo; produtor, escopo e linhagem nunca sao declarados por caller publico."
+    arquivo: "docs/pipeline-conteudo.md"
+  }
+
+  use sema.produto.pipeline_conteudo.confianca
+
+  task avaliar_gate_conteudo_interno {
+    input {
+      envelope_politica: EnvelopeAssinadoConteudo required
+      gate: PoliticaGateConteudo required
+      required_evidence_adicional: Lista<Texto>
+      attester_capabilities_adicionais: Objeto
+      run_id: Texto required
+      trust_domain_id: Texto required
+      trust_root_digest: Texto required
+      revocation_digest_esperado: Texto required
+      ledger_id: Texto required
+      policy_digest: Texto required
+      definition_digest: Texto required
+      artefato_digest: Texto required
+      target_id: Texto
+      authorization_scope: Texto required
+      produtor_id: Texto required
+      producer_lineage_ids: Lista<Texto> required
+      evidencias_aceitas: Lista required
+      pareceres_ia: Lista required
+      configuracao_confianca: ConfiguracaoConfiancaConteudo required
+    }
+    output {
+      veredito: VereditoConteudo
+      aprovacoes_validas: Inteiro
+      control_domains_distintos: Inteiro
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      run_id deve_ser ligado_a_todos_os_atestados_e_pareceres
+      trust_domain_id deve_ser ligado_a_todos_os_atestados_e_pareceres
+      trust_root_digest deve_ser ligado_a_politica_atestados_e_pareceres
+      ledger_id deve_ser ligado_a_todos_os_atestados_e_pareceres
+      policy_digest deve_ser ligado_a_todos_os_atestados_e_pareceres
+      definition_digest deve_ser ligado_a_todos_os_atestados_e_pareceres
+      envelope_politica deve_ser assinado_por_POLICY_AUTHORITY_da_raiz_pinada
+      envelope_politica deve_ser rejeitado_quando_POLICY_AUTHORITY_estiver_atualmente_revogada
+      envelope_politica deve_ser ter_payload_type_TRUST_POLICY
+      envelope_politica deve_ser ligado_ao_run_policy_digest_definition_digest_target_set_digest_e_ledger_exatos
+      envelope_politica deve_ser recebido_do_replay_somente_apos_ativacao_temporal_valida
+      gate deve_ser exatamente_o_gate_de_mesmo_id_no_envelope_politica
+      required_evidence_adicional deve_ser somente_endurecer_o_gate_assinado
+      attester_capabilities_adicionais deve_ser somente_endurecer_capabilities_de_atestador_por_evidencia
+      configuracao_confianca deve_ser corresponder_ao_trust_root_digest_e_revocation_digest_esperado
+      authorization_scope deve_ser derivado_do_run_target_e_account_scope_exatos
+      produtor_id deve_ser derivado_do_artefato_aceito_pelo_replay_canonico
+      producer_lineage_ids deve_ser derivado_da_linhagem_completa_do_replay_canonico
+      evidencias_aceitas deve_ser ligadas_ao_digest_alvo_e_execucao_exatos
+      evidencias_aceitas deve_ser exigir_capability_content_evidence_attest_especifica_por_evidence_type
+      evidencias_aceitas deve_ser rejeitar_capability_generica_content_evidence_attest
+      attester_capabilities_adicionais deve_ser vincular_evidencia_de_adapter_a_content_adapter_attest_adapter_id_version_evidence_type
+      evidencias_aceitas deve_ser exigir_adapter_id_e_adapter_version_exatos_em_data_de_evidencia_de_adapter
+      evidencias_aceitas deve_ser exigir_observation_digest_em_confirmation_predicate
+      evidencias_aceitas deve_ser exigir_observed_media_type_independente_assinado_e_compativel_com_artefato_e_adapter_em_constraints
+      evidencias_aceitas deve_ser recalcular_constraints_digest_results_digest_e_resultado_APROVADO_REPROVADO_ou_INCONCLUSIVO
+      evidencias_aceitas deve_ser originadas_de_data_publica_sem_segredos
+      evidencias_aceitas deve_ser satisfazer_min_attestations_per_evidence_para_cada_tipo_requerido
+      evidencias_aceitas deve_ser satisfazer_min_distinct_attester_control_domains_para_cada_tipo_requerido
+      evidencias_aceitas deve_ser contadas_por_principals_chaves_e_control_domains_de_atestadores_distintos
+      pareceres_ia deve_ser ligados_ao_digest_alvo_execucao_e_rubrica_exatos
+      pareceres_ia deve_ser emitidos_por_ia_especializada_autorizada
+      pareceres_ia deve_ser contados_por_principals_chaves_e_control_domains_distintos
+      producer_lineage_ids deve_ser disjunto_dos_avaliadores_quando_exigido
+      gate deve_ser separador_de_avaliacao_deterministica_e_parecer_semantico
+      gate deve_ser ter_scope_obrigatorio_e_exato
+      gate deve_ser ter_evidencia_requerida_nao_vazia_quando_deterministico_ou_hibrido
+      gate deve_ser ter_capability_de_avaliador_nao_vazia_quando_semantico_ou_hibrido
+      pareceres_ia deve_ser rejeitados_quando_key_id_estiver_atualmente_revogado
+      evidencias_aceitas deve_ser rejeitadas_quando_key_id_estiver_atualmente_revogado
+    }
+    effects {
+      auditoria gate_conteudo_derivado criticidade = alta
+    }
+    authz {
+      escopo: sema.conteudo.gate.avaliar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.gate_derivado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      produtor_ou_ancestral_aprovar_gate_critico
+      mesma_chave_publica_formar_multiplos_principals
+      nomes_diferentes_no_mesmo_control_domain_formarem_quorum
+      mesma_chave_ou_control_domain_de_atestador_formar_quorum_deterministico_falso
+      quorum_de_atestadores_substituir_quorum_de_pareceres_ia
+      reutilizar_atestado_entre_runs_targets_ou_accounts
+      avaliar_gate_solto_ou_divergente_da_politica_assinada
+      caller_publico_declarar_produtor_id_authorization_scope_ou_linhagem
+      expor_avaliacao_isolada_como_superficie_publica_autoritativa
+      capability_generica_content_evidence_attest_satisfazer_evidencia
+      evidencia_de_adapter_sem_binding_de_adapter_id_e_version
+      caller_reduzir_evidencia_quorum_independencia_ou_rubrica
+      target_set_ser_reduzido_fora_da_politica_assinada
+      sema_inventar_julgamento_semantico
+      revisao_humana_nativa
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.trust.avaliarGateConteudoInterno
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/trust.ts"
+      simbolo: cli.src.pipeline_conteudo.trust.avaliarGateConteudoInterno
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      veredito existe
+      aprovacoes_validas existe
+      control_domains_distintos existe
+      veredito deve_ser aprovado_somente_com_quorum_satisfeito
+      veredito em [NAO_AVALIADO, APROVADO, REPROVADO, INCONCLUSIVO]
+      veredito deve_ser consumido_somente_por_derivarEstadoPipelineConteudo
+    }
+    tests {
+      caso "mesma chave ou dominio nao forma quorum" {
+        given {
+          gate: "dois atestadores por evidencia e duas aprovacoes IA com dominios distintos"
+          envelope_politica: "TRUST_POLICY assinado por POLICY_AUTHORITY com o gate exato"
+          run_id: "run-a"
+          trust_domain_id: "content-prod"
+          trust_root_digest: "sha256:root"
+          revocation_digest_esperado: "sha256:revogacoes"
+          ledger_id: "ledger-content-1"
+          policy_digest: "sha256:policy"
+          definition_digest: "sha256:definition"
+          artefato_digest: "sha256:abc"
+          authorization_scope: "target:site-a:account:publisher-a"
+          produtor_id: "producer-a"
+          producer_lineage_ids: "producer-a producer-parent"
+          evidencias_aceitas: "evidencia valida"
+          pareceres_ia: "tres pareceres sem independencia real"
+          configuracao_confianca: "producer-a evaluator-a evaluator-b evaluator-c e revogacoes atuais"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          veredito: "INCONCLUSIVO"
+          control_domains_distintos: 1
+        }
+      }
+    }
+  }
+}

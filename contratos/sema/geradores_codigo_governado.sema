@@ -1,6 +1,6 @@
 module sema.produto.geradores_codigo_governado {
   docs {
-    resumo: "Contrato interno para garantir que codigo gerado pela Sema carregue um cabecalho curto, humano e IA-first em todos os alvos."
+    resumo: "Contrato interno para garantir cabecalho IA-first e materializacao executavel honesta no codigo gerado pela Sema em todos os alvos."
   }
 
   vinculos {
@@ -31,11 +31,15 @@ module sema.produto.geradores_codigo_governado {
       idioma_humano_preservado: Booleano
       cobertura_ia_fraca_media_forte: Booleano
       comentario_compacto: Booleano
+      testes_lua_erro_nao_tautologicos: Booleano
+      operadores_lua_validos: Booleano
     }
     rules {
       modulo deve_ser preenchido
       alvo deve_ser em [typescript, javascript, python, php, dart, lua, html, css, dotnet, cpp, nestjs, fastapi]
       capacidade_ia deve_ser em [fraca, media, forte]
+      alvo deve_ser quando_lua_gerar_testes_de_erro_sem_injetar_erro_esperado_na_execucao
+      alvo deve_ser quando_lua_mapear_operadores_da_DSL_para_sintaxe_valida_do_destino
     }
     effects {
       fs.write codigo_gerado criticidade = media
@@ -60,6 +64,8 @@ module sema.produto.geradores_codigo_governado {
         idioma_humano_preservado: publico
         cobertura_ia_fraca_media_forte: publico
         comentario_compacto: publico
+        testes_lua_erro_nao_tautologicos: publico
+        operadores_lua_validos: publico
       }
     }
     audit {
@@ -75,6 +81,8 @@ module sema.produto.geradores_codigo_governado {
       remover_acentos_do_texto_humano_por_causa_da_dsl
       copiar_contrato_inteiro_para_comentario
       substituir_drift_por_comentario_no_codigo
+      teste_lua_gerado_induzir_a_propria_falha_por_contexto_erro_esperado
+      operador_da_DSL_emitido_com_sintaxe_invalida_no_lua
     }
     impl {
       ts: gerador_typescript.src.index.gerarTypeScript
@@ -115,6 +123,8 @@ module sema.produto.geradores_codigo_governado {
       idioma_humano_preservado == verdadeiro
       cobertura_ia_fraca_media_forte == verdadeiro
       comentario_compacto == verdadeiro
+      testes_lua_erro_nao_tautologicos == verdadeiro
+      operadores_lua_validos == verdadeiro
     }
     tests {
       caso "typescript recebe cabecalho governado" {
@@ -157,6 +167,19 @@ module sema.produto.geradores_codigo_governado {
           cabecalho_sema_governado: verdadeiro
           descricao_humana_presente: verdadeiro
           lembrete_consulta_sema: verdadeiro
+        }
+      }
+      caso "lua materializa erro e operadores sem induzir o resultado" {
+        given {
+          modulo: "exemplos.tratamento_erro"
+          alvo: "lua"
+          capacidade_ia: "forte"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          testes_lua_erro_nao_tautologicos: verdadeiro
+          operadores_lua_validos: verdadeiro
         }
       }
       caso "dotnet recebe cabecalho governado" {

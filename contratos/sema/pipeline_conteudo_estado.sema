@@ -1,0 +1,300 @@
+module sema.produto.pipeline_conteudo.estado {
+  docs {
+    resumo: "Ledger canonico append-only, replay deterministico, condicoes operacionais e projecoes regeneraveis do pipeline de conteudo. Manifesto e dashboards nao sao autoridade."
+    arquivo: "docs/pipeline-conteudo.md"
+  }
+
+  use sema.produto.pipeline_conteudo.confianca
+
+  use sema.produto.pipeline_conteudo.avaliacao
+
+  use sema.produto.pipeline_conteudo.ledger
+
+  type EstadoGateConteudo {
+    fields {
+      gate_id: Texto
+      target_id: Texto
+      artifact_digest: Texto
+      veredito: VereditoConteudo
+      condition: CondicaoOperacionalConteudo
+      evidence_ids: Lista<Texto>
+      assessment_ids: Lista<Texto>
+      blockers: Lista<Texto>
+    }
+    invariants {
+      gate_id existe
+      veredito existe
+      condition existe
+      evidence_ids existe
+      assessment_ids existe
+      blockers existe
+    }
+  }
+
+  type ProjecaoPipelineConteudo {
+    fields {
+      authoritative: Booleano
+      ledger_id: Texto
+      ledger_head: Texto
+      run_id: Texto
+      generated_at: Timestamp
+      gates: Lista<EstadoGateConteudo>
+      targets: Lista
+      artifacts: Lista
+      next_actions: Lista<Texto>
+    }
+    invariants {
+      authoritative == falso
+      ledger_id existe
+      ledger_head existe
+      run_id existe
+      gates existe
+      targets existe
+      artifacts existe
+      next_actions existe
+    }
+  }
+
+  enum CondicaoOperacionalConteudo {
+    PENDENTE,
+    PRONTA,
+    EXECUTANDO,
+    AGUARDANDO_EVIDENCIA,
+    AGUARDANDO_EVENTO_EXTERNO,
+    FERRAMENTA_INDISPONIVEL,
+    CAPACIDADE_AUSENTE,
+    AUTORIZACAO_AUSENTE,
+    FALHA_TRANSITORIA,
+    FALHA_TERMINAL,
+    EXECUCAO_ENCERRADA
+  }
+
+  task derivar_estado_pipeline_conteudo {
+    input {
+      eventos: Lista<EventoLedgerConteudo> required
+      envelope_politica: EnvelopeAssinadoConteudo required
+      definicao: Objeto required
+      configuracao_confianca: ConfiguracaoConfiancaConteudo required
+      trust_root_digest_esperado: Texto required
+      revocation_digest_esperado: Texto required
+      expected_head: Texto required
+    }
+    output {
+      valido: Booleano
+      run_id: Texto
+      estados_gate: Lista<EstadoGateConteudo>
+      concluido: Booleano
+      next_actions: Lista<Texto>
+      artifacts_aceitos: Lista
+    }
+    rules {
+      envelope_politica deve_ser TRUST_POLICY_assinado_por_POLICY_AUTHORITY
+      envelope_politica deve_ser rejeitado_quando_POLICY_AUTHORITY_estiver_atualmente_revogada
+      envelope_politica deve_ser ter_issued_at_expires_at_validos_e_encerrar_autorizacao_de_execucao_em_expires_at_e_nao_apenas_ativacao
+      eventos deve_ser ter_cada_recorded_at_dentro_de_issued_at_expires_at_da_politica_assinada
+      eventos deve_ser rejeitado_no_replay_canonico_se_qualquer_recorded_at_estiver_fora_da_janela_assinada
+      envelope_politica deve_ser ligado_ao_run_trust_root_definition_target_set_ledger_e_gates_exatos
+      configuracao_confianca deve_ser completa_e_ligada_aos_digests_externos_pinado_de_raiz_e_revogacoes
+      eventos deve_ser replay_deterministico_do_ledger
+      eventos deve_ser validos_no_expected_head_externo_obrigatorio
+      eventos deve_ser superseder_pareceres_de_digests_anteriores
+      eventos deve_ser isolado_por_target
+      eventos deve_ser satisfazer_quorum_de_atestadores_por_tipo_de_evidencia_separado_do_quorum_de_pareceres_ia
+      eventos deve_ser derivar_produtor_authorization_scope_e_linhagem_sem_entrada_de_caller_publico
+      eventos deve_ser exigir_capability_de_atestador_exata_por_evidence_type
+      eventos deve_ser exigir_binding_adapter_id_version_e_capability_em_evidencia_de_adapter
+      eventos deve_ser exigir_observation_digest_em_confirmation_predicate
+      eventos deve_ser exigir_observed_media_type_independente_assinado_e_compativel_com_artifact_media_type_e_adapter
+      eventos deve_ser recalcular_binding_constraints_digest_results_digest_e_resultado_das_constraints
+      eventos deve_ser rejeitar_metadata_de_target_ou_artefato_e_data_publica_com_segredos
+      eventos deve_ser validar_metadata_v1_de_target_por_allowlist_exata_required_metadata_optional_metadata_e_valores_escalares_publicos
+      eventos deve_ser exigir_metadata_vazia_em_ARTIFACT_REGISTERED_ate_schema_assinado_proprio
+      envelope_politica deve_ser fonte_dos_vereditos_calculados
+      envelope_politica deve_ser separador_de_condicao_e_veredito
+      definicao deve_ser ligada_ao_definition_digest_da_politica_e_execucao
+      definicao deve_ser fonte_dos_gates_obrigatorios_e_escopos_de_producao
+      definicao deve_ser ter_gates_exatamente_iguais_aos_da_politica_assinada
+      definicao deve_ser exigir_producer_disjoint_verdadeiro_em_todo_required_completion_gate
+      envelope_politica deve_ser ter_target_set_digest_igual_ao_digest_dos_targets_do_RUN_STARTED
+      eventos deve_ser aceitar_artefatos_somente_de_principal_atual_nao_revogado_com_papel_capability_e_scope_exatos
+      eventos deve_ser aceitar_artefatos_somente_quando_ligados_a_etapa_output_target_dependencias_e_linhagem_exatos
+      eventos deve_ser recalcular_constraints_somente_de_observacoes_independentes_assinadas
+      eventos deve_ser ignorar_metadata_autodeclarada_do_artefato_como_medicao_de_constraint
+      eventos deve_ser causar_valido_falso_em_falha_de_configuracao_ledger_ou_planejamento
+      eventos deve_ser causar_valido_verdadeiro_somente_apos_replay_canonico_valido
+    }
+    effects {
+      auditoria estado_pipeline_conteudo_derivado criticidade = alta
+    }
+    authz {
+      escopo: sema.conteudo.estado.derivar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.estado_derivado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      confiar_em_concluido_manual
+      manifesto_alterar_estado_canonico
+      condicao_operacional_aprovar_gate
+      condicao_operacional_ser_usada_como_veredito
+      evidencia_de_um_target_vazar_para_outro
+      produtor_sem_capability_ou_scope_substituir_artefato
+      artefato_rejeitado_aparecer_em_artifacts_aceitos
+      metadata_do_produtor_satisfazer_constraint
+      metadata_ou_data_publica_conter_credencial_token_senha_secret_ou_chave_privada
+      politica_expirada_autorizar_novo_evento
+      replay_canonico_aceitar_evento_fora_de_issued_at_expires_at
+      metadata_de_ARTIFACT_REGISTERED_sem_schema_assinado_proprio
+      caller_reduzir_gates_obrigatorios
+      caller_reduzir_target_set_assinado
+      politica_crua_ou_gate_solto_governar_estado
+      caller_publico_declarar_produtor_authorization_scope_ou_linhagem_do_gate
+      avaliacao_isolada_de_gate_ser_superficie_autoritativa
+      runner_executar_dentro_do_derivador_ou_escrever_veredito
+      revisao_humana_nativa
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.state.derivarEstadoPipelineConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/state.ts"
+      simbolo: cli.src.pipeline_conteudo.state.derivarEstadoPipelineConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      run_id existe
+      estados_gate existe
+      concluido existe
+      next_actions existe
+      artifacts_aceitos existe
+      valido != falso ou concluido == falso
+      valido != falso ou artifacts_aceitos deve_ser vazio
+      concluido != verdadeiro ou estados_gate deve_ser todos_gates_obrigatorios_aprovados
+      concluido != verdadeiro ou valido == verdadeiro
+      estados_gate deve_ser separado_por_target
+      estados_gate deve_ser derivado_somente_por_derivarEstadoPipelineConteudo_apos_replay_valido
+    }
+    tests {
+      caso "ignora concluido manual" {
+        given {
+          eventos: "execucao sem atestado de publicacao"
+          envelope_politica: "publicacao exige atestado externo e politica assinada"
+          configuracao_confianca: "adapter autorizado e revogacoes atuais"
+          trust_root_digest_esperado: "sha256:root"
+          revocation_digest_esperado: "sha256:revogacoes"
+          expected_head: "sha256:checkpoint"
+          definicao: "pipeline com gate-publicacao obrigatorio"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+          concluido: falso
+          next_actions: "coletar_evidencia"
+        }
+      }
+    }
+  }
+
+  task projetar_manifesto_pipeline_conteudo {
+    input {
+      eventos: Lista<EventoLedgerConteudo> required
+      envelope_politica: EnvelopeAssinadoConteudo required
+      definicao: Objeto required
+      configuracao_confianca: ConfiguracaoConfiancaConteudo required
+      trust_root_digest_esperado: Texto required
+      revocation_digest_esperado: Texto required
+      expected_head: Texto required
+    }
+    output {
+      projecao: ProjecaoPipelineConteudo
+    }
+    rules {
+      eventos deve_ser ledger_canonico_validado
+      eventos deve_ser ligado_ao_expected_head_externo_obrigatorio
+      envelope_politica deve_ser TRUST_POLICY_assinado_por_POLICY_AUTHORITY
+      envelope_politica deve_ser fonte_dos_vereditos_calculados
+      configuracao_confianca deve_ser completa_e_ligada_aos_digests_externos_pinado_de_raiz_e_revogacoes
+      definicao deve_ser ligada_ao_definition_digest_da_politica_e_execucao
+      eventos deve_ser permitir_projecao_somente_quando_estado_valido
+      eventos deve_ser projetar_somente_artifacts_aceitos_pelo_replay
+    }
+    effects {
+      fs.write manifesto_pipeline_conteudo criticidade = baixa
+    }
+    authz {
+      escopo: sema.conteudo.projecao.gerar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.projecao_gerada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      ler_manifesto_como_entrada_canonica
+      aceitar_edicao_manual_como_evento
+      projetar_quando_estado_valido_for_falso
+      projetar_artefato_rejeitado_ou_apenas_autodeclarado
+      executar_runner_durante_projecao
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.projection.projetarManifestoPipelineConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/projection.ts"
+      simbolo: cli.src.pipeline_conteudo.projection.projetarManifestoPipelineConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "seguro"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      projecao existe
+      projecao deve_ser nao_autoritativa
+      projecao deve_ser ligada_ao_head_canonico
+      projecao deve_ser falhar_fechada_quando_estado_for_invalido
+    }
+    tests {
+      caso "manifesto e somente projecao" {
+        given {
+          eventos: "ledger valido"
+          envelope_politica: "TRUST_POLICY valido e assinado"
+          configuracao_confianca: "principals autorizados e revogacoes atuais"
+          trust_root_digest_esperado: "sha256:root"
+          revocation_digest_esperado: "sha256:revogacoes"
+          expected_head: "sha256:checkpoint"
+          definicao: "pipeline valido com gates obrigatorios"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          projecao: "authoritative false e ledger_head presente"
+        }
+      }
+    }
+  }
+}

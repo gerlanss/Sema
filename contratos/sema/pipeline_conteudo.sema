@@ -1,0 +1,253 @@
+module sema.produto.pipeline_conteudo {
+  docs {
+    resumo: "Pipeline AI-native de criacao de conteudo, multicanal e multiformato. Profiles criativos sao capacidades opcionais; runner externo executa; Sema planeja, verifica evidencias e deriva o estado canonico sem revisao humana nativa."
+    arquivo: "contratos/sema/pipeline_conteudo_confianca.sema"
+    arquivo: "contratos/sema/pipeline_conteudo_autorizacao.sema"
+    arquivo: "contratos/sema/pipeline_conteudo_avaliacao.sema"
+    arquivo: "contratos/sema/pipeline_conteudo_ledger.sema"
+    arquivo: "contratos/sema/pipeline_conteudo_estado.sema"
+    arquivo: "contratos/sema/pipeline_conteudo_adaptadores.sema"
+    arquivo: "contratos/sema/pipeline_conteudo_cli.sema"
+    arquivo: "docs/pipeline-conteudo.md"
+  }
+
+  use sema.produto.pipeline_conteudo.confianca
+
+  use sema.produto.pipeline_conteudo.autorizacao
+
+  use sema.produto.pipeline_conteudo.avaliacao
+
+  use sema.produto.pipeline_conteudo.ledger
+
+  use sema.produto.pipeline_conteudo.estado
+
+  use sema.produto.pipeline_conteudo.adaptadores
+
+  type EtapaPipelineConteudo {
+    fields {
+      stage_id: Texto
+      capability: Texto
+      scope: EscopoEtapaConteudo
+      adapter_policy: PoliticaAdapterEtapaConteudo
+      depends_on: Lista<Texto>
+      produces: Lista<Texto>
+      gate_ids: Lista<Texto>
+    }
+    invariants {
+      stage_id existe
+      capability existe
+      scope existe
+      adapter_policy existe
+      depends_on existe
+      produces existe
+      produces deve_ser ter_exatamente_um_item_na_v1
+      gate_ids existe
+    }
+  }
+
+  type DefinicaoPipelineConteudo {
+    fields {
+      schema_version: Texto
+      pipeline_id: Texto
+      version: Texto
+      stages: Lista<EtapaPipelineConteudo>
+      gates: Lista<PoliticaGateConteudo>
+      adapters: Lista<AdaptadorConteudo>
+      required_completion_gates: Lista<Texto>
+    }
+    invariants {
+      pipeline_id existe
+      version existe
+      stages existe
+      gates existe
+      adapters existe
+      required_completion_gates existe
+    }
+  }
+
+  type PlanoPipelineConteudo {
+    fields {
+      pipeline_id: Texto
+      definition_digest: Texto
+      target_ids: Lista<Texto>
+      stage_instances: Lista
+      artifact_slots: Lista
+      gate_instances: Lista
+      next_actions: Lista<Texto>
+    }
+    invariants {
+      pipeline_id existe
+      definition_digest existe
+      target_ids existe
+      stage_instances existe
+      artifact_slots existe
+      gate_instances existe
+      next_actions existe
+    }
+  }
+
+  enum EscopoEtapaConteudo {
+    GLOBAL,
+    POR_ALVO
+  }
+
+  task validar_definicao_pipeline_conteudo {
+    input {
+      definicao: DefinicaoPipelineConteudo required
+    }
+    output {
+      valida: Booleano
+      definition_digest: Texto
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      definicao deve_ser ter_stage_ids_unicos
+      definicao deve_ser ter_gate_ids_unicos
+      definicao deve_ser ter_grafo_de_etapas_aciclico
+      definicao deve_ser ter_dependencias_existentes
+      definicao deve_ser ter_gates_ligados_a_etapas_existentes
+      definicao deve_ser ter_scope_obrigatorio_e_igual_entre_gate_e_etapa
+      definicao deve_ser ter_quorum_de_atestadores_por_evidencia_separado_do_quorum_de_pareceres_ia
+      definicao deve_ser ter_producer_disjoint_e_rejection_is_binding_booleanos_em_todos_os_gates
+      definicao deve_ser ter_producer_disjoint_verdadeiro_em_todo_required_completion_gate
+      definicao deve_ser ter_completion_gates_existentes
+      definicao deve_ser ter_adapters_id_version_unicos
+      definicao deve_ser ter_required_metadata_e_optional_metadata_unicos_e_disjuntos_em_cada_adapter
+      definicao deve_ser ter_union_required_metadata_optional_metadata_como_allowlist_exata_top_level_da_metadata_v1
+      definicao deve_ser permitir_somente_valores_escalares_publicos_na_metadata_v1
+      definicao deve_ser ter_exatamente_um_output_por_etapa_na_v1
+      definicao deve_ser ter_adapter_policy_em [NONE, CONSTRAINTS, CONFIRMATION]
+      definicao deve_ser ter_adapter_policy_NONE_em_etapa_GLOBAL
+      definicao deve_ser ter_gate_em_etapa_com_adapter_policy_diferente_de_NONE
+      definicao deve_ser ter_adapter_policy_CONSTRAINTS_em_capability_content_target_adapt
+      definicao deve_ser ter_adapter_policy_CONFIRMATION_em_capability_content_target_deliver
+    }
+    effects {
+      auditoria definicao_pipeline_conteudo_validada criticidade = alta
+    }
+    authz {
+      escopo: sema.conteudo.pipeline.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.pipeline_validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      canal_fixado_no_nucleo
+      formato_fixado_no_nucleo
+      marca_fixada_no_nucleo
+      revisao_humana_nativa
+      runner_com_autoridade_de_veredito
+      runner_alterar_politica_gates_ou_completion_gates
+      required_completion_gate_com_producer_disjoint_falso
+      expor_avaliador_interno_de_gate_na_superficie_publica_do_pacote
+      manifesto_como_fonte_da_verdade
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.planner.validarDefinicaoPipelineConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/planner.ts"
+      simbolo: cli.src.pipeline_conteudo.planner.validarDefinicaoPipelineConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valida existe
+      definition_digest existe
+      bloqueios existe
+      valida != falso ou bloqueios existe
+    }
+    tests {
+      caso "nucleo nao depende de plataforma" {
+        given {
+          definicao: "pauta pesquisa master adaptacao qa entrega"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valida: verdadeiro
+        }
+      }
+    }
+  }
+
+  task planejar_pipeline_conteudo {
+    input {
+      definicao: DefinicaoPipelineConteudo required
+      alvos: Lista<AlvoConteudo> required
+    }
+    output {
+      plano: PlanoPipelineConteudo
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      definicao deve_ser valida
+      alvos deve_ser validos_e_isolados
+      definicao deve_ser instanciar_etapa_global_uma_vez
+      definicao deve_ser instanciar_etapa_por_alvo_para_cada_target_id
+      definicao deve_ser preservar_dependencias_por_escopo
+      definicao deve_ser declarativa_e_sem_execucao_de_ferramentas
+      definicao deve_ser produzir_slots_sem_ambiguidade_de_output
+      alvos deve_ser obedecer_allowlist_exata_required_metadata_optional_metadata_do_adapter
+      alvos deve_ser ter_valores_de_metadata_escalares_publicos_sem_estrutura_aninhada
+      alvos deve_ser ter_account_scope_como_referencia_opaca_estrita_e_nunca_credencial
+    }
+    effects {
+      auditoria pipeline_conteudo_planejado criticidade = media
+    }
+    forbidden {
+      executar_runner
+      publicar_conteudo
+      chamar_ferramenta_de_producao
+      criar_aprovacao_sem_parecer
+      injetar_experiencia_engrenagem_oculta_no_nucleo
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.planner.planejarPipelineConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/planner.ts"
+      simbolo: cli.src.pipeline_conteudo.planner.planejarPipelineConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      plano existe
+      bloqueios existe
+      plano deve_ser ligado_ao_definition_digest
+      plano deve_ser isolado_por_alvo
+      plano deve_ser instruir_runner_externo
+      plano deve_ser incapaz_de_aprovar_gate_ou_mutar_estado_canonico
+    }
+    tests {
+      caso "planeja dois formatos sem contaminar o nucleo" {
+        given {
+          definicao: "pipeline generico valido"
+          alvos: "artigo-site audio-feed"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          plano: "um nucleo e duas adaptacoes isoladas"
+        }
+      }
+    }
+  }
+}

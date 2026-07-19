@@ -1,0 +1,23 @@
+[
+  {
+    "targetId": "documento-principal",
+    "adapterId": "destination.document",
+    "accountScope": "account:publisher.site-a",
+    "formatProfileId": "long-form",
+    "locale": "pt-BR",
+    "metadata": {
+      "title": "Exemplo de conteúdo multiformato"
+    }
+  },
+  {
+    "targetId": "episodio-audio",
+    "adapterId": "destination.audio-feed",
+    "accountScope": "account:publisher.feed-a",
+    "formatProfileId": "spoken-episode",
+    "locale": "pt-BR",
+    "metadata": {
+      "title": "Exemplo de conteúdo multiformato",
+      "description": "A mesma intenção editorial em um destino de áudio independente."
+    }
+  }
+]

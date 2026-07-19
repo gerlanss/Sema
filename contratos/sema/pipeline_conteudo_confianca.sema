@@ -1,0 +1,283 @@
+module sema.produto.pipeline_conteudo.confianca {
+  docs {
+    resumo: "Politica de confianca AI-native para alegacoes, atestados e pareceres do pipeline de conteudo. A raiz publica e fixada externamente, revogacoes formam um overlay pinado separado e somente politica assinada, identidades autorizadas, escopo exato e independencia satisfazem gates."
+    arquivo: "docs/pipeline-conteudo.md"
+  }
+
+  type PrincipalConteudo {
+    fields {
+      principal_id: Texto
+      key_id: Texto
+      control_domain: Texto
+      papeis: Lista<Texto>
+      capabilities: Lista<Texto>
+      scopes: Lista<Texto>
+      public_key_pem: Texto
+    }
+    invariants {
+      principal_id existe
+      key_id existe
+      control_domain existe
+      papeis existe
+      public_key_pem existe
+    }
+  }
+
+  type ConfiguracaoConfiancaConteudo {
+    fields {
+      trust_domain_id: Texto
+      principals: Lista<PrincipalConteudo>
+      revoked_key_ids: Lista<Texto>
+      max_envelope_age_ms: Inteiro
+      max_future_skew_ms: Inteiro
+      schema_versions_aceitas: Lista<Texto>
+    }
+    invariants {
+      trust_domain_id existe
+      principals existe
+      revoked_key_ids existe
+    }
+  }
+
+  type ContextoAssinadoEventoConteudo {
+    fields {
+      run_id: Texto
+      trust_domain_id: Texto
+      trust_root_digest: Texto
+      ledger_id: Texto
+      policy_digest: Texto
+      definition_digest: Texto
+    }
+    invariants {
+      run_id existe
+      trust_domain_id existe
+      trust_root_digest existe
+      ledger_id existe
+      policy_digest existe
+      definition_digest existe
+    }
+  }
+
+  type EnvelopeAssinadoConteudo {
+    fields {
+      schema_version: Texto
+      payload_type: Texto
+      payload: Objeto
+      principal_id: Texto
+      key_id: Texto
+      issued_at: Timestamp
+      nonce: Texto
+      signature_algorithm: Texto
+      signature: Texto
+    }
+    invariants {
+      payload_type existe
+      payload existe
+      principal_id existe
+      key_id existe
+      issued_at existe
+      nonce existe
+      signature_algorithm existe
+      signature existe
+    }
+  }
+
+  type PoliticaGateConteudo {
+    fields {
+      gate_id: Texto
+      stage_id: Texto
+      scope: EscopoGateConteudo
+      evaluation_mode: ModoAvaliacaoConteudo
+      required_evidence: Lista<Texto>
+      evaluator_capabilities: Lista<Texto>
+      min_attestations_per_evidence: Inteiro
+      min_distinct_attester_control_domains: Inteiro
+      min_approvals: Inteiro
+      min_distinct_control_domains: Inteiro
+      producer_disjoint: Booleano
+      rejection_is_binding: Booleano
+      rubric_digest: Texto
+    }
+    invariants {
+      gate_id existe
+      stage_id existe
+      scope existe
+      evaluation_mode existe
+      min_attestations_per_evidence deve_ser maior_ou_igual_a_um
+      min_distinct_attester_control_domains deve_ser maior_ou_igual_a_um
+      min_approvals deve_ser maior_ou_igual_a_um
+      min_distinct_control_domains deve_ser maior_ou_igual_a_um
+      producer_disjoint existe
+      rejection_is_binding existe
+      rubric_digest existe
+    }
+  }
+
+  type PoliticaConfiancaConteudo {
+    fields {
+      policy_id: Texto
+      version: Texto
+      run_id: Texto
+      trust_domain_id: Texto
+      trust_root_digest: Texto
+      definition_digest: Texto
+      target_set_digest: Texto
+      ledger_id: Texto
+      gates: Lista<PoliticaGateConteudo>
+      issued_at: Timestamp
+      expires_at: Timestamp
+    }
+    invariants {
+      policy_id existe
+      version existe
+      run_id existe
+      trust_domain_id existe
+      trust_root_digest existe
+      definition_digest existe
+      target_set_digest existe
+      ledger_id existe
+      gates existe
+      issued_at existe
+      expires_at existe
+      expires_at deve_ser posterior_a issued_at
+      expires_at deve_ser encerrar_autorizacao_de_execucao_e_nao_apenas_ativacao
+    }
+  }
+
+  enum VereditoConteudo {
+    NAO_AVALIADO,
+    APROVADO,
+    REPROVADO,
+    INCONCLUSIVO
+  }
+
+  enum EstadoEvidenciaConteudo {
+    DECLARADA,
+    ACEITA,
+    REJEITADA,
+    EXPIRADA,
+    REVOGADA,
+    SUPERADA
+  }
+
+  enum ModoAvaliacaoConteudo {
+    DETERMINISTICA,
+    IA_ESPECIALIZADA,
+    HIBRIDA
+  }
+
+  enum EscopoGateConteudo {
+    GLOBAL,
+    POR_ALVO
+  }
+
+  task verificar_envelope_assinado_conteudo {
+    input {
+      envelope: EnvelopeAssinadoConteudo required
+      configuracao_confianca: ConfiguracaoConfiancaConteudo required
+      trust_root_digest_esperado: Texto required
+      revocation_digest_esperado: Texto required
+      payload_type_esperado: Texto required
+      capability_requerida: Texto
+      scope_requerido: Texto
+    }
+    output {
+      valido: Booleano
+      digest: Texto
+      principal: PrincipalConteudo
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      envelope deve_ser assinado_com_ed25519
+      envelope deve_ser ligado_ao_payload_canonico
+      envelope deve_ser ter_wrapper_com_campos_exatos_e_sem_extensoes_nao_assinadas
+      envelope deve_ser emitido_por_principal_autorizado
+      envelope deve_ser unico_por_nonce
+      envelope deve_ser compativel_com_capability_e_scope
+      configuracao_confianca deve_ser completa_e_sem_chaves_privadas
+      configuracao_confianca deve_ser corresponder_ao_trust_root_digest_esperado_externo
+      configuracao_confianca deve_ser corresponder_ao_revocation_digest_esperado_externo
+      envelope deve_ser ligado_ao_contexto_assinado_completo_quando_for_evento
+      envelope deve_ser emitido_por_POLICY_AUTHORITY_atualmente_nao_revogada_quando_payload_type_for_TRUST_POLICY
+    }
+    effects {
+      auditoria envelope_conteudo_verificado criticidade = alta
+    }
+    authz {
+      escopo: sema.conteudo.confianca.verificar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        envelope: interno
+        configuracao_confianca: interno
+        payload_type_esperado: interno
+        capability_requerida: interno
+        scope_requerido: interno
+      }
+      output {
+        valido: interno
+        digest: interno
+        principal: interno
+        bloqueios: interno
+      }
+    }
+    audit {
+      evento: sema.conteudo.envelope_verificado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      confiar_em_json_sem_assinatura
+      aceitar_chave_revogada
+      aceitar_replay_de_nonce
+      aceitar_capability_ausente
+      aceitar_contexto_assinado_parcial
+      aceitar_politica_crua_sem_envelope_assinado
+      aceitar_campo_extra_no_wrapper_do_envelope
+      aceitar_POLICY_AUTHORITY_atualmente_revogada
+      executor_controlar_raiz_de_confianca_critica
+      derivar_pins_esperados_da_mesma_configuracao_recebida
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.trust.verificarEnvelopeAssinadoConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/trust.ts"
+      simbolo: cli.src.pipeline_conteudo.trust.verificarEnvelopeAssinadoConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      digest existe
+      bloqueios existe
+      valido != falso ou bloqueios existe
+    }
+    tests {
+      caso "rejeita recibo falsificado" {
+        given {
+          envelope: "recibo sem assinatura autorizada"
+          configuracao_confianca: "raiz publica completa e revogacoes atuais"
+          trust_root_digest_esperado: "sha256:root-pinado-externamente"
+          revocation_digest_esperado: "sha256:revogacoes-pinadas-externamente"
+          payload_type_esperado: "EVIDENCE_ATTESTED"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: falso
+          bloqueios: "assinatura_invalida"
+        }
+      }
+    }
+  }
+}

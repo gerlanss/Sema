@@ -1,0 +1,138 @@
+module sema.produto.pipeline_conteudo.cli {
+  docs {
+    resumo: "Superficie publica da CLI para validar, planejar, registrar e reconstruir o pipeline de conteudo com politica assinada, raiz, revogacoes e checkpoint externos. A CLI nao executa agentes, nao publica e nao transforma arquivo local em raiz de confianca forte."
+    arquivo: "docs/pipeline-conteudo.md"
+    arquivo: "docs/commands.md"
+  }
+
+  use sema.produto.pipeline_conteudo
+
+  task operar_cli_pipeline_conteudo {
+    input {
+      subcomando: Texto required
+      argumentos: Lista<Texto> required
+    }
+    output {
+      exit_code: Inteiro
+      payload: Objeto
+    }
+    rules {
+      subcomando deve_ser em [AJUDA, CAPABILITIES, VALIDAR, PLANEJAR, VALIDAR_ENVELOPE, REGISTRAR, STATUS, PROJETAR]
+      subcomando deve_ser quando_AJUDA_descrever_todos_os_subcomandos_entradas_fronteira_de_confianca_runner_externo_e_ausencia_de_revisao_humana_nativa
+      argumentos deve_ser arquivos_e_flags_explicitos
+      argumentos deve_ser ter_trust_root_digest_externo_em_operacao_de_confianca
+      argumentos deve_ser ter_revocation_digest_externo_em_operacao_de_confianca
+      argumentos deve_ser ter_expected_head_externo_em [REGISTRAR, STATUS, PROJETAR]
+      argumentos deve_ser ter_envelope_de_politica_assinado_em [STATUS, PROJETAR]
+      argumentos deve_ser ter_envelope_de_politica_assinado_em REGISTRAR
+      argumentos deve_ser derivar_contexto_esperado_obrigatorio_da_politica_assinada_em_operacao_de_ledger
+      argumentos deve_ser rejeitar_metadata_e_data_publicas_com_segredos
+      argumentos deve_ser manter_pins_externos_mesmo_com_development_local_trust
+      argumentos deve_ser produzir_falhas_publicas_com_codigo_estatico_sem_eco_de_excecao_caminho_ou_subcomando_desconhecido
+    }
+    effects {
+      fs.write ledger_local_ou_projecao_quando_solicitado criticidade = alta
+      auditoria comando_pipeline_conteudo criticidade = alta
+    }
+    authz {
+      escopo: sema.conteudo.cli.operar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.cli_executada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      executar_runner
+      chamar_agente_produtor
+      chamar_avaliador_ia
+      publicar_conteudo
+      armazenar_chave_privada
+      aceitar_manifesto_como_entrada_canonica
+      aceitar_raiz_sem_digest_pinado
+      aceitar_revogacoes_sem_digest_pinado
+      aceitar_trust_local_sem_flag_development_explicita
+      development_local_trust_dispensar_pins_externos
+      declarar_ledger_local_como_append_only_forte
+      registrar_status_ou_projetar_sem_expected_head
+      status_ou_projetar_com_politica_crua_nao_assinada
+      registrar_sem_politica_assinada_ou_com_contexto_autoancorado_pelo_genesis
+      aceitar_credencial_token_senha_secret_ou_chave_privada_em_metadata_ou_data_publica
+      expor_avaliacao_isolada_de_gate_como_superficie_publica
+      empacotar_tarball_sem_preservar_exports_map
+      permitir_deep_import_dist_pipelineConteudo
+      publicar_avaliador_interno_em_subpath_publico
+      revisao_humana_nativa
+      erro_publico_ecoa_mensagem_de_excecao_caminho_ou_subcomando_controlado
+      ajuda_retornar_argumento_obrigatorio_ausente
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.command.comandoPipelineConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/command.ts"
+      arquivo: "pacotes/cli/src/comandos.ts"
+      arquivo: "pacotes/cli/src/index.part01.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.pipeline_conteudo.command.comandoPipelineConteudo
+    }
+    execucao {
+      idempotencia: condicional
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      exit_code existe
+      payload existe
+      exit_code != 0 ou payload existe
+      payload deve_ser usar_codigo_estatico_e_comando_sanitizado_em_falha
+      payload deve_ser quando_AJUDA_ser_autodescritivo_para_agente_IA
+    }
+    tests {
+      caso "planejamento nao executa ferramentas" {
+        given {
+          subcomando: "PLANEJAR"
+          argumentos: "definicao.json alvos.json json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exit_code: 0
+          payload: "plano declarativo"
+        }
+      }
+      caso "falha publica nao ecoa entrada controlada" {
+        given {
+          subcomando: "TOKEN_CONTROLADO"
+          argumentos: "caminho-controlado json-invalido"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exit_code: 1
+          payload: "comando desconhecido e erro estatico"
+        }
+      }
+      caso "ajuda orienta agente sem executar o pipeline" {
+        given {
+          subcomando: "AJUDA"
+          argumentos: "help"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exit_code: 0
+          payload: "usos completos runner externo sem revisao humana nativa"
+        }
+      }
+    }
+  }
+}

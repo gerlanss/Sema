@@ -27,6 +27,7 @@ const DOCS_PUBLICOS = [
   "frontend.md",
   "getting-started.md",
   "i18n.md",
+  "pipeline-conteudo.md",
   "profiles.md",
   "repositories.md",
   "rollback.md",
@@ -253,6 +254,7 @@ async function prepararManifestPublico() {
     bin: manifestCli.bin,
     main: manifestCli.main,
     types: manifestCli.types,
+    exports: manifestCli.exports,
     files: [
       "dist",
       "docs",

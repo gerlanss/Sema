@@ -26,7 +26,7 @@ encoding in every published document. The plugin smoke must validate the repo
 marketplace, manifest version, installed skill copy, and absence of Sema MCP.
 After push and npm publication, `npm run release:verificar-distribuicao` must
 repeat that installation from the remote `gerlanss/Sema` marketplace and prove
-that GitHub HEAD, the installed skill, and npm 2.1.0 all describe the same
+that GitHub HEAD, the installed skill, and npm 2.2.0 all describe the same
 release.
 
 Native generator evidence is mandatory when changing C#/.NET or C++ support.

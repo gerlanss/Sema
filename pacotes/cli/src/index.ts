@@ -8,6 +8,7 @@ export { iniciarProfileAuthor, comandoAuthor, criarAuthorBriefing, revisarCliche
 export { validarProfileSemantico } from "./profileCommand.js";
 export { materializarExemplosOficiais } from "./exemplosOficiais.js";
 export { expandirIntencaoSemanticaProfile, sugerirStarterPresetProfile, validarPipelineProfiles, exigirQaCriativoQuandoPublicavel, catalogoDropdownOnboarding } from "./profileOrquestracao.js";
+export * from "./pipelineConteudo/index.js";
 
 principal().catch((erro) => {
   console.error("Falha ao executar a CLI da Sema.");

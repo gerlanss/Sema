@@ -1,0 +1,105 @@
+module sema.produto.pipeline_conteudo.autorizacao {
+  docs {
+    resumo: "Raiz publica pinada do pipeline de conteudo e overlay de revogacoes pinado separadamente. Ambos os digests esperados precisam vir de fronteira externa; fingerprints de chave nao podem fingir principals independentes."
+    arquivo: "docs/pipeline-conteudo.md"
+  }
+
+  use sema.produto.pipeline_conteudo.confianca
+
+  task validar_raiz_confianca_conteudo {
+    input {
+      configuracao_confianca: ConfiguracaoConfiancaConteudo required
+      trust_root_digest_esperado: Texto required
+      revocation_digest_esperado: Texto required
+    }
+    output {
+      valida: Booleano
+      trust_root_digest: Texto
+      revocation_digest: Texto
+      fingerprints: Lista<Texto>
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      configuracao_confianca deve_ser ter_trust_domain_id_preenchido
+      configuracao_confianca deve_ser ter_principals_com_ids_e_key_ids_unicos
+      configuracao_confianca deve_ser ter_fingerprints_publicos_unicos
+      configuracao_confianca deve_ser ter_control_domains_explicitos_e_normalizados
+      configuracao_confianca deve_ser ter_papeis_capabilities_e_scopes_normalizados
+      configuracao_confianca deve_ser ter_public_key_pem_exclusivamente_SPKI_PUBLICA_BEGIN_PUBLIC_KEY
+      configuracao_confianca deve_ser ter_revoked_key_ids_subconjunto_de_keys_conhecidas
+      configuracao_confianca deve_ser gerar_trust_root_digest_sem_revoked_key_ids
+      configuracao_confianca deve_ser gerar_revocation_digest_separado_com_trust_domain_e_revoked_key_ids_ordenados
+      trust_root_digest_esperado deve_ser igual_ao_digest_canonico
+      revocation_digest_esperado deve_ser igual_ao_digest_canonico_de_revogacoes
+      configuracao_confianca deve_ser produzir_bloqueios_estaticos_sem_eco_de_campo_principal_key_id_ou_revogacao_controlada
+    }
+    effects {
+      auditoria raiz_confianca_conteudo_validada criticidade = critica
+    }
+    authz {
+      escopo: sema.conteudo.trust_root.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.conteudo.trust_root_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      mesma_chave_publica_em_multiplos_principals
+      digest_da_raiz_autodeclarado_pelo_executor
+      digest_de_revogacoes_autodeclarado_pelo_executor
+      revogacao_mutar_digest_da_raiz_historica
+      chave_privada_no_workspace
+      public_key_pem_em_PKCS8_BEGIN_PRIVATE_KEY
+      qualquer_bloco_PEM_privado_em_principal
+      trust_root_local_sem_modo_development_explicito
+      bloqueio_de_confianca_ecoa_campo_principal_key_id_fingerprint_ou_revogacao_controlada
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.trust.validarConfiguracaoConfiancaConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/trust.ts"
+      simbolo: cli.src.pipeline_conteudo.trust.validarConfiguracaoConfiancaConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: critica
+    }
+    guarantees {
+      valida existe
+      trust_root_digest existe
+      revocation_digest existe
+      trust_root_digest deve_ser calculado_sem_revoked_key_ids
+      revocation_digest deve_ser calculado_separadamente
+      fingerprints existe
+      bloqueios existe
+      valida != falso ou bloqueios existe
+      bloqueios deve_ser conter_somente_codigos_estaticos
+    }
+    tests {
+      caso "mesma chave nao cria quorum falso" {
+        given {
+          configuracao_confianca: "trust-a com principal-a e principal-b usando a mesma chave"
+          trust_root_digest_esperado: "sha256:root"
+          revocation_digest_esperado: "sha256:revogacoes"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valida: falso
+          bloqueios: "fingerprint_duplicado"
+        }
+      }
+    }
+  }
+}

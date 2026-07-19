@@ -93,6 +93,7 @@ export type Comando =
   | "sync"
   | "author"
   | "profile"
+  | "conteudo"
   | "validar"
   | "ast"
   | "ir"
@@ -294,7 +295,14 @@ export function ajuda(): string {
       "sema profile capabilities --json",
       "sema rule-packs --profile legal --json",
       "",
-      "[5] Adotar Sema em projeto que ainda não usa",
+      "[5] Orquestrar criação de conteúdo por IA",
+      "sema conteudo capabilities --json",
+      "sema conteudo validar <definition.json> --json",
+      "sema conteudo planejar <definition.json> --alvos-arquivo <targets.json> --json",
+      "sema conteudo registrar <ledger.ndjson> --envelope-arquivo <envelope.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-id <id> --expected-head <sha256:...> --json",
+      "sema conteudo status <definition.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-arquivo <ledger.ndjson> --expected-head <sha256:...> --json",
+      "",
+      "[6] Adotar Sema em projeto que ainda não usa",
       "sema importar <fonte> <diretorio> --saida <diretorio> --json",
       "sema formatar <arquivo-ou-pasta>",
       "sema validar <arquivo-ou-pasta> --json",
@@ -323,6 +331,7 @@ export function ajuda(): string {
       "author: sema author <iniciar|validar|briefing|revisar-cliches|validar-narrativa|validar-proibicoes> [arquivo] [--tema-sensivel] [--preset conto|romance|roteiro|lore|campanha] [--saida <arquivo>] [--texto <texto>] [--json]",
       "profile: sema profile validar <software|workflow|ops|game|legal|research|redacao|propostas|conversas> <arquivo-ou-pasta> [--maturidade draft|prototype|production|critical] [--preset <preset>] [--artefato <texto>|--artefato-arquivo <arquivo>] [--json]",
       "capabilities: sema profile capabilities [--json]",
+      "conteúdo: sema conteudo <capabilities|validar|planejar|validar-envelope|registrar|status|projetar> [--trust-root-digest <sha256:...>] [--revocation-digest <sha256:...>] [--expected-head <sha256:...>] [opções] [--json]",
       "rule packs: sema rule-packs [--profile <author|software|workflow|ops|game|legal|research|redacao|propostas|conversas>] [--json]",
     ]),
     "",
@@ -347,6 +356,7 @@ export function ajuda(): string {
       "sema author validar-proibicoes <arquivo.sema> [--texto <texto>|--texto-arquivo <arquivo>] [--json]",
       "sema profile validar <profile> <arquivo.sema> [--maturidade draft|prototype|production|critical] [--preset <preset>] [--artefato <texto>|--artefato-arquivo <arquivo>] [--json]",
       "sema profile capabilities [--json]",
+      "sema conteudo <capabilities|validar|planejar|validar-envelope|registrar|status|projetar> [--trust-root-digest <sha256:...>] [--revocation-digest <sha256:...>] [--expected-head <sha256:...>] [opções] [--json]",
       "sema rule-packs [--profile <profile>] [--json]",
     ]),
     "",

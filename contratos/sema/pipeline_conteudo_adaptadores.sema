@@ -1,0 +1,208 @@
+module sema.produto.pipeline_conteudo.adaptadores {
+  docs {
+    resumo: "Adaptadores abertos de destino e formato para o pipeline de conteudo. Plataformas, contas e perfis de formato sao dados versionados; nenhum canal, marca ou experiencia fica embutido no nucleo."
+    arquivo: "docs/pipeline-conteudo.md"
+  }
+
+  type AdaptadorConteudo {
+    fields {
+      adapter_id: Texto
+      version: Texto
+      capabilities: Lista<Texto>
+      accepted_media_types: Lista<Texto>
+      format_profiles: Lista<Texto>
+      deterministic_constraints: Lista
+      required_metadata: Lista<Texto>
+      optional_metadata: Lista<Texto>
+      confirmation_predicates: Lista<Texto>
+    }
+    invariants {
+      adapter_id existe
+      version existe
+      capabilities existe
+      accepted_media_types existe
+      format_profiles existe
+      required_metadata existe
+      optional_metadata existe
+      confirmation_predicates existe
+    }
+  }
+
+  type AlvoConteudo {
+    fields {
+      target_id: Texto
+      adapter_id: Texto
+      account_scope: Texto
+      format_profile_id: Texto
+      locale: Texto
+      metadata: Objeto
+    }
+    invariants {
+      target_id existe
+      adapter_id existe
+      account_scope existe
+      format_profile_id existe
+      locale existe
+    }
+  }
+
+  enum PoliticaAdapterEtapaConteudo {
+    NONE,
+    CONSTRAINTS,
+    CONFIRMATION
+  }
+
+  task validar_adaptador_conteudo {
+    input {
+      adapter: AdaptadorConteudo required
+    }
+    output {
+      valido: Booleano
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      adapter deve_ser ter_id_opaco_e_extensivel
+      adapter deve_ser versionado_e_imutavel_na_execucao
+      adapter deve_ser ter_format_profiles_declarados
+      adapter deve_ser ter_constraints_deterministicas
+      adapter deve_ser ter_config_de_constraint_com_exatamente_um_campo_numerico_de_limite_permitido
+      adapter deve_ser rejeitar_campo_extra_ambiguo_ou_segredo_em_config_de_constraint
+      adapter deve_ser ter_confirmation_predicates_verificaveis_externamente
+      adapter deve_ser ter_constraints_avaliaveis_por_observacoes_assinadas_independentes
+      adapter deve_ser ter_confirmation_predicates_convertiveis_em_evidencias_atestadas
+      adapter deve_ser exigir_capability_de_atestador_vinculada_a_adapter_id_version_e_evidence_type
+      adapter deve_ser exigir_data_com_adapter_id_e_adapter_version_exatos_em_evidencia_de_adapter
+      adapter deve_ser exigir_observation_digest_em_confirmacao
+      adapter deve_ser exigir_constraints_digest_results_digest_e_resultado_recalculado_em_constraints
+      adapter deve_ser exigir_observed_media_type_obtido_e_assinado_independentemente_em_constraints
+      adapter deve_ser ter_required_metadata_e_optional_metadata_unicos_e_disjuntos
+      adapter deve_ser definir_union_required_metadata_optional_metadata_como_allowlist_exata_top_level_da_metadata_v1
+      adapter deve_ser permitir_somente_valores_escalares_publicos_na_metadata_v1
+      adapter deve_ser rejeitar_chaves_extras_aninhadas_sensiveis_ou_com_padroes_api_token_aws_secret_access_key_e_session_cookie
+      adapter deve_ser emitir_somente_codigos_estaticos_sem_eco_de_chave_caminho_ou_valor_em_bloqueio_de_metadata
+    }
+    effects {
+      auditoria adaptador_conteudo_validado criticidade = media
+    }
+    forbidden {
+      enum_fechado_de_plataformas_no_nucleo
+      marca_embutida_no_nucleo
+      experiencia_engrenagem_oculta_como_padrao_global
+      publicacao_confirmada_por_declaracao_do_runner
+      metadata_autodeclarada_do_artefato_satisfazer_constraint
+      confirmation_predicate_sem_atestador_autorizado
+      capability_generica_content_evidence_attest_validar_evidencia_de_adapter
+      confirmacao_sem_observation_digest
+      constraint_com_adapter_digest_ou_resultado_declarado_divergente
+      artifact_media_type_autodeclarado_substituir_observed_media_type
+      diagnostico_de_metadata_ecoa_chave_caminho_ou_valor_controlado_pelo_chamador
+      config_de_constraint_conter_credencial_token_senha_secret_chave_privada_ou_campo_extra
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.adapters.validarAdaptadorConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/adapters.ts"
+      simbolo: cli.src.pipeline_conteudo.adapters.validarAdaptadorConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      valido existe
+      bloqueios existe
+      valido != falso ou bloqueios existe
+    }
+    tests {
+      caso "aceita destino arbitrario" {
+        given {
+          adapter: "adapter destino-futuro version 1 com formato texto-longo"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+        }
+      }
+    }
+  }
+
+  task planejar_alvos_conteudo {
+    input {
+      alvos: Lista<AlvoConteudo> required
+      adapters: Lista<AdaptadorConteudo> required
+      artefatos_mestre: Lista required
+    }
+    output {
+      planos_adaptacao: Lista
+      bloqueios_por_alvo: Lista
+    }
+    rules {
+      alvos deve_ser ter_target_id_unico
+      alvos deve_ser ligado_a_adapters_e_format_profiles_existentes
+      alvos deve_ser isolado_por_account_scope
+      alvos deve_ser ter_isolation_key_derivada_de_target_account_adapter_e_formato
+      alvos deve_ser ter_metadata_com_chaves_exatas_na_union_required_metadata_optional_metadata_do_adapter
+      alvos deve_ser ter_valores_de_metadata_escalares_publicos_sem_estrutura_aninhada
+      alvos deve_ser rejeitar_chaves_extras_sensiveis_e_padroes_api_token_aws_secret_access_key_e_session_cookie
+      alvos deve_ser ter_account_scope_como_referencia_opaca_estrita_e_nunca_credencial
+      artefatos_mestre deve_ser preservado_na_linhagem_das_adaptacoes
+      adapters deve_ser independente_por_alvo
+      adapters deve_ser validados_antes_de_copiar_constraints_para_o_plano_publico
+      alvos deve_ser originar_authorization_scope_derivado_de_run_target_e_account_exatos_na_execucao
+      alvos deve_ser produzir_bloqueios_de_metadata_com_codigos_estaticos_sem_eco_de_entrada
+    }
+    effects {
+      auditoria alvos_conteudo_planejados criticidade = media
+    }
+    forbidden {
+      reutilizar_atestado_target_bound_em_outro_target
+      exigir_midia_em_destino_text_only
+      exigir_copy_em_destino_audio_only
+      compartilhar_credencial_entre_account_scopes_sem_politica
+      armazenar_credencial_token_senha_secret_ou_chave_privada_em_metadata
+      metadata_com_chave_fora_da_allowlist_required_optional_do_adapter
+      metadata_aninhada_ou_com_valor_nao_escalar_publico
+      metadata_conter_api_token_aws_secret_access_key_ou_session_cookie
+      account_scope_conter_credencial
+      runner_tratar_confirmation_predicate_como_veredito
+      bloqueio_de_metadata_expor_nome_caminho_ou_valor_fornecido
+      plano_publico_copiar_config_de_constraint_invalida_ambigua_ou_sensivel
+    }
+    impl {
+      ts: cli.src.pipeline_conteudo.adapters.planejarAlvosConteudo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/pipelineConteudo/adapters.ts"
+      simbolo: cli.src.pipeline_conteudo.adapters.planejarAlvosConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      planos_adaptacao existe
+      bloqueios_por_alvo existe
+      planos_adaptacao deve_ser preservar_target_ids
+    }
+    tests {
+      caso "isola dois destinos" {
+        given {
+        alvos: "target-a,target-b"
+        adapters: "adapter-a,adapter-b"
+        artefatos_mestre: "master,sha256:abc"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          planos_adaptacao: "target-a target-b"
+        }
+      }
+    }
+  }
+}
