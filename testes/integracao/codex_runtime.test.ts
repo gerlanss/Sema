@@ -10,7 +10,10 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { criarAgentContextPack, criarGuiaCapacidadeIa } from "../../pacotes/cli/src/agentContextPack.ts";
-import { sincronizarEntrypointCodex } from "../../pacotes/cli/src/agentEntryPoints.ts";
+import {
+  renderizarDocumentoAgentesPorCapacidade,
+  sincronizarEntrypointCodex,
+} from "../../pacotes/cli/src/agentEntryPoints.ts";
 import { avaliarDependenciasVerificacao } from "../../pacotes/cli/src/doctorCommand.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
@@ -163,6 +166,8 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     const pack = criarAgentContextPack(criarGuiaCapacidadeIa());
     const resultado = await sincronizarEntrypointCodex(base, pack);
     const agents = await readFile(path.join(base, "AGENTS.md"), "utf8");
+    const aiIntegration = renderizarDocumentoAgentesPorCapacidade(pack);
+    const commands = await readFile(path.join(base, "docs", "commands.md"), "utf8");
 
     assert.equal(resultado.entrypointCodex, "AGENTS.md");
     assert.equal(resultado.codexNativo, true);
@@ -178,6 +183,16 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     assert.match(agents, /Codex/);
     assert.match(agents, /Use diretamente a CLI local/);
     assert.doesNotMatch(agents, /preflight/i);
+    assert.match(aiIntegration, /Generated Lua tests preserve the contract's failure shape/);
+    assert.equal(aiIntegration.endsWith("\n"), true);
+    assert.match(commands, /targetSetDigest/);
+    assert.match(commands, /sema interativo validar-control-run/);
+    assert.match(commands, /validar-evidencia-temporal --bundle-arquivo <file>/);
+    assert.match(commands, /outputTargets/);
+    assert.match(commands, /Validation-result shapes describe `payload\.resultado`/);
+    assert.match(commands, /jobOrchestrationPlan/);
+    assert.match(commands, /ordered `queue` is the assignment list/);
+    assert.match(commands, /local evidence bundle is never presented as authoritative trust/);
 
     const copilotManual = await readFile(path.join(base, ".github/copilot-instructions.md"), "utf8");
     assert.equal(copilotManual, "# Configuração manual preservada\n");

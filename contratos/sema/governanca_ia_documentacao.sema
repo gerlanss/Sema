@@ -254,7 +254,7 @@ module sema.produto.governanca_ia.documentacao {
     }
     error {
       i18n_documental_incompleto {
-        mensagem: documentacao precisa seguir a superficie declarada, usar PT-BR privado por padrao, cobrir idiomas solicitados quando externos, preservar acentos e nao inventar quantidade fixa
+        mensagem: documentacao precisa seguir a superficie declarada e usar PT-BR privado por padrao e cobrir idiomas solicitados quando externos e preservar acentos e nao inventar quantidade fixa
         categoria: negocio
         recuperabilidade: permanente
         acao_chamador: corrigir

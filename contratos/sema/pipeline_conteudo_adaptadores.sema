@@ -193,9 +193,9 @@ module sema.produto.pipeline_conteudo.adaptadores {
     tests {
       caso "isola dois destinos" {
         given {
-        alvos: "target-a,target-b"
-        adapters: "adapter-a,adapter-b"
-        artefatos_mestre: "master,sha256:abc"
+          alvos: "target-a,target-b"
+          adapters: "adapter-a,adapter-b"
+          artefatos_mestre: "master,sha256:abc"
         }
 
         expect {

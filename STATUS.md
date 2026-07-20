@@ -8,10 +8,10 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.2.0`
+- Version: `2.3.0`
 - Package: `@semacode/cli`
-- Last updated: 2026-07-19
-- Reference commit: `5936352`
+- Last updated: 2026-07-20
+- Reference commit: `cf1c296`
 - Build Week entry: Devpost submission `1102882` is `Submitted`; the final
   source snapshot is `build-week-2026`.
 - Support: `suporte@otimitare.online`

@@ -230,7 +230,6 @@ module sema.produto.governanca_ia.qualidade_contrato {
           sucesso: falso
         }
       }
-
       caso "descripcion sem acento bloqueia quando i18n es foi declarado" {
         given {
           contrato_alvo: "i18n_es exige texto visible con acentos"
@@ -243,7 +242,6 @@ module sema.produto.governanca_ia.qualidade_contrato {
           sucesso: falso
         }
       }
-
       caso "i18n sem idioma declarado bloqueia" {
         given {
           contrato_alvo: "i18n exige texto visivel com acentos"
@@ -256,7 +254,6 @@ module sema.produto.governanca_ia.qualidade_contrato {
           sucesso: falso
         }
       }
-
       caso "descricao com acento passa na checagem ptbr" {
         given {
           contrato_alvo: "i18n_ptbr exige texto visivel com acentos"

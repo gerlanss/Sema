@@ -175,7 +175,6 @@ module sema.produto.cli_init_templates {
           entrypoints_legados_limpos: verdadeiro
         }
       }
-
       caso "preserva arquivos existentes sem force" {
         given {
           template_nome: "base"
@@ -189,7 +188,6 @@ module sema.produto.cli_init_templates {
           arquivos_preservados: "README.md, sema.config.json, contratos/pedidos.sema"
         }
       }
-
     }
   }
 

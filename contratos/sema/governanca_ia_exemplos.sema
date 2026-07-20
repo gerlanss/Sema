@@ -14,6 +14,10 @@ module sema.produto.governanca_ia.exemplos {
       origem_canonica_resolvida: Booleano
       destinos_exemplos_prevalidados: Booleano
     }
+    forbidden {
+      materializar_exemplo_antes_de_prevalidar_todos_os_destinos
+      seguir_symlink_ou_junction_fora_do_workspace
+    }
     impl {
       ts: cli.src.index.materializarExemplosOficiais
     }
@@ -35,10 +39,6 @@ module sema.produto.governanca_ia.exemplos {
       arquivos_preservados existe
       origem_canonica_resolvida existe
       destinos_exemplos_prevalidados == verdadeiro
-    }
-    forbidden {
-      materializar_exemplo_antes_de_prevalidar_todos_os_destinos
-      seguir_symlink_ou_junction_fora_do_workspace
     }
     tests {
       caso "bootstrap cria exemplos sem sobrescrever usuario" {

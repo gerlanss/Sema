@@ -51,6 +51,7 @@ module sema.produto.governanca_ia.contexto.projeto {
           entrada: "exemplos/calculadora.sema"
           explicito: verdadeiro
         }
+
         expect {
           sucesso: verdadeiro
           workspace_atual_exigido: verdadeiro
@@ -91,6 +92,7 @@ module sema.produto.governanca_ia.contexto.projeto {
         given {
           estrutura_desejada: "modulos"
         }
+
         expect {
           sucesso: verdadeiro
         }

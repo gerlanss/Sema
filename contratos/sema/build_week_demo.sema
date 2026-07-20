@@ -26,6 +26,7 @@ module sema.showcase.build_week_2026.demo {
     simbolo: lib.project_state.resetProject
     simbolo: lib.scenario.runScenario
   }
+
   task approve_payment {
     input {
       payment_id: Texto required
@@ -62,6 +63,7 @@ module sema.showcase.build_week_2026.demo {
           payment_id: "pay_demo_2026"
           amount_cents: 4200
         }
+
         expect {
           sucesso: verdadeiro
           approved: verdadeiro
@@ -70,6 +72,7 @@ module sema.showcase.build_week_2026.demo {
       }
     }
   }
+
   task prepare_bootstrap_workspace {
     input {
       reason: Texto required
@@ -140,6 +143,7 @@ module sema.showcase.build_week_2026.demo {
         given {
           reason: "record bootstrap take"
         }
+
         expect {
           sucesso: verdadeiro
           agents_absent: verdadeiro
@@ -148,6 +152,7 @@ module sema.showcase.build_week_2026.demo {
       }
     }
   }
+
   task reset_demo_project {
     input {
       reason: Texto required
@@ -211,6 +216,7 @@ module sema.showcase.build_week_2026.demo {
       implementation_symbol existe
     }
   }
+
   task run_demo_scenario {
     input {
       mode: Texto required
@@ -288,6 +294,7 @@ module sema.showcase.build_week_2026.demo {
         given {
           mode: "smoke"
         }
+
         expect {
           sucesso: verdadeiro
           drift_detected: verdadeiro

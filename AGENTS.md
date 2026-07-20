@@ -6,13 +6,14 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 1. Leia `SEMA_BOOT.md`.
 2. Rode `sema --version`; se falhar, pare e peça a instalação da CLI.
 3. Use diretamente a CLI local: `sema resumo`, `sema docs-impacto`, `sema inspecionar`, `sema drift` e `sema impacto`.
-4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
-5. Chame docs-impacto com a intenção declarada antes de agir.
-6. Chame inspecionar no contrato `.sema` aplicável.
-7. Antes de editar código existente, rode drift e impacto.
-8. Antes de criar ou editar `.sema`, use exemplos oficiais.
-9. Ao concluir mudança de contrato, rode validar.
-10. Antes de finalizar, use finalizar-mudanca com as docs lidas.
+4. Quando a capacidade correta não estiver clara, use `sema descobrir recomendar --intencao "<objetivo>" --json`; não autoexecute resultado ambíguo.
+5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
+6. Chame docs-impacto com a intenção declarada antes de agir.
+7. Chame inspecionar no contrato `.sema` aplicável.
+8. Antes de editar código existente, rode drift e impacto.
+9. Antes de criar ou editar `.sema`, use exemplos oficiais.
+10. Ao concluir mudança de contrato, rode validar.
+11. Antes de finalizar, use finalizar-mudanca com as docs lidas.
 
 É proibido substituir esse fluxo por leitura manual de `AGENTS.md`, `README.md`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 

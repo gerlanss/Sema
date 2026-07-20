@@ -332,10 +332,11 @@ launched, or an external observer attested the result.
 
 ## Semantic budget split plan
 
-The current operational facade remains compatible, but two governed artifacts
-have crossed the planning threshold: `operations.ts` has 1,112 lines and
-`sistemas_interativos_operacao.sema` has 304 lines. Before either reaches its
-blocking limit, split by responsibility as follows:
+The current operational facade remains compatible, but three governed artifacts
+have crossed the planning threshold: `operations.ts` has 1,112 lines,
+`sistemas_interativos_operacao.sema` has 304 lines, and the installed-package
+smoke `scripts/testar-pacote-cli-publico.mjs` has 1,009 lines. Before any of
+them reaches its blocking limit, split by responsibility as follows:
 
 - move engine snapshots, semantic diffs, asset provenance, and editor-state
   observation into `engineObservation.ts`;
@@ -347,7 +348,11 @@ blocking limit, split by responsibility as follows:
 - split the contract into `sistemas_interativos_observacao_engine.sema`,
   `sistemas_interativos_orquestracao_jobs.sema`, and
   `sistemas_interativos_acceptance_evidencias.sema`, with all three contracts
-  linked to the shared facade and their actual implementation files.
+  linked to the shared facade and their actual implementation files;
+- split the installed-package smoke into helpers for public-boundary security,
+  Codex bootstrap, content-pipeline compatibility, interactive systems, and
+  generated toolchains, while retaining the current script as the stable
+  orchestrator and preserving one end-to-end isolated installation.
 
 This is a responsibility split, not a numbered-file workaround. Existing
 exports, schema versions, fixtures, digests, and fail-closed behavior must remain

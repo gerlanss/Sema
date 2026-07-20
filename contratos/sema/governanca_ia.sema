@@ -80,6 +80,7 @@ module sema.produto.governanca_ia {
         given {
           base_projeto: "."
         }
+
         expect {
           sucesso: verdadeiro
           responsabilidades_separadas: verdadeiro

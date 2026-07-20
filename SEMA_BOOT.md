@@ -6,12 +6,13 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 
 1. Confirme `AGENTS.md` na raiz e rode `sema --version`; se o comando não existir, pare e peça a instalação da CLI.
 2. Use a CLI local diretamente para ler o workspace: `sema resumo`, `sema docs-impacto`, `sema inspecionar`, `sema drift` e `sema impacto`.
-3. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
-4. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
-5. Antes de criar módulo, rota, task ou contrato, inspecione o contrato `.sema` aplicável.
-6. Antes de editar código existente, rode drift e impacto pela CLI local.
-7. Antes de criar ou corrigir `.sema`, use os exemplos oficiais na CLI local.
-8. Se qualquer etapa falhar, pare e diga que está bloqueado.
+3. Se não estiver claro qual profile, workflow, pipeline, gerador ou adapter usar, rode `sema descobrir recomendar --intencao "<objetivo>" --json`; não execute automaticamente uma recomendação ambígua.
+4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
+5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
+6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato `.sema` aplicável.
+7. Antes de editar código existente, rode drift e impacto pela CLI local.
+8. Antes de criar ou corrigir `.sema`, use os exemplos oficiais na CLI local.
+9. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
 Não substitua esse fluxo por leitura manual de `AGENTS.md`, `README.md`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
 

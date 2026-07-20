@@ -432,6 +432,12 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "points back to the applicable contract. The marker is not a substitute for",
     "validation, drift, impact, or finalization gates.",
     "",
+    "Generated Lua tests preserve the contract's failure shape. A case whose only",
+    "expectation is `sucesso: falso` may terminate without an output, while a case",
+    "that also declares observable output fields must return a structured failure",
+    "result. The generator keeps these paths distinct instead of forcing every",
+    "failure into one representation.",
+    "",
     `Governed code above ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} lines requires a`,
     `split plan. Governed code above ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO}`,
     "lines blocks closure. Markdown documentation is not counted as governed code",
@@ -466,7 +472,7 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "",
     "Sema governs contract, scope, drift, evidence, and quality. It does not bypass",
     "platform policies, terms of use, permissions, security controls, or laws.",
-  ].join("\n");
+  ].join("\n") + "\n";
 }
 
 function renderizarInstrucaoCodexSema(agentContextPack: AgentContextPack): string {
@@ -804,33 +810,34 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 - \`sema conteudo planejar <definition.json> --alvos-arquivo <targets.json> --json\`: creates a declarative multi-target plan for an external runner.
 - \`sema conteudo validar-envelope --envelope-arquivo <envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --payload-type <type> --json\`: verifies Ed25519 identity, authorization, freshness, scope, and the separately pinned trust root and current revocation overlay.
 - \`sema conteudo registrar <ledger.ndjson> --envelope-arquivo <envelope.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-id <id> --expected-head <sha256:...> --json\`: appends a verified envelope under the signed run policy to the local replay ledger at an externally retained head.
-- \`sema conteudo status <definition.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-arquivo <ledger.ndjson> --expected-head <sha256:...> --json\`: verifies the signed policy and derives verdicts, operational conditions, completion, and next actions from canonical events.
+- \`sema conteudo status <definition.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-arquivo <ledger.ndjson> --expected-head <sha256:...> --json\`: verifies the signed policy and its \`targetSetDigest\`, then derives verdicts, operational conditions, completion, and next actions from canonical events.
 - \`sema conteudo projetar <definition.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-arquivo <ledger.ndjson> --expected-head <sha256:...> --saida <manifest.json> --json\`: regenerates a non-authoritative manifest bound to the ledger head.
 
-The content command never runs producers, evaluators, creative tools, or publication adapters; those belong to an external runner. It has no native human-review transition. A signed policy binds the run, definition, ledger, trust root, gates, complete target set, and authorization window. Stages select \`adapterPolicy\` as \`NONE\`, \`CONSTRAINTS\`, or \`CONFIRMATION\`; definition v1 accepts one output per stage. Constraint results must come from independent signed observations, including independently observed media type, not artifact metadata or executor claims.
+The content command is an AI-native, multi-channel, multi-format control plane. It never runs producers, evaluators, creative tools, or publication adapters; those belong to an external runner. It has no native human-review transition. A signed policy binds \`runId\`, definition, ledger, trust root, gates, complete target set, and the full \`issuedAt\`/\`expiresAt\` authorization window; no event may be recorded outside it. Stages select \`adapterPolicy\` as \`NONE\`, \`CONSTRAINTS\`, or \`CONFIRMATION\`; definition v1 accepts one output per stage. Constraint results must come from independent signed observations, including independently observed media type, not artifact metadata or executor claims. Target metadata is an exact scalar allowlist from \`requiredMetadata + optionalMetadata\`; \`accountScope\` is a credential-free \`account:<alias>\` reference, and artifact metadata is prohibited in v1. Deterministic evidence and AI opinions have separate quorum fields. Evidence requires an exact \`content.evidence.attest:<evidenceType>\` capability; adapter evidence requires \`content.adapter.attest:<adapterId>@<version>:<evidenceType>\` plus signed adapter binding.
 
-Target metadata is an exact scalar allowlist from \`requiredMetadata + optionalMetadata\`; \`accountScope\` is a credential-free \`account:<alias>\` reference, and artifact metadata is prohibited in v1. Deterministic evidence and AI opinions have separate quorum fields. Evidence requires an exact attestation capability plus signed adapter binding where applicable.
+Verdicts such as \`APROVADO\`, \`REPROVADO\`, and \`INCONCLUSIVO\` remain separate from operational conditions such as \`AGUARDANDO_EVENTO_EXTERNO\` and \`FERRAMENTA_INDISPONIVEL\`. A generated manifest is only a projection and cannot alter canonical state.
 
-Verdicts remain separate from operational conditions, and a generated manifest cannot alter canonical state. Append freshness uses the platform clock rather than caller-provided time, and an authority in the current revocation overlay cannot sign an accepted policy.
-
-Local NDJSON plus a hash chain is portable replay evidence, not a strong append-only trust boundary. Retain the expected head, canonical trust-root digest, and current revocation digest externally, or use protected storage for high assurance. A workspace-local trust file additionally requires \`--development-local-trust\`; that flag does not disable digest pinning.
+Local NDJSON plus a hash chain is portable evidence for replay, not a strong append-only trust boundary. Retain \`expectedHead\`, the canonical trust-root digest, and the current revocation digest externally, or use protected storage for high assurance. The trust-root pin identifies the authority snapshot independently from the revocation overlay. A workspace-local trust file additionally requires \`--development-local-trust\`; the flag does not disable digest pinning. Append freshness uses the platform clock rather than caller-provided \`recordedAt\`, and an authority in the current revocation overlay cannot sign an accepted policy.
 
 ## AI-native Interactive Systems
 
 - \`sema interativo capabilities --json\`: lists the canonical interactive capability vocabulary.
-- \`sema interativo schema --json\`: exposes stable definition, extension-command, and data-schema shapes for AI clients.
+- \`sema interativo schema --json\`: exposes the stable read-only definition schema, enum matrix, constraints, extension-command and data-schema shapes, plus canonical example paths for AI clients.
 - \`sema interativo pipelines --json\`: lists reusable game, simulation, and hybrid pipelines.
 - \`sema interativo adapters [--spatial-model <NON_SPATIAL|TWO_D|TWO_POINT_FIVE_D|THREE_D>] [--render-mode <HEADLESS|TEXT|VISUAL|XR>] --json\`: lists compatible external adapter descriptors.
 - \`sema interativo validar <definition.json> --json\`: validates independent kind, spatial model, render mode, visual profile, fidelity, control, time, world, budget, pipeline, and acceptance axes.
 - \`sema interativo planejar <definition.json> --json\`: expands compatible stages and required evidence without running an engine.
 - \`sema interativo validar-evidencias|status <definition.json> [--plano-arquivo <plan.json>] --bundle-arquivo <bundle.json> --json\`: validates a portable evidence bundle or derives non-authoritative status; \`--evidencias-arquivo\` is an alias and an omitted plan is recomputed deterministically.
 - \`sema interativo validar-protocolo <adapter-run.json> --json\`: checks DETECT/PROBE/SNAPSHOT/PLAN/APPLY/VALIDATE/EVIDENCE/ROLLBACK ordering and stable target binding.
-- Experience IR: \`validar-ir\`, \`indexar-ir\`, \`consultar-ir\`, \`chunk-ir\`, and \`descrever-ir\`.
-- Operational state: \`validar-engine-snapshot\`, \`diff-engine-snapshots\`, \`validar-asset-provenance\`, \`validar-editor-state\`, \`planejar-jobs\`, \`validar-acceptance\`, \`operar-acceptance\`, and \`validar-multimodal\`.
-- Temporal, autonomy, and testing: \`validar-temporal\`, \`validar-evidencia-temporal\`, \`validar-autonomia\`, \`validar-playtest-fuzz\`, and \`validar-multiplayer\`.
+- Experience IR: \`validar-ir\`, \`indexar-ir\`, \`consultar-ir --semantic-id <id>\`, \`chunk-ir --semantic-id <id> [--raso]\`, and \`descrever-ir\`.
+- Operational state: \`validar-engine-snapshot\`, \`diff-engine-snapshots\`, \`validar-asset-provenance\`, \`validar-editor-state\`, \`planejar-jobs\`, \`validar-acceptance\`, \`operar-acceptance --operation <VALIDATE|EVALUATE|INVALIDATE> --context-file <file>\`, and \`validar-multimodal\`.
+- Temporal, autonomy, and testing: \`validar-temporal\`, \`validar-evidencia-temporal --bundle-arquivo <file>\`, \`validar-autonomia\`, \`validar-playtest-fuzz\`, and \`validar-multiplayer\`.
 - Portability and workers: \`analisar-portabilidade\` and \`validar-workers\`.
+- \`sema interativo validar-control-run <control-run.json> --definition-arquivo <definition.json> --plano-arquivo <plan.json> --contrato-arquivo <validation-contract.json> --entrada-arquivo <input.json> [--entrada-auxiliar-arquivo <supporting-input.json>] --evidencia-arquivo <evidence.json> --resultado-arquivo <result.json> --json\`: binds one advanced validation to its complete local digest chain instead of trusting a standalone result.
 
-Spatial model and render mode are orthogonal: \`THREE_D + HEADLESS\` is valid, while XR requires \`THREE_D\`. \`PIXEL_8_BIT\` and \`PIXEL_16_BIT\` are independent visual profiles available to games and simulations. Every command above is local and read-only; external runners own engine/editor execution, authorization, mutation, rollback, migration, rendering, playtest, and worker scheduling. Full local coverage is \`STRUCTURALLY_COMPLETE\`, never authoritative completion.
+The control-run command recomputes the canonical plan and selected pure validator, then verifies the definition, pipeline descriptor, validation contract, schema-declared inputs, evidence, and result digests. Prefix advanced items with \`sema interativo\` and pass the documented JSON file as the positional argument; an agent does not have to infer the validator or payload shape from a filename or visual style. The machine-readable schema publishes command maps, input/output schema links, required top-level fields, \`outputTargets\` path segments from the payload root, at least one real output shape per command, and official fixtures for all 20 advanced commands. Validation-result shapes describe \`payload.resultado\`; projected IR values use \`indice\`, \`entry\`, \`chunk\`, or \`descriptor\`; operation projections such as \`engineDiff\` and \`jobOrchestrationPlan\` live under \`payload.resultado.value\`; the job plan's ordered \`queue\` is the assignment list and exposes kind, priority, adapter, dependencies, locks, budgets, heartbeat, checkpoint, and recovery data.
+
+Spatial model and render mode are orthogonal: \`THREE_D + HEADLESS\` is valid, while XR requires \`THREE_D\`. \`PIXEL_8_BIT\` and \`PIXEL_16_BIT\` are independent visual profiles available to games and simulations. Every command above rejects unknown, duplicate, missing-value, or invalid-enum arguments, remains local, read-only, and non-authoritative, and leaves engine/editor execution, authorization, mutation, rollback, migration, rendering, playtest, and worker scheduling to external runners. Full local coverage is \`STRUCTURALLY_COMPLETE\`, never authoritative completion, and a local evidence bundle is never presented as authoritative trust.
 
 ## Operational
 

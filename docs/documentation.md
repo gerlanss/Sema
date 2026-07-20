@@ -37,3 +37,12 @@ sema finalizar-mudanca \
 - Do not include private or sensitive operational material.
 - Prefer local CLI examples.
 - Point support requests to suporte@otimitare.online.
+
+## Contract Split Plan
+
+`contratos/sema/governanca_ia_documentacao.sema` is close to the 500-line
+blocking limit. Before adding another documentation capability, split it by
+responsibility into contracts for required-document resolution, localization,
+and change-finalization evidence. Preserve the existing task names, guarantees,
+implementations, and links; the contracts may continue to govern the same CLI
+files through multiple `vinculos`. Do not create numbered part files.

@@ -75,8 +75,7 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 - `sema profile capabilities --json`: lists profiles/capabilities.
 - `sema rule-packs --profile <profile> --json`: lists rule packs.
 
-`author` is a specialized `sema author` workflow, not a `profile validar`
-alias. Discovery exposes that distinction explicitly.
+`author` is a specialized `sema author` workflow, not a `profile validar` alias. Discovery exposes that distinction explicitly.
 
 ## AI-native Content Pipeline
 
@@ -92,60 +91,27 @@ The content command is an AI-native, multi-channel, multi-format control plane. 
 
 Verdicts such as `APROVADO`, `REPROVADO`, and `INCONCLUSIVO` remain separate from operational conditions such as `AGUARDANDO_EVENTO_EXTERNO` and `FERRAMENTA_INDISPONIVEL`. A generated manifest is only a projection and cannot alter canonical state.
 
-Local NDJSON plus a hash chain is portable evidence for replay, not a strong append-only trust boundary. Retain `expectedHead`, the canonical trust-root digest, and the current revocation digest externally, or use protected storage for high assurance. The trust-root pin identifies the authority snapshot independently from the revocation overlay. A workspace-local trust file additionally requires `--development-local-trust`; the flag does not disable digest pinning.
-Append freshness uses the platform clock rather than caller-provided `recordedAt`, and an authority in the current revocation overlay cannot sign an accepted policy.
+Local NDJSON plus a hash chain is portable evidence for replay, not a strong append-only trust boundary. Retain `expectedHead`, the canonical trust-root digest, and the current revocation digest externally, or use protected storage for high assurance. The trust-root pin identifies the authority snapshot independently from the revocation overlay. A workspace-local trust file additionally requires `--development-local-trust`; the flag does not disable digest pinning. Append freshness uses the platform clock rather than caller-provided `recordedAt`, and an authority in the current revocation overlay cannot sign an accepted policy.
 
 ## AI-native Interactive Systems
 
 - `sema interativo capabilities --json`: lists the canonical interactive capability vocabulary.
-- `sema interativo schema --json`: exposes the stable read-only definition schema, enum matrix, constraints, and canonical example paths for AI clients.
+- `sema interativo schema --json`: exposes the stable read-only definition schema, enum matrix, constraints, extension-command and data-schema shapes, plus canonical example paths for AI clients.
 - `sema interativo pipelines --json`: lists reusable game, simulation, and hybrid pipelines.
 - `sema interativo adapters [--spatial-model <NON_SPATIAL|TWO_D|TWO_POINT_FIVE_D|THREE_D>] [--render-mode <HEADLESS|TEXT|VISUAL|XR>] --json`: lists compatible external adapter descriptors.
 - `sema interativo validar <definition.json> --json`: validates independent kind, spatial model, render mode, visual profile, fidelity, control, time, world, budget, pipeline, and acceptance axes.
 - `sema interativo planejar <definition.json> --json`: expands compatible stages and required evidence without running an engine.
 - `sema interativo validar-evidencias|status <definition.json> [--plano-arquivo <plan.json>] --bundle-arquivo <bundle.json> --json`: validates a portable evidence bundle or derives non-authoritative status; `--evidencias-arquivo` is an alias and an omitted plan is recomputed deterministically.
-- `sema interativo validar-protocolo <adapter-run.json> --json`: checks adapter-phase ordering and stable target binding.
-
-Advanced AI-facing validators and projections are exposed through the same
-read-only command surface:
-
+- `sema interativo validar-protocolo <adapter-run.json> --json`: checks DETECT/PROBE/SNAPSHOT/PLAN/APPLY/VALIDATE/EVIDENCE/ROLLBACK ordering and stable target binding.
 - Experience IR: `validar-ir`, `indexar-ir`, `consultar-ir --semantic-id <id>`, `chunk-ir --semantic-id <id> [--raso]`, and `descrever-ir`.
 - Operational state: `validar-engine-snapshot`, `diff-engine-snapshots`, `validar-asset-provenance`, `validar-editor-state`, `planejar-jobs`, `validar-acceptance`, `operar-acceptance --operation <VALIDATE|EVALUATE|INVALIDATE> --context-file <file>`, and `validar-multimodal`.
-- Temporal and QA: `validar-temporal` and `validar-evidencia-temporal --bundle-arquivo <file>`.
-- Autonomous testing and authority: `validar-autonomia`, `validar-playtest-fuzz`, and `validar-multiplayer`.
-- Portability and distributed work: `analisar-portabilidade` and `validar-workers`.
+- Temporal, autonomy, and testing: `validar-temporal`, `validar-evidencia-temporal --bundle-arquivo <file>`, `validar-autonomia`, `validar-playtest-fuzz`, and `validar-multiplayer`.
+- Portability and workers: `analisar-portabilidade` and `validar-workers`.
+- `sema interativo validar-control-run <control-run.json> --definition-arquivo <definition.json> --plano-arquivo <plan.json> --contrato-arquivo <validation-contract.json> --entrada-arquivo <input.json> [--entrada-auxiliar-arquivo <supporting-input.json>] --evidencia-arquivo <evidence.json> --resultado-arquivo <result.json> --json`: binds one advanced validation to its complete local digest chain instead of trusting a standalone result.
 
-The core control-run validator binds one advanced validation to its complete
-local chain instead of trusting a standalone result:
+The control-run command recomputes the canonical plan and selected pure validator, then verifies the definition, pipeline descriptor, validation contract, schema-declared inputs, evidence, and result digests. Prefix advanced items with `sema interativo` and pass the documented JSON file as the positional argument; an agent does not have to infer the validator or payload shape from a filename or visual style. The machine-readable schema publishes command maps, input/output schema links, required top-level fields, `outputTargets` path segments from the payload root, at least one real output shape per command, and official fixtures for all 20 advanced commands. Validation-result shapes describe `payload.resultado`; projected IR values use `indice`, `entry`, `chunk`, or `descriptor`; operation projections such as `engineDiff` and `jobOrchestrationPlan` live under `payload.resultado.value`; the job plan's ordered `queue` is the assignment list and exposes kind, priority, adapter, dependencies, locks, budgets, heartbeat, checkpoint, and recovery data.
 
-```bash
-sema interativo validar-control-run <control-run.json> --definition-arquivo <definition.json> --plano-arquivo <plan.json> --contrato-arquivo <validation-contract.json> --entrada-arquivo <input.json> [--entrada-auxiliar-arquivo <supporting-input.json>] --evidencia-arquivo <evidence.json> --resultado-arquivo <result.json> --json
-```
-
-It recomputes the canonical plan and selected pure validator, then verifies the
-definition, pipeline descriptor, validation contract, schema-declared inputs,
-evidence, and result digests. It remains local, read-only, and non-authoritative.
-
-Prefix every item above with `sema interativo` and pass the documented JSON
-file as the positional argument. `sema interativo schema --json` publishes the
-machine-readable command map, input/output schema links, required top-level
-fields, `outputTargets` path segments from the payload root, and official
-fixture paths for all 20 advanced commands. An agent does
-not have to infer the validator or payload shape from a filename or visual style.
-Every command advertises at least one real output shape. Validation-result
-shapes describe `payload.resultado`; projected IR values use `indice`, `entry`,
-`chunk`, or `descriptor`; and operation projections such as `engineDiff` and
-`jobOrchestrationPlan` live under `payload.resultado.value`. The job plan's
-ordered `queue` is the assignment list and exposes each job's kind, priority,
-adapter, dependencies, locks, budgets, heartbeat, checkpoint, and recovery data.
-
-Spatial model and render mode are orthogonal; `THREE_D + HEADLESS` is valid and
-XR requires `THREE_D`. `PIXEL_8_BIT` and `PIXEL_16_BIT` are independent visual
-profiles. Each subcommand rejects unknown, duplicate, missing-value, or invalid
-enum arguments instead of returning an empty successful result. The CLI plans and validates;
-external runners own engine/editor execution, authorization, mutation, and
-rollback. Full local coverage is `STRUCTURALLY_COMPLETE`, never authoritative
-completion; a local evidence bundle is never presented as authoritative trust.
+Spatial model and render mode are orthogonal: `THREE_D + HEADLESS` is valid, while XR requires `THREE_D`. `PIXEL_8_BIT` and `PIXEL_16_BIT` are independent visual profiles available to games and simulations. Every command above rejects unknown, duplicate, missing-value, or invalid-enum arguments, remains local, read-only, and non-authoritative, and leaves engine/editor execution, authorization, mutation, rollback, migration, rendering, playtest, and worker scheduling to external runners. Full local coverage is `STRUCTURALLY_COMPLETE`, never authoritative completion, and a local evidence bundle is never presented as authoritative trust.
 
 ## Operational
 
