@@ -43,7 +43,7 @@ import type {
   FonteAchadoProfile,
   MaturidadeProfile,
   OpcoesProfileValidar,
-  PerfilSemantico,
+  PerfilSemanticoValidavel,
   PresetProfile,
   ProfileGovernanca,
   RequisitoProfile,
@@ -65,11 +65,11 @@ export async function carregarArtefatoProfile(args: string[]): Promise<{ texto: 
 
 export async function validarProfileSemantico(
   entrada: string | undefined,
-  profile: PerfilSemantico,
+  profile: PerfilSemanticoValidavel,
   opcoes: OpcoesProfileValidar,
 ): Promise<ResultadoProfileValidar> {
   if (!entrada) {
-    throw new Error("Uso: sema profile validar <software|workflow|ops|game|legal|research|redacao|propostas|conversas> <arquivo-ou-pasta> [--maturidade draft|prototype|production|critical] [--preset <preset>] [--artefato <texto>|--artefato-arquivo <arquivo>] [--json]");
+    throw new Error("Uso: sema profile validar <software|workflow|ops|game|simulation|legal|research|redacao|propostas|conversas> <arquivo-ou-pasta> [--maturidade draft|prototype|production|critical] [--preset <preset>] [--artefato <texto>|--artefato-arquivo <arquivo>] [--json]");
   }
 
   const modulos = await carregarModulos(entrada);
@@ -184,13 +184,21 @@ export function renderizarProfileValidarTexto(resultado: ResultadoProfileValidar
 }
 
 export function criarPayloadCapabilityMatrix() {
-  const profiles = Object.values(CAPABILITY_MATRIX_GOVERNANCA);
+  const profiles = Object.values(CAPABILITY_MATRIX_GOVERNANCA)
+    .filter((profile) => profile.profile !== "author");
+  const workflowsEspecializados = [{
+    id: "workflow.author",
+    comando: "sema author <subcomando>",
+    resumo: "Workflow narrativo especializado; não é um profile validável.",
+  }] as const;
   return {
     comando: "profile capabilities",
     sucesso: true,
     profiles,
+    workflowsEspecializados,
     resumo: {
       profiles: profiles.length,
+      workflowsEspecializados: workflowsEspecializados.length,
       validaArtefatoReal: profiles.filter((profile) => profile.validaArtefatoReal).map((profile) => profile.profile),
       interpretaNegacao: profiles.filter((profile) => profile.interpretaNegacao).map((profile) => profile.profile),
     },
@@ -206,6 +214,10 @@ export function renderizarCapabilityMatrixTexto(payload: ReturnType<typeof criar
       `  packs=${profile.rulePacksSugeridos.join(", ")}`,
       `  limites=${profile.limites.join(" | ")}`,
     ].join("\n")).join("\n"),
+    "SPECIALIZED_WORKFLOWS",
+    ...payload.workflowsEspecializados.map((workflow) => (
+      `- ${workflow.id}: ${workflow.resumo}\n  comando=${workflow.comando}`
+    )),
   ].join("\n");
 }
 
@@ -252,9 +264,9 @@ export async function comandoProfile(posicionais: string[], args: string[], emJs
       "Uso: sema profile <validar|capabilities|rule-packs>",
       "",
       "Comandos:",
-      "  sema profile validar <software|workflow|ops|game|legal|research|redacao|propostas|conversas> <arquivo-ou-pasta> [--maturidade draft|prototype|production|critical] [--preset <preset>] [--artefato <texto>|--artefato-arquivo <arquivo>] [--json]",
+      "  sema profile validar <software|workflow|ops|game|simulation|legal|research|redacao|propostas|conversas> <arquivo-ou-pasta> [--maturidade draft|prototype|production|critical] [--preset <preset>] [--artefato <texto>|--artefato-arquivo <arquivo>] [--json]",
       "  sema profile capabilities [--json]",
-      "  sema profile rule-packs [--profile <author|software|workflow|ops|game|legal|research|redacao|propostas|conversas>] [--json]",
+      "  sema profile rule-packs [--profile <author|software|workflow|ops|game|simulation|legal|research|redacao|propostas|conversas>] [--json]",
       "",
       "O profile e um gate semantico: se requisito obrigatorio faltar, a saida bloqueia.",
     ].join("\n"));
@@ -282,7 +294,7 @@ export async function comandoProfile(posicionais: string[], args: string[], emJs
   const profile = normalizarProfileSemantico(posicionais[1] ?? obterOpcao(args, "--profile"));
   const entrada = posicionais[2] ?? obterOpcao(args, "--arquivo");
   if (!profile) {
-    console.error("Profile invalido. Use software, workflow, ops, game, legal, research, redacao, propostas ou conversas.");
+    console.error("Profile invalido. Use software, workflow, ops, game, simulation, legal, research, redacao, propostas ou conversas.");
     return 1;
   }
 

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.game.pixel-8-bit",
+  "version": "1.0.0",
+  "kind": "GAME",
+  "spatialModel": "TWO_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "PIXEL_8_BIT",
+  "fidelity": "ARCADE",
+  "controlModes": [
+    "HUMAN"
+  ],
+  "timeModel": "FIXED_STEP",
+  "determinism": "SEEDED",
+  "capabilities": [
+    "interactive.control.human",
+    "interactive.determinism.seeded",
+    "interactive.event.log",
+    "interactive.failure.observe",
+    "interactive.fidelity.arcade",
+    "interactive.kind.game",
+    "interactive.playtest.plan",
+    "interactive.render.visual",
+    "interactive.replay.compare",
+    "interactive.runtime.bind",
+    "interactive.runtime.observe",
+    "interactive.seed.bind",
+    "interactive.smoke.observe",
+    "interactive.snapshot.capture",
+    "interactive.spatial.two_d",
+    "interactive.state.model",
+    "interactive.time.fixed_step",
+    "interactive.visual.pixel_8_bit",
+    "interactive.world.model"
+  ],
+  "pipelines": [
+    "interactive.prototype",
+    "interactive.playtest",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "engine.pico8",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "compact single-screen platform game",
+    "state": {
+      "room": 1,
+      "score": 0
+    },
+    "time": {
+      "tickRateHz": 30
+    },
+    "events": [
+      "player.jump",
+      "coin.collect",
+      "player.hit"
+    ],
+    "initialConditions": {
+      "room": 1,
+      "lives": 3
+    },
+    "grid": "8 px tiles on a 128x128 canvas",
+    "loop": "move, jump, collect, exit",
+    "objective": "collect every coin and reach the exit",
+    "successConditions": [
+      "exit reached after all coins are collected"
+    ],
+    "failureConditions": [
+      "all lives exhausted"
+    ],
+    "rules": [
+      "integer-aligned sprite positions",
+      "no sub-pixel rendering"
+    ],
+    "seed": 8,
+    "snapshot": "room state at entry",
+    "replay": "button transitions per fixed tick",
+    "step": "one 30 Hz tick"
+  },
+  "budgets": {
+    "paletteColors": 16,
+    "baseResolution": "128x128",
+    "tileSize": "8x8",
+    "spriteSize": "8x8 and 16x16",
+    "memoryBudgetBytes": 32768,
+    "audioProfile": "four-channel chiptune"
+  },
+  "acceptance": {
+    "pixelIntegrity": "sprites and tiles stay on the integer grid",
+    "playability": "the full loop is completable with two buttons and a d-pad"
+  }
+}

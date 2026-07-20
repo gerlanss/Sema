@@ -12,7 +12,7 @@ import type {
   FonteAchadoProfile,
   MaturidadeProfile,
   OpcoesProfileValidar,
-  PerfilSemantico,
+  PerfilSemanticoValidavel,
   PresetProfile,
   ProfileGovernanca,
   RequisitoProfile,
@@ -21,7 +21,7 @@ import type {
   RuntimeGateProfile,
   SeveridadeProfile,
 } from "./profileAuthorTipos.js";
-export const REQUISITOS_PROFILE: Record<PerfilSemantico, RequisitoProfile[]> = {
+export const REQUISITOS_PROFILE: Record<PerfilSemanticoValidavel, RequisitoProfile[]> = {
   software: [
     { id: "contrato_antes_codigo", descricao: "declara contrato antes de codigo vivo", termos: [/contrato/i, /codigo|implementacao|vivo/i], obrigatorio: true },
     { id: "drift_e_impacto", descricao: "exige drift e mapa de impacto antes de editar", termos: [/drift/i, /impacto|impact map|mapa/i], obrigatorio: true },
@@ -45,6 +45,14 @@ export const REQUISITOS_PROFILE: Record<PerfilSemantico, RequisitoProfile[]> = {
     { id: "estado_e_regras", descricao: "declara estado, regras e transicoes de jogo", termos: [/estado|state/i, /regras?|transitions?|transicoes/i], obrigatorio: true },
     { id: "falha_balanceamento", descricao: "modela falha, balanceamento e abuso", termos: [/falha|derrota|erro/i, /balanceamento|abuso|exploit/i], obrigatorio: true },
     { id: "telemetria_jogo", descricao: "define telemetria ou replay de decisao", termos: [/telemetria|replay|metricas/i], obrigatorio: false },
+  ],
+  simulation: [
+    { id: "modelo_e_assumptions", descricao: "declara modelo testavel e assumptions explicitas", termos: [/modelo|model/i, /assumptions?|premissas?|hipoteses?/i], obrigatorio: true },
+    { id: "condicoes_outputs_unidades", descricao: "declara condicoes iniciais, contorno, outputs e unidades", termos: [/condicoes?_iniciais|initial[_ -]?conditions?/i, /condicoes?_contorno|boundary[_ -]?conditions?/i, /outputs?|saidas?|resultados?/i, /unidades?|units?/i], obrigatorio: true },
+    { id: "spatial_render_visual_separados", descricao: "separa modelo espacial, modo de renderizacao e visual profile", termos: [/spatial[_ -]?model|modelo[_ -]?espacial/i, /render[_ -]?mode|modo[_ -]?(?:de[_ -]?)?render/i, /visual[_ -]?profile|perfil[_ -]?visual/i], obrigatorio: true },
+    { id: "controle_e_tempo", descricao: "declara modo de controle e modelo de tempo", termos: [/controle|control(?:[_ -]?modes?)?/i, /tempo|time[_ -]?model|fixed[_ -]?step|real[_ -]?time|event[_ -]?driven/i], obrigatorio: true },
+    { id: "fidelidade_calibracao_incerteza", descricao: "declara fidelidade, referencia, calibracao, tolerancia e incerteza", termos: [/fidelity|fidelidade/i, /referencia|reference|dataset/i, /calibracao|calibration/i, /tolerancias?|tolerances?/i, /incerteza|uncertainty/i], obrigatorio: true },
+    { id: "telemetria_e_replay_simulacao", descricao: "define telemetria, seed, snapshot ou replay reproduzivel", termos: [/telemetria|telemetry|metricas?/i, /seed|snapshot|replay|event[_ -]?log/i], obrigatorio: false },
   ],
   legal: [
     { id: "jurisdicao_e_escopo", descricao: "declara jurisdicao, escopo e limite de uso", termos: [/jurisdicao/i, /escopo|limite/i], obrigatorio: true },
@@ -93,7 +101,7 @@ export const REQUISITOS_PROFILE_COMUNS: RequisitoProfile[] = [
   },
 ];
 
-export const ALIASES_PROFILE: Record<string, PerfilSemantico> = {
+export const ALIASES_PROFILE: Record<string, PerfilSemanticoValidavel> = {
   software: "software",
   codigo: "software",
   code: "software",
@@ -110,6 +118,12 @@ export const ALIASES_PROFILE: Record<string, PerfilSemantico> = {
   game: "game",
   jogo: "game",
   games: "game",
+  simulation: "simulation",
+  simulations: "simulation",
+  simulacao: "simulation",
+  simulacoes: "simulation",
+  simulador: "simulation",
+  simuladores: "simulation",
   legal: "legal",
   juridico: "legal",
   research: "research",
@@ -136,7 +150,7 @@ export const ALIASES_PROFILE: Record<string, PerfilSemantico> = {
   chat: "conversas",
 };
 
-export function normalizarProfileSemantico(valor: string | undefined): PerfilSemantico | null {
+export function normalizarProfileSemantico(valor: string | undefined): PerfilSemanticoValidavel | null {
   if (!valor) {
     return null;
   }
@@ -152,7 +166,7 @@ export function normalizarMaturidadeProfile(valor: string | undefined): Maturida
   return "production";
 }
 
-export const PRESETS_PROFILE: Record<PerfilSemantico, PresetProfile[]> = {
+export const PRESETS_PROFILE: Record<PerfilSemanticoValidavel, PresetProfile[]> = {
   software: ["api", "modulo", "refactor", "persistencia", "security"],
   workflow: ["webhook", "fila", "n8n", "cron", "integracao"],
   ops: ["deploy", "migration", "incidente", "rollback", "critical"],
@@ -161,6 +175,7 @@ export const PRESETS_PROFILE: Record<PerfilSemantico, PresetProfile[]> = {
   redacao: ["editorial", "materia", "blog", "seo", "reescrita"],
   propostas: ["marketplace", "freela", "consultiva", "diagnostico", "score90"],
   game: ["casual", "arcade", "rpg", "economia", "playtest"],
+  simulation: ["model", "scenario", "calibration", "deterministic", "batch", "safety"],
   conversas: ["atendimento", "vendas", "suporte", "qualificacao", "retencao", "cobranca"],
 };
 
@@ -299,6 +314,21 @@ export const CAPABILITY_MATRIX_GOVERNANCA: Record<ProfileGovernanca, CapabilityP
       "balanceamento numerico profundo depende de parametros e sessoes",
     ],
     rulePacksSugeridos: ["playtest", "economy-balance", "progression"],
+  },
+  simulation: {
+    profile: "simulation",
+    detectaLiteral: true,
+    detectaSemantico: "parcial",
+    detectaOrdemExecucao: "parcial",
+    detectaDriftReal: "parcial",
+    validaArtefatoReal: "parcial",
+    interpretaNegacao: true,
+    confianca: "media",
+    limites: [
+      "validacao textual nao executa engine, solver ou runtime externo",
+      "aparencia visual nao prova fidelidade sem referencia, calibracao, tolerancia e evidencia observada",
+    ],
+    rulePacksSugeridos: ["simulation-model", "simulation-calibration", "simulation-determinism", "simulation-batch", "simulation-safety"],
   },
   conversas: {
     profile: "conversas",

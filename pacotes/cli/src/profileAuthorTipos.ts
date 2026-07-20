@@ -6,7 +6,8 @@
 import type { compilarCodigo } from "@sema/nucleo";
 
 export type PerfilSemantico = "software" | "workflow" | "ops" | "game" | "legal" | "research" | "redacao" | "propostas" | "conversas";
-export type ProfileGovernanca = PerfilSemantico | "author";
+export type PerfilSemanticoValidavel = PerfilSemantico | "simulation";
+export type ProfileGovernanca = PerfilSemanticoValidavel | "author";
 export type SeveridadeProfile = "info" | "warning" | "blocking" | "critical";
 export type MaturidadeProfile = "draft" | "prototype" | "production" | "critical";
 export type DecisaoAgenteProfile = "continuar" | "continuar_com_ressalva" | "parar" | "chamar_humano";
@@ -54,6 +55,12 @@ export type PresetProfile =
   | "rpg"
   | "economia"
   | "playtest"
+  | "model"
+  | "scenario"
+  | "calibration"
+  | "deterministic"
+  | "batch"
+  | "safety"
   | "atendimento"
   | "vendas"
   | "suporte"
@@ -142,7 +149,7 @@ export interface OpcoesProfileValidar {
 export interface ResultadoProfileValidar {
   comando: "profile validar";
   sucesso: boolean;
-  profile: PerfilSemantico;
+  profile: PerfilSemanticoValidavel;
   arquivo: string;
   modulo: string | null;
   maturidade: MaturidadeProfile;

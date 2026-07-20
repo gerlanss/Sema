@@ -1,0 +1,143 @@
+module sema.produto.sistemas_interativos.cli {
+  docs {
+    resumo: "Superficie publica da CLI para catalogar, validar, planejar e verificar evidencias de jogos e simulacoes. A CLI e um control plane local e declarativo; engines, editores e runners permanecem externos."
+    arquivo: "docs/sistemas-interativos.md"
+    arquivo: "docs/commands.md"
+  }
+
+  use sema.produto.sistemas_interativos
+
+  use sema.produto.sistemas_interativos.adaptadores
+
+  use sema.produto.sistemas_interativos.evidencias
+
+  use sema.produto.sistemas_interativos.control_run
+
+  task operar_cli_sistemas_interativos {
+    input {
+      subcomando: Texto required
+      argumentos: Lista<Texto> required
+    }
+    output {
+      exit_code: Inteiro
+      payload: Objeto
+      executed: Booleano
+      workspace_mutated: Booleano
+    }
+    rules {
+      subcomando deve_ser em [CAPABILITIES, SCHEMA, PIPELINES, ADAPTERS, VALIDAR, PLANEJAR, VALIDAR_EVIDENCIAS, STATUS, VALIDAR_PROTOCOLO, VALIDAR_CONTROL_RUN]
+      argumentos deve_ser arquivos_filtros_e_flags_explicitos
+      argumentos deve_ser aceitar_somente_allowlist_do_subcomando
+      argumentos deve_ser rejeitar_flag_desconhecida_duplicada_sem_valor_ou_enum_invalido
+      argumentos deve_ser validar_json_antes_de_processar
+      argumentos deve_ser produzir_erros_com_codigos_estaticos_sem_eco_de_segredo
+      argumentos deve_ser manter_validacao_planejamento_e_status_sem_execucao_externa
+      argumentos deve_ser retornar_executed_false_e_workspace_mutated_false
+      subcomando deve_ser expor_vocabulario_completo_derivado_dos_pipelines_e_adapters_canonicos_quando_CAPABILITIES
+      subcomando deve_ser expor_shape_v1_campos_eixos_constraints_e_caminhos_de_exemplos_quando_SCHEMA
+      subcomando deve_ser retornar_read_only_true_executed_false_e_workspace_mutated_false_quando_SCHEMA
+      subcomando deve_ser exigir_manifesto_definition_plan_validation_contract_inputs_evidence_e_result_quando_VALIDAR_CONTROL_RUN
+      subcomando deve_ser reexecutar_validador_local_e_comparar_resultado_quando_VALIDAR_CONTROL_RUN
+    }
+    effects {
+      consulta definicoes_e_bundles_locais criticidade = baixa
+      auditoria comando_sistemas_interativos criticidade = media
+    }
+    authz {
+      escopo: sema.interativo.cli.operar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.interativo.cli_executada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      executar_engine
+      abrir_editor
+      iniciar_jogo_ou_simulacao
+      aplicar_adapter
+      escrever_no_projeto_alvo
+      instalar_plugin_ou_sdk
+      declarar_adapter_detectado_sem_probe_externo
+      esconder_capabilities_ausentes
+      ecoar_caminho_controlado_segredo_ou_stack_em_erro_publico
+      retornar_lista_vazia_com_sucesso_para_filtro_invalido
+      exigir_que_IA_adivinhe_shape_ou_vocabulario_da_definicao
+      aceitar_control_run_sem_todos_os_digests_e_artefatos_exatos
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.command.comandoSistemasInterativos
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/command.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/controlRun.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/render.ts"
+      arquivo: "pacotes/cli/src/comandos.ts"
+      arquivo: "pacotes/cli/src/index.part01.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.sistemas_interativos.command.comandoSistemasInterativos
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      exit_code existe
+      payload existe
+      executed == falso
+      workspace_mutated == falso
+      exit_code != 0 ou payload existe
+      payload deve_ser deterministico_versionado_e_read_only_quando_SCHEMA
+      payload deve_ser cobrir_toda_capability_de_pipeline_e_adapter_quando_CAPABILITIES
+    }
+    tests {
+      caso "planejamento 16-bit nao abre engine" {
+        given {
+          subcomando: "PLANEJAR"
+          argumentos: "jogo-16bit.json json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exit_code: 0
+          executed: falso
+          workspace_mutated: falso
+        }
+      }
+      caso "schema ensina IA sem executar ou escrever" {
+        given {
+          subcomando: "SCHEMA"
+          argumentos: "json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          executed: falso
+          workspace_mutated: falso
+        }
+      }
+      caso "control run liga toda a cadeia sem executar runtime" {
+        given {
+          subcomando: "VALIDAR_CONTROL_RUN"
+          argumentos: "manifesto definition plano inputs evidence result json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exit_code: 0
+          executed: falso
+          workspace_mutated: falso
+        }
+      }
+    }
+  }
+}

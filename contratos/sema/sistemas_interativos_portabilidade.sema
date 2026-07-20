@@ -1,0 +1,263 @@
+module sema.produto.sistemas_interativos.portabilidade {
+  docs {
+    resumo: "Migracao versionada, portabilidade assistida entre engines com perdas declaradas e workers distribuidos para cook, shaders, render e testes. Toda saida e plano local; conversao e trabalho externo exigem adapters e evidencias."
+    arquivo: "contratos/sema/sistemas_interativos_ir.sema"
+    arquivo: "contratos/sema/sistemas_interativos_operacao.sema"
+    arquivo: "contratos/sema/sistemas_interativos_adaptadores.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type PlanoPortabilidadeInterativa {
+    fields {
+      schema_version: Texto
+      plan_id: Texto
+      system_id: Texto
+      experience_ir_digest: Texto
+      source: Objeto
+      source_manifest: Objeto
+      targets: Lista
+      migrations: Lista
+      acceptance: Objeto
+    }
+    invariants {
+      schema_version existe
+      plan_id existe
+      system_id existe
+      experience_ir_digest existe
+      source existe
+      source_manifest existe
+      targets existe
+      migrations existe
+      acceptance existe
+    }
+  }
+
+  type PlanoWorkersDistribuidos {
+    fields {
+      schema_version: Texto
+      plan_id: Texto
+      system_id: Texto
+      input_digest: Texto
+      workers: Lista
+      jobs: Lista
+      leases: Lista
+      evidence_requirements: Lista<Texto>
+    }
+    invariants {
+      schema_version existe
+      plan_id existe
+      system_id existe
+      input_digest existe
+      workers existe
+      jobs existe
+      leases existe
+      evidence_requirements existe
+    }
+  }
+
+  task analisar_plano_portabilidade_interativa {
+    input {
+      plano: PlanoPortabilidadeInterativa required
+    }
+    output {
+      valido: Booleano
+      plan_digest: Texto
+      target_reports: Lista
+      declared_losses: Lista
+      migration_gaps: Lista<Texto>
+      next_actions: Lista<Texto>
+      converted: Booleano
+      authoritative: Booleano
+      executed: Booleano
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      plano deve_ser ter_schema_version_sema_interactive_portability_v1_e_somente_campos_top_level_permitidos
+      plano deve_ser ligar_experience_ir_digest_e_source_snapshot_digest_sha256
+      plano deve_ser declarar_source_engine_version_e_coordinate_system
+      plano deve_ser ter_source_manifest_canonicalizavel_ligado_ao_experience_ir_digest_e_source_snapshot_digest
+      plano deve_ser ter_source_manifest_com_entries_unicas_de_semantic_id_source_kind_content_digest_e_required
+      plano deve_ser ter_targets_com_id_engine_version_output_format_e_mappings
+      plano deve_ser ligar_mapping_a_semantic_id_source_kind_target_kind_e_status
+      plano deve_ser rejeitar_mapping_sem_semantic_id_e_source_kind_presentes_no_source_manifest
+      plano deve_ser exigir_cobertura_de_todas_as_entries_required_do_source_manifest_por_target
+      plano deve_ser ter_status_em [EXACT, APPROXIMATE, UNSUPPORTED]
+      plano deve_ser exigir_losses_fallback_e_acceptance_para_APPROXIMATE_ou_UNSUPPORTED
+      plano deve_ser impedir_claim_lossless_cross_engine_sem_prova_externa
+      plano deve_ser ter_ao_menos_uma_migration_ligada_a_cada_target_id
+      plano deve_ser ter_migration_backup_compatibility_test_e_rollback_digests_para_mudanca_de_versao
+      plano deve_ser exigir_engine_e_to_version_da_migration_iguais_a_origem_ou_ao_target_ligado
+      plano deve_ser exigir_evidencia_de_import_scene_assets_materials_animation_physics_audio_timeline_build_e_smoke
+      plano deve_ser produzir_relatorio_de_perdas_por_target_sem_converter_arquivo_e_zerar_ready_e_handoff_diante_de_qualquer_bloqueio_global_ou_estrutural
+    }
+    effects {
+      auditoria plano_portabilidade_analisado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.portabilidade.analisar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.portabilidade_analisada
+      ator: auth.agente
+      correlacao: plan_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      declarar_conversao_perfeita_por_mapeamento_sintatico
+      mapping_arbitrario_ou_desconectado_do_source_manifest
+      declarar_ready_for_external_migration_sem_cobertura_integral_da_origem
+      esconder_UNSUPPORTED_ou_perda
+      migrar_sem_backup_teste_e_rollback
+      migration_vazia_ou_desconectada_de_target_source_e_versao
+      armazenar_blend_uasset_build_ou_cache_no_plano
+      executar_import_export_migracao_engine_ou_editor
+      declarar_target_convertido_ou_validado
+      aceitar_campo_top_level_desconhecido_ou_valor_sensivel_em_qualquer_profundidade_ou_ecoar_caminho_asset_semantic_id_token_secret_ou_valor_invalido
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.portability.analisarPlanoPortabilidadeInterativa
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/portability.ts"
+      simbolo: cli.src.sistemas_interativos.portability.analisarPlanoPortabilidadeInterativa
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      plan_digest existe
+      target_reports existe
+      declared_losses existe
+      migration_gaps existe
+      next_actions existe
+      converted == falso
+      authoritative == falso
+      executed == falso
+      bloqueios existe
+    }
+    tests {
+      caso "Unreal para Unity declara Niagara aproximado e Chaos sem suporte" {
+        given {
+          plano: "mappings exact approximate unsupported com losses fallback acceptance e migration rollback"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          converted: falso
+          authoritative: falso
+        }
+      }
+    }
+  }
+
+  task validar_plano_workers_distribuidos {
+    input {
+      plano: PlanoWorkersDistribuidos required
+    }
+    output {
+      valido: Booleano
+      plan_digest: Texto
+      topological_order: Lista<Texto>
+      assignments: Lista
+      capability_gaps: Lista<Texto>
+      lock_conflicts: Lista<Texto>
+      next_actions: Lista<Texto>
+      completed: Booleano
+      authoritative: Booleano
+      executed: Booleano
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      plano deve_ser ter_schema_version_sema_interactive_distributed_jobs_v1_e_somente_campos_top_level_permitidos
+      plano deve_ser ligar_input_digest_sha256
+      plano deve_ser ter_workers_com_id_capabilities_ram_vram_disk_concurrency_e_isolation
+      plano deve_ser ter_jobs_em [COOK, SHADERS, RENDER, TEST]
+      plano deve_ser ter_job_input_digest_dependencies_capabilities_budgets_idempotency_unica_checkpoint_retry_e_evidencias
+      plano deve_ser formar_DAG_sem_ciclo
+      plano deve_ser mapear_worker_compativel_por_capabilities_e_budgets
+      plano deve_ser ter_leases_de_GPU_EDITOR_CACHE_com_owner_ttl_heartbeat_checkpoint_ligado_ao_job_e_GPU_obrigatoria_para_RENDER_SHADERS_ou_VRAM_positivo
+      plano deve_ser detectar_lock_exclusivo_compartilhado_entre_jobs_concorrentes
+      plano deve_ser exigir_cook_shader_render_test_output_digest_log_checkpoint_e_resource_metrics
+      plano deve_ser produzir_ordem_e_assignments_sem_enfileirar_worker_e_zerar_assignments_e_handoff_diante_de_qualquer_bloqueio_global_ou_estrutural
+    }
+    effects {
+      auditoria plano_workers_distribuidos_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.workers.validar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.workers_plano_validado
+      ator: auth.agente
+      correlacao: plan_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      job_sem_budget_checkpoint_idempotency_unica_ou_GPU_lease_quando_exigida
+      worker_sem_isolation
+      executar_job_durante_planejamento
+      atribuir_job_sem_capability_ou_recurso
+      ignorar_lock_concorrente
+      declarar_render_cook_shader_ou_test_concluido
+      aceitar_campo_top_level_desconhecido_ou_valor_sensivel_em_qualquer_profundidade_ou_ecoar_worker_job_caminho_token_secret_ou_valor_invalido
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.portability.validarPlanoWorkersDistribuidos
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/portability.ts"
+      simbolo: cli.src.sistemas_interativos.portability.validarPlanoWorkersDistribuidos
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      plan_digest existe
+      topological_order existe
+      assignments existe
+      capability_gaps existe
+      lock_conflicts existe
+      next_actions existe
+      completed == falso
+      authoritative == falso
+      executed == falso
+      bloqueios existe
+      valido != verdadeiro ou capability_gaps deve_ser vazio
+      valido != verdadeiro ou lock_conflicts deve_ser vazio
+    }
+    tests {
+      caso "cook shaders render e test usam DAG e locks" {
+        given {
+          plano: "workers isolados jobs content addressed dependencies budgets leases heartbeat checkpoint evidence"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+          completed: falso
+          executed: falso
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,138 @@
+module sema.produto.sistemas_interativos.catalogo_avancado {
+  docs {
+    resumo: "Catalogo AI-first das capacidades P0, P1 e P2: IR, observacao, proveniencia, editor, jobs, aceite, 4D, QA, autonomia, fuzz, multiplayer, migracao, portabilidade e workers. Todo pipeline e descobrivel e todo adapter e apenas descriptor externo."
+    arquivo: "contratos/sema/sistemas_interativos.sema"
+    arquivo: "contratos/sema/descoberta_capacidades.sema"
+    arquivo: "docs/sistemas-interativos.md"
+    arquivo: "docs/descoberta-capacidades.md"
+  }
+
+  task listar_pipelines_interativos_avancados {
+    input {
+      filtros: Objeto required
+    }
+    output {
+      pipelines: Lista
+      capabilities: Lista<Texto>
+      executed: Booleano
+    }
+    rules {
+      filtros deve_ser opcionais_e_explicitos
+    }
+    effects {
+      consulta catalogo_interativo_avancado criticidade = baixa
+    }
+    forbidden {
+      pipeline_especifico_para_Artemis
+      pipeline_separado_apenas_por_3d_2d_8bit_ou_16bit
+      pipeline_oculto_da_descoberta
+      comando_sem_definition_json
+      executar_pipeline_durante_listagem
+      afirmar_engine_plugin_worker_ou_verifier_instalado
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.advanced_catalog.listarPipelinesInterativosAvancados
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/advancedCatalog.ts"
+      arquivo: "testes/unidade/sistemas-interativos-advanced-catalog.test.ts"
+      simbolo: cli.src.sistemas_interativos.advanced_catalog.listarPipelinesInterativosAvancados
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "2s"
+      retry: "seguro"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      pipelines existe
+      capabilities existe
+      executed == falso
+      pipelines deve_ser ter_ids_unicos
+      pipelines deve_ser ter_required_evidence_nao_vazia
+      pipelines deve_ser expor_toda_capacidade_do_texto_fundador_P0_P1_P2
+      pipelines deve_ser incluir_IR_observacao_proveniencia_editor_evidencia_job_aceite_4D_QA_autonomia_fuzz_multiplayer_migracao_portabilidade_e_workers
+      pipelines deve_ser separar_objetivo_de_modelo_espacial_render_e_visual_profile
+      pipelines deve_ser compartilhar_catalogo_canonico_com_descoberta_schema_planner_e_agent_context
+      pipelines deve_ser produzir_template_planejar_definition_json_na_descoberta
+      pipelines deve_ser listar_capability_sem_provedor_em_vez_de_inventar_adapter
+    }
+    tests {
+      caso "IA encontra pipeline por objetivo e nao por estilo" {
+        given {
+          filtros: "portar jogo 16-bit Godot para Unity com perdas declaradas"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pipelines: "interactive.portability"
+          executed: falso
+        }
+      }
+    }
+  }
+
+  task listar_adaptadores_interativos_avancados {
+    input {
+      filtros: Objeto required
+    }
+    output {
+      adapters: Lista
+      executed: Booleano
+      external_calls: Booleano
+    }
+    rules {
+      filtros deve_ser opcionais_e_explicitos
+    }
+    effects {
+      consulta descriptors_adapters_avancados criticidade = baixa
+    }
+    forbidden {
+      executar_detect_probe_engine_editor_worker_ou_verifier
+      tratar_descriptor_como_adapter_instalado
+      adapter_telemetria_declarar_build_render_ou_migracao
+      adapter_build_declarar_verificacao_multimodal
+      credencial_path_ou_comando_embutido_no_descriptor
+      mutacao_sem_rollback
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.advanced_catalog.listarAdaptadoresInterativosAvancados
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/advancedCatalog.ts"
+      arquivo: "testes/unidade/sistemas-interativos-advanced-catalog.test.ts"
+      simbolo: cli.src.sistemas_interativos.advanced_catalog.listarAdaptadoresInterativosAvancados
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "2s"
+      retry: "seguro"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      adapters existe
+      executed == falso
+      external_calls == falso
+      adapters deve_ser ter_ids_unicos
+      adapters deve_ser nao_conter_secret_token_credential_path_ou_executable
+      adapters deve_ser ter_descriptor_versionado_role_compatibilidade_capabilities_protocolo_e_boundary_EXTERNAL
+      adapters deve_ser cobrir_IR_observacao_proveniencia_editor_evidencia_job_aceite_temporal_autonomia_portabilidade_e_workers
+      adapters deve_ser reutilizar_Blender_Unreal_Unity_Godot_runtime_build_telemetry_validator_e_custom
+      adapters deve_ser ter_capabilities_especificas_ao_role_sem_cobertura_falsa
+      adapters deve_ser exigir_protocolo_base_e_rollback_para_mutantes
+    }
+    tests {
+      caso "descriptor nao vira integracao real" {
+        given {
+          filtros: "engine blender role EDITOR"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          executed: falso
+          external_calls: falso
+        }
+      }
+    }
+  }
+}

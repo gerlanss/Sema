@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.game.3d.human",
+  "version": "1.0.0",
+  "kind": "GAME",
+  "spatialModel": "THREE_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "REALISTIC",
+  "fidelity": "SYSTEMIC",
+  "controlModes": [
+    "HUMAN"
+  ],
+  "timeModel": "REAL_TIME",
+  "determinism": "BEST_EFFORT",
+  "capabilities": [
+    "interactive.control.human",
+    "interactive.determinism.best_effort",
+    "interactive.failure.observe",
+    "interactive.fidelity.systemic",
+    "interactive.kind.game",
+    "interactive.playtest.plan",
+    "interactive.render.visual",
+    "interactive.replay.compare",
+    "interactive.runtime.bind",
+    "interactive.runtime.observe",
+    "interactive.smoke.observe",
+    "interactive.spatial.three_d",
+    "interactive.state.model",
+    "interactive.time.real_time",
+    "interactive.visual.realistic",
+    "interactive.world.model"
+  ],
+  "pipelines": [
+    "interactive.prototype",
+    "interactive.playtest"
+  ],
+  "adapterTargets": [
+    "engine.godot",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "third-person exploration arena",
+    "state": {
+      "player": "active",
+      "arena": "loaded"
+    },
+    "time": {
+      "tickRateHz": 60
+    },
+    "events": [
+      "player.move",
+      "objective.complete",
+      "player.fail"
+    ],
+    "initialConditions": {
+      "spawn": "arena.entry",
+      "health": 100
+    },
+    "units": "metres",
+    "scale": "1 unit = 1 metre",
+    "coordinateSystem": "right-handed Y-up",
+    "loop": "explore, solve, reach the exit",
+    "objective": "reach arena.exit",
+    "successConditions": [
+      "arena.exit reached"
+    ],
+    "failureConditions": [
+      "health reaches zero"
+    ],
+    "rules": [
+      "movement obeys collision volumes",
+      "objectives unlock in declared order"
+    ]
+  },
+  "acceptance": {
+    "boot": "runtime reaches the playable arena",
+    "loop": "a human can complete one full objective cycle",
+    "failure": "failure returns to a recoverable checkpoint"
+  }
+}

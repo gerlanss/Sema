@@ -313,6 +313,9 @@ Nao transforme isso em um \`index.html\` solto.
 Comandos uteis da CLI para esse fluxo:
 - \`sema starter-ia\`
 - \`sema ajuda-ia\`
+- \`sema descobrir catalogo --json\`
+- \`sema descobrir recomendar --intencao "<objetivo>" --json\`
+- \`sema interativo pipelines --json\`
 - \`sema resumo <arquivo-ou-pasta>\`
 - \`sema prompt-curto <arquivo-ou-pasta>\`
 - \`sema prompt-ia\`

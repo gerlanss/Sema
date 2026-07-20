@@ -1,0 +1,217 @@
+module sema.produto.sistemas_interativos.control_run {
+  docs {
+    resumo: "Control run AI-first somente leitura que liga definicao, plano canonico, pipeline, contrato do pipeline, schemas de entrada, evidencia e resultado por digests. Nao executa engine, editor, worker ou validador externo."
+    arquivo: "contratos/sema/sistemas_interativos.sema"
+    arquivo: "contratos/sema/sistemas_interativos_extensoes_cli.sema"
+    arquivo: "docs/sistemas-interativos.md"
+    arquivo: "docs/commands.md"
+  }
+
+  type ManifestoControlRunInterativo {
+    fields {
+      schema_version: Texto
+      run_id: Texto
+      system_id: Texto
+      pipeline_id: Texto
+      validator_command: Texto
+      definition_digest: Texto
+      plan_digest: Texto
+      pipeline_contract_digest: Texto
+      validation_contract_digest: Texto
+      producer_id: Texto
+      producer_version: Texto
+      producer_configuration_digest: Texto
+      verifier_id: Texto
+      verifier_version: Texto
+      verifier_configuration_digest: Texto
+      input_schema_keys: Lista<Texto>
+      input_digests: Lista<Texto>
+      evidence_digest: Texto
+      result_digest: Texto
+    }
+    invariants {
+      schema_version existe
+      run_id existe
+      system_id existe
+      pipeline_id existe
+      validator_command existe
+      definition_digest existe
+      plan_digest existe
+      pipeline_contract_digest existe
+      validation_contract_digest existe
+      producer_id existe
+      producer_version existe
+      producer_configuration_digest existe
+      verifier_id existe
+      verifier_version existe
+      verifier_configuration_digest existe
+      input_schema_keys existe
+      input_digests existe
+      evidence_digest existe
+      result_digest existe
+    }
+  }
+
+  type ArtefatosControlRunInterativo {
+    fields {
+      definicao: Objeto
+      plano: Objeto
+      contrato: Objeto
+      entradas: Lista
+      evidencia: Objeto
+      resultado: Objeto
+    }
+    invariants {
+      definicao existe
+      plano existe
+      contrato existe
+      entradas existe
+      evidencia existe
+      resultado existe
+    }
+  }
+
+  task validar_control_run_interativo {
+    input {
+      manifesto: ManifestoControlRunInterativo required
+      artefatos: ArtefatosControlRunInterativo required
+    }
+    output {
+      valid: Booleano
+      control_run_digest: Texto
+      definition_digest: Texto
+      plan_digest: Texto
+      pipeline_contract_digest: Texto
+      validation_contract_digest: Texto
+      input_digests: Lista<Texto>
+      evidence_digest: Texto
+      result_digest: Texto
+      bindings: Lista
+      issues: Lista<Texto>
+      completed: Booleano
+      local_coverage_complete: Booleano
+      awaiting_external_attestation: Booleano
+      executed: Booleano
+      workspace_mutated: Booleano
+      authoritative: Booleano
+    }
+    rules {
+      manifesto deve_ser ter_schema_version_sema_interactive_control_run_v1
+      manifesto deve_ser ter_ids_seguros_e_digests_sha256
+      manifesto deve_ser ligar_definition_digest_a_definicao_canonica_valida
+      manifesto deve_ser ligar_plan_digest_ao_plano_fornecido_e_ao_plano_recalculado
+      manifesto deve_ser ligar_system_id_a_definicao_plano_entradas_e_evidencia_quando_presentes
+      manifesto deve_ser ligar_pipeline_id_a_definicao_e_ao_plano_recalculado
+      manifesto deve_ser ligar_pipeline_contract_digest_ao_descriptor_canonico_do_catalogo
+      manifesto deve_ser ligar_validation_contract_digest_ao_artefato_de_contrato_exato
+      manifesto deve_ser ligar_produtor_e_verificador_distintos_com_id_version_e_configuration_digest_a_evidencia
+      manifesto deve_ser ligar_validator_command_a_superficie_CLI_canonica_do_pipeline
+      manifesto deve_ser ligar_input_schema_keys_aos_schemas_exigidos_pelo_comando
+      manifesto deve_ser ligar_input_digests_aos_artefatos_exatos_na_mesma_ordem
+      manifesto deve_ser validar_schema_version_e_campos_top_level_obrigatorios_de_cada_entrada
+      manifesto deve_ser ligar_evidence_digest_e_result_digest_aos_artefatos_exatos
+      manifesto deve_ser exigir_evidencia_input_exata_ou_envelope_generico_estrito_ligado_a_run_system_definition_plan_contract_e_inputs
+      manifesto deve_ser exigir_resultado_sucesso_read_only_sem_execucao_mutacao_ou_autoridade
+      manifesto deve_ser rejeitar_entrada_e_resultado_de_outro_system_run_contract_definition_ou_plan_quando_o_vinculo_existir
+      manifesto deve_ser produzir_bindings_e_issues_deterministicos_sem_ecoa_de_artefatos
+      manifesto deve_ser manter_completed_false_e_authoritative_false
+    }
+    effects {
+      auditoria control_run_interativo_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.control_run.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.control_run_validado
+      ator: auth.agente
+      correlacao: run_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aceitar_manifesto_sem_todos_os_artefatos_exatos
+      aceitar_pipeline_ausente_da_definicao_ou_plano
+      aceitar_comando_generico_quando_pipeline_tem_superficie_especifica
+      aceitar_schema_ou_digest_divergente
+      aceitar_resultado_de_outro_sistema_run_contrato_definicao_ou_plano
+      aceitar_campo_top_level_desconhecido_no_manifesto
+      executar_engine_editor_worker_adapter_validador_ou_resultado
+      gravar_workspace
+      promover_cobertura_local_para_atestacao_externa
+      ecoar_input_evidencia_resultado_caminho_token_secret_ou_valor_sensivel
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.control_run.validarControlRunInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/controlRun.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/command.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/index.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "testes/unidade/sistemas-interativos-control-run.test.ts"
+      arquivo: "exemplos/sistemas-interativos/advanced/control-run-valid.json"
+      arquivo: "exemplos/sistemas-interativos/advanced/control-run-definition-valid.json"
+      simbolo: cli.src.sistemas_interativos.control_run.validarControlRunInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valid existe
+      control_run_digest existe
+      definition_digest existe
+      plan_digest existe
+      pipeline_contract_digest existe
+      validation_contract_digest existe
+      input_digests existe
+      evidence_digest existe
+      result_digest existe
+      bindings existe
+      issues existe
+      completed == falso
+      local_coverage_complete existe
+      awaiting_external_attestation == verdadeiro
+      executed == falso
+      workspace_mutated == falso
+      authoritative == falso
+      valid != verdadeiro ou issues deve_ser vazio
+    }
+    tests {
+      caso "control run temporal liga toda a cadeia sem executar runtime" {
+        given {
+          manifesto: "definition plan interactive.temporal_qa validar-evidencia-temporal schemas inputs evidence result e digests exatos"
+          artefatos: "fixtures oficiais locais"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valid: verdadeiro
+          completed: falso
+          executed: falso
+          authoritative: falso
+        }
+      }
+      caso "resultado de outro sistema falha fechado" {
+        given {
+          manifesto: "system interactive.system"
+          artefatos: "evidencia ou resultado ligado a outro systemId"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valid: falso
+          completed: falso
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "sema.interactive.control-run/v1",
+  "runId": "run.temporal.1",
+  "systemId": "interactive.system",
+  "pipelineId": "interactive.temporal_qa",
+  "validatorCommand": "validar-evidencia-temporal",
+  "definitionDigest": "sha256:7fa0e796dc5a374c4df577f9dcf84815480b851925242ffd10f5006e38b7012a",
+  "planDigest": "sha256:07cc197de02708f18f131c445f00987094441d6a73d34ca7c9d3834ed664c903",
+  "pipelineContractDigest": "sha256:740c7814a510eb8e39b06a558871c4ac3c8ec99e350ff0b197886a6e909faf4d",
+  "validationContractDigest": "sha256:de8c602231b1538d1f73b31ac50f4ab940a395768debf29b262bd8d04c330cd5",
+  "producerId": "runner.temporal.external",
+  "producerVersion": "2.0.0",
+  "producerConfigurationDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "verifierId": "verifier.temporal.independent",
+  "verifierVersion": "1.0.0",
+  "verifierConfigurationDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+  "inputSchemaKeys": [
+    "temporalContract",
+    "temporalEvidence"
+  ],
+  "inputDigests": [
+    "sha256:de8c602231b1538d1f73b31ac50f4ab940a395768debf29b262bd8d04c330cd5",
+    "sha256:98f3ea6afa71d9fdfc3635bd6e338870e169f43b93ab4a56e997ea4869129dc9"
+  ],
+  "evidenceDigest": "sha256:98f3ea6afa71d9fdfc3635bd6e338870e169f43b93ab4a56e997ea4869129dc9",
+  "resultDigest": "sha256:1240c513e5152569a16dba119deef0c4cdf06a210c51f33d871586787d853818"
+}

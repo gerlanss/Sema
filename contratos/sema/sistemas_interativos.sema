@@ -1,0 +1,265 @@
+module sema.produto.sistemas_interativos {
+  docs {
+    resumo: "Nucleo declarativo de sistemas interativos para jogos, simulacoes e hibridos. Modelo espacial e modo de renderizacao sao eixos ortogonais, permitindo inclusive 3D headless; controle humano, scriptado, IA, hibrido, autonomo ou emergente; runner externo executa e Sema valida, planeja e exige evidencias."
+    arquivo: "contratos/sema/sistemas_interativos_adaptadores.sema"
+    arquivo: "contratos/sema/sistemas_interativos_evidencias.sema"
+    arquivo: "contratos/sema/sistemas_interativos_cli.sema"
+    arquivo: "contratos/sema/simulation.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  use sema.produto.sistemas_interativos.adaptadores
+
+  use sema.produto.sistemas_interativos.evidencias
+
+  type DefinicaoSistemaInterativo {
+    fields {
+      schema_version: Texto
+      system_id: Texto
+      version: Texto
+      kind: Texto
+      spatial_model: Texto
+      render_mode: Texto
+      visual_profile: Texto
+      fidelity: Texto
+      control_modes: Lista<Texto>
+      time_model: Texto
+      determinism: Texto
+      capabilities: Lista<Texto>
+      pipelines: Lista<Texto>
+      adapter_targets: Lista<Texto>
+      world: Objeto
+      budgets: Objeto
+      acceptance: Objeto
+    }
+    invariants {
+      schema_version existe
+      system_id existe
+      version existe
+      kind existe
+      spatial_model existe
+      render_mode existe
+      visual_profile existe
+      fidelity existe
+      control_modes existe
+      time_model existe
+      determinism existe
+      capabilities existe
+      pipelines existe
+      adapter_targets existe
+      world existe
+      acceptance existe
+    }
+  }
+
+  type PlanoSistemaInterativo {
+    fields {
+      system_id: Texto
+      definition_digest: Texto
+      capabilities_requeridas: Lista<Texto>
+      capabilities_ausentes: Lista<Texto>
+      pipelines: Lista
+      adapters_compativeis: Lista<Texto>
+      adapters_selecionados: Lista<Texto>
+      adapter_selection_explicit: Booleano
+      adapter_coverage_complete: Booleano
+      capabilities_sem_adapter: Lista<Texto>
+      stage_provider_map: Lista
+      stages: Lista
+      next_actions: Lista<Texto>
+      executed: Booleano
+    }
+    invariants {
+      system_id existe
+      definition_digest existe
+      capabilities_requeridas existe
+      capabilities_ausentes existe
+      pipelines existe
+      adapters_compativeis existe
+      adapters_selecionados existe
+      adapter_selection_explicit existe
+      adapter_coverage_complete existe
+      capabilities_sem_adapter existe
+      stage_provider_map existe
+      stages existe
+      next_actions existe
+      executed == falso
+    }
+  }
+
+  task validar_definicao_sistema_interativo {
+    input {
+      definicao: DefinicaoSistemaInterativo required
+    }
+    output {
+      valida: Booleano
+      definition_digest: Texto
+      capabilities_requeridas: Lista<Texto>
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      definicao deve_ser ter_schema_version_suportada
+      definicao deve_ser ter_kind_em [GAME, SIMULATION, HYBRID]
+      definicao deve_ser ter_spatial_model_em [NON_SPATIAL, TWO_D, TWO_POINT_FIVE_D, THREE_D]
+      definicao deve_ser ter_render_mode_em [HEADLESS, TEXT, VISUAL, XR]
+      definicao deve_ser ter_visual_profile_em [NONE, PIXEL_8_BIT, PIXEL_16_BIT, RASTER, VECTOR, STYLIZED, REALISTIC]
+      definicao deve_ser ter_fidelity_em [ARCADE, STYLIZED, SYSTEMIC, REALISTIC, CALIBRATED]
+      definicao deve_ser ter_control_modes_validos_unicos
+      definicao deve_ser ter_time_model_em [REAL_TIME, FIXED_STEP, VARIABLE_STEP, TURN_BASED, EVENT_DRIVEN, BATCH, ACCELERATED]
+      definicao deve_ser ter_determinism_em [STRICT, SEEDED, BEST_EFFORT, STOCHASTIC, NONE]
+      definicao deve_ser ter_capabilities_e_pipelines_unicos
+      definicao deve_ser ter_world_com_identidade_estado_tempo_eventos_e_condicoes_iniciais
+      definicao deve_ser exigir_visual_profile_NONE_quando_render_mode_HEADLESS_ou_TEXT
+      definicao deve_ser rejeitar_visual_profile_NONE_quando_render_mode_VISUAL_ou_XR
+      definicao deve_ser exigir_spatial_model_THREE_D_quando_render_mode_XR
+      definicao deve_ser exigir_budgets_de_paleta_resolucao_tiles_sprites_memoria_e_audio_quando_PIXEL_8_BIT_ou_PIXEL_16_BIT
+      definicao deve_ser validar_tipos_limites_positivos_e_dimensoes_dos_budgets_retro
+      definicao deve_ser exigir_unidades_escala_e_coordenadas_quando_spatial_model_THREE_D
+      definicao deve_ser exigir_grid_ou_coordenadas_quando_TWO_D_ou_TWO_POINT_FIVE_D
+      definicao deve_ser exigir_loop_objetivo_sucesso_falha_e_regras_quando_GAME_ou_HYBRID
+      definicao deve_ser exigir_modelo_assumptions_condicoes_contorno_outputs_e_validacao_quando_SIMULATION_ou_HYBRID
+      definicao deve_ser exigir_referencia_calibracao_tolerancias_incerteza_e_telemetria_quando_REALISTIC_ou_CALIBRATED
+      definicao deve_ser exigir_seed_snapshot_replay_e_passo_reprodutivel_quando_determinism_STRICT_ou_SEEDED
+      definicao deve_ser exigir_pipeline_interactive_replay_quando_determinism_STRICT_ou_SEEDED
+      definicao deve_ser exigir_capability_de_controle_para_cada_control_mode
+      definicao deve_ser exigir_criterio_de_parada_e_seguranca_quando_AUTONOMOUS_ou_UNCONTROLLED
+      definicao deve_ser exigir_pipeline_interactive_safety_para_GAME_autonomo_ou_pipeline_safety_compativel_para_outros_kinds
+      definicao deve_ser exigir_pipeline_interactive_calibrate_para_GAME_REALISTIC_ou_CALIBRATED_ou_pipeline_calibrate_compativel_para_outros_kinds
+      definicao deve_ser exigir_evidencias_por_pipeline_e_fidelidade
+    }
+    effects {
+      auditoria definicao_sistema_interativo_validada criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.definicao.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.interativo.definicao_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      assumir_3d_como_unico_modelo_espacial
+      tratar_2d_8bit_ou_16bit_como_modo_inferior
+      confundir_estetica_retro_com_tipo_de_mundo
+      aceitar_REALISTIC_ou_CALIBRATED_sem_referencia_calibracao_tolerancia_incerteza_e_telemetria
+      aceitar_headless_com_dependencia_visual_obrigatoria
+      aceitar_simulacao_sem_modelo_assumptions_e_condicoes_iniciais
+      aceitar_jogo_sem_loop_falha_e_estado
+      aceitar_autonomia_sem_criterio_de_parada
+      executar_engine_runner_ou_editor_durante_validacao
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.validator.validarDefinicaoSistemaInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/validator.ts"
+      simbolo: cli.src.sistemas_interativos.validator.validarDefinicaoSistemaInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valida existe
+      definition_digest existe
+      capabilities_requeridas existe
+      bloqueios existe
+      valida != falso ou bloqueios existe
+    }
+    tests {
+      caso "aceita jogo 16-bit e simulador 3D no mesmo nucleo" {
+        given {
+          definicao: "kind GAME spatial_model TWO_D render_mode VISUAL visual PIXEL_16_BIT ou kind SIMULATION spatial_model THREE_D render_mode HEADLESS fidelity CALIBRATED"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valida: verdadeiro
+        }
+      }
+    }
+  }
+
+  task planejar_sistema_interativo {
+    input {
+      definicao: DefinicaoSistemaInterativo required
+    }
+    output {
+      plano: PlanoSistemaInterativo
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      definicao deve_ser valida
+      definicao deve_ser resolver_capabilities_por_kind_modelo_espacial_render_visual_controle_tempo_fidelidade_e_pipelines
+      definicao deve_ser resolver_adapters_por_eixos_e_capabilities_de_stage_e_nao_por_marca_fixada
+      definicao deve_ser exigir_selecao_explicita_de_adapter_targets_para_plano_executavel
+      definicao deve_ser permitir_composicao_de_multiplos_adapters_selecionados
+      definicao deve_ser mapear_provedores_candidatos_e_selecionados_por_stage_capability
+      definicao deve_ser bloquear_composicao_selecionada_com_capability_sem_provedor
+      definicao deve_ser expandir_pipelines_em_stages_ordenados_e_evidencias_exigidas
+      definicao deve_ser preservar_semantic_ids_estaveis_em_world_entities_stages_e_artifacts
+      definicao deve_ser declarar_fronteira_de_execucao_externa
+      definicao deve_ser produzir_next_actions_sem_executar_ferramentas
+    }
+    effects {
+      auditoria sistema_interativo_planejado criticidade = media
+    }
+    forbidden {
+      executar_engine
+      abrir_editor
+      aplicar_patch_no_projeto_alvo
+      iniciar_playtest_real
+      inventar_adapter_compativel
+      escolher_pipeline_por_estilo_visual_apenas
+      ocultar_capability_ausente
+      tratar_adapter_apenas_compativel_nos_eixos_como_provedor_de_stage
+      tratar_adapter_candidato_parcial_como_plano_executavel
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.planner.planejarSistemaInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/planner.ts"
+      simbolo: cli.src.sistemas_interativos.planner.planejarSistemaInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      plano existe
+      bloqueios existe
+      plano deve_ser ligado_ao_definition_digest
+      plano deve_ser executed_false
+      plano deve_ser listar_capabilities_ausentes
+      plano deve_ser listar_capabilities_sem_adapter
+      plano deve_ser expor_stage_provider_map
+      plano deve_ser adapter_coverage_complete_somente_com_composicao_selecionada_completa
+      plano deve_ser cobrir_3d_2d_8bit_16bit_e_headless_sem_codigo_especial_por_projeto
+    }
+    tests {
+      caso "planejamento nao executa runtime" {
+        given {
+          definicao: "simulacao headless autonoma deterministica com batch run"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          plano: "executed false com stages e next actions"
+        }
+      }
+    }
+  }
+}

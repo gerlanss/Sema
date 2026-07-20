@@ -1,0 +1,58 @@
+{
+  "runId": "fixture.protocol.read-only.001",
+  "adapterId": "runtime.headless.generic",
+  "adapterVersion": "1.0.0",
+  "semanticTargetId": "example.simulation.headless.autonomous-batch",
+  "phases": [
+    {
+      "phaseId": "readonly.detect",
+      "phase": "DETECT",
+      "semanticTargetId": "example.simulation.headless.autonomous-batch",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "readonly.probe",
+      "phase": "PROBE",
+      "semanticTargetId": "example.simulation.headless.autonomous-batch",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "readonly.snapshot",
+      "phase": "SNAPSHOT",
+      "semanticTargetId": "example.simulation.headless.autonomous-batch",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "readonly.plan",
+      "phase": "PLAN",
+      "semanticTargetId": "example.simulation.headless.autonomous-batch",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "readonly.validate",
+      "phase": "VALIDATE",
+      "semanticTargetId": "example.simulation.headless.autonomous-batch",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "readonly.evidence",
+      "phase": "EVIDENCE",
+      "semanticTargetId": "example.simulation.headless.autonomous-batch",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    }
+  ],
+  "mutated": false,
+  "success": true
+}

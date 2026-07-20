@@ -17,6 +17,12 @@ Start here:
 - [Commands](./commands.md)
 - [Syntax](./syntax.md)
 - [Profiles](./profiles.md)
+- [Capability Discovery](./descoberta-capacidades.md) — one explainable catalog
+  for governance flows, profiles, specialized workflows, pipelines, generators,
+  capability tokens, and adapters.
+- [AI-native Interactive Systems](./sistemas-interativos.md) — declarative
+  control plane for games, simulations, and hybrids across 3D, 2D, retro,
+  text, XR, and headless execution.
 - [AI-native Content Pipeline](./pipeline-conteudo.md) — signed-policy,
   multi-channel and multi-format orchestration for external AI runners, with
   canonical ledger replay and no native human-review path.

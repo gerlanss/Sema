@@ -21,6 +21,7 @@ const DOCS_PUBLICOS = [
   "cli.md",
   "commands.md",
   "database.md",
+  "descoberta-capacidades.md",
   "deploy.md",
   "documentation.md",
   "env.md",
@@ -32,6 +33,7 @@ const DOCS_PUBLICOS = [
   "repositories.md",
   "rollback.md",
   "security.md",
+  "sistemas-interativos.md",
   "support.md",
   "syntax.md",
   "testing.md",
@@ -70,7 +72,7 @@ const MARCADORES_PORTEIRO_LEGADO = [
 
 const MARCADOR_NOME_TOOL_MCP_LEGADO = /\bsema_(?:docs_impacto|finalizar_mudanca|inspecionar|drift|impacto|exemplos)\b/i;
 const MARCADOR_MOJIBAKE_VISIVEL = /\uFFFD|\u00C3[\u0080-\u00BF]|\u00C2[\u0080-\u00BF]|Ã¢Å¡|Ã¯Â¸/u;
-const ARQUIVO_RUNTIME_VISIVEL = /^dist\/(?:agentContext|agentContextPack|agentContextTipos|agentEntryPoints|doctorCommand|docs\.part01|exemplosOficiais|fsGovernado|index\.part0[1-8]|initCommand|initTemplatesBase|workspaceWrite)\.(?:js|d\.ts|json)$/i;
+const ARQUIVO_RUNTIME_VISIVEL = /^dist\/(?:(?:discovery|sistemasInterativos)\/[^/]+|(?:agentContext|agentContextPack|agentContextTipos|agentEntryPoints|doctorCommand|docs\.part01|exemplosOficiais|fsGovernado|index\.part0[1-8]|initCommand|initTemplatesBase|workspaceWrite))\.(?:js|d\.ts|json)$/i;
 
 function removerDetectorMigracaoLegada(arquivo, conteudo) {
   if (!/^dist\/agentEntryPoints\.js$/i.test(arquivo)) {

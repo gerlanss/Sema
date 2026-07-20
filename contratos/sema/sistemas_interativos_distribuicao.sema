@@ -1,0 +1,121 @@
+module sema.produto.sistemas_interativos.distribuicao {
+  docs {
+    resumo: "Fronteira do pacote npm local para descoberta e sistemas interativos. Prova por instalacao isolada que API, exemplos aninhados, schema, pipelines, adapters, validacao, planejamento e protocolo sobrevivem ao tarball sem publicar uma release."
+    arquivo: "docs/sistemas-interativos.md"
+    arquivo: "docs/descoberta-capacidades.md"
+    arquivo: "docs/testing.md"
+  }
+
+  task verificar_pacote_publico_sistemas_interativos {
+    input {
+      tarball: Texto required
+      sandbox: Texto required
+      exemplos_oficiais: Lista required
+      comandos_smoke: Lista required
+    }
+    output {
+      api_raiz_importavel: Booleano
+      bin_sem_efeito_em_import: Booleano
+      exemplos_aninhados_materializados: Booleano
+      descoberta_operacional: Booleano
+      schema_interativo_exposto: Booleano
+      definicao_oficial_validada: Booleano
+      plano_oficial_validado: Booleano
+      protocolo_oficial_validado: Booleano
+      control_run_instalado_validado: Booleano
+      geradores_runtime_completos: Booleano
+      publicado: Booleano
+    }
+    rules {
+      tarball deve_ser instalado_em_sandbox_isolado
+      sandbox deve_ser fora_do_workspace_de_desenvolvimento
+      exemplos_oficiais deve_ser lidos_do_pacote_instalado_e_nao_da_arvore_fonte
+      comandos_smoke deve_ser executados_pelo_bin_do_pacote_instalado
+      comandos_smoke deve_ser executar_payload_valido_nos_20_subcomandos_com_fixtures_advanced_do_pacote
+      comandos_smoke deve_ser validar_control_run_com_definicao_plano_contrato_entradas_evidencia_e_resultado_do_pacote_instalado
+    }
+    effects {
+      fs.write sandbox_temporario criticidade = baixa
+      auditoria pacote_interativo_testado criticidade = alta
+    }
+    authz {
+      escopo: sema.publico.cli.testar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.publico.pacote_interativo_testado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      importar_api_raiz_e_executar_cli_implicitamente
+      testar_apenas_help_ou_presenca_de_arquivo
+      validar_exemplo_da_arvore_fonte_no_lugar_do_pacote
+      omitir_dotnet_ou_cpp_do_prepack_tradicional
+      tratar_tarball_local_como_publicacao_npm
+      publicar_npm_ou_github_release_durante_smoke
+      declarar_adapter_externo_instalado_por_existir_descriptor
+      aceitar_smoke_que_exercita_apenas_Experience_IR_e_ignora_comandos_avancados
+    }
+    impl {
+      ts: scripts.testar_pacote_cli_publico.main
+    }
+    vinculos {
+      arquivo: "scripts/empacotar-cli-publica.mjs"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "pacotes/cli/scripts/prepack-exemplos.mjs"
+      arquivo: "pacotes/cli/package.json"
+      arquivo: "pacotes/cli/src/exemplosOficiais.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "testes/integracao/bootstrap-seguro.test.ts"
+      simbolo: scripts.testar_pacote_cli_publico.main
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "300s"
+      retry: "nenhum"
+      compensacao: "remover sandbox e bloquear release"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      api_raiz_importavel == verdadeiro
+      bin_sem_efeito_em_import == verdadeiro
+      exemplos_aninhados_materializados == verdadeiro
+      descoberta_operacional == verdadeiro
+      schema_interativo_exposto == verdadeiro
+      definicao_oficial_validada == verdadeiro
+      plano_oficial_validado == verdadeiro
+      protocolo_oficial_validado == verdadeiro
+      control_run_instalado_validado == verdadeiro
+      geradores_runtime_completos == verdadeiro
+      publicado == falso
+    }
+    tests {
+      caso "tarball instalado preserva control plane interativo" {
+        given {
+          tarball: "@semacode/cli local"
+          sandbox: "diretorio temporario isolado"
+          exemplos_oficiais: "definicao simulacao 3D e protocolo read-only"
+          comandos_smoke: "descobrir, interativo schema, validar, planejar, validar-protocolo e validar-control-run"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          api_raiz_importavel: verdadeiro
+          exemplos_aninhados_materializados: verdadeiro
+          descoberta_operacional: verdadeiro
+          schema_interativo_exposto: verdadeiro
+          plano_oficial_validado: verdadeiro
+          control_run_instalado_validado: verdadeiro
+          publicado: falso
+        }
+      }
+    }
+  }
+}

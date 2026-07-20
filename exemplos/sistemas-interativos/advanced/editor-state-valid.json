@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "sema.interactive.editor-state/v1",
+  "editorSessionId": "editor.session",
+  "adapter": {
+    "adapterId": "engine.custom",
+    "adapterVersion": "1.0.0"
+  },
+  "scene": {
+    "semanticId": "scene.main",
+    "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "selection": ["entity.root"],
+  "mode": "EDIT",
+  "unsavedChanges": true,
+  "shaderJobs": [
+    { "jobId": "job.shader", "status": "RUNNING", "progressBasisPoints": 4200 }
+  ],
+  "importJobs": [
+    { "jobId": "job.import", "status": "QUEUED", "progressBasisPoints": 0 }
+  ],
+  "plugins": [
+    {
+      "pluginId": "Plugin.Render",
+      "version": "1.2.0",
+      "enabled": true,
+      "provenanceDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "modals": [
+    { "modalId": "modal.import", "kind": "ImportOptions", "blocking": true }
+  ],
+  "processes": [
+    {
+      "processRef": "opaque:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "role": "SHADER_COMPILER",
+      "state": "RUNNING"
+    }
+  ],
+  "observedAt": "2026-07-20T03:00:00.000Z",
+  "readOnly": true,
+  "authoritative": false
+}

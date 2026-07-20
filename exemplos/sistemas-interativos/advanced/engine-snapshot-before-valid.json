@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "sema.interactive.engine-snapshot/v1",
+  "snapshotId": "snapshot.before",
+  "projectId": "project.demo",
+  "sceneId": "scene.main",
+  "adapter": {
+    "adapterId": "engine.custom",
+    "adapterVersion": "1.0.0"
+  },
+  "semanticObjects": [
+    {
+      "semanticId": "entity.root",
+      "kind": "Entity",
+      "stateDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "componentDigests": {
+        "Transform": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  ],
+  "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "readOnly": true,
+  "authoritative": false
+}

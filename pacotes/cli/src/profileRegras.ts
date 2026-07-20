@@ -12,7 +12,7 @@ import type {
   FonteAchadoProfile,
   MaturidadeProfile,
   OpcoesProfileValidar,
-  PerfilSemantico,
+  PerfilSemanticoValidavel,
   PresetProfile,
   ProfileGovernanca,
   RequisitoProfile,
@@ -24,7 +24,7 @@ import type {
 import { PRESETS_PROFILE, ALIASES_PROFILE } from "./profileCatalogo.js";
 import { RULE_PACKS_SEMA } from "./profileRulePacks.js";
 
-export function normalizarPresetProfile(profile: PerfilSemantico, valor: string | undefined): PresetProfile | null {
+export function normalizarPresetProfile(profile: PerfilSemanticoValidavel, valor: string | undefined): PresetProfile | null {
   if (!valor) return null;
   const chave = valor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   const alias: Record<string, PresetProfile> = {
@@ -65,17 +65,29 @@ export function normalizarPresetProfile(profile: PerfilSemantico, valor: string 
     retencao_cliente: "retencao",
     cobrar: "cobranca",
   };
-  const preset = alias[chave] ?? (chave as PresetProfile);
+  const aliasSimulation: Record<string, PresetProfile> = {
+    modelo: "model",
+    cenario: "scenario",
+    calibracao: "calibration",
+    deterministico: "deterministic",
+    deterministica: "deterministic",
+    lote: "batch",
+    seguranca: "safety",
+  };
+  const preset = (profile === "simulation" ? aliasSimulation[chave] : undefined) ?? alias[chave] ?? (chave as PresetProfile);
   return PRESETS_PROFILE[profile].includes(preset) ? preset : null;
 }
 
-export function moduloCombinaComProfile(modulo: string | null | undefined, caminho: string, profile: PerfilSemantico): boolean {
+export function moduloCombinaComProfile(modulo: string | null | undefined, caminho: string, profile: PerfilSemanticoValidavel): boolean {
   const alvo = `${modulo ?? ""} ${caminho}`.toLowerCase();
   if (profile === "workflow") {
     return /workflow|n8n|orquestracao/.test(alvo);
   }
   if (profile === "conversas") {
     return /conversas|conversa|atendimento|chatbot|bot/.test(alvo);
+  }
+  if (profile === "simulation") {
+    return /simulation|simulacao|simulador/.test(alvo);
   }
   if (profile === "redacao") {
     return /redacao|redator|materia|editorial|seo/.test(alvo);
@@ -88,7 +100,7 @@ export function moduloCombinaComProfile(modulo: string | null | undefined, camin
 
 export function severidadeRequisitoProfile(
   requisito: RequisitoProfile,
-  profile: PerfilSemantico,
+  profile: PerfilSemanticoValidavel,
   maturidade: MaturidadeProfile,
 ): SeveridadeProfile {
   if (requisito.severidade) return requisito.severidade;
@@ -111,7 +123,7 @@ export function riscoAchadoProfile(severidade: SeveridadeProfile, fonte: FonteAc
 export function avaliarRequisitosProfile(
   conteudo: string,
   requisitos: RequisitoProfile[],
-  profile: PerfilSemantico,
+  profile: PerfilSemanticoValidavel,
   maturidade: MaturidadeProfile,
   fonte: FonteAchadoProfile = "contrato",
 ): AchadoProfile[] {

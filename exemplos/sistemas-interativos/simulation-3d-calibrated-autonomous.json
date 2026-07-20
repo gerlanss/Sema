@@ -1,0 +1,141 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.simulation.3d.calibrated-autonomous",
+  "version": "1.0.0",
+  "kind": "SIMULATION",
+  "spatialModel": "THREE_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "REALISTIC",
+  "fidelity": "CALIBRATED",
+  "controlModes": [
+    "AUTONOMOUS"
+  ],
+  "timeModel": "FIXED_STEP",
+  "determinism": "STRICT",
+  "capabilities": [
+    "interactive.control.autonomous",
+    "interactive.determinism.strict",
+    "interactive.event.log",
+    "interactive.fidelity.calibrated",
+    "interactive.kind.simulation",
+    "interactive.render.visual",
+    "interactive.replay.compare",
+    "interactive.seed.bind",
+    "interactive.snapshot.capture",
+    "interactive.spatial.three_d",
+    "interactive.state.model",
+    "interactive.time.fixed_step",
+    "interactive.visual.realistic",
+    "interactive.world.model",
+    "simulation.calibrate",
+    "simulation.hazard.model",
+    "simulation.invariants.validate",
+    "simulation.model",
+    "simulation.outputs.compare",
+    "simulation.outputs.observe",
+    "simulation.recovery.plan",
+    "simulation.reference.bind",
+    "simulation.scenario.define",
+    "simulation.stop.validate",
+    "simulation.telemetry.observe",
+    "simulation.uncertainty.measure",
+    "simulation.validity.report"
+  ],
+  "pipelines": [
+    "simulation.scenario",
+    "simulation.calibrate",
+    "simulation.validate",
+    "simulation.safety",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "engine.godot",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "autonomous warehouse vehicle calibration scene",
+    "state": {
+      "vehicle": "idle",
+      "payloadKg": 250
+    },
+    "time": {
+      "fixedStepSeconds": 0.01
+    },
+    "events": [
+      "route.assigned",
+      "obstacle.detected",
+      "emergency.stop"
+    ],
+    "initialConditions": {
+      "vehiclePose": [
+        0,
+        0,
+        0
+      ],
+      "batteryPercent": 100
+    },
+    "units": "SI",
+    "scale": "1 unit = 1 metre",
+    "coordinateSystem": "right-handed Z-up",
+    "model": "rigid-body vehicle with measured acceleration and braking curves",
+    "assumptions": [
+      "floor friction remains inside the calibrated interval",
+      "sensor timestamps are monotonic"
+    ],
+    "boundaryConditions": {
+      "maximumSpeedMetresPerSecond": 2.5,
+      "workspace": "40m x 20m x 6m"
+    },
+    "outputs": [
+      "stoppingDistanceMetres",
+      "routeTimeSeconds",
+      "minimumObstacleClearanceMetres"
+    ],
+    "validation": {
+      "method": "compare calibrated outputs with the reference dataset and tolerances",
+      "invariants": ["speed remains bounded", "obstacle clearance remains positive"]
+    },
+    "seed": 2026071901,
+    "snapshot": "complete physical and controller state at tick zero",
+    "replay": "ordered sensor frames and controller decisions",
+    "step": "fixed 0.01 second integration step",
+    "stopCriteria": [
+      "scenario duration reaches 300 seconds",
+      "emergency stop is raised"
+    ],
+    "safetyConstraints": [
+      "speed never exceeds 2.5 metres per second",
+      "obstacle clearance never falls below 0.25 metres"
+    ]
+  },
+  "acceptance": {
+    "reference": {
+      "datasetId": "fixture.warehouse-braking-v1",
+      "provenance": "declared external measurement fixture"
+    },
+    "calibration": {
+      "method": "bounded least squares",
+      "parameters": [
+        "rollingResistance",
+        "brakeResponseDelay"
+      ]
+    },
+    "tolerances": {
+      "stoppingDistanceMetres": 0.05,
+      "routeTimePercent": 2
+    },
+    "uncertainty": {
+      "method": "bootstrap confidence interval",
+      "confidence": 0.95
+    },
+    "telemetry": {
+      "sampleRateHz": 100,
+      "requiredSignals": [
+        "pose",
+        "velocity",
+        "brakeCommand"
+      ]
+    }
+  }
+}

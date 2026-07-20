@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "sema.interactive.job-orchestration/v1",
+  "queueId": "queue.render",
+  "capacity": { "ramMb": 32768, "vramMb": 12288, "diskMb": 200000 },
+  "lockCapacity": { "GPU": 1, "EDITOR": 1, "CACHE": 1 },
+  "jobs": [
+    {
+      "jobId": "job.import",
+      "kind": "IMPORT",
+      "priority": 50,
+      "dependencies": [],
+      "locks": ["CACHE"],
+      "budget": { "ramMb": 2048, "vramMb": 0, "diskMb": 10000 },
+      "heartbeat": { "intervalMs": 1000, "timeoutMs": 5000 },
+      "checkpoint": {
+        "intervalMs": 10000,
+        "resume": false,
+        "recoveryToken": "opaque:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "adapter": { "adapterId": "engine.custom", "adapterVersion": "1.0.0" }
+    },
+    {
+      "jobId": "job.render",
+      "kind": "RENDER",
+      "priority": 90,
+      "dependencies": ["job.import"],
+      "locks": ["GPU", "EDITOR"],
+      "budget": { "ramMb": 8192, "vramMb": 8192, "diskMb": 50000 },
+      "heartbeat": { "intervalMs": 1000, "timeoutMs": 5000 },
+      "checkpoint": {
+        "intervalMs": 10000,
+        "resume": true,
+        "checkpointDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "recoveryToken": "opaque:sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "adapter": { "adapterId": "engine.custom", "adapterVersion": "1.0.0" }
+    }
+  ]
+}

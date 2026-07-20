@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.game.pixel-16-bit",
+  "version": "1.0.0",
+  "kind": "GAME",
+  "spatialModel": "TWO_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "PIXEL_16_BIT",
+  "fidelity": "STYLIZED",
+  "controlModes": [
+    "HUMAN"
+  ],
+  "timeModel": "FIXED_STEP",
+  "determinism": "SEEDED",
+  "capabilities": [
+    "game.progression.curve",
+    "game.progression.exploit",
+    "game.progression.model",
+    "interactive.control.human",
+    "interactive.determinism.seeded",
+    "interactive.event.log",
+    "interactive.fidelity.stylized",
+    "interactive.kind.game",
+    "interactive.render.visual",
+    "interactive.replay.compare",
+    "interactive.runtime.bind",
+    "interactive.seed.bind",
+    "interactive.smoke.observe",
+    "interactive.snapshot.capture",
+    "interactive.spatial.two_d",
+    "interactive.state.model",
+    "interactive.time.fixed_step",
+    "interactive.visual.pixel_16_bit",
+    "interactive.world.model"
+  ],
+  "pipelines": [
+    "interactive.prototype",
+    "game.progression",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "engine.tic80",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "side-view action adventure",
+    "state": {
+      "area": "harbour",
+      "abilities": [
+        "dash"
+      ]
+    },
+    "time": {
+      "tickRateHz": 60
+    },
+    "events": [
+      "enemy.defeat",
+      "ability.unlock",
+      "checkpoint.activate"
+    ],
+    "initialConditions": {
+      "area": "harbour",
+      "health": 5
+    },
+    "coordinateSystem": "screen-space origin top-left",
+    "grid": "16 px metatiles on a 320x180 canvas",
+    "loop": "explore, fight, unlock, return",
+    "objective": "restore the harbour beacon",
+    "successConditions": [
+      "beacon restored"
+    ],
+    "failureConditions": [
+      "health reaches zero before a checkpoint"
+    ],
+    "rules": [
+      "abilities unlock through declared progression gates",
+      "animation frames use the declared sprite budget"
+    ],
+    "seed": 16,
+    "snapshot": "checkpoint state",
+    "replay": "input transitions and progression events",
+    "step": "one 60 Hz tick"
+  },
+  "budgets": {
+    "paletteColors": 256,
+    "baseResolution": "320x180",
+    "tileSize": "16x16",
+    "spriteSize": "16x32 and 32x32",
+    "memoryBudgetBytes": 262144,
+    "audioProfile": "sampled tracker with eight voices"
+  },
+  "acceptance": {
+    "progression": "every required ability is reachable without sequence breaking",
+    "pixelIntegrity": "camera scaling preserves hard pixel edges"
+  }
+}

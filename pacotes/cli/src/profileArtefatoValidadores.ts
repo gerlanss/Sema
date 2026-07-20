@@ -3,7 +3,7 @@
 // Contrato: contratos/sema/orcamento_semantico.sema
 // Descri??o: validadores de artefato por profile sem?ntico.
 
-import type { AchadoProfile, MaturidadeProfile, PerfilSemantico, PresetProfile, SeveridadeProfile } from "./profileAuthorTipos.js";
+import type { AchadoProfile, MaturidadeProfile, PerfilSemanticoValidavel, PresetProfile, SeveridadeProfile } from "./profileAuthorTipos.js";
 import { contemArtefatoProfile, contratoProibeTermoProfile, criarAchadoArtefatoProfile, trechoRegexProfile } from "./profileRegras.js";
 import {
   artefatoParecePagamentoWebhookProfile,
@@ -503,6 +503,112 @@ export function avaliarArtefatoGameProfile(artefato: string, preset: PresetProfi
   return achados;
 }
 
+export function avaliarArtefatoSimulationProfile(artefato: string, preset: PresetProfile | null): AchadoProfile[] {
+  const achados = validarTermosObrigatoriosArtefato(artefato, [
+    { id: "simulation_modelo_artefato", descricao: "artefato declara modelo testavel", regex: /modelo|model/i, sugestao: "declare o modelo testavel do simulador." },
+    { id: "simulation_assumptions_artefato", descricao: "artefato declara assumptions ou premissas", regex: /assumptions?|premissas?/i, sugestao: "declare assumptions ou premissas e seus limites." },
+    { id: "simulation_condicoes_iniciais_artefato", descricao: "artefato declara condicoes iniciais", regex: /condicoes?[_ -]?iniciais|initial[_ -]?conditions?/i, sugestao: "declare o estado e os parametros iniciais do simulador." },
+    { id: "simulation_condicoes_contorno_artefato", descricao: "artefato declara condicoes de contorno", regex: /condicoes?[_ -]?contorno|boundary[_ -]?conditions?/i, sugestao: "declare limites, fronteiras e condicoes de contorno." },
+    { id: "simulation_outputs_unidades_artefato", descricao: "artefato declara outputs observaveis e unidades", regex: /(?:outputs?|saidas?|resultados?)[\s\S]{0,180}(?:unidades?|units?)|(?:unidades?|units?)[\s\S]{0,180}(?:outputs?|saidas?|resultados?)/i, sugestao: "declare outputs observaveis com unidades explicitas." },
+    { id: "simulation_spatial_model_artefato", descricao: "artefato declara modelo espacial", regex: /spatial[_ -]?model|modelo[_ -]?espacial/i, sugestao: "declare NON_SPATIAL, TWO_D, TWO_POINT_FIVE_D ou THREE_D como spatial_model." },
+    { id: "simulation_render_mode_artefato", descricao: "artefato declara modo de renderizacao", regex: /render[_ -]?mode|modo[_ -]?(?:de[_ -]?)?render/i, sugestao: "declare HEADLESS, TEXT, VISUAL ou XR como render_mode." },
+    { id: "simulation_visual_profile_artefato", descricao: "artefato declara visual profile separado", regex: /visual[_ -]?profile|perfil[_ -]?visual/i, sugestao: "declare o visual profile separadamente de spatial_model e render_mode; 8/16-bit pertencem ao visual profile." },
+    { id: "simulation_validation_artefato", descricao: "artefato declara metodo de validacao do modelo", regex: /validation|validacao|validar[_ -]?modelo/i, sugestao: "declare como outputs, invariantes e tolerancias validam o modelo." },
+    { id: "simulation_controle_tempo_artefato", descricao: "artefato declara controle e modelo de tempo", regex: /(?:controle|control(?:[_ -]?modes?)?)[\s\S]{0,180}(?:tempo|time[_ -]?model|fixed[_ -]?step|real[_ -]?time|event[_ -]?driven)|(?:tempo|time[_ -]?model)[\s\S]{0,180}(?:controle|control(?:[_ -]?modes?)?)/i, sugestao: "declare modo de controle e modelo de tempo de forma independente." },
+    { id: "simulation_fidelidade_artefato", descricao: "artefato declara nivel de fidelidade", regex: /fidelity|fidelidade|ARCADE|STYLIZED|SYSTEMIC|REALISTIC|CALIBRATED/i, sugestao: "declare o nivel de fidelidade sem inferi-lo da aparencia visual." },
+    { id: "simulation_incerteza_artefato", descricao: "artefato declara incerteza ou limites do modelo", regex: /incerteza|uncertainty|intervalo[_ -]?confianca|confidence[_ -]?interval/i, severidade: "warning", sugestao: "registre incerteza, limites e validade esperada do modelo." },
+    { id: "simulation_telemetria_replay_artefato", descricao: "artefato declara telemetria, snapshot ou replay", regex: /telemetria|telemetry|metricas?|snapshot|replay|event[_ -]?log|state[_ -]?digest/i, severidade: "warning", sugestao: "adicione evidencia observavel, snapshot e replay quando aplicavel." },
+  ]);
+
+  const representacaoLegada = /["']?(?:representation|representacao)["']?\s*[:=]/i;
+  if (contemArtefatoProfile(artefato, representacaoLegada)) {
+    achados.push(criarAchadoArtefatoProfile(
+      "simulation_representacao_legada",
+      "campo unico de representacao conflita modelo espacial e renderizacao",
+      false,
+      "critical",
+      trechoRegexProfile(artefato, representacaoLegada),
+      "substitua por spatial_model e render_mode ortogonais.",
+      "THREE_D com HEADLESS deve preservar ambos os eixos.",
+    ));
+  }
+
+  const pixelComoEixo = /["']?(?:spatial[_ -]?model|modelo[_ -]?espacial|render[_ -]?mode|modo[_ -]?(?:de[_ -]?)?render)["']?\s*[:=]\s*["']?(?:PIXEL[_ -]?(?:8|16)[_ -]?BIT|(?:8|16)[_ -]?BIT)/i;
+  if (contemArtefatoProfile(artefato, pixelComoEixo)) {
+    achados.push(criarAchadoArtefatoProfile(
+      "simulation_pixel_como_eixo",
+      "8/16-bit foi usado como eixo espacial ou de render em vez de visual profile",
+      false,
+      "critical",
+      trechoRegexProfile(artefato, pixelComoEixo),
+      "use um spatial_model e render_mode validos e mova PIXEL_8_BIT/PIXEL_16_BIT para visual_profile.",
+      "estetica retro nao define a dimensionalidade nem o modo de execucao do simulador.",
+    ));
+  }
+
+  const headless = avaliarPresencaPositivaArtefato(artefato, /["']?(?:render[_ -]?mode|modo[_ -]?(?:de[_ -]?)?render)["']?\s*[:=]\s*["']?HEADLESS/i).atendido;
+  if (headless) {
+    achados.push(...validarTermosObrigatoriosArtefato(artefato, [
+      { id: "simulation_headless_visual_none", descricao: "simulacao headless usa visual profile NONE", regex: /["']?(?:visual[_ -]?profile|perfil[_ -]?visual)["']?\s*[:=]\s*["']?NONE/i, sugestao: "defina visual_profile NONE quando render_mode for HEADLESS." },
+    ]));
+  }
+
+  const xr = avaliarPresencaPositivaArtefato(artefato, /["']?(?:render[_ -]?mode|modo[_ -]?(?:de[_ -]?)?render)["']?\s*[:=]\s*["']?XR/i).atendido;
+  if (xr) {
+    achados.push(...validarTermosObrigatoriosArtefato(artefato, [
+      { id: "simulation_xr_spatial_three_d", descricao: "render XR usa spatial model THREE_D", regex: /["']?(?:spatial[_ -]?model|modelo[_ -]?espacial)["']?\s*[:=]\s*["']?THREE_D/i, sugestao: "defina spatial_model THREE_D quando render_mode for XR." },
+    ]));
+  }
+
+  const exigeCalibracao = preset === "calibration" || avaliarPresencaPositivaArtefato(artefato, /fidelity["'\s:=]+(?:REALISTIC|CALIBRATED)|fidelidade["'\s:=]+(?:realista|calibrada)/i).atendido;
+  if (exigeCalibracao) {
+    achados.push(...validarTermosObrigatoriosArtefato(artefato, [
+      { id: "simulation_calibration_referencia_artefato", descricao: "calibracao declara referencia ou dataset rastreavel", regex: /referencia|reference|dataset|baseline/i, severidade: "critical", sugestao: "vincule dataset, baseline ou referencia versionada." },
+      { id: "simulation_calibration_metodo_artefato", descricao: "calibracao declara metodo reproduzivel", regex: /(?:calibracao|calibration)[\s\S]{0,140}(?:metodo|method|procedimento|procedure)|(?:metodo|method)[\s\S]{0,140}(?:calibracao|calibration)/i, severidade: "critical", sugestao: "declare metodo e parametros reproduziveis de calibracao." },
+      { id: "simulation_calibration_tolerancia_artefato", descricao: "calibracao declara tolerancia numerica com unidade", regex: /(?:tolerancias?|tolerances?|erro|error)[^\n\r]{0,120}(?:<=|>=|=|:)?\s*\d+(?:[.,]\d+)?\s*(?:%|percent|por cento|ms|s|m|km|kg|g|K|C|Hz|Pa|N)\b/i, severidade: "critical", sugestao: "declare tolerancia numerica, criterio de erro e unidade." },
+      { id: "simulation_calibration_incerteza_telemetria_artefato", descricao: "calibracao declara incerteza e telemetria observavel", regex: /(?:incerteza|uncertainty)[\s\S]{0,180}(?:telemetria|telemetry|metricas?)|(?:telemetria|telemetry)[\s\S]{0,180}(?:incerteza|uncertainty)/i, severidade: "blocking", sugestao: "registre incerteza e telemetria usadas para validar a calibracao." },
+    ]));
+  }
+
+  const exigeDeterminismo = preset === "deterministic" || avaliarPresencaPositivaArtefato(artefato, /["']?(?:determinism|determinismo)["']?\s*[:=]\s*["']?(?:STRICT|SEEDED|DETERMINISTIC)|\bdeterministic\b/i).atendido;
+  if (exigeDeterminismo) {
+    achados.push(...validarTermosObrigatoriosArtefato(artefato, [
+      { id: "simulation_deterministic_seed_artefato", descricao: "execucao deterministica declara seed", regex: /\bseed\b|semente[_ -]?aleatoria/i, sugestao: "declare a seed de cada execucao." },
+      { id: "simulation_deterministic_step_artefato", descricao: "execucao deterministica declara passo reproduzivel", regex: /fixed[_ -]?step|passo[_ -]?fixo|passo[_ -]?reprodutivel|time[_ -]?step/i, sugestao: "declare fixed step ou passo reproduzivel." },
+      { id: "simulation_deterministic_snapshot_artefato", descricao: "execucao deterministica declara snapshot ou digest de estado", regex: /snapshot|state[_ -]?digest|hash[_ -]?estado|estado[_ -]?hash/i, sugestao: "capture snapshot e digest do estado por etapa relevante." },
+      { id: "simulation_deterministic_replay_artefato", descricao: "execucao deterministica declara replay ou event log", regex: /replay|event[_ -]?log|result[_ -]?digest|log[_ -]?eventos/i, sugestao: "preserve replay/event log e digest do resultado." },
+    ]));
+  }
+
+  if (preset === "scenario") {
+    achados.push(...validarTermosObrigatoriosArtefato(artefato, [
+      { id: "simulation_scenario_id_artefato", descricao: "cenario possui identidade estavel", regex: /scenario[_ -]?id|cenario[_ -]?id|id[_ -]?cenario/i, sugestao: "declare scenario_id estavel." },
+      { id: "simulation_scenario_acceptance_artefato", descricao: "cenario possui resultado esperado e aceite", regex: /acceptance|aceitacao|resultado[_ -]?esperado|expected[_ -]?output/i, sugestao: "declare outputs esperados e criterios de aceitacao." },
+    ]));
+  }
+
+  if (preset === "batch") {
+    achados.push(...validarTermosObrigatoriosArtefato(artefato, [
+      { id: "simulation_batch_runs_artefato", descricao: "batch declara repeticoes ou ensemble", regex: /batch|lote|ensemble|replications?|repeticoes?/i, sugestao: "declare quantidade de runs ou replications do batch." },
+      { id: "simulation_batch_seed_strategy_artefato", descricao: "batch declara estrategia de seeds", regex: /seed[_ -]?strategy|estrategia[_ -]?(?:de[_ -]?)?seeds?/i, sugestao: "declare estrategia de seeds por run." },
+      { id: "simulation_batch_aggregation_artefato", descricao: "batch declara agregacao de outputs", regex: /aggregation|agregacao|percentil|media|mediana|distribution|distribuicao/i, sugestao: "declare como outputs dos runs serao agregados." },
+      { id: "simulation_batch_budget_stop_artefato", descricao: "batch declara budget e condicao de parada", regex: /(?:resource[_ -]?budget|time[_ -]?budget|orcamento|limite)[\s\S]{0,180}(?:stop[_ -]?condition|criterio[_ -]?parada|max[_ -]?runs)|(?:stop[_ -]?condition|criterio[_ -]?parada)[\s\S]{0,180}(?:budget|orcamento|limite)/i, sugestao: "declare limite de recursos/tempo e condicao de parada do batch." },
+    ]));
+  }
+
+  const exigeSafety = preset === "safety" || avaliarPresencaPositivaArtefato(artefato, /AUTONOMOUS|UNCONTROLLED|autonom[oa]/i).atendido;
+  if (exigeSafety) {
+    achados.push(...validarTermosObrigatoriosArtefato(artefato, [
+      { id: "simulation_safety_authority_artefato", descricao: "autonomia declara fronteira de autoridade", regex: /authority[_ -]?boundary|fronteira[_ -]?(?:de[_ -]?)?autoridade|escopo[_ -]?autonomia/i, severidade: "critical", sugestao: "delimite o que o controlador autonomo pode observar e alterar." },
+      { id: "simulation_safety_budget_artefato", descricao: "autonomia declara budget de recursos ou tempo", regex: /resource[_ -]?budget|time[_ -]?budget|orcamento[_ -]?(?:de[_ -]?)?recursos|limite[_ -]?(?:de[_ -]?)?(?:tempo|recursos)/i, severidade: "critical", sugestao: "declare limites de tempo, memoria, CPU, iteracoes ou custo." },
+      { id: "simulation_safety_stop_artefato", descricao: "autonomia declara condicao de parada ou kill switch", regex: /stop[_ -]?condition|criterio[_ -]?(?:de[_ -]?)?parada|kill[_ -]?switch|emergency[_ -]?stop/i, severidade: "critical", sugestao: "declare condicao de parada verificavel e mecanismo de interrupcao." },
+      { id: "simulation_safety_failsafe_artefato", descricao: "autonomia declara fail-safe, isolamento ou tomada humana", regex: /fail[_ -]?safe|failsafe|human[_ -]?takeover|tomada[_ -]?humana|isolamento|sandbox/i, severidade: "critical", sugestao: "declare fail-safe, isolamento e quando um humano assume o controle." },
+    ]));
+  }
+
+  return achados;
+}
+
 export function avaliarArtefatoConversasProfile(artefato: string, preset: PresetProfile | null): AchadoProfile[] {
   const achados = validarTermosObrigatoriosArtefato(artefato, [
     { id: "conversas_tom_artefato", descricao: "artefato declara tom/persona da conversa", regex: /tom|persona|voz|formalidade|comercial|persuasiv|serio|consultiv/i, sugestao: "declare o tom, persona e nivel de formalidade usados na resposta." },
@@ -634,7 +740,7 @@ export function avaliarArtefatoConversasProfile(artefato: string, preset: Preset
 }
 
 export function avaliarArtefatoProfile(
-  profile: PerfilSemantico,
+  profile: PerfilSemanticoValidavel,
   contrato: string,
   artefato: string | null | undefined,
   maturidade: MaturidadeProfile,
@@ -658,6 +764,8 @@ export function avaliarArtefatoProfile(
       return avaliarArtefatoPropostasProfile(artefato, preset);
     case "game":
       return avaliarArtefatoGameProfile(artefato, preset);
+    case "simulation":
+      return avaliarArtefatoSimulationProfile(artefato, preset);
     case "conversas":
       return avaliarArtefatoConversasProfile(artefato, preset);
   }

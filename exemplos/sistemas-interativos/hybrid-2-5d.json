@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.hybrid.2-5d.seeded",
+  "version": "1.0.0",
+  "kind": "HYBRID",
+  "spatialModel": "TWO_POINT_FIVE_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "STYLIZED",
+  "fidelity": "SYSTEMIC",
+  "controlModes": [
+    "HYBRID"
+  ],
+  "timeModel": "FIXED_STEP",
+  "determinism": "SEEDED",
+  "capabilities": [
+    "interactive.control.hybrid",
+    "interactive.determinism.seeded",
+    "interactive.event.log",
+    "interactive.failure.observe",
+    "interactive.fidelity.systemic",
+    "interactive.kind.hybrid",
+    "interactive.playtest.plan",
+    "interactive.render.visual",
+    "interactive.replay.compare",
+    "interactive.runtime.bind",
+    "interactive.runtime.observe",
+    "interactive.seed.bind",
+    "interactive.smoke.observe",
+    "interactive.snapshot.capture",
+    "interactive.spatial.2_5_d",
+    "interactive.state.model",
+    "interactive.time.fixed_step",
+    "interactive.visual.stylized",
+    "interactive.world.model",
+    "simulation.model",
+    "simulation.outputs.observe",
+    "simulation.scenario.define"
+  ],
+  "pipelines": [
+    "interactive.prototype",
+    "interactive.playtest",
+    "simulation.scenario",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "engine.godot",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "2.5D emergency-routing training sandbox",
+    "state": {
+      "district": "coastal-a",
+      "evacuatedAgents": 0
+    },
+    "time": {
+      "fixedStepSeconds": 0.25
+    },
+    "events": [
+      "route.open",
+      "hazard.spread",
+      "agent.evacuate"
+    ],
+    "initialConditions": {
+      "hazardOrigin": "sector-4",
+      "activeRoutes": 3
+    },
+    "coordinateSystem": "isometric grid with metric depth",
+    "grid": "1 metre navigation cells",
+    "loop": "inspect, route, advance, review",
+    "objective": "evacuate the declared population before the horizon",
+    "successConditions": [
+      "all reachable agents evacuated"
+    ],
+    "failureConditions": [
+      "simulation horizon reached with reachable agents remaining"
+    ],
+    "rules": [
+      "human route choices and scripted agents share one state model",
+      "render depth does not change navigation costs"
+    ],
+    "model": "discrete agent movement over a weighted evacuation graph",
+    "assumptions": [
+      "agents select only currently open routes"
+    ],
+    "boundaryConditions": {
+      "horizonSeconds": 900,
+      "maximumAgents": 500
+    },
+    "outputs": [
+      "evacuationTimeSeconds",
+      "routeUtilisation",
+      "agentsRemaining"
+    ],
+    "validation": {
+      "method": "compare replay outputs against declared evacuation invariants",
+      "invariants": ["agent counts are conserved", "route costs remain non-negative"]
+    },
+    "seed": 2026071904,
+    "snapshot": "graph, agents, hazard, and human decisions",
+    "replay": "ordered route decisions and simulation events",
+    "step": "fixed 0.25 second update"
+  },
+  "acceptance": {
+    "hybridBoundary": "human actions and simulated agents remain distinguishable in the event log",
+    "projection": "2.5D rendering preserves the underlying metric grid"
+  }
+}

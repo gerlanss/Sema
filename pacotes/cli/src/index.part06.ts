@@ -328,6 +328,9 @@ export async function comandoAjudaIa(): Promise<number> {
   console.log("");
   console.log(renderizarSecaoAscii("Fluxo recomendado", [
     "Use `sema starter-ia` para um texto curto de onboarding.",
+    "Use `sema descobrir recomendar --intencao <objetivo> --json` quando ainda não souber qual profile, workflow, pipeline, gerador ou adaptador usar.",
+    "Use `sema descobrir catalogo --json` ou `sema capabilities --json` para expor o mapa completo de capacidades à IA.",
+    "Use `sema interativo pipelines --json` para jogos, simulações e híbridos 3D, 2D, retro, texto, XR ou headless.",
     "Use `sema sync-codex` para regenerar o contexto governado do Codex na raiz.",
     "Use `sema instalar-exemplos` para materializar `exemplos/` oficiais sem sobrescrever arquivos locais.",
     "Use `sema resumo <arquivo> --micro --para onboarding --json` para IA fraca; o resumo vem no stdout.",

@@ -1,0 +1,211 @@
+module exemplos.profile.simulation {
+  docs {
+    resumo: "Starter do Profile Simulation com contrato primeiro. Modelo espacial, modo de renderizacao e visual_profile sao eixos separados; THREE_D headless preserva ambos, e PIXEL_8_BIT ou PIXEL_16_BIT nunca substituem spatial_model nem render_mode."
+  }
+
+  type SimulationSpec {
+    fields {
+      objetivo: Texto
+      modelo: Texto
+      assumptions: Lista
+      condicoes_iniciais: Lista
+      condicoes_contorno: Lista
+      outputs: Lista
+      unidades: Lista
+      spatial_model: Texto
+      render_mode: Texto
+      visual_profile: Texto
+      validation: Texto
+      controle: Texto
+      tempo: Texto
+      fidelity: Texto
+      referencia: Texto
+      calibracao: Texto
+      tolerancias: Texto
+      incerteza: Texto
+      telemetria: Texto
+      determinism: Texto
+      seed: Texto
+      snapshot: Texto
+      replay: Texto
+    }
+    invariants {
+      objetivo existe
+      modelo existe
+      assumptions existe
+      condicoes_iniciais existe
+      condicoes_contorno existe
+      outputs existe
+      unidades existe
+      spatial_model existe
+      render_mode existe
+      visual_profile existe
+      validation existe
+      controle existe
+      tempo existe
+      fidelity existe
+      incerteza existe
+    }
+  }
+
+  task validar_simulacao {
+    input {
+      objetivo: Texto required
+      modelo: Texto required
+      assumptions: Lista required
+      condicoes_iniciais: Lista required
+      condicoes_contorno: Lista required
+      outputs: Lista required
+      unidades: Lista required
+      spatial_model: Texto required
+      render_mode: Texto required
+      visual_profile: Texto required
+      validation: Texto required
+      controle: Texto required
+      tempo: Texto required
+      fidelity: Texto required
+      referencia: Texto required
+      calibracao: Texto required
+      tolerancias: Texto required
+      incerteza: Texto required
+      telemetria: Texto required
+      determinism: Texto
+      seed: Texto
+      snapshot: Texto
+      replay: Texto
+      scenario_id: Texto
+      acceptance: Texto
+      batch: Texto
+      replications: Inteiro
+      seed_strategy: Texto
+      aggregation: Texto
+      resource_budget: Texto
+      stop_condition: Texto
+      authority_boundary: Texto
+      fail_safe: Texto
+      human_takeover: Texto
+      isolamento: Texto
+    }
+    output {
+      aprovado: Booleano
+      bloqueios: Lista
+    }
+    rules {
+      modelo deve_ser testavel
+      assumptions deve_ser nao_vazio
+      condicoes_iniciais deve_ser nao_vazio
+      condicoes_contorno deve_ser nao_vazio
+      outputs deve_ser observaveis
+      unidades deve_ser explicitas
+      spatial_model deve_ser em [NON_SPATIAL, TWO_D, TWO_POINT_FIVE_D, THREE_D]
+      render_mode deve_ser em [HEADLESS, TEXT, VISUAL, XR]
+      visual_profile deve_ser em [NONE, PIXEL_8_BIT, PIXEL_16_BIT, RASTER, VECTOR, STYLIZED, REALISTIC]
+      spatial_model deve_ser separado_de render_mode_e_visual_profile
+      render_mode deve_ser exigir_spatial_model_THREE_D_quando_XR
+      render_mode deve_ser exigir_visual_profile_NONE_quando_HEADLESS_ou_TEXT
+      validation deve_ser testavel
+      controle deve_ser em [HUMAN, SCRIPTED, AI, HYBRID, AUTONOMOUS, UNCONTROLLED]
+      tempo deve_ser explicito
+      fidelity deve_ser em [ARCADE, STYLIZED, SYSTEMIC, REALISTIC, CALIBRATED]
+      referencia deve_ser rastreavel
+      calibracao deve_ser ter_metodo_reproduzivel
+      tolerancias deve_ser numericas_com_unidade
+      incerteza deve_ser declarada
+      telemetria deve_ser observavel
+      determinism deve_ser exigir_seed_fixed_step_snapshot_e_replay_quando_declarado
+      scenario_id deve_ser ligado_a_condicoes_e_acceptance_quando_fornecido
+      batch deve_ser exigir_replications_seed_strategy_aggregation_resource_budget_e_stop_condition_quando_fornecido
+      controle deve_ser exigir_authority_boundary_resource_budget_stop_condition_fail_safe_human_takeover_e_isolamento_quando_AUTONOMOUS_ou_UNCONTROLLED
+    }
+    effects {
+      auditoria simulation_profile_exemplo criticidade = media
+    }
+    forbidden {
+      PIXEL_8_BIT_como_spatial_model_ou_render_mode
+      PIXEL_16_BIT_como_spatial_model_ou_render_mode
+      aparencia_visual_provar_fidelidade
+      calibracao_sem_referencia_tolerancia_ou_incerteza
+      determinismo_sem_seed_snapshot_e_replay
+      autonomia_sem_fronteira_budget_parada_e_fail_safe
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      aprovado existe
+      bloqueios existe
+    }
+    tests {
+      caso "simulacao 2D retro controlada" {
+        given {
+          objetivo: "comparar fluxo de trafego"
+          modelo: "agentes em grid TWO_D"
+          assumptions: "velocidade limitada"
+          condicoes_iniciais: "100 agentes"
+          condicoes_contorno: "bordas fechadas"
+          outputs: "tempo medio e congestionamento"
+          unidades: "segundos metros agentes"
+          spatial_model: "TWO_D"
+          render_mode: "VISUAL"
+          visual_profile: "PIXEL_16_BIT"
+          validation: "comparar outputs com baseline e tolerancia"
+          controle: "HUMAN"
+          tempo: "FIXED_STEP"
+          fidelity: "SYSTEMIC"
+          referencia: "baseline versionada"
+          calibracao: "metodo reproduzivel"
+          tolerancias: "erro <= 2 percent"
+          incerteza: "intervalo de confianca"
+          telemetria: "metricas por tick"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+
+      caso "simulacao espacial 3D headless autonoma" {
+        given {
+          objetivo: "validar estabilidade orbital"
+          modelo: "mundo espacial THREE_D sem renderer"
+          assumptions: "massa constante"
+          condicoes_iniciais: "seed e snapshot inicial"
+          condicoes_contorno: "limite orbital"
+          outputs: "state digest e result digest"
+          unidades: "metros segundos quilogramas"
+          spatial_model: "THREE_D"
+          render_mode: "HEADLESS"
+          visual_profile: "NONE"
+          validation: "invariantes orbitais e comparacao com dataset"
+          controle: "AUTONOMOUS"
+          tempo: "FIXED_STEP"
+          fidelity: "CALIBRATED"
+          referencia: "dataset versionado"
+          calibracao: "metodo reproduzivel"
+          tolerancias: "erro <= 1 percent"
+          incerteza: "intervalo de confianca"
+          telemetria: "event log por tick"
+          determinism: "SEEDED"
+          seed: "42"
+          snapshot: "state_digest"
+          replay: "event_log"
+          resource_budget: "limite de CPU e memoria"
+          stop_condition: "maximo de 10000 ticks"
+          authority_boundary: "sem escrita externa"
+          fail_safe: "kill switch"
+          human_takeover: "operador pode interromper"
+          isolamento: "sandbox local"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+}

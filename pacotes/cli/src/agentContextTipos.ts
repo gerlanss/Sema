@@ -1,6 +1,8 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.contexto
 // Descrição: tipos e constantes compartilhadas para a entrada IA-first nativa do Codex.
 
+import type { ResumoDescobertaAgentContext } from "./discovery/types.js";
+
 export type CapacidadeIa = "fraca" | "media" | "forte";
 export type CapacidadeIaLegada = "pequena" | "grande";
 export type ChaveGuiaCapacidadeIa = CapacidadeIa | CapacidadeIaLegada;
@@ -77,6 +79,7 @@ export interface AgentContextPack {
   proibicoes: string[];
   prioridades: string[];
   fontes: FonteAgentContextPack[];
+  descoberta: ResumoDescobertaAgentContext;
   exemplosOficiais: string[];
   textoBrutoSobDemanda: Record<string, string>;
   guiaPorCapacidade: Record<ChaveGuiaCapacidadeIa, string[]>;
@@ -122,7 +125,9 @@ export const DOCUMENTOS_SUPORTE_IA = [
   "docs/syntax.md",
   "docs/cli.md",
   "docs/commands.md",
+  "docs/descoberta-capacidades.md",
   "docs/profiles.md",
+  "docs/sistemas-interativos.md",
   "docs/testing.md",
   "docs/documentation.md",
   "docs/deploy.md",
@@ -136,6 +141,11 @@ export const EXEMPLOS_OFICIAIS_AGENT_CONTEXT = [
   "exemplos/profile_workflow_n8n.sema",
   "exemplos/profile_ops.sema",
   "exemplos/profile_game.sema",
+  "exemplos/profile_simulation.sema",
+  "exemplos/sistemas-interativos/game-pixel-16-bit.json",
+  "exemplos/sistemas-interativos/simulation-headless-autonomous-batch.json",
+  "exemplos/sistemas-interativos/simulation-3d-calibrated-autonomous.json",
+  "exemplos/sistemas-interativos/protocol-read-only-valid.json",
   "exemplos/profile_legal.sema",
   "exemplos/profile_research.sema",
   "exemplos/author_obra_comum.sema",

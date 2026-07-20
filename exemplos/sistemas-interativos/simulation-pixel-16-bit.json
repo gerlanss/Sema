@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.simulation.pixel-16-bit.uncontrolled",
+  "version": "1.0.0",
+  "kind": "SIMULATION",
+  "spatialModel": "TWO_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "PIXEL_16_BIT",
+  "fidelity": "SYSTEMIC",
+  "controlModes": [
+    "UNCONTROLLED"
+  ],
+  "timeModel": "EVENT_DRIVEN",
+  "determinism": "BEST_EFFORT",
+  "capabilities": [
+    "interactive.control.uncontrolled",
+    "interactive.determinism.best_effort",
+    "interactive.fidelity.systemic",
+    "interactive.kind.simulation",
+    "interactive.render.visual",
+    "interactive.spatial.two_d",
+    "interactive.state.model",
+    "interactive.time.event_driven",
+    "interactive.visual.pixel_16_bit",
+    "interactive.world.model",
+    "simulation.hazard.model",
+    "simulation.model",
+    "simulation.outputs.observe",
+    "simulation.recovery.plan",
+    "simulation.scenario.define",
+    "simulation.stop.validate"
+  ],
+  "pipelines": [
+    "simulation.scenario",
+    "simulation.safety"
+  ],
+  "adapterTargets": [
+    "engine.tic80",
+    "simulation.runner.generic",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "uncontrolled cellular ecosystem visualisation",
+    "state": {
+      "generation": 0,
+      "population": 64
+    },
+    "time": {
+      "advance": "next scheduled ecosystem event"
+    },
+    "events": [
+      "organism.birth",
+      "organism.consume",
+      "organism.expire"
+    ],
+    "initialConditions": {
+      "population": 64,
+      "resourceCells": 256
+    },
+    "grid": "160x90 logical cells rendered as 2x2 pixels",
+    "model": "event-driven predator-resource cellular system",
+    "assumptions": [
+      "all interactions are local to neighbouring cells"
+    ],
+    "boundaryConditions": {
+      "topology": "toroidal",
+      "maximumPopulation": 2048
+    },
+    "outputs": [
+      "populationBySpecies",
+      "resourceCoverage",
+      "extinctionEvents"
+    ],
+    "validation": {
+      "method": "check event and population invariants independently of pixel rendering",
+      "invariants": ["population remains non-negative", "events reference existing cells"]
+    },
+    "stopCriteria": [
+      "generation reaches 10000",
+      "all species become extinct"
+    ],
+    "safetyConstraints": [
+      "population allocation never exceeds 2048 entities",
+      "event queue never exceeds 65536 entries"
+    ]
+  },
+  "budgets": {
+    "paletteColors": 256,
+    "baseResolution": "320x180",
+    "tileSize": "2x2",
+    "spriteSize": "2x2 to 8x8",
+    "memoryBudgetBytes": 524288,
+    "audioProfile": "optional four-voice event sonification"
+  },
+  "acceptance": {
+    "invariants": [
+      "population counts remain non-negative",
+      "every event references an existing cell"
+    ],
+    "visualisation": "pixel styling does not alter the model state or event order"
+  }
+}

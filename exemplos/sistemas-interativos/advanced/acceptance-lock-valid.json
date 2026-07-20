@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "sema.interactive.acceptance-lock/v1",
+  "lockId": "acceptance.main",
+  "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sceneId": "scene.main",
+  "timeRange": { "start": 0, "end": 240, "unit": "FRAME" },
+  "approver": {
+    "approverIdDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "role": "ArtDirector",
+    "method": "HUMAN"
+  },
+  "decision": "ACCEPTED",
+  "status": "ACTIVE",
+  "createdAt": "2026-07-20T03:00:00.000Z",
+  "authoritative": false
+}

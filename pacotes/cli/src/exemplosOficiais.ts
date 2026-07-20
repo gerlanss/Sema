@@ -11,6 +11,7 @@ import {
 } from "./workspaceWrite.js";
 
 const DIRETORIO_CLI_ATUAL = path.dirname(fileURLToPath(import.meta.url));
+const EXTENSOES_EXEMPLOS_OFICIAIS = new Set([".sema", ".json", ".md"]);
 
 export interface ResultadoMaterializacaoExemplos {
   sucesso: boolean;
@@ -29,6 +30,41 @@ export interface PlanoExemplosOficiais {
     origemArquivo: string;
     caminhoRelativo: string;
   }>;
+}
+
+async function listarArquivosExemplosOficiais(
+  origem: string,
+  diretorioAtual = origem,
+): Promise<PlanoExemplosOficiais["arquivos"]> {
+  const arquivos: PlanoExemplosOficiais["arquivos"] = [];
+  const entradas = await readdir(diretorioAtual, { withFileTypes: true });
+
+  for (const entrada of entradas) {
+    const origemArquivo = path.join(diretorioAtual, entrada.name);
+    const relativoOrigem = path.relative(origem, origemArquivo);
+
+    if (entrada.isSymbolicLink()) {
+      throw new Error(`Exemplo oficial nao pode atravessar symlink ou junction: ${relativoOrigem}`);
+    }
+    if (entrada.isDirectory()) {
+      arquivos.push(...await listarArquivosExemplosOficiais(origem, origemArquivo));
+      continue;
+    }
+    if (
+      !entrada.isFile() ||
+      !EXTENSOES_EXEMPLOS_OFICIAIS.has(path.extname(entrada.name).toLowerCase())
+    ) {
+      continue;
+    }
+
+    arquivos.push({
+      nome: relativoOrigem,
+      origemArquivo,
+      caminhoRelativo: path.join("exemplos", relativoOrigem),
+    });
+  }
+
+  return arquivos;
 }
 
 
@@ -52,16 +88,11 @@ export async function planejarExemplosOficiais(): Promise<PlanoExemplosOficiais>
   if (!origem) {
     return { origem: undefined, arquivos: [] };
   }
-  const entradas = (await readdir(origem, { withFileTypes: true }))
-    .filter((entrada) => entrada.isFile() && entrada.name.endsWith(".sema"))
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const arquivos = await listarArquivosExemplosOficiais(origem);
+  arquivos.sort((a, b) => a.caminhoRelativo.localeCompare(b.caminhoRelativo, "pt-BR"));
   return {
     origem,
-    arquivos: entradas.map((entrada) => ({
-      nome: entrada.name,
-      origemArquivo: path.join(origem, entrada.name),
-      caminhoRelativo: path.join("exemplos", entrada.name),
-    })),
+    arquivos,
   };
 }
 

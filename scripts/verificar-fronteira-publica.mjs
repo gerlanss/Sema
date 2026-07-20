@@ -76,9 +76,11 @@ const arquivosSuperficieLocalDireta = [
   "docs/auth.md",
   "docs/cli.md",
   "docs/commands.md",
+  "docs/descoberta-capacidades.md",
   "docs/deploy.md",
   "docs/getting-started.md",
   "docs/testing.md",
+  "docs/sistemas-interativos.md",
   "pacotes/cli/README.md",
   "pacotes/cli/src/agentContext.ts",
   "pacotes/cli/src/agentContextPack.ts",
@@ -104,6 +106,8 @@ const arquivosDocsCodexEmIngles = [
   "docs/ai-integration.md",
   "docs/ai-workflow.md",
   "docs/commands.md",
+  "docs/descoberta-capacidades.md",
+  "docs/sistemas-interativos.md",
   "docs/syntax.md",
 ];
 

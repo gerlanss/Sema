@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "sema.interactive.engine-snapshot/v1",
+  "snapshotId": "snapshot.after",
+  "projectId": "project.demo",
+  "sceneId": "scene.main",
+  "adapter": {
+    "adapterId": "engine.custom",
+    "adapterVersion": "1.0.0"
+  },
+  "semanticObjects": [
+    {
+      "semanticId": "entity.root",
+      "kind": "Entity",
+      "stateDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "componentDigests": {
+        "Transform": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "semanticId": "entity.child",
+      "kind": "Entity",
+      "parentSemanticId": "entity.root",
+      "stateDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "componentDigests": {
+        "Mesh": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    }
+  ],
+  "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "readOnly": true,
+  "authoritative": false
+}

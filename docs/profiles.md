@@ -21,6 +21,7 @@ When a profile returns `bloqueado: true`, the artifact is not approved.
 ```bash
 sema profile capabilities --json
 sema profile validar software contratos/example.sema --maturidade production --preset default --json
+sema profile validar simulation contratos/example.sema --maturidade production --preset calibration --json
 sema rule-packs --profile software --json
 ```
 
@@ -32,8 +33,8 @@ sema rule-packs --profile software --json
 - `legal`: terms, privacy, compliance, risk, and regulated language.
 - `research`: comparisons, uncertainty, evidence, citations, and decisions.
 - `game`: rules, loops, player states, scoring, and playability checks.
-- `author`: creative writing, narrative continuity, cliche review, and style
-  guardrails.
+- `simulation`: models, assumptions, units, scenarios, calibration, uncertainty,
+  deterministic replay, and tolerance evidence.
 - `redacao`: editorial and creative writing, narrative structure, voice,
   clarity, and publication-ready evidence.
 - `propostas`: commercial proposals, scope clarity, deliverables, constraints,
@@ -43,3 +44,11 @@ sema rule-packs --profile software --json
 
 Profiles are local CLI checks. They do not create or require external service
 accounts.
+
+`author` remains a dedicated workflow under `sema author`; it is not exposed as
+a fake `sema profile validar author` gate. Use `sema descobrir explicar workflow.author`
+to inspect that boundary.
+
+The legacy `sema profile capabilities` view lists only profiles accepted by
+`profile validar`; its separate `workflowsEspecializados` field points Author
+to `sema author` without advertising an invalid validation command.

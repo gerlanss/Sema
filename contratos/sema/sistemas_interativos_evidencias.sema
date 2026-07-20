@@ -1,0 +1,271 @@
+module sema.produto.sistemas_interativos.evidencias {
+  docs {
+    resumo: "Bundles portateis e nao autoritativos de evidencia, snapshots, replay, playtest, calibracao, build e rollback para provar o estado de jogos e simulacoes sem confundir compilacao, editor aberto ou declaracao do runner com execucao valida. Alta garantia exige envelope assinado, anti-replay e checkpoint externo fornecidos por uma camada de trust/ledger; este modulo nao inventa essa autoridade."
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type ObservacaoSistemaInterativo {
+    fields {
+      evidence_id: Texto
+      evidence_type: Texto
+      stage_id: Texto
+      semantic_target_id: Texto
+      producer_adapter_id: Texto
+      producer_adapter_version: Texto
+      artifact_digest: Texto
+      observed_at: Timestamp
+      source: Texto
+      data: Objeto
+    }
+    invariants {
+      evidence_id existe
+      evidence_type existe
+      stage_id existe
+      semantic_target_id existe
+      producer_adapter_id existe
+      producer_adapter_version existe
+      artifact_digest existe
+      observed_at existe
+      source existe
+      data existe
+    }
+  }
+
+  type BundleEvidenciasSistemaInterativo {
+    fields {
+      schema_version: Texto
+      run_id: Texto
+      system_id: Texto
+      definition_digest: Texto
+      plan_digest: Texto
+      observations: Lista<ObservacaoSistemaInterativo>
+    }
+    invariants {
+      schema_version existe
+      run_id existe
+      system_id existe
+      definition_digest existe
+      plan_digest existe
+      observations existe
+    }
+  }
+
+  type EstadoSistemaInterativo {
+    fields {
+      status: Texto
+      stages: Lista
+      evidencias_aceitas: Lista<Texto>
+      evidencias_ausentes: Lista<Texto>
+      bloqueios: Lista<Texto>
+      next_actions: Lista<Texto>
+      completed: Booleano
+      local_coverage_complete: Booleano
+      awaiting_external_attestation: Booleano
+      completion_scope: Texto
+      authoritative: Booleano
+    }
+    invariants {
+      status existe
+      stages existe
+      evidencias_aceitas existe
+      evidencias_ausentes existe
+      bloqueios existe
+      next_actions existe
+      completed == falso
+      local_coverage_complete existe
+      awaiting_external_attestation == verdadeiro
+      completion_scope == STRUCTURAL_LOCAL
+      authoritative == falso
+    }
+  }
+
+  task validar_bundle_evidencias_sistema_interativo {
+    input {
+      definicao: Objeto required
+      plano: Objeto required
+      bundle: BundleEvidenciasSistemaInterativo required
+    }
+    output {
+      valido: Booleano
+      evidencias_aceitas: Lista<Texto>
+      evidencias_ausentes: Lista<Texto>
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      bundle deve_ser ter_schema_version_suportada
+      plano deve_ser recomputado_canonicamente_a_partir_da_definicao
+      plano deve_ser rejeitar_conteudo_injetado_vazio_ou_divergente_do_digest_canonico
+      bundle deve_ser ligado_ao_run_system_definition_digest_e_plan_digest_exatos
+      bundle deve_ser ter_evidence_ids_unicos
+      bundle deve_ser ter_artifact_digest_sha256_valido_em_toda_observacao
+      bundle deve_ser preservar_semantic_target_id_estavel
+      bundle deve_ser ligar_evidence_type_a_stage_id_existente
+      bundle deve_ser ligar_producer_adapter_id_e_version_ao_provedor_selecionado_no_stage_provider_map
+      bundle deve_ser exigir_data_como_objeto_json_nao_vazio
+      bundle deve_ser rejeitar_data_com_credencial_token_senha_secret_ou_chave_privada
+      bundle deve_ser exigir_snapshot_antes_de_mutacao
+      bundle deve_ser exigir_runtime_boot_loop_failure_e_replay_em_playtest
+      bundle deve_ser exigir_package_build_launch_e_runtime_smoke_em_packaged_build
+      bundle deve_ser exigir_reference_dataset_calibration_tolerance_uncertainty_e_telemetry_quando_REALISTIC_ou_CALIBRATED
+      bundle deve_ser exigir_hazards_stop_conditions_recovery_evidence_quando_controle_AUTONOMOUS_ou_UNCONTROLLED
+      bundle deve_ser exigir_seed_state_digest_event_log_e_result_digest_quando_determinism_STRICT_ou_SEEDED
+      bundle deve_ser exigir_rollback_observed_quando_apply_falhou_apos_mutacao
+      bundle deve_ser separar_evidencia_observada_de_claim_do_produtor
+      bundle deve_ser tratado_como_portatil_nao_autoritativo_sem_envelope_assinado_anti_replay_e_checkpoint_externo
+    }
+    effects {
+      auditoria bundle_evidencias_interativo_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.evidencias.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.interativo.evidencias_validadas
+      ator: auth.agente
+      correlacao: run_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      compilou_logo_esta_jogavel
+      editor_abriu_logo_simulacao_esta_valida
+      screenshot_unico_provar_determinismo
+      runner_aprovar_o_proprio_resultado_sem_observacao
+      playtest_sem_boot_loop_falha_e_replay
+      realismo_sem_dataset_calibracao_tolerancia_e_incerteza
+      packaged_build_sem_launch_smoke
+      falha_mutante_sem_rollback_observado
+      evidencia_de_outro_definition_digest
+      aceitar_plano_fornecido_sem_recomputar_definition_digest_plan_digest_stages_e_requirements
+      declarar_bundle_local_como_trust_boundary_forte
+      substituir_envelope_assinado_quorum_anti_replay_ou_checkpoint_externo_por_source_textual
+      ecoar_evidence_id_stage_id_caminho_token_ou_valor_controlado_em_erro_publico
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.evidence.validarBundleEvidenciasSistemaInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/evidence.ts"
+      simbolo: cli.src.sistemas_interativos.evidence.validarBundleEvidenciasSistemaInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      evidencias_aceitas existe
+      evidencias_ausentes existe
+      bloqueios existe
+      valido != falso ou bloqueios existe
+      valido != verdadeiro ou evidencias_ausentes deve_ser vazio
+    }
+    tests {
+      caso "build sem playtest nao prova jogo" {
+        given {
+          definicao: "GAME pipeline interactive.playtest"
+          plano: "playtest exige runtime boot loop failure replay"
+          bundle: "somente build success"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: falso
+          evidencias_ausentes: "runtime boot loop failure replay"
+        }
+      }
+    }
+  }
+
+  task derivar_estado_sistema_interativo {
+    input {
+      definicao: Objeto required
+      plano: Objeto required
+      bundle: BundleEvidenciasSistemaInterativo required
+    }
+    output {
+      estado: EstadoSistemaInterativo
+    }
+    rules {
+      bundle deve_ser validado_contra_definicao_e_plano
+      plano deve_ser marcar_BLOCKED_quando_capability_requerida_ou_provedor_selecionado_estiver_ausente
+      plano deve_ser impedir_STRUCTURALLY_COMPLETE_quando_adapter_selection_explicit_ou_adapter_coverage_complete_for_falso
+      bundle deve_ser marcar_WAITING_EVIDENCE_somente_para_evidencia_ausente_sem_gap_de_capability_ou_provedor
+      bundle deve_ser marcar_INVALID_para_integridade_schema_array_digest_ou_plano_malformado
+    }
+    effects {
+      auditoria estado_sistema_interativo_derivado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.estado.derivar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.interativo.estado_derivado
+      ator: auth.agente
+      correlacao: run_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      completed_manual
+      status_running_ser_tratado_como_sucesso
+      ignorar_evidencia_ausente
+      promover_build_para_playtest
+      promover_playtest_editor_para_packaged_build
+      manifesto_de_estado_mutar_definicao
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.evidence.derivarEstadoSistemaInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/evidence.ts"
+      simbolo: cli.src.sistemas_interativos.evidence.derivarEstadoSistemaInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "seguro"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      estado existe
+      estado deve_ser authoritative_false
+      estado deve_ser manter_completed_false_sem_atestacao_externa
+      estado deve_ser marcar_local_coverage_complete_somente_quando_valido_e_sem_evidencias_ausentes
+      estado deve_ser listar_next_actions
+      estado deve_ser derivado_por_stage_e_evidence_type
+      estado deve_ser ter_status_em [INVALID, PLANNED, READY, RUNNING, WAITING_EVIDENCE, BLOCKED, STRUCTURALLY_COMPLETE]
+      estado deve_ser marcar_STRUCTURALLY_COMPLETE_somente_com_todas_as_evidencias_obrigatorias
+      estado deve_ser produzir_next_actions_deterministicas
+      estado deve_ser distinguir_capability_ausente_adapter_indisponivel_evidencia_ausente_e_falha_terminal
+      estado deve_ser nao_autoritativo_e_regeneravel
+      estado deve_ser nunca_STRUCTURALLY_COMPLETE_com_capabilities_ausentes_capabilities_sem_adapter_ou_adapter_coverage_incomplete
+    }
+    tests {
+      caso "estado incompleto continua honesto" {
+        given {
+          definicao: "simulacao calibrated"
+          plano: "calibrate validate package"
+          bundle: "calibration presente tolerance ausente"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          estado: "WAITING_EVIDENCE completed false"
+        }
+      }
+    }
+  }
+}

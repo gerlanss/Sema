@@ -75,6 +75,37 @@ project:
 Sema does not replace human approval, platform policy, security review, or legal
 judgment. It is a local governance layer for scope, evidence, drift, and quality.
 
+## Discoverable Pipelines and Interactive Systems
+
+Sema now exposes an explainable capability catalog so an agent can distinguish
+governance flows, validation profiles, specialized workflows, orchestration
+pipelines, generators, capability tokens, and external adapters before choosing
+what to use.
+
+The interactive control plane models games, simulations, and hybrid systems
+without coupling the contract to one engine or visual style. Spatial model and
+render mode are independent: `THREE_D + HEADLESS` is valid, while XR requires
+`THREE_D`; 8-bit and 16-bit remain independent visual profiles. Human-controlled, scripted, AI-controlled,
+autonomous, and emergent systems share the same world, time, pipeline, adapter,
+and evidence model.
+
+```bash
+sema descobrir recomendar --intencao "validate an autonomous calibrated 3D simulator" --json
+sema interativo schema --json
+sema interativo pipelines --json
+sema interativo validar exemplos/sistemas-interativos/simulation-3d-calibrated-autonomous.json --json
+```
+
+Interactive catalog entries are external descriptors, not proof that an engine,
+editor, plug-in, verifier, or worker is installed or ran. The local
+`validar-control-run` binder can prove that a definition, canonical plan,
+pipeline contract, schemas, evidence, and validator result belong together, but
+even `STRUCTURALLY_COMPLETE` remains non-authoritative and keeps
+`completed: false` until an external trust layer attests the run.
+
+See [Capability Discovery](./docs/descoberta-capacidades.md) and
+[AI-native Interactive Systems](./docs/sistemas-interativos.md).
+
 ## Install
 
 ```bash
@@ -129,7 +160,8 @@ into `CODEX_HOME` or silently modify Codex.
 ## Codex-Native Architecture
 
 - `AGENTS.md` is the only official client entrypoint.
-- Agent Context Pack schema version 6 uses `entrypointCodex`, `codexNativo`, and
+- Agent Context Pack schema version 7 exposes the deterministic capability
+  discovery summary alongside `entrypointCodex`, `codexNativo`, and
   `cliLocalSemAutorizacao`.
 - Install the Sema Codex skill for first contact in projects that do not yet
   have Sema. Once initialized, the generated `AGENTS.md` owns the governed

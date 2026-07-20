@@ -16,6 +16,7 @@ module sema.produto.governanca_ia.contexto.agent_pack {
       proibicoes: Lista
       prioridades: Lista
       fontes: Lista
+      descoberta: Objeto
       exemplosOficiais: Lista
       textoBrutoSobDemanda: Objeto
       guiaPorCapacidade: Objeto
@@ -62,6 +63,7 @@ module sema.produto.governanca_ia.contexto.agent_pack {
         proibicoes: publico
         prioridades: publico
         fontes: publico
+        descoberta: publico
         exemplosOficiais: publico
         textoBrutoSobDemanda: interno
         guiaPorCapacidade: publico
@@ -122,6 +124,7 @@ module sema.produto.governanca_ia.contexto.agent_pack {
     vinculos {
       arquivo: "pacotes/cli/src/agentContextPack.ts"
       arquivo: "pacotes/cli/src/agentContextTipos.ts"
+      arquivo: "pacotes/cli/src/discovery/index.ts"
       arquivo: "scripts/empacotar-cli-publica.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
       simbolo: cli.src.agent_context_pack.criarAgentContextPack
@@ -135,14 +138,16 @@ module sema.produto.governanca_ia.contexto.agent_pack {
     }
     guarantees {
       nome existe
-      versao == 6
+      versao == 7
       objetivo existe
       ordemLeitura existe
       regrasObrigatorias existe
       proibicoes existe
       prioridades existe
       fontes existe
+      descoberta existe
       exemplosOficiais existe
+      exemplosOficiais deve_ser incluir_profile_simulation_e_definicoes_interativas_retro_headless_3d_e_protocolo_adapter
       textoBrutoSobDemanda existe
       guiaPorCapacidade existe
       aliasesCapacidade existe
@@ -164,7 +169,8 @@ module sema.produto.governanca_ia.contexto.agent_pack {
 
         expect {
           sucesso: verdadeiro
-          versao: 6
+          versao: 7
+          descoberta: "sema.discovery/v1"
           entrypointCodex: "AGENTS.md"
           codexNativo: verdadeiro
           cliLocalSemAutorizacao: verdadeiro

@@ -1,0 +1,279 @@
+module sema.produto.sistemas_interativos.adaptadores {
+  docs {
+    resumo: "Catalogo aberto e protocolo seguro de adapters para engines, runtimes, editores, assets, build e telemetria. Todo fluxo exige detect, probe, snapshot, plan, validate e evidence; adapters mutantes inserem apply e rollback sem enfraquecer a sequencia base."
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type AdaptadorSistemaInterativo {
+    fields {
+      adapter_id: Texto
+      version: Texto
+      role: Texto
+      engine: Texto
+      kinds: Lista<Texto>
+      spatial_models: Lista<Texto>
+      render_modes: Lista<Texto>
+      visual_profiles: Lista<Texto>
+      control_modes: Lista<Texto>
+      time_models: Lista<Texto>
+      fidelities: Lista<Texto>
+      capabilities: Lista<Texto>
+      protocol: Lista<Texto>
+      read_only_probe: Booleano
+      mutates_workspace: Booleano
+      supports_rollback: Booleano
+      execution_boundary: Texto
+    }
+    invariants {
+      adapter_id existe
+      version existe
+      role existe
+      engine existe
+      kinds existe
+      spatial_models existe
+      render_modes existe
+      visual_profiles existe
+      control_modes existe
+      time_models existe
+      fidelities existe
+      capabilities existe
+      protocol existe
+      read_only_probe == verdadeiro
+      mutates_workspace existe
+      execution_boundary existe
+    }
+  }
+
+  type RegistroProtocoloAdapter {
+    fields {
+      run_id: Texto
+      adapter_id: Texto
+      adapter_version: Texto
+      semantic_target_id: Texto
+      phases: Lista
+      mutated: Booleano
+      success: Booleano
+      rollback_evidence_id: Texto
+    }
+    invariants {
+      run_id existe
+      adapter_id existe
+      adapter_version existe
+      semantic_target_id existe
+      phases existe
+      mutated existe
+      success existe
+    }
+  }
+
+  task listar_adaptadores_sistemas_interativos {
+    input {
+      filtros: Objeto required
+    }
+    output {
+      adapters: Lista<AdaptadorSistemaInterativo>
+      filtros_aplicados: Objeto
+      executed: Booleano
+    }
+    rules {
+      filtros deve_ser opcionais_e_explicitos
+    }
+    effects {
+      consulta catalogo_adapters_interativos criticidade = baixa
+    }
+    forbidden {
+      detectar_engine_no_host_durante_listagem
+      executar_probe_real_durante_listagem
+      tratar_catalogo_embutido_como_plugin_instalado
+      declarar_adapter_disponivel_sem_probe_externo
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.catalog.listarAdaptadoresSistemasInterativos
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/catalog.ts"
+      simbolo: cli.src.sistemas_interativos.catalog.listarAdaptadoresSistemasInterativos
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "2s"
+      retry: "seguro"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      adapters existe
+      filtros_aplicados existe
+      executed == falso
+      adapters deve_ser versionados
+      adapters deve_ser filtrar_por_kind_spatial_model_render_mode_visual_role_control_time_e_fidelity
+      adapters deve_ser incluir_runtime_headless_web_canvas_love2d_pico8_tic80_godot_unity_unreal_blender_assets_build_telemetria_e_custom_quando_compativeis
+      adapters deve_ser catalogo_de_capacidade_e_nao_execucao
+      adapters deve_ser retornados_como_copias_sem_referencia_mutavel_ao_registro_canonico
+    }
+    tests {
+      caso "lista adapters retro e 3D sem executar" {
+        given {
+          filtros: "spatial_model TWO_D ou THREE_D e render_mode VISUAL ou HEADLESS"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          executed: falso
+        }
+      }
+    }
+  }
+
+  task validar_adaptador_sistema_interativo {
+    input {
+      adapter: AdaptadorSistemaInterativo required
+    }
+    output {
+      valido: Booleano
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      adapter deve_ser ter_id_version_role_e_engine_opacos
+      adapter deve_ser ter_capabilities_unicas
+      adapter deve_ser ter_matrizes_de_compatibilidade_nao_vazias
+      adapter deve_ser ter_protocol_base_completo_e_ordenado [DETECT, PROBE, SNAPSHOT, PLAN, VALIDATE, EVIDENCE]
+      adapter deve_ser ter_detect_probe_snapshot_e_plan_read_only
+      adapter deve_ser declarar_execution_boundary_EXTERNAL
+      adapter deve_ser declarar_APPLY_ROLLBACK_e_supports_rollback_quando_mutates_workspace_verdadeiro
+      adapter deve_ser omitir_APPLY_e_ROLLBACK_quando_mutates_workspace_falso
+      adapter deve_ser nao_conter_credencial_token_secret_senha_ou_chave_privada
+      adapter deve_ser rejeitar_chaves_sensiveis_em_snake_case_camelCase_ou_variantes_normalizadas
+    }
+    effects {
+      auditoria adaptador_sistema_interativo_validado criticidade = media
+    }
+    forbidden {
+      enum_fechado_de_engines_no_nucleo
+      adapter_executar_ao_ser_validado
+      apply_antes_de_snapshot_e_plan
+      adapter_mutavel_durante_run
+      credencial_embutida_no_descriptor
+      adapter_declarar_sucesso_sem_evidencia
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.adapter_protocol.validarAdaptadorSistemaInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/adapterProtocol.ts"
+      simbolo: cli.src.sistemas_interativos.adapter_protocol.validarAdaptadorSistemaInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "3s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      valido existe
+      bloqueios existe
+      valido != falso ou bloqueios existe
+    }
+    tests {
+      caso "adapter exige observacao antes de apply" {
+        given {
+          adapter: "mutates workspace true DETECT PROBE SNAPSHOT PLAN APPLY VALIDATE EVIDENCE ROLLBACK boundary EXTERNAL"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_protocolo_adapter_sistema_interativo {
+    input {
+      registro: RegistroProtocoloAdapter required
+    }
+    output {
+      valido: Booleano
+      fase_atual: Texto
+      bloqueios: Lista<Texto>
+      exige_rollback: Booleano
+    }
+    rules {
+      registro deve_ser ligado_a_run_adapter_version_e_semantic_target_id
+      registro deve_ser resolver_adapter_id_no_catalogo_e_exigir_adapter_version_exata
+      registro deve_ser permitir_somente_fases_declaradas_pelo_descriptor_do_adapter
+      registro deve_ser ter_phases_como_lista_e_phase_ids_unicos_em_ordem_canonica
+      registro deve_ser ter_mutated_e_success_booleanos_estritos
+      registro deve_ser ter_sequencia_base_completa [DETECT, PROBE, SNAPSHOT, PLAN, VALIDATE, EVIDENCE]
+      registro deve_ser ter_detect_antes_de_probe
+      registro deve_ser ter_probe_antes_de_snapshot
+      registro deve_ser ter_snapshot_antes_de_plan
+      registro deve_ser ter_plan_antes_de_apply
+      registro deve_ser ter_validate_e_evidence_depois_de_apply
+      registro deve_ser exigir_rollback_quando_mutated_e_success_falso
+      registro deve_ser rejeitar_APPLY_ROLLBACK_ou_mutated_verdadeiro_para_fluxo_read_only
+      registro deve_ser ter_digests_de_input_output_por_phase
+      registro deve_ser preservar_semantic_target_id_em_todas_as_phases
+    }
+    effects {
+      auditoria protocolo_adapter_interativo_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.adapter.protocolo.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.interativo.adapter_protocolo_validado
+      ator: auth.agente
+      correlacao: run_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      apply_sem_snapshot
+      apply_sem_plan
+      sucesso_sem_validate_e_evidence
+      falha_mutante_sem_rollback
+      trocar_semantic_target_id_no_meio_do_run
+      confiar_em_timestamp_do_runner_como_ordem_unica
+      aceitar_fase_ausente_ou_array_malformado
+      ecoar_id_fase_adapter_caminho_token_ou_valor_controlado_em_erro_publico
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.adapter_protocol.validarProtocoloAdapterSistemaInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/adapterProtocol.ts"
+      simbolo: cli.src.sistemas_interativos.adapter_protocol.validarProtocoloAdapterSistemaInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "3s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      fase_atual existe
+      bloqueios existe
+      exige_rollback existe
+      valido != falso ou bloqueios existe
+    }
+    tests {
+      caso "falha depois de apply exige rollback" {
+        given {
+          registro: "detect probe snapshot plan apply validate_failed mutated true sem rollback"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: falso
+          exige_rollback: verdadeiro
+        }
+      }
+    }
+  }
+}

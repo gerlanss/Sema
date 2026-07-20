@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sema.interactive.autonomy/v1",
+  "runId": "run.repair.1",
+  "cycleIndex": 1,
+  "previousCycleDigest": "GENESIS",
+  "triggeredStopCriteria": [],
+  "systemId": "interactive.system",
+  "definitionDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "policy": {
+    "mode": "SAFE_APPLY_EXTERNAL",
+    "maxCycles": 3,
+    "stopCriteria": ["invariant passed", "budget reached", "runner unavailable"],
+    "allowedRiskClasses": ["OBSERVATION_ONLY", "SAFE_REVERSIBLE"],
+    "requireHumanApprovalFor": ["PRIVILEGED", "IRREVERSIBLE"]
+  },
+  "diagnostics": [
+    {
+      "diagnosticId": "diagnostic.camera.target",
+      "failedInvariant": "camera.subject_visible",
+      "phase": "launch.ascent",
+      "evidenceIds": ["evidence.812"],
+      "semanticTargetId": "vehicle.crewed"
+    }
+  ],
+  "resourceLocks": [
+    {
+      "lockId": "lock.editor.1",
+      "resourceType": "EDITOR",
+      "ownerRunId": "run.repair.1",
+      "ownerJobId": "job.repair.1",
+      "checkpointDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ],
+  "acceptanceLocks": [],
+  "acceptanceLocksDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "acceptanceClaims": [
+    {
+      "claimId": "acceptance.claim.camera.retarget",
+      "patchId": "patch.camera.retarget",
+      "artifactDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "sceneId": "scene.main",
+      "timeRange": { "start": 0, "end": 240, "unit": "FRAME" },
+      "acceptanceLocksDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "claimDigest": "sha256:97c05656f15cb74fcdac060df6f535574b8f3ac25721dfe244db42af751e684b"
+    }
+  ],
+  "proposals": [
+    {
+      "patchId": "patch.camera.retarget",
+      "diagnosticId": "diagnostic.camera.target",
+      "semanticTargetId": "vehicle.crewed",
+      "ownerJobId": "job.repair.1",
+      "adapterId": "editor.unreal",
+      "adapterVersion": "1.0.0",
+      "operation": "retarget camera to vehicle.crewed",
+      "riskClass": "SAFE_REVERSIBLE",
+      "mutates": true,
+      "humanApproved": false,
+      "inputDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "mutationScope": {
+        "artifactDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sceneId": "scene.main",
+        "timeRange": { "start": 0, "end": 240, "unit": "FRAME" }
+      },
+      "snapshotDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "checkpointDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "rollbackPlanDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "resourceLockIds": ["lock.editor.1"]
+    }
+  ],
+  "simulations": [
+    {
+      "simulationId": "simulation.camera.retarget",
+      "patchId": "patch.camera.retarget",
+      "sandboxDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "resultDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "passed": true,
+      "evidenceDigests": ["sha256:4444444444444444444444444444444444444444444444444444444444444444"]
+    }
+  ],
+  "proofs": [
+    {
+      "proofId": "proof.camera.retarget",
+      "patchId": "patch.camera.retarget",
+      "simulationId": "simulation.camera.retarget",
+      "verifierId": "verifier.temporal.independent",
+      "independentOfProducer": true,
+      "evidenceDigests": ["sha256:4444444444444444444444444444444444444444444444444444444444444444"],
+      "decision": "PASS"
+    }
+  ],
+  "recoveryToken": "sha256:3b15f9227045e075f6b2bd5bd3adc953122799de050a186f6a0952ae5e494a3a"
+}

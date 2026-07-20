@@ -312,6 +312,56 @@ export const RULE_PACKS_SEMA: RulePackSema[] = [
     monetizacao: "cloud",
     status: "planejado",
   },
+  {
+    id: "simulation-model",
+    nome: "Simulation Model Contract",
+    categoria: "oss",
+    profiles: ["simulation"],
+    maturidadeMinima: "draft",
+    controles: ["model", "assumptions", "initial_conditions", "boundary_conditions", "outputs", "units"],
+    monetizacao: "aberto",
+    status: "base",
+  },
+  {
+    id: "simulation-calibration",
+    nome: "Simulation Calibration Evidence",
+    categoria: "oss",
+    profiles: ["simulation"],
+    maturidadeMinima: "prototype",
+    controles: ["reference", "calibration", "tolerance", "uncertainty", "telemetry"],
+    monetizacao: "aberto",
+    status: "base",
+  },
+  {
+    id: "simulation-determinism",
+    nome: "Simulation Determinism And Replay",
+    categoria: "oss",
+    profiles: ["simulation"],
+    maturidadeMinima: "prototype",
+    controles: ["seed", "fixed_step", "snapshot", "event_log", "replay", "result_digest"],
+    monetizacao: "aberto",
+    status: "base",
+  },
+  {
+    id: "simulation-batch",
+    nome: "Simulation Batch Runs",
+    categoria: "oss",
+    profiles: ["simulation"],
+    maturidadeMinima: "prototype",
+    controles: ["replications", "seed_strategy", "aggregation", "resource_budget", "stop_condition"],
+    monetizacao: "aberto",
+    status: "base",
+  },
+  {
+    id: "simulation-safety",
+    nome: "Autonomous Simulation Safety",
+    categoria: "oss",
+    profiles: ["simulation"],
+    maturidadeMinima: "prototype",
+    controles: ["authority_boundary", "resource_budget", "stop_condition", "fail_safe", "human_takeover", "isolation"],
+    monetizacao: "aberto",
+    status: "base",
+  },
 ];
 
 export const REQUISITOS_PRESET_PROFILE: Partial<Record<PresetProfile, RequisitoProfile[]>> = {
@@ -401,6 +451,24 @@ export const REQUISITOS_PRESET_PROFILE: Partial<Record<PresetProfile, RequisitoP
   ],
   economia: [
     { id: "game_economia_balanceada", descricao: "economia declara moeda, fonte, gasto e exploit", termos: [/moeda|economia/i, /fonte/i, /gasto|sink/i, /exploit/i], obrigatorio: true, severidade: "blocking" },
+  ],
+  model: [
+    { id: "simulation_model_core", descricao: "modelo declara assumptions, condicoes, outputs e unidades", termos: [/modelo|model/i, /assumptions?|premissas?/i, /condicoes?_iniciais|initial[_ -]?conditions?/i, /condicoes?_contorno|boundary[_ -]?conditions?/i, /outputs?|saidas?/i, /unidades?|units?/i], obrigatorio: true, severidade: "blocking" },
+  ],
+  scenario: [
+    { id: "simulation_scenario_acceptance", descricao: "cenario declara identidade, condicoes e criterios de aceitacao", termos: [/scenario|cenario/i, /condicoes?_iniciais|initial[_ -]?conditions?/i, /condicoes?_contorno|boundary[_ -]?conditions?/i, /acceptance|aceitacao|resultado_esperado/i], obrigatorio: true, severidade: "blocking" },
+  ],
+  calibration: [
+    { id: "simulation_calibration_evidence", descricao: "calibracao declara referencia, metodo, tolerancia, incerteza e telemetria", termos: [/referencia|reference|dataset/i, /calibracao|calibration/i, /tolerancias?|tolerances?/i, /incerteza|uncertainty/i, /telemetria|telemetry/i], obrigatorio: true, severidade: "critical" },
+  ],
+  deterministic: [
+    { id: "simulation_deterministic_replay", descricao: "determinismo declara seed, passo, snapshot e replay", termos: [/determinism|determinismo|deterministic/i, /seed/i, /fixed[_ -]?step|passo_reprodutivel/i, /snapshot|state[_ -]?digest/i, /replay|event[_ -]?log/i], obrigatorio: true, severidade: "blocking" },
+  ],
+  batch: [
+    { id: "simulation_batch_budget", descricao: "batch declara repeticoes, estrategia de seeds, agregacao, budget e parada", termos: [/batch|lote|ensemble/i, /replications?|repeticoes?|scenarios?/i, /seed[_ -]?strategy|estrategia[_ -]?seed/i, /aggregation|agregacao|metricas?/i, /budget|orcamento|limite/i, /stop[_ -]?condition|criterio[_ -]?parada/i], obrigatorio: true, severidade: "blocking" },
+  ],
+  safety: [
+    { id: "simulation_autonomous_safety", descricao: "autonomia declara fronteira, budget, parada, fail-safe e tomada humana", termos: [/autonomous|uncontrolled|autonom/i, /authority[_ -]?boundary|fronteira[_ -]?autoridade/i, /resource[_ -]?budget|orcamento[_ -]?recursos|limite/i, /stop[_ -]?condition|criterio[_ -]?parada|kill[_ -]?switch/i, /fail[_ -]?safe|human[_ -]?takeover|isolamento/i], obrigatorio: true, severidade: "critical" },
   ],
   atendimento: [
     { id: "conversas_atendimento_estado", descricao: "atendimento declara estado do cliente e proxima acao", termos: [/estado|etapa|sentimento/i, /proxima_acao|proxima acao|encaminhar|resolver/i], obrigatorio: true, severidade: "blocking" },

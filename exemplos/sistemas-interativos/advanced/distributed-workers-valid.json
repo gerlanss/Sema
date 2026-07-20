@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "sema.interactive.distributed-jobs/v1",
+  "planId": "workers.build.1",
+  "systemId": "interactive.system",
+  "inputDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "workers": [
+    {
+      "workerId": "worker.gpu.1",
+      "capabilities": ["job.cook", "job.shaders", "job.render", "job.test"],
+      "ramMb": 32768,
+      "vramMb": 12288,
+      "diskMb": 102400,
+      "maxConcurrency": 1,
+      "isolation": "CONTAINER"
+    }
+  ],
+  "jobs": [
+    {
+      "jobId": "job.cook",
+      "type": "COOK",
+      "inputDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "dependsOn": [],
+      "requiredCapabilities": ["job.cook"],
+      "budgets": { "ramMb": 8192, "vramMb": 0, "diskMb": 20480, "runtimeSeconds": 1800 },
+      "idempotencyKey": "idempotency.cook.1",
+      "checkpointIntervalSeconds": 60,
+      "retry": { "maxAttempts": 1, "backoffSeconds": 10 },
+      "resourceLockIds": ["lock.cache.cook"],
+      "requiredEvidence": ["output.digest", "job.log", "job.checkpoint", "resources.metrics"]
+    },
+    {
+      "jobId": "job.shaders",
+      "type": "SHADERS",
+      "inputDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "dependsOn": ["job.cook"],
+      "requiredCapabilities": ["job.shaders"],
+      "budgets": { "ramMb": 16384, "vramMb": 8192, "diskMb": 20480, "runtimeSeconds": 3600 },
+      "idempotencyKey": "idempotency.shaders.1",
+      "checkpointIntervalSeconds": 60,
+      "retry": { "maxAttempts": 1, "backoffSeconds": 10 },
+      "resourceLockIds": ["lock.gpu.shaders"],
+      "requiredEvidence": ["output.digest", "job.log", "job.checkpoint", "resources.metrics"]
+    },
+    {
+      "jobId": "job.render",
+      "type": "RENDER",
+      "inputDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "dependsOn": ["job.shaders"],
+      "requiredCapabilities": ["job.render"],
+      "budgets": { "ramMb": 16384, "vramMb": 10240, "diskMb": 40960, "runtimeSeconds": 7200 },
+      "idempotencyKey": "idempotency.render.1",
+      "checkpointIntervalSeconds": 30,
+      "retry": { "maxAttempts": 1, "backoffSeconds": 10 },
+      "resourceLockIds": ["lock.gpu.render"],
+      "requiredEvidence": ["output.digest", "job.log", "job.checkpoint", "resources.metrics"]
+    },
+    {
+      "jobId": "job.test",
+      "type": "TEST",
+      "inputDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "dependsOn": ["job.render"],
+      "requiredCapabilities": ["job.test"],
+      "budgets": { "ramMb": 8192, "vramMb": 2048, "diskMb": 10240, "runtimeSeconds": 1800 },
+      "idempotencyKey": "idempotency.test.1",
+      "checkpointIntervalSeconds": 30,
+      "retry": { "maxAttempts": 2, "backoffSeconds": 10 },
+      "resourceLockIds": ["lock.gpu.test", "lock.editor.test"],
+      "requiredEvidence": ["output.digest", "job.log", "job.checkpoint", "resources.metrics"]
+    }
+  ],
+  "leases": [
+    { "lockId": "lock.cache.cook", "resourceId": "cache.project", "resourceType": "CACHE", "ownerJobId": "job.cook", "exclusive": true, "ttlSeconds": 120, "heartbeatSeconds": 30, "checkpointDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    { "lockId": "lock.gpu.shaders", "resourceId": "gpu.0", "resourceType": "GPU", "ownerJobId": "job.shaders", "exclusive": true, "ttlSeconds": 120, "heartbeatSeconds": 30, "checkpointDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222" },
+    { "lockId": "lock.gpu.render", "resourceId": "gpu.0", "resourceType": "GPU", "ownerJobId": "job.render", "exclusive": true, "ttlSeconds": 120, "heartbeatSeconds": 30, "checkpointDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333" },
+    { "lockId": "lock.gpu.test", "resourceId": "gpu.0", "resourceType": "GPU", "ownerJobId": "job.test", "exclusive": true, "ttlSeconds": 120, "heartbeatSeconds": 30, "checkpointDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444" },
+    { "lockId": "lock.editor.test", "resourceId": "editor.0", "resourceType": "EDITOR", "ownerJobId": "job.test", "exclusive": true, "ttlSeconds": 120, "heartbeatSeconds": 30, "checkpointDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444" }
+  ],
+  "evidenceRequirements": ["output.digest", "job.log", "job.checkpoint", "resources.metrics"]
+}

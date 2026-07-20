@@ -1,0 +1,198 @@
+module sema.produto.sistemas_interativos.extensoes_cli {
+  docs {
+    resumo: "Extensoes read-only da CLI interativa para Experience IR, snapshots, proveniencia, estado de editor, jobs, acceptance locks, evidencias multimodais, tempo, autonomia, playtest, multiplayer, portabilidade e workers. Toda operacao local valida ou projeta dados; integracoes e execucao permanecem externas."
+    arquivo: "docs/sistemas-interativos.md"
+    arquivo: "docs/commands.md"
+  }
+
+  use sema.produto.sistemas_interativos.cli
+
+  use sema.produto.sistemas_interativos.ir
+
+  use sema.produto.sistemas_interativos.operacao
+
+  use sema.produto.sistemas_interativos.temporal
+
+  use sema.produto.sistemas_interativos.autonomia
+
+  use sema.produto.sistemas_interativos.testes_autonomos
+
+  use sema.produto.sistemas_interativos.portabilidade
+
+  task operar_extensoes_cli_interativas {
+    input {
+      subcomando: Texto required
+      argumentos: Lista<Texto> required
+    }
+    output {
+      exit_code: Inteiro
+      payload: Objeto
+      executed: Booleano
+      workspace_mutated: Booleano
+      authoritative: Booleano
+    }
+    rules {
+      subcomando deve_ser em [VALIDAR_IR, INDEXAR_IR, CONSULTAR_IR, CHUNK_IR, DESCREVER_IR, VALIDAR_ENGINE_SNAPSHOT, DIFF_ENGINE_SNAPSHOTS, VALIDAR_ASSET_PROVENANCE, VALIDAR_EDITOR_STATE, PLANEJAR_JOBS, VALIDAR_ACCEPTANCE, OPERAR_ACCEPTANCE, VALIDAR_MULTIMODAL, VALIDAR_TEMPORAL, VALIDAR_EVIDENCIA_TEMPORAL, VALIDAR_AUTONOMIA, VALIDAR_PLAYTEST_FUZZ, VALIDAR_MULTIPLAYER, ANALISAR_PORTABILIDADE, VALIDAR_WORKERS]
+      argumentos deve_ser arquivos_opcoes_e_flags_em_allowlist_do_subcomando
+      argumentos deve_ser rejeitar_flag_desconhecida_duplicada_sem_valor_ou_enum_invalido
+      argumentos deve_ser validar_JSON_antes_de_processar
+      argumentos deve_ser produzir_codigo_estatico_sem_eco_de_entrada_em_erro
+      argumentos deve_ser retornar_executed_false_workspace_mutated_false_e_authoritative_false
+      subcomando deve_ser validar_Experience_IR_content_addressed_quando_VALIDAR_IR
+      subcomando deve_ser indexar_Experience_IR_sem_persistir_quando_INDEXAR_IR
+      subcomando deve_ser consultar_semanticId_explicito_quando_CONSULTAR_IR
+      subcomando deve_ser criar_chunk_com_dependencias_por_padrao_quando_CHUNK_IR
+      subcomando deve_ser aceitar_flag_RASO_apenas_quando_CHUNK_IR
+      subcomando deve_ser descrever_JSON_nativo_e_CBOR_externo_quando_DESCREVER_IR
+      subcomando deve_ser validar_snapshot_read_only_quando_VALIDAR_ENGINE_SNAPSHOT
+      subcomando deve_ser derivar_diff_deterministico_de_dois_snapshots_quando_DIFF_ENGINE_SNAPSHOTS
+      subcomando deve_ser validar_proveniencia_sem_expor_URI_quando_VALIDAR_ASSET_PROVENANCE
+      subcomando deve_ser validar_estado_de_editor_declarado_quando_VALIDAR_EDITOR_STATE
+      subcomando deve_ser planejar_jobs_locks_budgets_heartbeat_checkpoint_e_recovery_quando_PLANEJAR_JOBS
+      subcomando deve_ser validar_lock_de_aceite_quando_VALIDAR_ACCEPTANCE
+      subcomando deve_ser operar_lock_somente_com_operacao_e_contexto_explicitos_quando_OPERAR_ACCEPTANCE
+      subcomando deve_ser validar_canais_verificador_e_decisao_quando_VALIDAR_MULTIMODAL
+      subcomando deve_ser validar_contrato_4D_camera_fisica_QA_build_e_hardware_quando_VALIDAR_TEMPORAL
+      subcomando deve_ser validar_bundle_temporal_contra_contrato_quando_VALIDAR_EVIDENCIA_TEMPORAL
+      subcomando deve_ser validar_ciclo_diagnosticar_propor_simular_provar_quando_VALIDAR_AUTONOMIA
+      subcomando deve_ser validar_bots_fuzz_save_load_quando_VALIDAR_PLAYTEST_FUZZ
+      subcomando deve_ser validar_autoridade_replicacao_e_conflitos_quando_VALIDAR_MULTIPLAYER
+      subcomando deve_ser analisar_perdas_fallbacks_e_migracoes_quando_ANALISAR_PORTABILIDADE
+      subcomando deve_ser validar_workers_leases_locks_e_dependencias_quando_VALIDAR_WORKERS
+    }
+    effects {
+      consulta arquivos_JSON_locais criticidade = baixa
+      auditoria extensao_cli_interativa criticidade = media
+    }
+    authz {
+      escopo: sema.interativo.extensoes.operar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.extensao_cli_executada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      executar_engine_editor_jogo_simulacao_worker_ou_verificador
+      detectar_engine_editor_plugin_SDK_GPU_ou_processo
+      reservar_recurso_ou_adquirir_lock_real
+      escrever_indice_chunk_plano_diff_lock_ou_relatorio_no_workspace
+      ler_credencial_secret_token_ou_variavel_de_ambiente
+      aceitar_comando_executavel_URI_de_fonte_ou_path_em_descriptor_publico
+      declarar_snapshot_como_probe_real
+      declarar_validacao_local_como_playtest_execucao_migracao_ou_conversao
+      declarar_DESCRIPTOR_como_integracao_instalada
+      declarar_STRUCTURALLY_COMPLETE_como_conclusao_autoritativa
+      ecoar_path_conteudo_de_arquivo_semanticId_ou_stack_em_erro_publico
+      ignorar_perdas_INCONCLUSIVE_unsupported_falha_de_verificador_ou_dependencias
+      operar_acceptance_sem_lockDigest_contexto_e_operacao_explicitos
+      autoexecutar_patch_migracao_job_ou_rollback
+      publicar_apenas_id_de_schema_sem_shape_acionavel
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.extension_command.executarExtensaoCliInterativa
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/extensionCommand.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/command.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/index.ts"
+      arquivo: "testes/unidade/sistemas-interativos-extension-command.test.ts"
+      simbolo: cli.src.sistemas_interativos.extension_command.executarExtensaoCliInterativa
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      exit_code existe
+      payload existe
+      executed == falso
+      workspace_mutated == falso
+      authoritative == falso
+      payload deve_ser expor_por_comando_argumentos_schemas_shapes_output_targets_required_top_level_fields_e_fixtures_oficiais_quando_consultado_pelo_schema_principal
+      payload deve_ser deterministico_e_versionado
+      payload deve_ser omitir_entrada_controlada_quando_invalido
+      payload deve_ser manter_fronteira_externa_explicita
+      payload deve_ser preservar_falhas_e_inconclusivos
+      payload deve_ser diferenciar_validacao_local_de_execucao_externa
+      payload deve_ser expor_todos_os_subcomandos_e_versoes_quando_SCHEMA
+    }
+    tests {
+      caso "IA valida e consulta IR sem escrever" {
+        given {
+          subcomando: "CONSULTAR_IR"
+          argumentos: "experience-ir-valid.json semantic-id scene.main json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exit_code: 0
+          executed: falso
+          workspace_mutated: falso
+          authoritative: falso
+        }
+      }
+      caso "diff nao sonda engine" {
+        given {
+          subcomando: "DIFF_ENGINE_SNAPSHOTS"
+          argumentos: "before.json after.json json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          executed: falso
+          workspace_mutated: falso
+          authoritative: falso
+        }
+      }
+      caso "operacao desconhecida falha sem eco" {
+        given {
+          subcomando: "OPERAR_ACCEPTANCE"
+          argumentos: "lock.json operation SEGREDO context-file context.json json"
+        }
+
+        expect {
+          sucesso: falso
+          executed: falso
+          workspace_mutated: falso
+          authoritative: falso
+        }
+      }
+      caso "autonomia permanece proposta externa" {
+        given {
+          subcomando: "VALIDAR_AUTONOMIA"
+          argumentos: "autonomy.json json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          executed: falso
+          workspace_mutated: falso
+          authoritative: falso
+        }
+      }
+      caso "portabilidade declara perdas sem converter" {
+        given {
+          subcomando: "ANALISAR_PORTABILIDADE"
+          argumentos: "portability.json json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          executed: falso
+          workspace_mutated: falso
+          authoritative: falso
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,253 @@
+module sema.produto.sistemas_interativos.testes_autonomos {
+  docs {
+    resumo: "Playtest bots, fuzz bounded de input/save/load e analise declarativa de autoridade multiplayer, sempre em sandbox e sem iniciar runtime ou rede."
+    arquivo: "contratos/sema/sistemas_interativos_autonomia.sema"
+    arquivo: "contratos/sema/sistemas_interativos_evidencias.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type PlanoPlaytestFuzz {
+    fields {
+      schema_version: Texto
+      plan_id: Texto
+      system_id: Texto
+      definition_digest: Texto
+      bots: Lista
+      input_actions: Lista
+      state_checkpoints: Lista
+      save_load_cases: Lista
+      fuzz_bounds: Objeto
+      stop_criteria: Lista
+      evidence_requirements: Lista<Texto>
+    }
+    invariants {
+      schema_version existe
+      plan_id existe
+      system_id existe
+      definition_digest existe
+      bots existe
+      input_actions existe
+      state_checkpoints existe
+      save_load_cases existe
+      fuzz_bounds existe
+      stop_criteria existe
+      evidence_requirements existe
+    }
+  }
+
+  type ModeloAutoridadeMultiplayer {
+    fields {
+      schema_version: Texto
+      model_id: Texto
+      system_id: Texto
+      topology: Texto
+      authorities: Lista
+      replicated_state: Lista
+      conflicts: Lista
+      reconnect: Objeto
+      security_invariants: Lista
+      evidence_requirements: Lista<Texto>
+    }
+    invariants {
+      schema_version existe
+      model_id existe
+      system_id existe
+      topology existe
+      authorities existe
+      replicated_state existe
+      conflicts existe
+      reconnect existe
+      security_invariants existe
+      evidence_requirements existe
+    }
+  }
+
+  task validar_plano_playtest_fuzz {
+    input {
+      plano: PlanoPlaytestFuzz required
+    }
+    output {
+      valido: Booleano
+      plan_digest: Texto
+      scenario_ids: Lista<Texto>
+      next_actions: Lista<Texto>
+      authoritative: Booleano
+      executed: Booleano
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      plano deve_ser ter_schema_version_sema_interactive_playtest_fuzz_v1_e_somente_campos_top_level_permitidos
+      plano deve_ser ter_bots_com_id_strategy_seed_max_steps_e_permissions
+      plano deve_ser ter_ao_menos_um_bot
+      plano deve_ser ter_input_actions_tipadas_e_bounded
+      plano deve_ser ter_state_checkpoints_antes_e_depois_de_save_load
+      plano deve_ser ligar_cada_save_load_source_a_BEFORE_target_a_AFTER_e_ids_distintos
+      plano deve_ser cobrir_save_load_corrupt_recovery_e_version_migration_sem_escrever_no_original
+      plano deve_ser ter_fuzz_bounds_de_steps_runtime_memory_disk_e_cases
+      plano deve_ser limitar_bot_max_steps_e_total_de_scenarios_aos_fuzz_bounds
+      plano deve_ser ter_stop_criteria_para_crash_hang_resource_exhaustion_e_invariant_failure
+      plano deve_ser exigir_boot_loop_failure_replay_state_digest_e_crash_trace
+      plano deve_ser proibir_input_de_sistema_arquivo_rede_ou_processo_fora_do_sandbox
+      plano deve_ser produzir_scenarios_deterministicos_sem_iniciar_runtime
+    }
+    effects {
+      auditoria plano_playtest_fuzz_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.playtest_fuzz.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.playtest_fuzz_validado
+      ator: auth.agente
+      correlacao: plan_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      fuzz_sem_budget
+      fuzz_sem_bot
+      bot_sem_seed
+      sobrescrever_save_canonico
+      save_load_sem_transicao_BEFORE_AFTER
+      bot_ou_scenarios_acima_dos_fuzz_bounds
+      input_fora_da_allowlist
+      executar_runtime_ou_fuzz_durante_validacao
+      aceitar_campo_top_level_desconhecido_ou_valor_sensivel_em_qualquer_profundidade_ou_declarar_playtest_passado_sem_evidencia
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.autonomy.validarPlanoPlaytestFuzz
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/autonomy.ts"
+      simbolo: cli.src.sistemas_interativos.autonomy.validarPlanoPlaytestFuzz
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      plan_digest existe
+      scenario_ids existe
+      next_actions existe
+      authoritative == falso
+      executed == falso
+      bloqueios existe
+    }
+    tests {
+      caso "bot seeded testa save load em sandbox" {
+        given {
+          plano: "bot explorer seed 42 input allowlist checkpoint save load corrupt recovery budgets stop criteria"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+          executed: falso
+        }
+      }
+    }
+  }
+
+  task validar_modelo_autoridade_multiplayer {
+    input {
+      modelo: ModeloAutoridadeMultiplayer required
+    }
+    output {
+      valido: Booleano
+      model_digest: Texto
+      authority_gaps: Lista<Texto>
+      next_actions: Lista<Texto>
+      authoritative: Booleano
+      executed: Booleano
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      modelo deve_ser ter_schema_version_sema_interactive_multiplayer_authority_v1_e_somente_campos_top_level_permitidos
+      modelo deve_ser ter_topology_em [SERVER_AUTHORITATIVE, CLIENT_AUTHORITATIVE, PEER_TO_PEER, HYBRID]
+      modelo deve_ser ter_ao_menos_uma_authority_e_um_estado_replicado
+      modelo deve_ser ter_authority_roles_coerentes_com_topology
+      modelo deve_ser ligar_cada_estado_replicado_a_semantic_target_owner_writer_readers_frequency_e_conflict_policy
+      modelo deve_ser exigir_owner_e_writers_compativeis_com_topology_para_todo_estado
+      modelo deve_ser impedir_duplo_writer_sem_resolucao_deterministica
+      modelo deve_ser declarar_validacao_servidor_para_input_cliente_e_estado_sensivel
+      modelo deve_ser exigir_writer_SERVER_para_estado_sensivel_em_SERVER_AUTHORITATIVE
+      modelo deve_ser declarar_disconnect_reconnect_resync_snapshot_replay_e_timeout
+      modelo deve_ser declarar_invariants_de_identidade_autorizacao_anti_replay_rate_limit_e_integridade
+      modelo deve_ser exigir_session_sync_conflict_reconnect_authority_evidence
+      modelo deve_ser produzir_authority_gaps_sem_abrir_rede
+    }
+    effects {
+      auditoria modelo_autoridade_multiplayer_validado criticidade = critica
+    }
+    authz {
+      escopo: sema.interativo.multiplayer.autoridade.validar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.multiplayer_autoridade_validada
+      ator: auth.agente
+      correlacao: model_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      confiar_em_cliente_para_estado_sensivel_sem_validacao
+      writer_cliente_em_estado_sensivel_SERVER_AUTHORITATIVE
+      modelo_sem_authority_ou_estado_replicado
+      topology_sem_role_owner_ou_writer_compativel
+      autoridade_ausente_ou_ambigua
+      reconectar_sem_resync
+      conflito_last_write_wins_sem_clock_ou_regra
+      abrir_socket_ou_iniciar_servidor
+      aceitar_campo_top_level_desconhecido_ou_valor_sensivel_em_qualquer_profundidade_ou_declarar_replicacao_correta_sem_trace
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.autonomy.validarModeloAutoridadeMultiplayer
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/autonomy.ts"
+      simbolo: cli.src.sistemas_interativos.autonomy.validarModeloAutoridadeMultiplayer
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: critica
+    }
+    guarantees {
+      valido existe
+      model_digest existe
+      authority_gaps existe
+      next_actions existe
+      authoritative == falso
+      executed == falso
+      bloqueios existe
+      valido != verdadeiro ou authority_gaps deve_ser vazio
+    }
+    tests {
+      caso "estado sensivel tem autoridade e validacao servidor" {
+        given {
+          modelo: "server authoritative inventory owner server client input validated reconnect resync replay"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+          executed: falso
+        }
+      }
+    }
+  }
+}

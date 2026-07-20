@@ -1,0 +1,163 @@
+module sema.produto.sistemas_interativos.autonomia {
+  docs {
+    resumo: "Ciclo seguro diagnosticar-propor-simular-provar para jogos e simulacoes. O nucleo valida elegibilidade e provas; apply, engine e runner permanecem externos."
+    arquivo: "contratos/sema/sistemas_interativos.sema"
+    arquivo: "contratos/sema/sistemas_interativos_adaptadores.sema"
+    arquivo: "contratos/sema/sistemas_interativos_operacao.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type CicloReparoAutonomo {
+    fields {
+      schema_version: Texto
+      run_id: Texto
+      cycle_index: Numero
+      previous_cycle_digest: Texto
+      triggered_stop_criteria: Lista<Texto>
+      system_id: Texto
+      definition_digest: Texto
+      policy: Objeto
+      diagnostics: Lista
+      proposals: Lista
+      simulations: Lista
+      proofs: Lista
+      resource_locks: Lista
+      acceptance_locks: Lista
+      acceptance_locks_digest: Texto
+      acceptance_claims: Lista
+      recovery_token: Texto
+    }
+    invariants {
+      schema_version existe
+      run_id existe
+      cycle_index existe
+      previous_cycle_digest existe
+      triggered_stop_criteria existe
+      system_id existe
+      definition_digest existe
+      policy existe
+      diagnostics existe
+      proposals existe
+      simulations existe
+      proofs existe
+      resource_locks existe
+      acceptance_locks existe
+      acceptance_locks_digest existe
+      acceptance_claims existe
+      recovery_token existe
+    }
+  }
+
+  task validar_ciclo_reparo_autonomo {
+    input {
+      ciclo: CicloReparoAutonomo required
+    }
+    output {
+      valido: Booleano
+      cycle_digest: Texto
+      eligible_safe_patches: Lista<Texto>
+      blocked_patches: Lista<Texto>
+      diagnostics: Lista
+      next_actions: Lista<Texto>
+      completed: Booleano
+      authoritative: Booleano
+      executed: Booleano
+      bloqueios: Lista<Texto>
+    }
+    rules {
+      ciclo deve_ser ter_schema_version_sema_interactive_autonomy_v1_e_somente_campos_top_level_permitidos
+      ciclo deve_ser ligar_definition_digest_sha256
+      ciclo deve_ser ter_policy_com_mode_max_cycles_stop_criteria_allowed_risk_classes_e_approval_rules
+      ciclo deve_ser ter_cycle_index_positivo_ate_policy_max_cycles
+      ciclo deve_ser usar_previous_cycle_digest_GENESIS_no_primeiro_ciclo_e_sha256_nos_seguintes
+      ciclo deve_ser impedir_elegibilidade_quando_triggered_stop_criteria_nao_for_vazio
+      ciclo deve_ser ter_diagnostics_ligados_a_failed_invariant_phase_evidence_ids_e_target_id
+      ciclo deve_ser ter_proposals_ligadas_a_diagnostic_target_adapter_version_input_digest_igual_ao_definition_digest_snapshot_checkpoint_e_rollback
+      ciclo deve_ser ligar_proposal_a_owner_job_id_mutation_scope_de_artifact_scene_time_range_e_acceptance_claim_content_addressed_exatamente_igual_por_patch
+      ciclo deve_ser ter_ao_menos_uma_proposal_valida_para_cada_diagnostic
+      ciclo deve_ser exigir_semantic_target_id_da_proposal_igual_ao_diagnostic_referenciado
+      ciclo deve_ser classificar_patch_em [OBSERVATION_ONLY, SAFE_REVERSIBLE, PRIVILEGED, IRREVERSIBLE]
+      ciclo deve_ser impedir_elegibilidade_de_PRIVILEGED_ou_IRREVERSIBLE_sem_aprovacao_humana_explicita
+      ciclo deve_ser impedir_apply_AUTONOMOUS_quando_risk_class_nao_for_SAFE_REVERSIBLE
+      ciclo deve_ser exigir_snapshot_checkpoint_rollback_resource_locks_acceptance_lock_completo_content_addressed_e_binding_de_artifact_scene_time_range_para_patch_mutante
+      ciclo deve_ser exigir_lock_com_owner_run_id_igual_ao_run_owner_job_id_igual_ao_patch_snapshot_checkpoint_coerentes_e_INVALIDATED_com_previous_lock_digest_e_evidencia_de_invalidacao
+      ciclo deve_ser ligar_simulation_sandbox_digest_result_digest_e_passed_a_patch_id
+      ciclo deve_ser ligar_proof_a_patch_simulation_e_evidence_digests
+      ciclo deve_ser ordenar_DIAGNOSE_PROPOSE_SIMULATE_PROVE_antes_de_qualquer_apply_externo
+      ciclo deve_ser exigir_recovery_token_opaco_e_ligado_ao_checkpoint
+      ciclo deve_ser produzir_elegibilidade_somente_sem_qualquer_bloqueio_e_sem_executar_patch_engine_editor_ou_runner
+    }
+    effects {
+      auditoria ciclo_reparo_autonomo_validado criticidade = critica
+    }
+    authz {
+      escopo: sema.interativo.autonomia.validar
+      tenant: obrigatorio
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.autonomia_ciclo_validado
+      ator: auth.agente
+      correlacao: run_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      apply_antes_de_snapshot_checkpoint_simulation_e_proof
+      auto_apply_privileged_ou_irreversible
+      matar_processo_por_timeout_sem_estado_do_editor_e_job
+      patch_sem_target_id_semantico
+      ciclo_com_diagnostic_sem_proposal
+      proposal_com_target_divergente_do_diagnostic_ou_input_digest_divergente_da_definition
+      lock_de_run_ou_job_concorrente
+      lock_com_snapshot_checkpoint_mutation_scope_claim_digest_ou_invalidacao_divergente_do_patch
+      ciclo_acima_de_max_cycles_ou_sem_previous_cycle_digest
+      patch_elegivel_apos_stop_criteria_disparado_ou_sobre_acceptance_lock_ACTIVE_sobreposto
+      prova_produzida_apenas_pelo_mesmo_patch_runner
+      declarar_patch_aplicado_ou_produto_corrigido
+      aceitar_campo_top_level_desconhecido_ou_valor_sensivel_em_qualquer_profundidade_ou_ecoar_patch_id_target_id_caminho_token_secret_ou_valor_invalido
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.autonomy.validarCicloReparoAutonomo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/autonomy.ts"
+      simbolo: cli.src.sistemas_interativos.autonomy.validarCicloReparoAutonomo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: critica
+    }
+    guarantees {
+      valido existe
+      cycle_digest existe
+      eligible_safe_patches existe
+      blocked_patches existe
+      diagnostics existe
+      next_actions existe
+      completed == falso
+      authoritative == falso
+      executed == falso
+      bloqueios existe
+    }
+    tests {
+      caso "patch seguro ainda exige simulacao prova e runner externo" {
+        given {
+          ciclo: "diagnose camera target propose SAFE_REVERSIBLE snapshot checkpoint simulate prove"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+          completed: falso
+          executed: falso
+        }
+      }
+    }
+  }
+}

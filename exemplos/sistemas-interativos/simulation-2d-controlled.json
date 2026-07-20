@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.simulation.2d.controlled",
+  "version": "1.0.0",
+  "kind": "SIMULATION",
+  "spatialModel": "TWO_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "VECTOR",
+  "fidelity": "SYSTEMIC",
+  "controlModes": [
+    "SCRIPTED"
+  ],
+  "timeModel": "FIXED_STEP",
+  "determinism": "SEEDED",
+  "capabilities": [
+    "interactive.control.scripted",
+    "interactive.determinism.seeded",
+    "interactive.event.log",
+    "interactive.fidelity.systemic",
+    "interactive.kind.simulation",
+    "interactive.render.visual",
+    "interactive.replay.compare",
+    "interactive.seed.bind",
+    "interactive.snapshot.capture",
+    "interactive.spatial.two_d",
+    "interactive.state.model",
+    "interactive.time.fixed_step",
+    "interactive.visual.vector",
+    "interactive.world.model",
+    "simulation.invariants.validate",
+    "simulation.model",
+    "simulation.outputs.compare",
+    "simulation.outputs.observe",
+    "simulation.scenario.define",
+    "simulation.validity.report"
+  ],
+  "pipelines": [
+    "simulation.scenario",
+    "simulation.validate",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "engine.web.canvas2d",
+    "simulation.runner.generic",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "script-controlled urban traffic grid",
+    "state": {
+      "vehicles": 120,
+      "signals": "timed-plan-a"
+    },
+    "time": {
+      "fixedStepSeconds": 0.1
+    },
+    "events": [
+      "vehicle.enter",
+      "signal.change",
+      "vehicle.exit"
+    ],
+    "initialConditions": {
+      "demandProfile": "weekday-am",
+      "signalPlan": "timed-plan-a"
+    },
+    "grid": "lane graph projected onto a 2D metric plane",
+    "coordinateSystem": "local east-north metres",
+    "model": "cell-transmission traffic flow with scripted signal phases",
+    "assumptions": [
+      "driver response is homogeneous inside each vehicle class"
+    ],
+    "boundaryConditions": {
+      "inflowVehiclesPerHour": 900,
+      "simulationDurationSeconds": 3600
+    },
+    "outputs": [
+      "meanTravelTimeSeconds",
+      "queueLengthVehicles",
+      "throughputVehiclesPerHour"
+    ],
+    "validation": {
+      "method": "compare seeded replay outputs with conservation invariants",
+      "invariants": ["vehicle count is conserved", "queue length remains non-negative"]
+    },
+    "seed": 2026071902,
+    "snapshot": "network, queues, signals, and random stream state",
+    "replay": "scripted demand and signal events",
+    "step": "fixed 0.1 second update"
+  },
+  "acceptance": {
+    "invariants": [
+      "vehicle count is conserved",
+      "queue length is never negative"
+    ],
+    "outputs": "all declared metrics are emitted for every completed run"
+  }
+}

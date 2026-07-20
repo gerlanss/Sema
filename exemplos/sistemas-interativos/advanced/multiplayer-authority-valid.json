@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "sema.interactive.multiplayer-authority/v1",
+  "modelId": "authority.game.1",
+  "systemId": "interactive.system",
+  "topology": "SERVER_AUTHORITATIVE",
+  "authorities": [
+    { "authorityId": "authority.server", "role": "SERVER", "principalId": "server.primary" },
+    { "authorityId": "authority.client.1", "role": "CLIENT", "principalId": "player.1" }
+  ],
+  "replicatedState": [
+    {
+      "stateId": "state.inventory",
+      "semanticTargetId": "player.1.inventory",
+      "sensitive": true,
+      "ownerAuthorityId": "authority.server",
+      "writerAuthorityIds": ["authority.server"],
+      "readerAuthorityIds": ["authority.server", "authority.client.1"],
+      "frequencyHz": 10,
+      "conflictPolicy": "SERVER_WINS",
+      "clientInputValidated": true
+    }
+  ],
+  "conflicts": [
+    {
+      "conflictId": "conflict.inventory",
+      "stateId": "state.inventory",
+      "resolution": "server validates sequence and wins"
+    }
+  ],
+  "reconnect": {
+    "disconnectDetected": true,
+    "reconnectAllowed": true,
+    "resyncSnapshot": true,
+    "replaySinceSequence": true,
+    "timeoutMs": 10000
+  },
+  "securityInvariants": ["IDENTITY", "AUTHORIZATION", "ANTI_REPLAY", "RATE_LIMIT", "INTEGRITY"],
+  "evidenceRequirements": ["multiplayer.session", "multiplayer.sync", "multiplayer.conflict", "multiplayer.reconnect", "multiplayer.authority"]
+}

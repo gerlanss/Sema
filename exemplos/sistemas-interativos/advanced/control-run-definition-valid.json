@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "interactive.system",
+  "version": "1.0.0",
+  "kind": "SIMULATION",
+  "spatialModel": "NON_SPATIAL",
+  "renderMode": "TEXT",
+  "visualProfile": "NONE",
+  "fidelity": "SYSTEMIC",
+  "controlModes": ["SCRIPTED"],
+  "timeModel": "TURN_BASED",
+  "determinism": "STRICT",
+  "capabilities": [
+    "interactive.control.scripted",
+    "interactive.determinism.strict",
+    "interactive.event.log",
+    "interactive.fidelity.systemic",
+    "interactive.kind.simulation",
+    "interactive.qa.capture",
+    "interactive.qa.exposure",
+    "interactive.qa.flicker",
+    "interactive.qa.ghosting",
+    "interactive.qa.jitter",
+    "interactive.qa.popping",
+    "interactive.render.text",
+    "interactive.replay.compare",
+    "interactive.seed.bind",
+    "interactive.snapshot.capture",
+    "interactive.spatial.non_spatial",
+    "interactive.state.model",
+    "interactive.time.turn_based",
+    "interactive.visual.none",
+    "interactive.world.model",
+    "simulation.invariants.validate",
+    "simulation.model",
+    "simulation.outputs.compare",
+    "simulation.outputs.observe",
+    "simulation.scenario.define",
+    "simulation.validity.report"
+  ],
+  "pipelines": [
+    "interactive.temporal_qa",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "engine.custom",
+    "telemetry.trace.local",
+    "validator.multimodal.external",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "turn-based queueing simulation with temporal QA",
+    "state": { "turn": 0, "queueLength": 0 },
+    "time": { "turnDurationMinutes": 1 },
+    "events": ["request.arrive", "request.complete", "capacity.change"],
+    "initialConditions": { "servers": 4, "queueLength": 0 },
+    "model": "finite-capacity discrete queue",
+    "assumptions": ["one turn represents one minute"],
+    "boundaryConditions": { "maximumQueueLength": 1000, "turns": 1440 },
+    "outputs": ["meanWaitTurns", "maximumQueueLength", "completedRequests"],
+    "validation": {
+      "method": "compare seeded turns with queue invariants, temporal metrics and expected outputs",
+      "invariants": ["queue length remains non-negative", "completed requests do not exceed arrivals"]
+    },
+    "seed": 2026072001,
+    "snapshot": "queue, servers, counters, random stream and temporal QA state",
+    "replay": "ordered scripted arrivals, capacity events and QA observations",
+    "step": "one declared turn"
+  },
+  "acceptance": {
+    "textSurface": "every turn and temporal QA decision can be inspected without a graphical renderer",
+    "invariants": [
+      "queue length is never negative",
+      "completed requests never exceed arrivals",
+      "QA evidence remains linked to the declared temporal contract"
+    ]
+  }
+}

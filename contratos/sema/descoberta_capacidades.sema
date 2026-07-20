@@ -1,0 +1,264 @@
+module sema.produto.descoberta_capacidades {
+  docs {
+    resumo: "Registro canonico e roteador explicavel de capacidades para IA. Expoe governance flows, profile gates, workflows especializados, pipelines, capability tokens, generators e adapters; recomenda sem executar e devolve ambiguidade quando nao ha vencedor seguro."
+    arquivo: "docs/descoberta-capacidades.md"
+    arquivo: "docs/commands.md"
+  }
+
+  type EntradaCatalogoCapacidade {
+    fields {
+      id: Texto
+      kind: Texto
+      domains: Lista<Texto>
+      label: Texto
+      summary: Texto
+      use_when: Lista<Texto>
+      avoid_when: Lista<Texto>
+      intent_signals: Lista<Texto>
+      negative_signals: Lista<Texto>
+      required_inputs: Lista<Texto>
+      command_templates: Lista
+      related: Lista<Texto>
+      source: Texto
+      extensible: Booleano
+    }
+    invariants {
+      id existe
+      kind existe
+      domains existe
+      label existe
+      summary existe
+      use_when existe
+      avoid_when existe
+      intent_signals existe
+      negative_signals existe
+      required_inputs existe
+      command_templates existe
+      related existe
+      source existe
+      extensible existe
+    }
+  }
+
+  task montar_catalogo_capacidades {
+    input {
+      filtros: Objeto required
+    }
+    output {
+      schema_version: Texto
+      filters: Objeto
+      entries: Lista<EntradaCatalogoCapacidade>
+      executed: Booleano
+      workspace_mutated: Booleano
+      external_calls: Booleano
+    }
+    rules {
+      filtros deve_ser aplicados_sem_execucao
+    }
+    effects {
+      consulta registro_capacidades criticidade = baixa
+    }
+    forbidden {
+      esconder_pipeline_publico
+      expor_quarenta_tools_sem_hierarquia_ou_kind
+      registrar_author_como_profile_gate
+      duplicar_fontes_autoritativas_em_catalogos_divergentes
+      executar_template_durante_catalogo
+      inferir_plugin_instalado_por_descriptor
+    }
+    impl {
+      ts: cli.src.discovery.catalog.montarCatalogoCapacidades
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/discovery/catalog.ts"
+      arquivo: "pacotes/cli/src/discovery/redaction.ts"
+      simbolo: cli.src.discovery.catalog.montarCatalogoCapacidades
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "3s"
+      retry: "seguro"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      schema_version existe
+      filters existe
+      entries existe
+      executed == falso
+      workspace_mutated == falso
+      external_calls == falso
+      entries deve_ser ter_ids_unicos_e_estaveis
+      entries deve_ser ter_kind_em [GOVERNANCE_FLOW, PROFILE_GATE, SPECIALIZED_WORKFLOW, ORCHESTRATION_PIPELINE, CAPABILITY_TOKEN, GENERATOR, ADAPTER]
+      entries deve_ser derivado_de_fontes_autoritativas_de_profiles_conteudo_interativo_author_geradores_e_governanca
+      entries deve_ser usar_catalogo_interativo_canonico_compartilhado_por_interativo_pipelines_e_descoberta
+      entries deve_ser distinguir_profile_gate_de_orchestration_pipeline
+      entries deve_ser mapear_author_para_sema_author_e_nunca_profile_validar_author
+      entries deve_ser expor_todos_os_pipelines_publicos
+      entries deve_ser ter_command_templates_com_placeholders_e_effect_class
+      entries deve_ser declarar_mutates_workspace_e_executes_external_runtime_por_template
+      entries deve_ser dar_template_de_planejamento_e_definition_json_para_pipeline_interativo
+      filters deve_ser redigido_quando_contem_caminho_credencial_token_secret_senha_ou_chave_privada
+    }
+    tests {
+      caso "author nao vira profile validar" {
+        given {
+          filtros: "kind SPECIALIZED_WORKFLOW id workflow.author"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          entries: "workflow.author usa sema author"
+          executed: falso
+        }
+      }
+    }
+  }
+
+  task recomendar_capacidade_por_intencao {
+    input {
+      intencao: Texto required
+      limite: Inteiro required
+    }
+    output {
+      intent: Texto
+      recommendations: Lista
+      ambiguity: Objeto
+      no_match: Booleano
+      executed: Booleano
+      workspace_mutated: Booleano
+      external_calls: Booleano
+    }
+    rules {
+      intencao deve_ser normalizada_com_acentos_aliases_e_tokens
+      limite deve_ser entre_1_e_10
+      intencao deve_ser priorizar_pipeline_interativo_avancado_especifico_sobre_profile_ou_adapter_generico
+      intencao deve_ser sugerir_subcomando_interativo_especifico_com_fixture_e_flags_quando_houver_pipeline_avancado
+    }
+    effects {
+      auditoria recomendacao_capacidade criticidade = baixa
+    }
+    forbidden {
+      executar_recomendacao
+      desempatar_silenciosamente
+      recomendar_comando_sem_input_obrigatorio_sem_placeholder
+      usar_modelo_nao_deterministico_no_ranking_base
+      retornar_score_sem_reason
+      tratar_estilo_3d_2d_8bit_ou_16bit_como_objetivo_de_pipeline
+      desempatar_alias_exato_compartilhado_pela_ordem_do_catalogo
+      recomendar_interativo_planejar_quando_existe_validador_ou_analisador_avancado_especifico
+    }
+    impl {
+      ts: cli.src.discovery.ranker.recomendarCapacidadePorIntencao
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/discovery/ranker.ts"
+      arquivo: "pacotes/cli/src/discovery/redaction.ts"
+      simbolo: cli.src.discovery.ranker.recomendarCapacidadePorIntencao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "3s"
+      retry: "seguro"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      recommendations existe
+      intent existe
+      ambiguity existe
+      no_match existe
+      executed == falso
+      workspace_mutated == falso
+      external_calls == falso
+      recommendations deve_ser ranqueado_por_sinais_positivos_negativos_kind_e_dominio
+      recommendations deve_ser ordenado_por_score_desc_e_id_asc
+      recommendations deve_ser ter_reasons_matched_signals_missing_inputs_e_template_sugerido
+      recommendations deve_ser ter_score_entre_0_e_100
+      intent deve_ser redigida_quando_contem_caminho_credencial_token_secret_senha_ou_chave_privada
+      ambiguity deve_ser detected_true_quando_delta_top_2_for_menor_ou_igual_a_7
+      ambiguity deve_ser detected_true_quando_mais_de_um_id_ou_alias_corresponde_exatamente
+      ambiguity deve_ser impedir_comando_sugerido_unico_quando_detected_true
+      no_match deve_ser verdadeiro_quando_top_score_for_menor_que_60
+      no_match deve_ser impedir_comando_sugerido
+    }
+    tests {
+      caso "simulador autonomo calibrado escolhe calibracao" {
+        given {
+          intencao: "validar simulador 3D autonomo realista calibrado"
+          limite: 5
+        }
+
+        expect {
+          sucesso: verdadeiro
+          recommendations: "simulation.calibrate"
+          executed: falso
+        }
+      }
+    }
+  }
+
+  task operar_cli_descoberta_capacidades {
+    input {
+      subcomando: Texto required
+      argumentos: Lista<Texto> required
+    }
+    output {
+      exit_code: Inteiro
+      payload: Objeto
+      executed: Booleano
+    }
+    rules {
+      subcomando deve_ser em [CATALOGO, RECOMENDAR, EXPLICAR, PIPELINE_LISTAR, PIPELINE_DESCREVER]
+      argumentos deve_ser filtros_intencao_id_limite_e_flags_explicitos
+      argumentos deve_ser rejeitar_flag_desconhecida_duplicada_ou_sem_valor
+      argumentos deve_ser produzir_erro_estatico_sem_eco_de_dados_sensiveis
+      argumentos deve_ser preservar_placeholders_sem_executar_template
+      argumentos deve_ser resolver_alias_unico_e_falhar_fechado_quando_alias_ambiguo
+    }
+    effects {
+      consulta registro_capacidades criticidade = baixa
+    }
+    forbidden {
+      subcomando_implicito_executavel
+      chamar_pipeline_profile_generator_ou_adapter
+      mutar_workspace
+      chamada_externa
+      imprimir_stack_ou_segredo
+    }
+    impl {
+      ts: cli.src.discovery.command.comandoDescobertaCapacidades
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/discovery/command.ts"
+      arquivo: "pacotes/cli/src/comandos.ts"
+      arquivo: "pacotes/cli/src/index.part01.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.discovery.command.comandoDescobertaCapacidades
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      exit_code existe
+      payload existe
+      executed == falso
+      payload deve_ser nao_ecoar_caminho_controlado_credencial_token_secret_senha_ou_chave_privada_em_sucesso_ou_erro
+    }
+    tests {
+      caso "recomendar nao executa" {
+        given {
+          subcomando: "RECOMENDAR"
+          argumentos: "intencao jogo 16-bit playtest json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          exit_code: 0
+          executed: falso
+        }
+      }
+    }
+  }
+}

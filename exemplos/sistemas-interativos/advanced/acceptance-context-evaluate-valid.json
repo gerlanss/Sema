@@ -1,0 +1,5 @@
+{
+  "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sceneId": "scene.main",
+  "timeRange": { "start": 0, "end": 240, "unit": "FRAME" }
+}

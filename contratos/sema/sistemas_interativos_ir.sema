@@ -1,0 +1,272 @@
+module sema.produto.sistemas_interativos.ir {
+  docs {
+    resumo: "Experience IR v1 content-addressed para jogos, simulacoes e hibridos sem executar engine. Mantem 20 kinds retrocompativeis e explicita LEVEL, PIVOT, COLLIDER, EMITTER, TRACK, CLIP, EVENT e GAME_STATE como papeis tipados, indexaveis e presentes em chunks."
+    arquivo: "contratos/sema/sistemas_interativos.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type ResultadoExperienceIr {
+    fields {
+      sucesso: Booleano
+      valido: Booleano
+      document_digest: Texto
+      issues: Lista
+      executed: Booleano
+      workspace_mutated: Booleano
+      authoritative: Booleano
+    }
+    invariants {
+      sucesso existe
+      valido existe
+      issues existe
+      executed == falso
+      workspace_mutated == falso
+      authoritative == falso
+    }
+  }
+
+  type IndiceExperienceIr {
+    fields {
+      schema_version: Texto
+      document_digest: Texto
+      entries: Lista
+      authoritative: Booleano
+    }
+    invariants {
+      schema_version existe
+      document_digest existe
+      entries existe
+      authoritative == falso
+    }
+  }
+
+  type ChunkExperienceIr {
+    fields {
+      schema_version: Texto
+      chunk_digest: Texto
+      document_digest: Texto
+      requested_semantic_id_digests: Lista<Texto>
+      entries: Lista
+      external_references: Lista<Texto>
+      authoritative: Booleano
+    }
+    invariants {
+      schema_version existe
+      chunk_digest existe
+      document_digest existe
+      requested_semantic_id_digests existe
+      entries existe
+      external_references existe
+      authoritative == falso
+    }
+  }
+
+  task validar_experience_ir {
+    input {
+      experience_ir: Objeto required
+    }
+    output {
+      resultado: ResultadoExperienceIr
+    }
+    rules {
+      experience_ir deve_ser schema_sema_experience_ir_v1
+      experience_ir deve_ser json_plain_sem_ciclos_undefined_bigint_nan_infinity_chaves_perigosas_chaves_sensiveis_ou_valores_sensiveis
+      experience_ir deve_ser conter_20_kinds_e_papeis_tipados_LEVEL_PIVOT_COLLIDER_EMITTER_TRACK_CLIP_EVENT_GAME_STATE_sem_quebrar_v1_legado
+      experience_ir deve_ser ter_semantic_ids_unicos_estaveis_com_prefixo_do_kind
+      experience_ir deve_ser declarar_references_exatas_unicas_e_validas
+      experience_ir deve_ser validar_kind_de_cada_referencia_tipificada_e_hierarquias_entity_transform_aciclicas_sem_self_parent
+      experience_ir deve_ser declarar_unidades_eixos_handedness_e_world_scale_positivo
+      experience_ir deve_ser exigir_source_license_hash_sha256_e_derivations_validas_em_todo_asset
+      experience_ir deve_ser exigir_ultimo_output_hash_da_derivacao_igual_ao_hash_do_asset
+      experience_ir deve_ser declarar_JSON_v1_com_canonicalizacao_sema
+      experience_ir deve_ser declarar_CBOR_como_codec_externo_encoded_false
+      experience_ir deve_ser permitir_extensions_somente_com_descritores_namespaced_content_addressed_sem_payload_inline
+      experience_ir deve_ser respeitar_limites_e_coerencia_network_mode_authority_replication_tick
+    }
+    effects {
+      auditoria experience_ir_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.ir.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.experience_ir_validado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      executar_engine_editor_runtime_ou_build
+      escrever_workspace
+      aceitar_referencia_quebrada_id_duplicado_self_parent_ciclo_hierarquico_ou_network_incoerente
+      aceitar_unidade_eixo_escala_ou_licenca_implicita
+      aceitar_asset_sem_hash_ou_derivacao_rastreavel
+      fingir_codificacao_CBOR
+      aceitar_ou_ecoar_payload_inline_chave_ou_valor_sensivel_id_uri_licenca_path_token_secret_ou_stack_em_issue_indice_ou_chunk
+      declarar_resultado_autoritativo
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.experience_ir.validarExperienceIr
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIr.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIrTypes.ts"
+      arquivo: "testes/integracao/sistemas-interativos-ir.test.ts"
+      arquivo: "exemplos/sistemas-interativos/experience-ir-valid.json"
+      simbolo: cli.src.sistemas_interativos.experience_ir.validarExperienceIr
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      resultado existe
+      resultado deve_ser deterministico
+      resultado deve_ser no_echo
+      resultado deve_ser executed_false_workspace_mutated_false_authoritative_false
+      resultado deve_ser valido_somente_sem_issues
+      resultado deve_ser ter_digest_somente_quando_valido
+    }
+    tests {
+      caso "rejeita ids duplicados referencias quebradas e asset opaco" {
+        given {
+          experience_ir: "v1 com duplicate semantic id, dangling reference e asset sem provenance"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: falso
+        }
+      }
+    }
+  }
+
+  task indexar_experience_ir {
+    input {
+      experience_ir: Objeto required
+    }
+    output {
+      sucesso: Booleano
+      indice: IndiceExperienceIr
+      issues: Lista
+      executed: Booleano
+      workspace_mutated: Booleano
+      authoritative: Booleano
+    }
+    rules {
+      experience_ir deve_ser validado_antes_de_indexar
+      experience_ir deve_ser indexado_por_semantic_id_em_ordem_canonica
+      experience_ir deve_ser produzir_content_digest_sha256_por_no
+      experience_ir deve_ser produzir_json_pointer_kind_e_references_por_entry
+      experience_ir deve_ser produzir_chunks_deterministicos_por_prefixo_semantico
+    }
+    forbidden {
+      indexar_documento_invalido
+      depender_da_ordem_de_iteracao_de_objeto
+      executar_engine
+      ecoar_consulta_invalida
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.experience_ir.indexarExperienceIr
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIr.ts"
+      simbolo: cli.src.sistemas_interativos.experience_ir.indexarExperienceIr
+      simbolo: cli.src.sistemas_interativos.experience_ir.consultarIndiceExperienceIr
+    }
+    execucao {
+      idempotencia: verdadeiro
+    }
+    guarantees {
+      sucesso existe
+      issues existe
+      executed == falso
+      workspace_mutated == falso
+      authoritative == falso
+      sucesso != verdadeiro ou indice existe
+      sucesso != verdadeiro ou indice deve_ser ligado_ao_document_digest
+    }
+    tests {
+      caso "indice e estavel entre execucoes" {
+        given {
+          experience_ir: "fixture v1 valida"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task criar_chunk_experience_ir {
+    input {
+      experience_ir: Objeto required
+      semantic_ids: Lista<Texto> required
+      incluir_dependencias: Booleano required
+    }
+    output {
+      sucesso: Booleano
+      chunk: ChunkExperienceIr
+      issues: Lista
+      executed: Booleano
+      workspace_mutated: Booleano
+      authoritative: Booleano
+    }
+    rules {
+      experience_ir deve_ser valido
+      semantic_ids deve_ser lista_nao_vazia_unica_e_existente
+      semantic_ids deve_ser ordenado_por_digest_na_saida_sem_eco_em_erro
+      incluir_dependencias deve_ser expandir_fecho_transitivo_quando_verdadeiro
+      incluir_dependencias deve_ser listar_external_references_quando_falso
+    }
+    forbidden {
+      criar_chunk_de_documento_invalido
+      aceitar_semantic_id_desconhecido
+      incluir_no_nao_referenciado_fora_do_fecho
+      executar_engine
+      declarar_chunk_autoritativo
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.experience_ir.criarChunkExperienceIr
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIr.ts"
+      simbolo: cli.src.sistemas_interativos.experience_ir.criarChunkExperienceIr
+    }
+    execucao {
+      idempotencia: verdadeiro
+    }
+    guarantees {
+      sucesso existe
+      issues existe
+      executed == falso
+      workspace_mutated == falso
+      authoritative == falso
+      sucesso != verdadeiro ou chunk existe
+      sucesso != verdadeiro ou chunk deve_ser ligado_ao_document_digest
+      sucesso != verdadeiro ou chunk deve_ser content_addressed_por_payload_canonico
+    }
+    tests {
+      caso "chunk transitivo inclui dependencias uma vez" {
+        given {
+          experience_ir: "fixture v1 valida"
+          semantic_ids: "scene.main"
+          incluir_dependencias: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}

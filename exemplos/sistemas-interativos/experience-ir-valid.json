@@ -1,0 +1,459 @@
+{
+  "schemaVersion": "sema.experience-ir/v1",
+  "revision": "1.0.0",
+  "coordinateSystem": {
+    "units": {
+      "length": "METER",
+      "mass": "KILOGRAM",
+      "time": "SECOND",
+      "angle": "RADIAN"
+    },
+    "axes": {
+      "handedness": "RIGHT_HANDED",
+      "up": "Y",
+      "forward": "NEGATIVE_Z"
+    },
+    "worldScaleMetersPerUnit": 1
+  },
+  "serialization": {
+    "json": {
+      "version": "1",
+      "mediaType": "application/vnd.sema.experience-ir+json",
+      "canonicalization": "SEMA_CANONICAL_JSON_V1"
+    },
+    "cbor": {
+      "mode": "EXTERNAL_CODEC_REQUIRED",
+      "mediaType": "application/cbor",
+      "encoded": false,
+      "deterministicEncodingRequired": true,
+      "codec": null
+    }
+  },
+  "project": {
+    "semanticId": "project.demo",
+    "kind": "PROJECT",
+    "references": [
+      "scene.main",
+      "world.main"
+    ],
+    "name": "Experience IR Demo",
+    "worldIds": [
+      "world.main"
+    ],
+    "defaultSceneId": "scene.main"
+  },
+  "worlds": [
+    {
+      "semanticId": "world.main",
+      "kind": "WORLD",
+      "references": [
+        "scene.main"
+      ],
+      "name": "Main World",
+      "sceneIds": [
+        "scene.main"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "semanticId": "scene.main",
+      "kind": "SCENE",
+      "references": [
+        "camera.main",
+        "entity.player",
+        "light.sun"
+      ],
+      "name": "Main Scene",
+      "semanticRole": "LEVEL",
+      "entityIds": [
+        "entity.player"
+      ],
+      "cameraId": "camera.main",
+      "lightIds": [
+        "light.sun"
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "semanticId": "entity.player",
+      "kind": "ENTITY",
+      "references": [
+        "component.player_state",
+        "transform.origin"
+      ],
+      "name": "Player",
+      "componentIds": [
+        "component.player_state"
+      ],
+      "transformId": "transform.origin"
+    }
+  ],
+  "components": [
+    {
+      "semanticId": "component.player_state",
+      "kind": "COMPONENT",
+      "references": [
+        "entity.player"
+      ],
+      "ownerEntityId": "entity.player",
+      "componentType": "player-state",
+      "properties": {
+        "health": 100,
+        "active": true
+      }
+    }
+  ],
+  "transforms": [
+    {
+      "semanticId": "transform.origin",
+      "kind": "TRANSFORM",
+      "references": [],
+      "semanticRole": "PIVOT",
+      "translation": [0, 0, 0],
+      "rotation": [0, 0, 0, 1],
+      "scale": [1, 1, 1]
+    }
+  ],
+  "cameras": [
+    {
+      "semanticId": "camera.main",
+      "kind": "CAMERA",
+      "references": [
+        "transform.origin"
+      ],
+      "transformId": "transform.origin",
+      "projection": "PERSPECTIVE",
+      "near": 0.1,
+      "far": 1000,
+      "fieldOfViewRadians": 1.0471975512
+    }
+  ],
+  "lights": [
+    {
+      "semanticId": "light.sun",
+      "kind": "LIGHT",
+      "references": [
+        "transform.origin"
+      ],
+      "transformId": "transform.origin",
+      "lightType": "DIRECTIONAL",
+      "color": "#fff4dd",
+      "intensity": {
+        "value": 110000,
+        "unit": "LUX"
+      }
+    }
+  ],
+  "materials": [
+    {
+      "semanticId": "material.player",
+      "kind": "MATERIAL",
+      "references": [
+        "texture.player_albedo"
+      ],
+      "shadingModel": "physically-based",
+      "textureIds": [
+        "texture.player_albedo"
+      ],
+      "parameters": {
+        "roughness": 0.6,
+        "metallic": 0
+      }
+    }
+  ],
+  "textures": [
+    {
+      "semanticId": "texture.player_albedo",
+      "kind": "TEXTURE",
+      "references": [],
+      "usage": "ALBEDO",
+      "colorSpace": "SRGB",
+      "provenance": {
+        "source": {
+          "kind": "ORIGINAL",
+          "uri": "asset://textures/player-albedo.png"
+        },
+        "license": {
+          "name": "CC0-1.0",
+          "spdxId": "CC0-1.0",
+          "attributionRequired": false
+        },
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "derivations": []
+      }
+    }
+  ],
+  "audio": [
+    {
+      "semanticId": "audio.ambience",
+      "kind": "AUDIO",
+      "references": [
+        "entity.player"
+      ],
+      "ownerEntityId": "entity.player",
+      "spatial": true,
+      "loop": true,
+      "provenance": {
+        "source": {
+          "kind": "VENDOR",
+          "uri": "asset://audio/ambience.ogg"
+        },
+        "license": {
+          "name": "Licensed asset pack",
+          "uri": "license://asset-pack/2026-07",
+          "attributionRequired": true
+        },
+        "hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "derivations": []
+      }
+    }
+  ],
+  "physics": [
+    {
+      "semanticId": "physics.player_body",
+      "kind": "PHYSICS",
+      "references": [
+        "entity.player"
+      ],
+      "ownerEntityId": "entity.player",
+      "bodyType": "DYNAMIC",
+      "massKilograms": 80,
+      "collider": {
+        "shape": "capsule",
+        "radiusMeters": 0.4,
+        "heightMeters": 1.8
+      },
+      "colliders": [
+        {
+          "semanticRole": "COLLIDER",
+          "colliderId": "collider.player_body",
+          "shape": "CAPSULE",
+          "trigger": false,
+          "radiusMeters": 0.4,
+          "heightMeters": 1.8
+        }
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "semanticId": "constraint.player_ground",
+      "kind": "CONSTRAINT",
+      "references": [
+        "entity.player",
+        "physics.player_body"
+      ],
+      "constraintType": "ground-contact",
+      "sourceId": "entity.player",
+      "targetId": "physics.player_body",
+      "parameters": {
+        "maxSlopeRadians": 0.7853981634
+      }
+    }
+  ],
+  "animations": [
+    {
+      "semanticId": "animation.player_idle",
+      "kind": "ANIMATION",
+      "references": [
+        "entity.player"
+      ],
+      "targetIds": [
+        "entity.player"
+      ],
+      "durationSeconds": 2,
+      "provenance": {
+        "source": {
+          "kind": "DERIVED",
+          "uri": "asset://animation/player-idle.glb"
+        },
+        "license": {
+          "name": "Project-owned",
+          "attributionRequired": false
+        },
+        "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "derivations": [
+          {
+            "operation": "retarget",
+            "tool": "external-animation-tool",
+            "toolVersion": "1.0.0",
+            "inputHashes": [
+              "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            ],
+            "parametersDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "outputHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ]
+      }
+    }
+  ],
+  "vfx": [
+    {
+      "semanticId": "vfx.player_spawn",
+      "kind": "VFX",
+      "references": [
+        "entity.player",
+        "material.player"
+      ],
+      "ownerEntityId": "entity.player",
+      "materialIds": [
+        "material.player"
+      ],
+      "emitters": [
+        {
+          "semanticRole": "EMITTER",
+          "emitterId": "emitter.player_spawn",
+          "ratePerSecond": 8,
+          "maxParticles": 128,
+          "enabled": true
+        }
+      ],
+      "provenance": {
+        "source": {
+          "kind": "GENERATED",
+          "uri": "asset://vfx/player-spawn.json"
+        },
+        "license": {
+          "name": "Project-owned",
+          "attributionRequired": false
+        },
+        "hash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "derivations": [
+          {
+            "operation": "generate",
+            "tool": "external-vfx-tool",
+            "inputHashes": [],
+            "parametersDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "outputHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          }
+        ]
+      }
+    }
+  ],
+  "timelines": [
+    {
+      "semanticId": "timeline.intro",
+      "kind": "TIMELINE",
+      "references": [
+        "animation.player_idle"
+      ],
+      "durationSeconds": 2,
+      "tracks": [
+        {
+          "semanticRole": "TRACK",
+          "trackId": "intro-player-idle",
+          "trackType": "ANIMATION",
+          "targetId": "animation.player_idle",
+          "clips": [
+            {
+              "semanticRole": "CLIP",
+              "clipId": "clip.player_idle",
+              "targetId": "animation.player_idle",
+              "startSeconds": 0,
+              "endSeconds": 2
+            }
+          ],
+          "events": [
+            {
+              "semanticRole": "EVENT",
+              "eventId": "event.intro_started",
+              "eventType": "INTRO_STARTED",
+              "atSeconds": 0,
+              "payload": {
+                "phase": "intro"
+              }
+            }
+          ],
+          "keyframes": [
+            {
+              "atSeconds": 0,
+              "value": {
+                "weight": 1
+              }
+            },
+            {
+              "atSeconds": 2,
+              "value": {
+                "weight": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "semanticId": "input.player",
+      "kind": "INPUT",
+      "references": [
+        "entity.player"
+      ],
+      "contextEntityId": "entity.player",
+      "actions": [
+        {
+          "actionId": "move",
+          "bindings": [
+            "keyboard:wasd",
+            "gamepad:left-stick"
+          ]
+        }
+      ]
+    }
+  ],
+  "saves": [
+    {
+      "semanticId": "save.main",
+      "kind": "SAVE",
+      "references": [
+        "entity.player",
+        "physics.player_body"
+      ],
+      "semanticRole": "GAME_STATE",
+      "strategy": "HYBRID",
+      "schemaRevision": "1",
+      "stateSemanticIds": [
+        "entity.player",
+        "physics.player_body"
+      ]
+    }
+  ],
+  "networks": [
+    {
+      "semanticId": "network.local",
+      "kind": "NETWORK",
+      "references": [],
+      "mode": "OFFLINE",
+      "authority": "NONE",
+      "replicatedSemanticIds": [],
+      "tickRateHz": 0
+    }
+  ],
+  "builds": [
+    {
+      "semanticId": "build.web",
+      "kind": "BUILD",
+      "references": [
+        "animation.player_idle",
+        "audio.ambience",
+        "scene.main",
+        "texture.player_albedo",
+        "vfx.player_spawn"
+      ],
+      "target": "web",
+      "entrySceneId": "scene.main",
+      "assetIds": [
+        "animation.player_idle",
+        "audio.ambience",
+        "texture.player_albedo",
+        "vfx.player_spawn"
+      ],
+      "options": {
+        "optimization": "balanced",
+        "sourceMaps": false
+      }
+    }
+  ]
+}

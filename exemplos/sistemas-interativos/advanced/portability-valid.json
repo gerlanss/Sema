@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "sema.interactive.portability/v1",
+  "planId": "portability.unreal.unity",
+  "systemId": "interactive.system",
+  "experienceIrDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "source": {
+    "engine": "Unreal",
+    "version": "5.6.0",
+    "snapshotDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "coordinateSystem": "centimeter left-handed Z-up"
+  },
+  "sourceManifest": {
+    "experienceIrDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "snapshotDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "entries": [
+      {
+        "semanticId": "vehicle.crewed",
+        "sourceKind": "Actor.Transform",
+        "contentDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "required": true
+      },
+      {
+        "semanticId": "vfx.reentry.plasma",
+        "sourceKind": "NiagaraSystem",
+        "contentDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "required": true
+      },
+      {
+        "semanticId": "audio.reentry.dynamic",
+        "sourceKind": "MetaSound",
+        "contentDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "required": true
+      }
+    ],
+    "manifestDigest": "sha256:34f89b97cd0304af40783e6e4f7ee7c2fd079b5d831917f7e11bfbd8db0ca025"
+  },
+  "targets": [
+    {
+      "targetId": "target.unity",
+      "engine": "Unity",
+      "version": "6.0.0",
+      "outputFormat": "USD plus sidecars",
+      "mappings": [
+        {
+          "mappingId": "mapping.transform",
+          "semanticId": "vehicle.crewed",
+          "sourceKind": "Actor.Transform",
+          "targetKind": "GameObject.Transform",
+          "status": "EXACT",
+          "losses": [],
+          "acceptanceCriteria": ["world transform preserved within tolerance"]
+        },
+        {
+          "mappingId": "mapping.niagara",
+          "semanticId": "vfx.reentry.plasma",
+          "sourceKind": "NiagaraSystem",
+          "targetKind": "VFXGraph",
+          "status": "APPROXIMATE",
+          "losses": ["renderer_module_mapping", "curve_precision"],
+          "fallback": "bake curves and rebuild unsupported modules",
+          "acceptanceCriteria": ["timing and bounds preserved", "visual review required"]
+        },
+        {
+          "mappingId": "mapping.metasound",
+          "semanticId": "audio.reentry.dynamic",
+          "sourceKind": "MetaSound",
+          "targetKind": "AudioMixerGraph",
+          "status": "UNSUPPORTED",
+          "losses": ["procedural_audio_graph"],
+          "fallback": "render stems and preserve event sidecar",
+          "acceptanceCriteria": ["event timing preserved", "user accepts non-procedural fallback"]
+        }
+      ]
+    }
+  ],
+  "migrations": [
+    {
+      "migrationId": "migration.unreal.55.56",
+      "targetId": "target.unity",
+      "engine": "Unreal",
+      "fromVersion": "5.5.0",
+      "toVersion": "5.6.0",
+      "backupDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "compatibilityReportDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "testPlanDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "rollbackPlanDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    }
+  ],
+  "acceptance": {
+    "maxUnsupportedPerTarget": 1,
+    "allowApproximate": true,
+    "requiredEvidence": [
+      "import.scene",
+      "import.assets",
+      "import.materials",
+      "import.animation",
+      "import.physics",
+      "import.audio",
+      "import.timeline",
+      "package.build",
+      "runtime.smoke"
+    ]
+  }
+}

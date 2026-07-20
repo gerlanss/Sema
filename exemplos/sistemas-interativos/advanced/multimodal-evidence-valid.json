@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "sema.interactive.multimodal-evidence/v1",
+  "evidenceId": "evidence.multimodal",
+  "runId": "run.validation",
+  "claimId": "claim.render.quality",
+  "definitionDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "planDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "contractDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "claimBindingDigest": "sha256:1525382b87d90d5a5f7277790e0b88383cd17bf3ddb749f5f7640d18fba4c810",
+  "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sceneId": "scene.main",
+  "timeRange": { "start": 0, "end": 10, "unit": "SECOND" },
+  "requiredModalities": ["SCREENSHOT", "VIDEO", "DEPTH", "NORMALS", "OBJECT_ID", "MOTION", "TRANSFORMS", "EVENTS", "AUDIO", "TELEMETRY"],
+  "channels": [
+    { "channelId": "channel.screenshot", "type": "SCREENSHOT", "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "mediaType": "image/png", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 1 },
+    { "channelId": "channel.video", "type": "VIDEO", "artifactDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "mediaType": "video/mp4", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 2 },
+    { "channelId": "channel.depth", "type": "DEPTH", "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "mediaType": "application/json", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 3 },
+    { "channelId": "channel.normals", "type": "NORMALS", "artifactDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "mediaType": "application/json", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 4 },
+    { "channelId": "channel.object_id", "type": "OBJECT_ID", "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "mediaType": "image/png", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 5 },
+    { "channelId": "channel.motion", "type": "MOTION", "artifactDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "mediaType": "application/json", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 6 },
+    { "channelId": "channel.transforms", "type": "TRANSFORMS", "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "mediaType": "application/json", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 7 },
+    { "channelId": "channel.events", "type": "EVENTS", "artifactDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "mediaType": "application/json", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 8 },
+    { "channelId": "channel.audio", "type": "AUDIO", "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "mediaType": "audio/wav", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 9 },
+    { "channelId": "channel.telemetry", "type": "TELEMETRY", "artifactDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "mediaType": "application/json", "metadataDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sampleCount": 10 }
+  ],
+  "producer": {
+    "producerIdDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "producerType": "ENGINE",
+    "version": "1.0.0",
+    "configurationDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "verifier": {
+    "verifierIdDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "verifierType": "MODEL",
+    "version": "1.0.0",
+    "independent": true,
+    "configurationDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "decision": {
+    "verdict": "PASS",
+    "reasonCodes": ["geometry_ok", "timing_ok"],
+    "confidenceBasisPoints": 9500
+  },
+  "observedAt": "2026-07-20T03:30:00.000Z",
+  "authoritative": false
+}

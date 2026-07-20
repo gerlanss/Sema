@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.simulation.headless.autonomous-batch",
+  "version": "1.0.0",
+  "kind": "SIMULATION",
+  "spatialModel": "NON_SPATIAL",
+  "renderMode": "HEADLESS",
+  "visualProfile": "NONE",
+  "fidelity": "SYSTEMIC",
+  "controlModes": [
+    "AUTONOMOUS"
+  ],
+  "timeModel": "BATCH",
+  "determinism": "STRICT",
+  "capabilities": [
+    "interactive.control.autonomous",
+    "interactive.determinism.strict",
+    "interactive.event.log",
+    "interactive.fidelity.systemic",
+    "interactive.kind.simulation",
+    "interactive.render.headless",
+    "interactive.replay.compare",
+    "interactive.seed.bind",
+    "interactive.snapshot.capture",
+    "interactive.spatial.non_spatial",
+    "interactive.state.model",
+    "interactive.time.batch",
+    "interactive.visual.none",
+    "interactive.world.model",
+    "simulation.batch.aggregate",
+    "simulation.batch.plan",
+    "simulation.batch.seed",
+    "simulation.hazard.model",
+    "simulation.invariants.validate",
+    "simulation.model",
+    "simulation.outputs.compare",
+    "simulation.outputs.observe",
+    "simulation.recovery.plan",
+    "simulation.scenario.define",
+    "simulation.stop.validate",
+    "simulation.validity.report"
+  ],
+  "pipelines": [
+    "simulation.scenario",
+    "simulation.batch_run",
+    "simulation.validate",
+    "simulation.safety",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "simulation.runner.generic",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "autonomous headless supply-network batch",
+    "state": {
+      "scenarioIndex": 0,
+      "completedRuns": 0
+    },
+    "time": {
+      "horizonDays": 365,
+      "batchRuns": 1000
+    },
+    "events": [
+      "shipment.dispatch",
+      "shipment.arrive",
+      "facility.disrupt"
+    ],
+    "initialConditions": {
+      "inventoryDataset": "fixture.inventory-baseline-v1",
+      "scenarioMatrix": "fixture.disruption-matrix-v1"
+    },
+    "model": "discrete-event multi-echelon supply network",
+    "assumptions": [
+      "lead-time distributions are stationary within a scenario"
+    ],
+    "boundaryConditions": {
+      "maximumFacilities": 500,
+      "horizonDays": 365
+    },
+    "outputs": [
+      "serviceLevel",
+      "stockoutDays",
+      "totalCost"
+    ],
+    "validation": {
+      "method": "validate every batch member before deterministic aggregation",
+      "invariants": ["inventory is finite", "completed runs do not exceed matrix size"]
+    },
+    "seed": 2026071903,
+    "snapshot": "model state and random stream before each batch member",
+    "replay": "scenario parameters, seed, and ordered discrete events",
+    "step": "advance to the next discrete event",
+    "stopCriteria": [
+      "all 1000 batch members complete",
+      "a declared invariant fails"
+    ],
+    "safetyConstraints": [
+      "a run cannot allocate more than 500 facilities",
+      "a failed invariant terminates only its current batch member"
+    ]
+  },
+  "acceptance": {
+    "determinism": "each scenario and seed pair reproduces its result digest",
+    "aggregation": "aggregate output reports sample count and failed-run count",
+    "invariants": [
+      "inventory is never NaN",
+      "completed run count never exceeds the matrix size"
+    ]
+  }
+}

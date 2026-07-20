@@ -25,6 +25,7 @@ import {
   type PoliticaPlataformaAgentContext,
   type PoliticaTimeoutResumoAgentContext,
 } from './agentContextTipos.js';
+import { criarResumoDescobertaAgentContext } from "./discovery/index.js";
 
 export const LIMITE_CARACTERES_PAYLOAD_INLINE = 262144;
 
@@ -320,7 +321,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
 
   return {
     nome: "Agent Context Pack",
-    versao: 6,
+    versao: 7,
     objetivo: "Dar a agentes IA uma entrada curta, estruturada e auditável antes de abrir código cru ou inventar contexto.",
     ordemLeitura: [
       ARQUIVO_SEMA_BOOT,
@@ -337,6 +338,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       "Leia SEMA_BOOT.md antes de qualquer outro artefato de IA.",
       "Leia AGENTS.md antes de editar código, contrato, docs operacionais, release ou deploy.",
       "Leia docs/commands.md antes de escolher comando Sema, interpretar um gate ou usar --saida de sema compilar.",
+      "Quando a intenção não deixar claro qual profile, workflow, pipeline, gerador ou adapter usar, rode `sema descobrir recomendar --intencao \"<objetivo>\" --json`; a recomendação informa, mas nunca se autoexecuta.",
       "Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, use diretamente sema resumo, docs-impacto, inspecionar, drift e impacto sobre a pasta local.",
       "Antes de editar, rode `sema inspecionar <contrato.sema> --json`, `sema drift <contrato.sema> --escopo modulo --json` e `sema impacto <contrato.sema> --alvo <token> --mudanca \"<descricao>\" --json`.",
       "Use exemplos oficiais antes de criar ou corrigir sintaxe .sema.",
@@ -359,6 +361,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     ],
     proibicoes: [
       "Não inventar sintaxe Sema fora da gramática e dos exemplos oficiais.",
+      "Não adivinhar nem executar automaticamente uma capacidade quando discovery reportar no-match, ambiguidade ou inputs ausentes.",
       "Não tratar README, texto livre ou código como fonte superior ao contrato.",
       "Não substituir os gates da CLI Sema por README.md, busca local, inferência pelo nome do projeto ou bom senso.",
       "Não tratar a pasta --saida de sema compilar como entrega final; entrega são os arquivos alvo/vínculos do contrato.",
@@ -382,6 +385,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     ],
     prioridades: [
       "Menor artefato suficiente primeiro.",
+      "Catálogo de discovery antes de escolher por chute entre profile, workflow, pipeline, gerador ou adapter.",
       "Workspace local: sema --version, resumo, docs-impacto, inspecionar, drift e impacto pela CLI; se sema não existir, pare e peça a instalação da CLI.",
       "Contrato, índice e AGENTS complementam o contexto Sema; não substituem chamada Sema.",
       "Exemplos oficiais antes de nova sintaxe.",
@@ -396,6 +400,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       "Se risco ou escopo estiver ambíguo, parar e pedir contrato/contexto.",
     ],
     fontes,
+    descoberta: criarResumoDescobertaAgentContext(),
     exemplosOficiais: [...EXEMPLOS_OFICIAIS_AGENT_CONTEXT],
     textoBrutoSobDemanda: Object.fromEntries(
       fontes.map((fonte) => [fonte.caminho, fonte.incluirTextoBrutoQuando]),

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "sema.interactive.playtest-fuzz/v1",
+  "planId": "playtest.fuzz.1",
+  "systemId": "interactive.system",
+  "definitionDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "inputActions": [
+    { "actionId": "input.move_x", "type": "AXIS", "minimum": -1, "maximum": 1 },
+    { "actionId": "input.confirm", "type": "BUTTON", "minimum": 0, "maximum": 1 }
+  ],
+  "bots": [
+    {
+      "botId": "bot.explorer.42",
+      "strategy": "EXPLORER",
+      "seed": 42,
+      "maxSteps": 1000,
+      "permissions": ["input.move_x", "input.confirm"]
+    }
+  ],
+  "stateCheckpoints": [
+    { "checkpointId": "checkpoint.before", "phase": "BEFORE", "stateDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222" },
+    { "checkpointId": "checkpoint.after", "phase": "AFTER", "stateDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333" }
+  ],
+  "saveLoadCases": [
+    { "caseId": "case.normal", "type": "NORMAL", "sourceCheckpointId": "checkpoint.before", "targetCheckpointId": "checkpoint.after", "sandboxOnly": true, "originalImmutable": true },
+    { "caseId": "case.corrupt", "type": "CORRUPT_RECOVERY", "sourceCheckpointId": "checkpoint.before", "targetCheckpointId": "checkpoint.after", "sandboxOnly": true, "originalImmutable": true },
+    { "caseId": "case.migration", "type": "VERSION_MIGRATION", "sourceCheckpointId": "checkpoint.before", "targetCheckpointId": "checkpoint.after", "sandboxOnly": true, "originalImmutable": true }
+  ],
+  "fuzzBounds": {
+    "maxSteps": 10000,
+    "maxRuntimeSeconds": 300,
+    "maxMemoryMb": 2048,
+    "maxDiskMb": 1024,
+    "maxCases": 100
+  },
+  "stopCriteria": ["CRASH", "HANG", "RESOURCE_EXHAUSTION", "INVARIANT_FAILURE"],
+  "evidenceRequirements": ["runtime.boot", "runtime.loop", "runtime.failure", "runtime.replay", "state.digest", "crash.trace"]
+}

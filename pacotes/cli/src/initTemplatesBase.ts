@@ -98,14 +98,15 @@ Antes de alterar codigo, contrato ou documentacao:
 3. rode \`sema resumo\`;
 4. rode \`sema docs-impacto --intencao "<acao>" --json\`;
 5. leia \`docs/commands.md\` antes de escolher comando ou interpretar \`--saida\`;
-6. use \`exemplos/\` e \`docs/syntax.md\` antes de criar ou corrigir \`.sema\`.
+6. use \`sema descobrir recomendar --intencao "<objetivo>" --json\` quando não souber qual capacidade ou pipeline aplicar;
+7. use \`exemplos/\` e \`docs/syntax.md\` antes de criar ou corrigir \`.sema\`.
 
 ## Estrutura criada
 
 - \`contratos/\`: contratos semanticamente governados.
 - \`AGENTS.md\`: entrypoint oficial do Codex.
 - \`exemplos/\`: exemplos oficiais da DSL Sema.
-- \`docs/commands.md\`: catalogo de comandos, gates e regra de \`--saida\`.
+- \`docs/commands.md\`: catalogo de comandos, pipelines, gates e regra de \`--saida\`.
 - \`docs/syntax.md\`: referencia curta para escrever \`.sema\`.
 - \`docs/ai-workflow.md\`: fluxo minimo para agentes.
 - \`SEMA_BOOT.md\`, \`SEMA_SMALL_MODEL.md\`, \`AGENT_CONTEXT_PACK.json\` e \`SEMA_INDEX.json\`: contexto IA-first.

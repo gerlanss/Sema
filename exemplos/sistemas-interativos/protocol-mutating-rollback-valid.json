@@ -1,0 +1,75 @@
+{
+  "runId": "fixture.protocol.mutating-rollback.001",
+  "adapterId": "engine.godot",
+  "adapterVersion": "1.0.0",
+  "semanticTargetId": "example.game.3d.human",
+  "phases": [
+    {
+      "phaseId": "mutating.detect",
+      "phase": "DETECT",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "mutating.probe",
+      "phase": "PROBE",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "mutating.snapshot",
+      "phase": "SNAPSHOT",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "mutating.plan",
+      "phase": "PLAN",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "mutating.apply",
+      "phase": "APPLY",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "mutating.validate",
+      "phase": "VALIDATE",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": false
+    },
+    {
+      "phaseId": "mutating.evidence",
+      "phase": "EVIDENCE",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    },
+    {
+      "phaseId": "mutating.rollback",
+      "phase": "ROLLBACK",
+      "semanticTargetId": "example.game.3d.human",
+      "inputDigest": "sha256:8faad66a2e59a27af6bbc6e1421493a2f3758f376515c44e2e16fbcb340ac082",
+      "outputDigest": "sha256:4f135cff766c846e90720c6e50676c37a7b98023bbe7b1ef6b3fa46fd54ffc2d",
+      "success": true
+    }
+  ],
+  "mutated": true,
+  "success": false,
+  "rollbackEvidenceId": "fixture.rollback.observed.001"
+}

@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0",
+  "systemId": "example.game.2d.seeded",
+  "version": "1.0.0",
+  "kind": "GAME",
+  "spatialModel": "TWO_D",
+  "renderMode": "VISUAL",
+  "visualProfile": "VECTOR",
+  "fidelity": "SYSTEMIC",
+  "controlModes": [
+    "HUMAN"
+  ],
+  "timeModel": "FIXED_STEP",
+  "determinism": "SEEDED",
+  "capabilities": [
+    "interactive.control.human",
+    "interactive.determinism.seeded",
+    "interactive.event.log",
+    "interactive.fidelity.systemic",
+    "interactive.kind.game",
+    "interactive.render.visual",
+    "interactive.replay.compare",
+    "interactive.runtime.bind",
+    "interactive.seed.bind",
+    "interactive.smoke.observe",
+    "interactive.snapshot.capture",
+    "interactive.spatial.two_d",
+    "interactive.state.model",
+    "interactive.time.fixed_step",
+    "interactive.visual.vector",
+    "interactive.world.model"
+  ],
+  "pipelines": [
+    "interactive.prototype",
+    "interactive.replay"
+  ],
+  "adapterTargets": [
+    "engine.web.canvas2d",
+    "telemetry.trace.local",
+    "validator.replay.local"
+  ],
+  "world": {
+    "identity": "top-down logistics puzzle",
+    "state": {
+      "grid": "warehouse-a",
+      "moves": 0
+    },
+    "time": {
+      "fixedStepMs": 16.6667
+    },
+    "events": [
+      "crate.move",
+      "route.complete",
+      "route.blocked"
+    ],
+    "initialConditions": {
+      "level": "warehouse-a",
+      "moves": 0
+    },
+    "coordinateSystem": "screen-space origin top-left",
+    "grid": "32 px orthogonal cells",
+    "loop": "inspect, route, move, verify",
+    "objective": "place every crate on a destination",
+    "successConditions": [
+      "all destinations occupied"
+    ],
+    "failureConditions": [
+      "no legal move remains"
+    ],
+    "rules": [
+      "one crate per destination",
+      "crates cannot overlap"
+    ],
+    "seed": 20260719,
+    "snapshot": "state captured before every move",
+    "replay": "ordered input events reproduce the run",
+    "step": "one fixed simulation tick"
+  },
+  "acceptance": {
+    "determinism": "same seed and inputs produce the same result digest",
+    "rendering": "world remains legible at the declared grid scale"
+  }
+}

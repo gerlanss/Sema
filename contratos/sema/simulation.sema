@@ -1,0 +1,259 @@
+module sema.produto.simulation {
+  docs {
+    resumo: "Profile Simulation para agentes validarem simuladores com contrato primeiro. Modelo espacial e modo de renderizacao sao ortogonais, permitindo 3D headless; 8/16-bit continua visual profile, sem confundir apresentacao com fidelidade."
+    arquivo: "contratos/sema/sistemas_interativos.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  vinculos {
+    arquivo: "pacotes/cli/src/profileCommand.ts"
+    arquivo: "pacotes/cli/src/profileCatalogo.ts"
+    arquivo: "pacotes/cli/src/profileArtefatoValidadores.ts"
+    simbolo: validarProfileSemantico
+  }
+
+  type ModeloSimulacao {
+    fields {
+      objetivo: Texto
+      modelo: Texto
+      assumptions: Lista
+      condicoes_iniciais: Lista
+      condicoes_contorno: Lista
+      outputs: Lista
+      unidades: Lista
+      incerteza: Texto
+      validation: Texto
+    }
+    invariants {
+      objetivo existe
+      modelo existe
+      assumptions existe
+      condicoes_iniciais existe
+      condicoes_contorno existe
+      outputs existe
+      unidades existe
+      incerteza existe
+      validation existe
+    }
+  }
+
+  task validar_modelo_simulacao {
+    input {
+      objetivo: Texto required
+      modelo: Texto required
+      assumptions: Lista required
+      condicoes_iniciais: Lista required
+      condicoes_contorno: Lista required
+      outputs: Lista required
+      unidades: Lista required
+      spatial_model: Texto required
+      render_mode: Texto required
+      visual_profile: Texto required
+      validation: Texto required
+      controle: Texto required
+      tempo: Texto required
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      aprovado: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      bloqueios: Lista
+    }
+    rules {
+      objetivo deve_ser preenchido
+      modelo deve_ser testavel
+      assumptions deve_ser nao_vazio
+      condicoes_iniciais deve_ser nao_vazio
+      condicoes_contorno deve_ser nao_vazio
+      outputs deve_ser observaveis
+      unidades deve_ser explicitas
+      spatial_model deve_ser em [NON_SPATIAL, TWO_D, TWO_POINT_FIVE_D, THREE_D]
+      render_mode deve_ser em [HEADLESS, TEXT, VISUAL, XR]
+      visual_profile deve_ser em [NONE, PIXEL_8_BIT, PIXEL_16_BIT, RASTER, VECTOR, STYLIZED, REALISTIC]
+      validation deve_ser testavel
+      render_mode deve_ser exigir_spatial_model_THREE_D_quando_XR
+      render_mode deve_ser exigir_visual_profile_NONE_quando_HEADLESS_ou_TEXT
+      controle deve_ser em [HUMAN, SCRIPTED, AI, HYBRID, AUTONOMOUS, UNCONTROLLED]
+      tempo deve_ser explicito
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria simulation_modelo criticidade = alta
+    }
+    authz {
+      escopo: sema.profile.simulation.validar_modelo
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.profile.simulation_modelo_validado
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      modelo_sem_assumptions
+      simulacao_sem_condicoes_iniciais_ou_contorno
+      output_nao_observavel
+      unidade_implicita_em_modelo_fisico
+      pixel_art_ser_tratado_como_baixa_validade
+      tres_dimensoes_ser_tratadas_como_realismo_automatico
+      confundir_spatial_model_com_render_mode
+      aprovar_mencao_negativa_como_requisito_atendido
+    }
+    impl {
+      ts: cli.src.profile_command.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profileCommand.ts"
+      simbolo: validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      bloqueios existe
+    }
+    tests {
+      caso "simulacao 2D controlada declara modelo" {
+        given {
+          objetivo: "avaliar fluxo de trafego"
+          modelo: "agentes em grid"
+          assumptions: "velocidade limitada"
+          condicoes_iniciais: "100 agentes e mapa inicial"
+          condicoes_contorno: "bordas fechadas"
+          outputs: "tempo medio e congestionamento"
+          unidades: "segundos metros agentes"
+          spatial_model: "TWO_D"
+          render_mode: "VISUAL"
+          visual_profile: "PIXEL_16_BIT"
+          validation: "comparar outputs com baseline e tolerancias"
+          controle: "HUMAN"
+          tempo: "FIXED_STEP"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+
+  task validar_fidelidade_simulacao {
+    input {
+      fidelity: Texto required
+      referencia: Texto required
+      calibracao: Texto required
+      tolerancias: Texto required
+      incerteza: Texto required
+      telemetria: Texto required
+      replay: Texto
+      artefato_real: Texto
+      preset: Texto
+    }
+    output {
+      aprovado: Booleano
+      score_artefato: Decimal
+      achados_artefato: Lista
+      decisao_agente: Texto
+      risco_validade: Texto
+    }
+    rules {
+      fidelity deve_ser em [ARCADE, STYLIZED, SYSTEMIC, REALISTIC, CALIBRATED]
+      referencia deve_ser rastreavel
+      calibracao deve_ser reproduzivel
+      tolerancias deve_ser numericas_e_justificadas
+      incerteza deve_ser declarada
+      telemetria deve_ser observavel
+      replay deve_ser fornecido_quando_determinismo_for_exigido
+      artefato_real deve_ser comparado_quando_fornecido
+      artefato_real deve_ser interpretado_com_negacao_quando_fornecido
+      preset deve_ser especializado_quando_fornecido
+    }
+    effects {
+      auditoria simulation_fidelidade criticidade = alta
+      evento simulation_profile_validado criticidade = baixa
+    }
+    authz {
+      escopo: sema.profile.simulation.validar_fidelidade
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.profile.simulation_fidelidade_validada
+      ator: auth.agente
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      realistic_true_sem_referencia
+      calibracao_sem_dataset_ou_metodo
+      tolerancia_sem_unidade
+      esconder_incerteza
+      aprovar_validade_por_aparencia_visual
+      aprovar_determinismo_sem_seed_snapshot_e_replay
+      aprovar_mencao_negativa_como_requisito_atendido
+    }
+    impl {
+      ts: cli.src.profile_command.validarProfileSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/profileCommand.ts"
+      simbolo: validarProfileSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      aprovado existe
+      score_artefato >= 0
+      score_artefato deve_ser menor_que_100_quando_requisito_declarado_ausente
+      achados_artefato existe
+      decisao_agente em [continuar, continuar_com_ressalva, parar, chamar_humano]
+      risco_validade existe
+    }
+    tests {
+      caso "realismo exige calibracao" {
+        given {
+          fidelity: "CALIBRATED"
+          referencia: "dataset versionado"
+          calibracao: "metodo reproduzivel"
+          tolerancias: "erro <= 2 por cento"
+          incerteza: "intervalo de confianca"
+          telemetria: "metricas por tick"
+          replay: "seed snapshot event log"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          aprovado: verdadeiro
+        }
+      }
+    }
+  }
+}

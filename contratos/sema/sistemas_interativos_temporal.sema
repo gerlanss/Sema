@@ -1,0 +1,292 @@
+module sema.produto.sistemas_interativos.temporal {
+  docs {
+    resumo: "Contratos 4D, timeline multimodal, camera, fisica, QA temporal, build limpo e budgets de hardware para jogos, simulacoes e hibridos. A validacao local confere estrutura e cobertura; runners externos produzem as observacoes e a atestacao final."
+    arquivo: "contratos/sema/sistemas_interativos.sema"
+    arquivo: "contratos/sema/sistemas_interativos_evidencias.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type ContratoTemporalInterativo {
+    fields {
+      schema_version: Texto
+      contract_id: Texto
+      system_id: Texto
+      experience_ir_digest: Texto
+      coordinate_system: Objeto
+      phases: Lista
+      tracks: Lista
+      invariants: Lista
+      shots: Lista
+      physics: Lista
+      temporal_qa: Objeto
+      build_acceptance: Objeto
+      hardware_targets: Lista
+    }
+    invariants {
+      schema_version existe
+      contract_id existe
+      system_id existe
+      experience_ir_digest existe
+      coordinate_system existe
+      phases existe
+      tracks existe
+      invariants existe
+      shots existe
+      physics existe
+      temporal_qa existe
+      build_acceptance existe
+      hardware_targets existe
+    }
+  }
+
+  type BundleVerificacaoTemporal {
+    fields {
+      schema_version: Texto
+      run_id: Texto
+      contract_digest: Texto
+      producer_id: Texto
+      producer_version: Texto
+      producer_configuration_digest: Texto
+      verifier_id: Texto
+      verifier_version: Texto
+      verifier_configuration_digest: Texto
+      independent_of_producer: Booleano
+      observations: Lista
+    }
+    invariants {
+      schema_version existe
+      run_id existe
+      contract_digest existe
+      producer_id existe
+      producer_version existe
+      producer_configuration_digest existe
+      verifier_id existe
+      verifier_version existe
+      verifier_configuration_digest existe
+      independent_of_producer existe
+      observations existe
+    }
+  }
+
+  task validar_contrato_temporal_interativo {
+    input {
+      contrato: ContratoTemporalInterativo required
+    }
+    output {
+      valido: Booleano
+      contract_digest: Texto
+      required_check_ids: Lista<Texto>
+      bloqueios: Lista<Texto>
+      executed: Booleano
+      authoritative: Booleano
+    }
+    rules {
+      contrato deve_ser ter_schema_version_sema_interactive_temporal_v1
+      contrato deve_ser ter_experience_ir_digest_sha256
+      contrato deve_ser ter_coordinate_system_com_unit_handedness_up_axis_forward_axis
+      contrato deve_ser ter_ids_semanticos_unicos_e_referencias_resolvidas
+      contrato deve_ser ter_phases_ordenadas_com_inicio_menor_que_fim
+      contrato deve_ser ter_tracks_em [TRANSFORM, ANIMATION, VFX, AUDIO, SPEECH, SUBTITLE, EVENT]
+      contrato deve_ser ligar_clips_a_phase_target_e_intervalo_validos
+      contrato deve_ser ter_invariants_em [ORDER, SYNC, VISIBILITY, BOUNDS, NO_OVERLAP, CONTINUITY]
+      contrato deve_ser ter_shots_com_camera_subjects_intervalo_visibilidade_composicao_e_jitter
+      contrato deve_ser ter_physics_em [COLLISION, ATTACHMENT, SEPARATION, CONSTRAINT]
+      contrato deve_ser ligar_physics_a_targets_distintos_intervalo_e_tolerancia
+      contrato deve_ser ter_checks_de_flicker_ghosting_popping_exposure_e_jitter_com_thresholds
+      contrato deve_ser exigir_build_installacao_limpa_launch_e_smoke_playtest_quando_build_for_requisito
+      contrato deve_ser ter_hardware_targets_com_resolucao_fps_frame_time_ram_vram_e_disco
+      contrato deve_ser aceitar_modelo_espacial_ou_perfil_visual_sem_regras_especiais_de_engine
+      contrato deve_ser produzir_digest_canonico_e_required_check_ids_estaveis
+      contrato deve_ser rejeitar_campo_top_level_desconhecido_e_valor_sensivel
+    }
+    effects {
+      auditoria contrato_temporal_interativo_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.temporal.contrato.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.interativo.temporal_contrato_validado
+      ator: auth.agente
+      correlacao: contract_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      usar_frame_sem_timebase
+      ligar_clip_a_phase_ou_target_inexistente
+      aceitar_camera_sem_subject
+      aceitar_fisica_sem_tolerancia
+      tratar_screenshot_unico_como_prova_temporal
+      tratar_build_como_smoke_playtest
+      declarar_hardware_aprovado_sem_medicao
+      executar_engine_editor_video_ou_build
+      ecoar_id_caminho_token_secret_ou_valor_invalido
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.temporal.validarContratoTemporalInterativo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/temporal.ts"
+      simbolo: cli.src.sistemas_interativos.temporal.validarContratoTemporalInterativo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      contract_digest existe
+      required_check_ids existe
+      bloqueios existe
+      executed == falso
+      authoritative == falso
+      valido != falso ou bloqueios existe
+    }
+    tests {
+      caso "timeline multimodal liga camera fisica e hardware" {
+        given {
+          contrato: "phase descent com VFX AUDIO SPEECH SUBTITLE shot camera capsule separation splash e RTX3060_1080p60"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: verdadeiro
+          executed: falso
+        }
+      }
+    }
+  }
+
+  task validar_bundle_verificacao_temporal {
+    input {
+      contrato: ContratoTemporalInterativo required
+      bundle: BundleVerificacaoTemporal required
+    }
+    output {
+      valido: Booleano
+      contract_digest: Texto
+      bundle_digest: Texto
+      result_digest: Texto
+      checks_aceitos: Lista<Texto>
+      checks_ausentes: Lista<Texto>
+      checks_falhos: Lista<Texto>
+      diagnostics: Lista
+      next_actions: Lista<Texto>
+      completed: Booleano
+      local_coverage_complete: Booleano
+      awaiting_external_attestation: Booleano
+      completion_scope: Texto
+      authoritative: Booleano
+      executed: Booleano
+    }
+    rules {
+      bundle deve_ser ter_schema_version_sema_interactive_temporal_evidence_v1
+      bundle deve_ser ligar_contract_digest_exato
+      bundle deve_ser ter_producer_e_verifier_com_id_version_e_configuration_digest
+      bundle deve_ser ter_verifier_id_distinto_do_producer_id_e_independencia_declarada
+      bundle deve_ser ter_observation_ids_e_check_ids_unicos
+      bundle deve_ser cobrir_required_check_ids_do_contrato
+      bundle deve_ser ter_decision_em [PASS, FAIL, INCONCLUSIVE]
+      bundle deve_ser ter_evidence_types_multimodais_e_artifact_digests_sha256
+      bundle deve_ser exigir_duas_ou_mais_amostras_ou_trace_para_check_temporal
+      bundle deve_ser exigir_depth_normals_object_id_transform_ou_collision_trace_quando_geometria_for_claim
+      bundle deve_ser exigir_audio_trace_e_timeline_event_quando_audio_ou_fala_for_claim
+      bundle deve_ser exigir_metricas_com_unidades_e_thresholds_para_qa_e_hardware
+      bundle deve_ser ligar_metricas_aos_thresholds_unidades_e_direcoes_do_contrato
+      bundle deve_ser rejeitar_numero_negativo_excessivo_ou_decision_incoerente_com_metricas
+      bundle deve_ser exigir_install_launch_e_smoke_distintos_para_build
+      bundle deve_ser produzir_diagnostics_com_failed_invariant_phase_frame_time_e_evidence_ids_validados
+      bundle deve_ser produzir_next_actions_deterministicas_sem_aplicar_patch
+      bundle deve_ser produzir_bundle_digest_e_result_digest_canonicos
+      bundle deve_ser manter_completed_false_e_authoritative_false
+      bundle deve_ser rejeitar_campo_top_level_desconhecido_e_valor_sensivel_sem_ecoa
+      bundle deve_ser zerar_checks_aceitos_e_handoff_externo_quando_houver_bloqueio_estrutural
+    }
+    effects {
+      auditoria bundle_temporal_interativo_validado criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.temporal.evidencias.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.interativo.temporal_evidencias_validadas
+      ator: auth.agente
+      correlacao: run_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      verifier_produtor_aprovar_a_si_mesmo
+      aceitar_independencia_apenas_por_booleano_sem_identidades_distintas
+      screenshot_isolado_provar_ordem_movimento_ou_fisica
+      passar_check_ausente
+      esconder_fail_ou_inconclusive
+      aceitar_PASS_com_threshold_excedido_ou_FAIL_sem_threshold_excedido
+      promover_cobertura_local_para_atestacao_externa
+      solicitar_atestacao_externa_com_schema_digest_ou_estrutura_invalida
+      ecoar_valor_sensivel_em_diagnostics_checks_ou_next_actions
+      executar_correcao_sugerida
+      ecoar_conteudo_multimodal_ou_valor_sensivel
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.temporal.validarBundleVerificacaoTemporal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/temporal.ts"
+      simbolo: cli.src.sistemas_interativos.temporal.validarBundleVerificacaoTemporal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      valido existe
+      contract_digest existe
+      bundle_digest existe
+      result_digest existe
+      checks_aceitos existe
+      checks_ausentes existe
+      checks_falhos existe
+      diagnostics existe
+      next_actions existe
+      completed == falso
+      local_coverage_complete existe
+      awaiting_external_attestation == verdadeiro
+      completion_scope == STRUCTURAL_LOCAL
+      authoritative == falso
+      executed == falso
+      valido != verdadeiro ou checks_ausentes deve_ser vazio
+      valido != verdadeiro ou checks_falhos deve_ser vazio
+    }
+    tests {
+      caso "splash antes do contato falha com diagnostico acionavel" {
+        given {
+          contrato: "ORDER water_contact antes de splash"
+          bundle: "water contact frame 39024 splash frame 39021"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: falso
+          completed: falso
+          authoritative: falso
+        }
+      }
+    }
+  }
+}

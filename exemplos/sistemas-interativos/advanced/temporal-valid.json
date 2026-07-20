@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "sema.interactive.temporal/v1",
+  "contractId": "mission.return.timeline",
+  "systemId": "interactive.system",
+  "experienceIrDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "coordinateSystem": {
+    "unit": "meter",
+    "handedness": "RIGHT",
+    "upAxis": "Z",
+    "forwardAxis": "X"
+  },
+  "phases": [
+    {
+      "phaseId": "descent",
+      "start": 0,
+      "end": 600,
+      "timeUnit": "FRAME"
+    }
+  ],
+  "tracks": [
+    {
+      "trackId": "track.audio",
+      "type": "AUDIO",
+      "clips": [
+        {
+          "clipId": "clip.audio",
+          "phaseId": "descent",
+          "semanticTargetId": "audio.splash",
+          "start": 300,
+          "end": 420,
+          "timeUnit": "FRAME"
+        }
+      ]
+    },
+    {
+      "trackId": "track.event",
+      "type": "EVENT",
+      "clips": [
+        {
+          "clipId": "clip.contact",
+          "phaseId": "descent",
+          "semanticTargetId": "event.water_contact",
+          "start": 389,
+          "end": 391,
+          "timeUnit": "FRAME"
+        }
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "invariantId": "invariant.contact_before_splash",
+      "type": "ORDER",
+      "phaseId": "descent",
+      "trackIds": ["track.audio", "track.event"],
+      "subjectIds": ["vehicle.crewed", "water.surface"],
+      "threshold": 3,
+      "unit": "frame"
+    }
+  ],
+  "shots": [
+    {
+      "shotId": "shot.keep_capsule_visible",
+      "phaseId": "descent",
+      "cameraId": "camera.main",
+      "subjectIds": ["vehicle.crewed"],
+      "start": 0,
+      "end": 600,
+      "timeUnit": "FRAME",
+      "composition": "capsule centered with horizon context",
+      "minimumVisibilityRatio": 0.92,
+      "maximumJitter": 1.5
+    }
+  ],
+  "physics": [
+    {
+      "relationId": "physics.capsule_water_contact",
+      "type": "COLLISION",
+      "phaseId": "descent",
+      "sourceId": "vehicle.crewed",
+      "targetId": "water.surface",
+      "start": 380,
+      "end": 410,
+      "timeUnit": "FRAME",
+      "tolerance": 0.02,
+      "unit": "meter"
+    }
+  ],
+  "temporalQa": {
+    "checks": [
+      { "checkId": "qa.flicker", "type": "FLICKER", "phaseId": "descent", "threshold": 0.02, "unit": "ratio" },
+      { "checkId": "qa.ghosting", "type": "GHOSTING", "phaseId": "descent", "threshold": 0.03, "unit": "ratio" },
+      { "checkId": "qa.popping", "type": "POPPING", "phaseId": "descent", "threshold": 1, "unit": "event" },
+      { "checkId": "qa.exposure", "type": "EXPOSURE", "phaseId": "descent", "threshold": 0.2, "unit": "ev" },
+      { "checkId": "qa.jitter", "type": "JITTER", "phaseId": "descent", "threshold": 1.5, "unit": "pixel" }
+    ]
+  },
+  "buildAcceptance": {
+    "required": true,
+    "artifactDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "cleanInstallRequired": true,
+    "launchRequired": true,
+    "smokePlaytestRequired": true
+  },
+  "hardwareTargets": [
+    {
+      "profileId": "rtx3060_1080p60",
+      "gpu": "RTX 3060",
+      "cpu": "6-core reference CPU",
+      "resolution": { "width": 1920, "height": 1080 },
+      "targetFps": 60,
+      "frameTimeP95Ms": 16.7,
+      "maxRamMb": 8192,
+      "maxVramMb": 6144,
+      "maxDiskMb": 4096
+    }
+  ]
+}

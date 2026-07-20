@@ -1,0 +1,145 @@
+module sema.produto.sistemas_interativos.ir_semantica {
+  docs {
+    resumo: "Semantica transversal do Experience IR v1: papeis tipados retrocompativeis, valores sensiveis, hierarquias aciclicas e politica de rede coerente, sempre read-only e nao autoritativa."
+    arquivo: "contratos/sema/sistemas_interativos_ir.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type ResultadoSemanticaExperienceIr {
+    fields {
+      valido: Booleano
+      semantic_roles: Lista<Texto>
+      issues: Lista
+      executed: Booleano
+      workspace_mutated: Booleano
+      authoritative: Booleano
+    }
+    invariants {
+      valido existe
+      semantic_roles existe
+      issues existe
+      executed == falso
+      workspace_mutated == falso
+      authoritative == falso
+    }
+  }
+
+  task validar_semantica_experience_ir {
+    input {
+      nodes: Lista required
+    }
+    output {
+      resultado: ResultadoSemanticaExperienceIr
+    }
+    rules {
+      nodes deve_ser manter_os_20_kinds_do_schema_sema_experience_ir_v1
+      nodes deve_ser mapear_SCENE_LEVEL_TRANSFORM_PIVOT_PHYSICS_COLLIDER_VFX_EMITTER_TIMELINE_TRACK_CLIP_EVENT_SAVE_GAME_STATE
+      nodes deve_ser produzir_semantic_roles_unicos_canonicos_em_indice_chunk_e_descriptor
+      nodes deve_ser ter_descritores_tipados_de_collider_emitter_track_clip_event_com_ids_locais_unicos_e_limites_validos
+      nodes deve_ser ter_hierarquias_entity_e_transform_aciclicas_sem_self_parent
+      nodes deve_ser coerente_em_network_mode_authority_replication_e_tick
+      nodes deve_ser livre_de_private_key_Bearer_sk_ghp_github_pat_e_query_URI_assinada_em_qualquer_string_json
+    }
+    effects {
+      auditoria experience_ir_semantica_validada criticidade = alta
+    }
+    authz {
+      escopo: sema.interativo.ir.validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+    }
+    audit {
+      evento: sema.interativo.experience_ir_semantica_validada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      adicionar_novos_kinds_ao_v1_para_representar_papel_equivalente
+      aceitar_ou_ecoar_valor_sensivel_ou_path_controlado
+      aceitar_self_parent_ou_ciclo_multi_no
+      aceitar_mode_authority_replicacao_ou_tick_incoerente
+      executar_engine_editor_runtime_build_ou_adapter
+      escrever_workspace
+      declarar_resultado_autoritativo
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.experience_ir_semantics.validarSemanticaExperienceIr
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIrSemantics.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIr.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIrTypes.ts"
+      arquivo: "testes/integracao/sistemas-interativos-ir.test.ts"
+      arquivo: "exemplos/sistemas-interativos/experience-ir-valid.json"
+      simbolo: cli.src.sistemas_interativos.experience_ir_semantics.validarSemanticaExperienceIr
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      resultado existe
+      resultado deve_ser deterministico_no_echo
+      resultado deve_ser preservar_compatibilidade_v1
+      resultado deve_ser executed_false_workspace_mutated_false_authoritative_false
+    }
+    tests {
+      caso "rejeita segredo ciclo e rede incoerente sem eco" {
+        given {
+          nodes: "valor Bearer sob chave neutra, ciclos entity/transform e CLIENT_SERVER NONE"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          valido: falso
+        }
+      }
+    }
+  }
+
+  task descrever_serializacao_experience_ir {
+    input {
+      schema_version: Texto required
+    }
+    output {
+      descriptor: Objeto
+      executed: Booleano
+      workspace_mutated: Booleano
+      authoritative: Booleano
+    }
+    rules {
+      schema_version deve_ser sema_experience_ir_v1_com_schema_de_papeis_semanticos
+    }
+    forbidden {
+      codificar_CBOR
+      declarar_codec_CBOR_instalado
+      executar_adapter_externo
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.experience_ir.descreverSerializacaoExperienceIr
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/experienceIr.ts"
+      simbolo: cli.src.sistemas_interativos.experience_ir.descreverSerializacaoExperienceIr
+    }
+    execucao {
+      idempotencia: verdadeiro
+    }
+    guarantees {
+      descriptor existe
+      executed == falso
+      workspace_mutated == falso
+      authoritative == falso
+      descriptor deve_ser declarar_JSON_v1_canonico_nativo
+      descriptor deve_ser declarar_CBOR_external_codec_required_encoded_false
+      descriptor deve_ser expor_os_oito_papeis_semanticos_sem_adicionar_kinds
+    }
+  }
+}
