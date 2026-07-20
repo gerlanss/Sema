@@ -9,6 +9,8 @@ npm run build
 npm run status:check
 npm run repo:verificar-publico
 npm run plugin:testar-codex
+npm run cli:empacotar-publica
+npm run cli:testar-pacote-publico
 node pacotes/cli/dist/index.js --help
 node pacotes/cli/dist/index.js --version
 node pacotes/cli/dist/index.js resumo exemplos/calculadora.sema --micro --json
@@ -26,8 +28,15 @@ encoding in every published document. The plugin smoke must validate the repo
 marketplace, manifest version, installed skill copy, and absence of Sema MCP.
 After push and npm publication, `npm run release:verificar-distribuicao` must
 repeat that installation from the remote `gerlanss/Sema` marketplace and prove
-that GitHub HEAD, the installed skill, and npm 2.2.0 all describe the same
-release.
+that GitHub HEAD, the installed skill, and the manifest-declared npm version
+all describe the same release.
+
+The local public-package smoke installs the generated tarball in an isolated
+sandbox. It must import the root API without executing the CLI, materialize
+nested interactive examples, and execute discovery, interactive schema,
+definition validation, planning, and adapter-protocol validation through the
+installed binary. Passing this smoke proves the local tarball only; it does not
+mean that npm or a GitHub release was published.
 
 Native generator evidence is mandatory when changing C#/.NET or C++ support.
 The `dotnet` smoke must compile and execute through the local .NET SDK. The

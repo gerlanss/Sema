@@ -19,6 +19,8 @@ const dependenciasInternas = [
   "gerador-html",
   "gerador-css",
   "gerador-php",
+  "gerador-dotnet",
+  "gerador-cpp",
 ];
 const escopoSema = path.join(cliDir, "node_modules", "@sema");
 const marcadorDependencias = path.join(cliDir, "node_modules", ".sema-prepack-internal-deps");
@@ -47,11 +49,13 @@ if (await existe(destino)) {
 await mkdir(destino, { recursive: true });
 
 for (const entrada of await readdir(origem, { withFileTypes: true })) {
-  if (!entrada.isFile() || !entrada.name.endsWith(".sema")) {
+  if (entrada.isDirectory()) {
+    await cp(path.join(origem, entrada.name), path.join(destino, entrada.name), { recursive: true });
     continue;
   }
-
-  await cp(path.join(origem, entrada.name), path.join(destino, entrada.name));
+  if (entrada.isFile() && entrada.name.endsWith(".sema")) {
+    await cp(path.join(origem, entrada.name), path.join(destino, entrada.name));
+  }
 }
 
 await writeFile(marcador, "gerado pelo prepack do @semacode/cli\n", "utf8");

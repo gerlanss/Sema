@@ -8,6 +8,7 @@ import { link, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { planejarExemplosOficiais } from "../../pacotes/cli/src/exemplosOficiais.js";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
 const MARCADOR_INICIO = "<!-- sema:agent-entrypoint:start -->";
@@ -234,6 +235,76 @@ test("sema iniciar prevalida exemplos e docs antes de criar qualquer arquivo", a
     } finally {
       await limparSandbox(base);
     }
+  }
+});
+
+test("planejamento de exemplos oficiais inclui arvore segura e deterministica", async () => {
+  const plano = await planejarExemplosOficiais();
+  const caminhos = plano.arquivos.map((arquivo) => arquivo.caminhoRelativo);
+
+  assert.ok(plano.origem);
+  assert.ok(caminhos.includes(path.join(
+    "exemplos",
+    "sistemas-interativos",
+    "simulation-3d-calibrated-autonomous.json",
+  )));
+  assert.ok(caminhos.includes(path.join("exemplos", "sistemas-interativos", "README.md")));
+  assert.ok(caminhos.includes(path.join("exemplos", "pipeline-conteudo", "definicao.json")));
+  assert.ok(plano.arquivos.every((arquivo) => [".sema", ".json", ".md"].includes(
+    path.extname(arquivo.nome).toLowerCase(),
+  )));
+  assert.deepEqual(
+    caminhos,
+    [...caminhos].sort((a, b) => a.localeCompare(b, "pt-BR")),
+  );
+});
+
+test("sema iniciar materializa e preserva exemplos oficiais aninhados", async () => {
+  const { base, repo } = await criarSandbox("sema-iniciar-exemplos-aninhados-");
+  const preservado = path.join(repo, "exemplos", "sistemas-interativos", "game-pixel-16-bit.json");
+  const sentinela = Buffer.from('{"manual":true}\n', "utf8");
+
+  try {
+    await mkdir(path.dirname(preservado), { recursive: true });
+    await writeFile(preservado, sentinela);
+    const resultado = executarCli(repo, ["iniciar", "--template", "base"]);
+
+    assert.equal(resultado.status, 0, diagnosticoCli(resultado));
+    assert.deepEqual(await readFile(preservado), sentinela);
+    assert.equal(
+      existsSync(path.join(
+        repo,
+        "exemplos",
+        "sistemas-interativos",
+        "simulation-3d-calibrated-autonomous.json",
+      )),
+      true,
+    );
+    assert.equal(
+      existsSync(path.join(repo, "exemplos", "pipeline-conteudo", "README.md")),
+      true,
+    );
+  } finally {
+    await limparSandbox(base);
+  }
+});
+
+test("sema iniciar recusa junction aninhada em exemplos sem escrita externa", async () => {
+  const { base, repo, outside } = await criarSandbox("sema-iniciar-junction-exemplo-aninhado-");
+
+  try {
+    await mkdir(path.join(repo, "exemplos"), { recursive: true });
+    await criarJunction(outside, path.join(repo, "exemplos", "sistemas-interativos"));
+    const resultado = executarCli(repo, ["iniciar", "--template", "base"]);
+
+    assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
+    assert.match(resultado.stderr, /symlink|junction/i);
+    assert.deepEqual(await readdir(outside), []);
+    assert.equal(existsSync(path.join(repo, "README.md")), false);
+    assert.equal(existsSync(path.join(repo, "sema.config.json")), false);
+    assert.equal(existsSync(path.join(repo, "contratos")), false);
+  } finally {
+    await limparSandbox(base);
   }
 });
 

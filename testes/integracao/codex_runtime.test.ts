@@ -8,6 +8,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { criarAgentContextPack, criarGuiaCapacidadeIa } from "../../pacotes/cli/src/agentContextPack.ts";
 import { sincronizarEntrypointCodex } from "../../pacotes/cli/src/agentEntryPoints.ts";
 import { avaliarDependenciasVerificacao } from "../../pacotes/cli/src/doctorCommand.ts";
@@ -35,13 +36,16 @@ test("Agent Context Pack declara Codex nativo e CLI local direta", () => {
   const pack = criarAgentContextPack(criarGuiaCapacidadeIa());
 
   assert.equal(pack.entrypointCodex, "AGENTS.md");
-  assert.equal(pack.versao, 6);
+  assert.equal(pack.versao, 7);
+  assert.equal(pack.descoberta.schemaVersion, "sema.discovery/v1");
+  assert.equal(pack.descoberta.commands.catalogo, "sema descobrir catalogo --json");
   assert.equal(pack.codexNativo, true);
   assert.equal(pack.cliLocalSemAutorizacao, true);
   assert.deepEqual(Object.keys(pack).sort(), [
     "aliasesCapacidade",
     "cliLocalSemAutorizacao",
     "codexNativo",
+    "descoberta",
     "entrypointCodex",
     "exemplosOficiais",
     "failClosed",
@@ -349,4 +353,42 @@ test("superfície pública não oferece o antigo porteiro preflight", () => {
   assert.doesNotMatch(ajuda.stdout, /sync-ai-entrypoints/);
   assert.doesNotMatch(ajuda.stdout, /preflight/i);
   assert.notEqual(preflight.status, 0);
+});
+
+test("import programático da raiz não executa a CLI e preserva APIs públicas", () => {
+  const modulo = pathToFileURL(CLI).href;
+  const resultado = spawnSync(process.execPath, [
+    "--input-type=module",
+    "--eval",
+    `const api = await import(${JSON.stringify(modulo)}); console.log(JSON.stringify({ exemplos: typeof api.materializarExemplosOficiais, descoberta: typeof api.montarCatalogoCapacidades, interativo: typeof api.validarDefinicaoSistemaInterativo }));`,
+  ], {
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+
+  assert.equal(resultado.status, 0, resultado.stderr);
+  assert.equal(resultado.stderr, "");
+  assert.deepEqual(JSON.parse(resultado.stdout), {
+    exemplos: "function",
+    descoberta: "function",
+    interativo: "function",
+  });
+});
+
+test("prepack tradicional inclui todas as dependências internas empacotadas", async () => {
+  const [manifestoTexto, prepack] = await Promise.all([
+    readFile(path.resolve("pacotes/cli/package.json"), "utf8"),
+    readFile(path.resolve("pacotes/cli/scripts/prepack-exemplos.mjs"), "utf8"),
+  ]);
+  const manifesto = JSON.parse(manifestoTexto) as { bundleDependencies: string[] };
+  const bloco = prepack.match(/const dependenciasInternas = \[([\s\S]*?)\];/u)?.[1];
+
+  assert.ok(bloco, "lista dependenciasInternas ausente no prepack");
+  const dependenciasPrepack = [...bloco.matchAll(/"([^"]+)"/gu)].map((match) => match[1]).sort();
+  const dependenciasManifesto = manifesto.bundleDependencies
+    .map((nome) => nome.replace(/^@sema\//u, ""))
+    .sort();
+  assert.deepEqual(dependenciasPrepack, dependenciasManifesto);
+  assert.ok(dependenciasPrepack.includes("gerador-dotnet"));
+  assert.ok(dependenciasPrepack.includes("gerador-cpp"));
 });

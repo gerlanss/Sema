@@ -201,12 +201,13 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 
 1. Confirme \`AGENTS.md\` na raiz e rode \`sema --version\`; se o comando não existir, pare e peça a instalação da CLI.
 2. Use a CLI local diretamente para ler o workspace: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
-3. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
-4. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
-5. Antes de criar módulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicável.
-6. Antes de editar código existente, rode drift e impacto pela CLI local.
-7. Antes de criar ou corrigir \`.sema\`, use os exemplos oficiais na CLI local.
-8. Se qualquer etapa falhar, pare e diga que está bloqueado.
+3. Se não estiver claro qual profile, workflow, pipeline, gerador ou adapter usar, rode \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não execute automaticamente uma recomendação ambígua.
+4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
+5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
+6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicável.
+7. Antes de editar código existente, rode drift e impacto pela CLI local.
+8. Antes de criar ou corrigir \`.sema\`, use os exemplos oficiais na CLI local.
+9. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
 Não substitua esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
 
@@ -481,13 +482,14 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 1. Leia \`${ARQUIVO_SEMA_BOOT}\`.
 2. Rode \`sema --version\`; se falhar, pare e peça a instalação da CLI.
 3. Use diretamente a CLI local: \`sema resumo\`, \`sema docs-impacto\`, \`sema inspecionar\`, \`sema drift\` e \`sema impacto\`.
-4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
-5. Chame docs-impacto com a intenção declarada antes de agir.
-6. Chame inspecionar no contrato \`.sema\` aplicável.
-7. Antes de editar código existente, rode drift e impacto.
-8. Antes de criar ou editar \`.sema\`, use exemplos oficiais.
-9. Ao concluir mudança de contrato, rode validar.
-10. Antes de finalizar, use finalizar-mudanca com as docs lidas.
+4. Quando a capacidade correta não estiver clara, use \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não autoexecute resultado ambíguo.
+5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
+6. Chame docs-impacto com a intenção declarada antes de agir.
+7. Chame inspecionar no contrato \`.sema\` aplicável.
+8. Antes de editar código existente, rode drift e impacto.
+9. Antes de criar ou editar \`.sema\`, use exemplos oficiais.
+10. Ao concluir mudança de contrato, rode validar.
+11. Antes de finalizar, use finalizar-mudanca com as docs lidas.
 
 É proibido substituir esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 
@@ -679,10 +681,11 @@ This is the minimum workflow for Codex in a local workspace.
 4. Run \`sema docs-impacto --intencao "<change>" --json\`.
 5. Read every required document returned by the command.
 6. Read \`docs/commands.md\` before selecting a command or interpreting \`--saida\`.
-7. Use \`exemplos/\` and \`docs/syntax.md\` before creating or editing a contract.
-8. Run \`sema drift\` and \`sema impacto\` before editing existing code.
-9. Run \`sema formatar\` and \`sema validar\` after changing a \`.sema\` contract.
-10. Run \`sema finalizar-mudanca\` with the documents read before closure.
+7. If the right capability is unclear, run \`sema descobrir recomendar --intencao "<goal>" --json\`; do not auto-run ambiguous recommendations.
+8. Use \`exemplos/\` and \`docs/syntax.md\` before creating or editing a contract.
+9. Run \`sema drift\` and \`sema impacto\` before editing existing code.
+10. Run \`sema formatar\` and \`sema validar\` after changing a \`.sema\` contract.
+11. Run \`sema finalizar-mudanca\` with the documents read before closure.
 
 Contract edit rule: \`.sema\` has its own size budget. Above ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} lines, plan a split by domain/capability; above ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}, do not create or edit before splitting. Do not use parte_1/parte_2 and do not force a 1:1 contract-to-file relationship; several contracts can govern the same file through \`vinculos\`.
 
@@ -739,6 +742,10 @@ Then read every required doc returned by \`docs-impacto\`.
 - \`sema inspecionar <arquivo-ou-pasta> --json\`: shows modules, tasks, routes, entities, links, and expected files.
 - \`sema ast <arquivo.sema> --json\`: shows AST for syntax debugging.
 - \`sema ir <arquivo.sema> --json\`: shows the IR used by gates and generators.
+- \`sema descobrir catalogo --json\`: lists governance flows, profiles, specialized workflows, pipelines, generators, capability tokens, and adapters from their canonical registries.
+- \`sema descobrir recomendar --intencao "<goal>" --json\`: ranks compatible capabilities deterministically without executing the selected command.
+- \`sema descobrir explicar <id> --json\`: explains inputs, boundaries, reasons, and the command template for one capability.
+- \`sema pipeline listar|descrever <id> --json\` and \`sema capabilities --json\`: compact projections of the same discovery catalog.
 
 ## Change and Closure
 
@@ -784,9 +791,46 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 ## Profiles and Author
 
 - \`sema author iniciar|validar|briefing|revisar-cliches|validar-narrativa|validar-proibicoes\`: governs authorial writing.
-- \`sema profile validar <software|workflow|ops|game|legal|research|redacao|propostas|conversas> <arquivo> --json\`: validates an artifact by profile.
+- \`sema profile validar <software|workflow|ops|game|simulation|legal|research|redacao|propostas|conversas> <arquivo> --json\`: validates an artifact by profile.
 - \`sema profile capabilities --json\`: lists profiles/capabilities.
 - \`sema rule-packs --profile <profile> --json\`: lists rule packs.
+
+\`author\` is a specialized \`sema author\` workflow, not a \`profile validar\` alias. Discovery exposes that distinction explicitly.
+
+## AI-native Content Pipeline
+
+- \`sema conteudo capabilities --json\`: lists generic producer, evaluator, and adapter capabilities without fixing a platform.
+- \`sema conteudo validar <definition.json> --json\`: validates the content DAG, gates, and open adapters.
+- \`sema conteudo planejar <definition.json> --alvos-arquivo <targets.json> --json\`: creates a declarative multi-target plan for an external runner.
+- \`sema conteudo validar-envelope --envelope-arquivo <envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --payload-type <type> --json\`: verifies Ed25519 identity, authorization, freshness, scope, and the separately pinned trust root and current revocation overlay.
+- \`sema conteudo registrar <ledger.ndjson> --envelope-arquivo <envelope.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-id <id> --expected-head <sha256:...> --json\`: appends a verified envelope under the signed run policy to the local replay ledger at an externally retained head.
+- \`sema conteudo status <definition.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-arquivo <ledger.ndjson> --expected-head <sha256:...> --json\`: verifies the signed policy and derives verdicts, operational conditions, completion, and next actions from canonical events.
+- \`sema conteudo projetar <definition.json> --politica-arquivo <policy-envelope.json> --confianca-arquivo <trust.json> --trust-root-digest <sha256:...> --revocation-digest <sha256:...> --ledger-arquivo <ledger.ndjson> --expected-head <sha256:...> --saida <manifest.json> --json\`: regenerates a non-authoritative manifest bound to the ledger head.
+
+The content command never runs producers, evaluators, creative tools, or publication adapters; those belong to an external runner. It has no native human-review transition. A signed policy binds the run, definition, ledger, trust root, gates, complete target set, and authorization window. Stages select \`adapterPolicy\` as \`NONE\`, \`CONSTRAINTS\`, or \`CONFIRMATION\`; definition v1 accepts one output per stage. Constraint results must come from independent signed observations, including independently observed media type, not artifact metadata or executor claims.
+
+Target metadata is an exact scalar allowlist from \`requiredMetadata + optionalMetadata\`; \`accountScope\` is a credential-free \`account:<alias>\` reference, and artifact metadata is prohibited in v1. Deterministic evidence and AI opinions have separate quorum fields. Evidence requires an exact attestation capability plus signed adapter binding where applicable.
+
+Verdicts remain separate from operational conditions, and a generated manifest cannot alter canonical state. Append freshness uses the platform clock rather than caller-provided time, and an authority in the current revocation overlay cannot sign an accepted policy.
+
+Local NDJSON plus a hash chain is portable replay evidence, not a strong append-only trust boundary. Retain the expected head, canonical trust-root digest, and current revocation digest externally, or use protected storage for high assurance. A workspace-local trust file additionally requires \`--development-local-trust\`; that flag does not disable digest pinning.
+
+## AI-native Interactive Systems
+
+- \`sema interativo capabilities --json\`: lists the canonical interactive capability vocabulary.
+- \`sema interativo schema --json\`: exposes stable definition, extension-command, and data-schema shapes for AI clients.
+- \`sema interativo pipelines --json\`: lists reusable game, simulation, and hybrid pipelines.
+- \`sema interativo adapters [--spatial-model <NON_SPATIAL|TWO_D|TWO_POINT_FIVE_D|THREE_D>] [--render-mode <HEADLESS|TEXT|VISUAL|XR>] --json\`: lists compatible external adapter descriptors.
+- \`sema interativo validar <definition.json> --json\`: validates independent kind, spatial model, render mode, visual profile, fidelity, control, time, world, budget, pipeline, and acceptance axes.
+- \`sema interativo planejar <definition.json> --json\`: expands compatible stages and required evidence without running an engine.
+- \`sema interativo validar-evidencias|status <definition.json> [--plano-arquivo <plan.json>] --bundle-arquivo <bundle.json> --json\`: validates a portable evidence bundle or derives non-authoritative status; \`--evidencias-arquivo\` is an alias and an omitted plan is recomputed deterministically.
+- \`sema interativo validar-protocolo <adapter-run.json> --json\`: checks DETECT/PROBE/SNAPSHOT/PLAN/APPLY/VALIDATE/EVIDENCE/ROLLBACK ordering and stable target binding.
+- Experience IR: \`validar-ir\`, \`indexar-ir\`, \`consultar-ir\`, \`chunk-ir\`, and \`descrever-ir\`.
+- Operational state: \`validar-engine-snapshot\`, \`diff-engine-snapshots\`, \`validar-asset-provenance\`, \`validar-editor-state\`, \`planejar-jobs\`, \`validar-acceptance\`, \`operar-acceptance\`, and \`validar-multimodal\`.
+- Temporal, autonomy, and testing: \`validar-temporal\`, \`validar-evidencia-temporal\`, \`validar-autonomia\`, \`validar-playtest-fuzz\`, and \`validar-multiplayer\`.
+- Portability and workers: \`analisar-portabilidade\` and \`validar-workers\`.
+
+Spatial model and render mode are orthogonal: \`THREE_D + HEADLESS\` is valid, while XR requires \`THREE_D\`. \`PIXEL_8_BIT\` and \`PIXEL_16_BIT\` are independent visual profiles available to games and simulations. Every command above is local and read-only; external runners own engine/editor execution, authorization, mutation, rollback, migration, rendering, playtest, and worker scheduling. Full local coverage is \`STRUCTURALLY_COMPLETE\`, never authoritative completion.
 
 ## Operational
 

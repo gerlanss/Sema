@@ -10,6 +10,31 @@ import { execFileSync, spawnSync } from "node:child_process";
 const raiz = process.cwd();
 const pastaPacotes = path.join(raiz, ".tmp", "pacotes-instalador-npm");
 const cacheNpm = path.join(raiz, ".tmp", "npm-cache");
+const EXEMPLOS_INTERATIVOS_PUBLICOS = [
+  "exemplos/sistemas-interativos/README.md",
+  "exemplos/sistemas-interativos/game-pixel-16-bit.json",
+  "exemplos/sistemas-interativos/simulation-3d-calibrated-autonomous.json",
+  "exemplos/sistemas-interativos/simulation-headless-autonomous-batch.json",
+  "exemplos/sistemas-interativos/protocol-read-only-valid.json",
+  "exemplos/sistemas-interativos/experience-ir-valid.json",
+  "exemplos/sistemas-interativos/advanced/acceptance-context-evaluate-valid.json",
+  "exemplos/sistemas-interativos/advanced/acceptance-lock-valid.json",
+  "exemplos/sistemas-interativos/advanced/asset-provenance-valid.json",
+  "exemplos/sistemas-interativos/advanced/autonomy-repair-valid.json",
+  "exemplos/sistemas-interativos/advanced/control-run-definition-valid.json",
+  "exemplos/sistemas-interativos/advanced/control-run-valid.json",
+  "exemplos/sistemas-interativos/advanced/distributed-workers-valid.json",
+  "exemplos/sistemas-interativos/advanced/editor-state-valid.json",
+  "exemplos/sistemas-interativos/advanced/engine-snapshot-after-valid.json",
+  "exemplos/sistemas-interativos/advanced/engine-snapshot-before-valid.json",
+  "exemplos/sistemas-interativos/advanced/job-orchestration-valid.json",
+  "exemplos/sistemas-interativos/advanced/multimodal-evidence-valid.json",
+  "exemplos/sistemas-interativos/advanced/multiplayer-authority-valid.json",
+  "exemplos/sistemas-interativos/advanced/playtest-fuzz-valid.json",
+  "exemplos/sistemas-interativos/advanced/portability-valid.json",
+  "exemplos/sistemas-interativos/advanced/temporal-evidence-valid.json",
+  "exemplos/sistemas-interativos/advanced/temporal-valid.json",
+];
 
 const MARCADORES_PORTEIRO_LEGADO = [
   { regex: /\bpreflight\b/i, motivo: "legacy preflight terminology" },
@@ -30,7 +55,7 @@ const MARCADORES_CONTEUDO_PRIVADO = [
 
 const MARCADOR_NOME_TOOL_MCP_LEGADO = /\bsema_(?:docs_impacto|finalizar_mudanca|inspecionar|drift|impacto|exemplos)\b/i;
 const MARCADOR_MOJIBAKE_VISIVEL = /\uFFFD|\u00C3[\u0080-\u00BF]|\u00C2[\u0080-\u00BF]|âš|ï¸/u;
-const ARQUIVO_RUNTIME_VISIVEL = /^package\/dist\/(?:agentContext|agentContextPack|agentContextTipos|agentEntryPoints|doctorCommand|docs\.part01|exemplosOficiais|fsGovernado|index\.part0[1-8]|initCommand|initTemplatesBase|workspaceWrite)\.(?:js|d\.ts|json)$/i;
+const ARQUIVO_RUNTIME_VISIVEL = /^package\/dist\/(?:(?:discovery|sistemasInterativos)\/[^/]+|(?:agentContext|agentContextPack|agentContextTipos|agentEntryPoints|doctorCommand|docs\.part01|exemplosOficiais|fsGovernado|index\.part0[1-8]|initCommand|initTemplatesBase|workspaceWrite))\.(?:js|d\.ts|json)$/i;
 
 function removerDetectorMigracaoLegada(arquivo, conteudo) {
   if (!/^package\/dist\/agentEntryPoints\.js$/i.test(arquivo)) {
@@ -84,6 +109,40 @@ function executarComSaida(comando, argumentos, cwd) {
     );
   }
   return resultado.stdout;
+}
+
+function executarJsonCliInstalada(semaBin, argumentos, cwd) {
+  return JSON.parse(executarComSaida(
+    process.execPath,
+    [semaBin, ...argumentos, "--json"],
+    cwd,
+  ));
+}
+
+function validarFronteiraDescoberta(payload, comando) {
+  if (
+    payload.schemaVersion !== "sema.discovery/v1" ||
+    payload.success !== true ||
+    payload.executed !== false ||
+    payload.workspaceMutated !== false ||
+    payload.externalCalls !== false ||
+    payload.requiresExplicitRun !== true
+  ) {
+    throw new Error(`The installed public CLI broke the read-only discovery boundary for ${comando}.`);
+  }
+}
+
+function validarFronteiraInterativa(payload, comando) {
+  if (
+    payload.sucesso !== true ||
+    payload.readOnly !== true ||
+    payload.executed !== false ||
+    payload.workspaceMutated !== false ||
+    payload.authoritative !== false ||
+    payload.externalExecutionRequired !== true
+  ) {
+    throw new Error(`The installed public CLI broke the declarative interactive boundary for ${comando}.`);
+  }
 }
 
 async function localizarTarball(versaoEsperada) {
@@ -386,30 +445,80 @@ async function main() {
     if (/\bpreflight\b/i.test(ajuda)) {
       throw new Error("The installed public CLI help still exposes the removed preflight command.");
     }
-    if (!ajuda.includes("sema conteudo capabilities --json") || !ajuda.includes("sema conteudo status")) {
-      throw new Error("The installed public CLI help does not expose the AI-native content pipeline.");
-    }
-
-    const ajudaConteudo = executarComSaida(process.execPath, [semaBin, "conteudo", "--help"], sandbox);
-    for (const uso of ["sema conteudo validar", "sema conteudo validar-envelope", "sema conteudo registrar", "sema conteudo projetar"]) {
-      if (!ajudaConteudo.includes(uso)) {
-        throw new Error(`The installed content pipeline help is missing ${uso}.`);
+    for (const comando of ["sema descobrir", "sema pipeline", "sema capabilities", "sema interativo"]) {
+      if (!ajuda.includes(comando)) {
+        throw new Error(`The installed public CLI help is missing ${comando}.`);
       }
     }
-    if (!ajudaConteudo.includes("Não existe revisão humana nativa") || !ajudaConteudo.includes("nextActions")) {
-      throw new Error("The installed content pipeline help does not state its AI-native runner boundary.");
+
+    const importRaiz = spawnSync(process.execPath, [
+      "--input-type=module",
+      "--eval",
+      "const api = await import('@semacode/cli'); process.stdout.write(JSON.stringify({ exemplos: typeof api.materializarExemplosOficiais, descoberta: typeof api.montarCatalogoCapacidades, interativo: typeof api.validarDefinicaoSistemaInterativo, ir: typeof api.validarExperienceIr, operacao: typeof api.validarSnapshotEngine, temporal: typeof api.validarContratoTemporalInterativo, autonomia: typeof api.validarCicloReparoAutonomo, portabilidade: typeof api.analisarPlanoPortabilidadeInterativa, extensaoCli: typeof api.executarExtensaoCliInterativa, controlRun: typeof api.validarControlRunInterativo }));",
+    ], {
+      cwd: sandbox,
+      encoding: "utf8",
+    });
+    if (importRaiz.status !== 0) {
+      throw new Error(`The installed public CLI root import failed: ${importRaiz.stderr}`);
+    }
+    const apiPublica = JSON.parse(importRaiz.stdout);
+    if (
+      importRaiz.stderr !== "" ||
+      apiPublica.exemplos !== "function" ||
+      apiPublica.descoberta !== "function" ||
+      apiPublica.interativo !== "function" ||
+      apiPublica.ir !== "function" ||
+      apiPublica.operacao !== "function" ||
+      apiPublica.temporal !== "function" ||
+      apiPublica.autonomia !== "function" ||
+      apiPublica.portabilidade !== "function" ||
+      apiPublica.extensaoCli !== "function" ||
+      apiPublica.controlRun !== "function"
+    ) {
+      throw new Error("The installed public CLI root import executed the bin or omitted a public API.");
     }
 
-    const capabilitiesConteudo = JSON.parse(
-      executarComSaida(process.execPath, [semaBin, "conteudo", "capabilities", "--json"], sandbox),
-    );
+    const catalogoDescoberta = executarJsonCliInstalada(semaBin, ["descobrir", "catalogo"], sandbox);
+    validarFronteiraDescoberta(catalogoDescoberta, "descobrir catalogo");
     if (
-      capabilitiesConteudo.sucesso !== true ||
-      capabilitiesConteudo.nativeHumanReview !== false ||
-      capabilitiesConteudo.runner !== "external" ||
-      capabilitiesConteudo.canonicalState !== "signed_hash_chained_ledger"
+      catalogoDescoberta.mode !== "catalog" ||
+      !catalogoDescoberta.entries?.some((item) => item.id === "simulation.calibrate")
     ) {
-      throw new Error("The installed content pipeline capabilities do not preserve the contracted AI-native boundary.");
+      throw new Error("The installed public CLI discovery catalog omitted simulation.calibrate.");
+    }
+
+    const recomendacaoDescoberta = executarJsonCliInstalada(
+      semaBin,
+      ["descobrir", "recomendar", "--intencao", "simulador 3D autônomo calibrado"],
+      sandbox,
+    );
+    validarFronteiraDescoberta(recomendacaoDescoberta, "descobrir recomendar");
+    if (
+      recomendacaoDescoberta.mode !== "ranking" ||
+      recomendacaoDescoberta.noMatch !== false ||
+      recomendacaoDescoberta.recommendations?.[0]?.id !== "simulation.calibrate"
+    ) {
+      throw new Error("The installed public CLI did not recommend the calibrated simulation pipeline.");
+    }
+
+    const pipelinesDescoberta = executarJsonCliInstalada(semaBin, ["pipeline", "listar"], sandbox);
+    validarFronteiraDescoberta(pipelinesDescoberta, "pipeline listar");
+    if (
+      !pipelinesDescoberta.entries?.some((item) => item.id === "simulation.calibrate") ||
+      !pipelinesDescoberta.entries?.every((item) => item.kind === "ORCHESTRATION_PIPELINE")
+    ) {
+      throw new Error("The installed public CLI pipeline alias returned an invalid catalog.");
+    }
+
+    const capabilitiesDescoberta = executarJsonCliInstalada(semaBin, ["capabilities"], sandbox);
+    validarFronteiraDescoberta(capabilitiesDescoberta, "capabilities");
+    if (
+      capabilitiesDescoberta.mode !== "catalog" ||
+      capabilitiesDescoberta.entries?.map((item) => item.id).join("\n") !==
+        catalogoDescoberta.entries?.map((item) => item.id).join("\n")
+    ) {
+      throw new Error("The installed public CLI capabilities alias diverged from the discovery catalog.");
     }
 
     const versao = executarComSaida(process.execPath, [semaBin, "--version"], sandbox).trim();
@@ -432,6 +541,11 @@ async function main() {
     executarComSaida(process.execPath, [semaBin, "iniciar", "--template", "base"], projetoCodex);
     if (await readFile(path.join(projetoCodex, "README.md"), "utf8") !== readmeOriginal) {
       throw new Error("The installed CLI overwrote an existing README during Codex bootstrap.");
+    }
+    for (const arquivoExemplo of EXEMPLOS_INTERATIVOS_PUBLICOS) {
+      if (!(await existe(path.join(projetoCodex, arquivoExemplo)))) {
+        throw new Error(`The installed CLI did not materialize nested official example ${arquivoExemplo}.`);
+      }
     }
     await mkdir(path.join(projetoCodex, ".github"), { recursive: true });
     await writeFile(
@@ -485,7 +599,7 @@ async function main() {
       throw new Error("The installed CLI followed a junction outside the bootstrap workspace.");
     }
     const packCodex = JSON.parse(await readFile(path.join(projetoCodex, "AGENT_CONTEXT_PACK.json"), "utf8"));
-    if (packCodex.versao !== 6 || packCodex.entrypointCodex !== "AGENTS.md" || !packCodex.codexNativo || !packCodex.cliLocalSemAutorizacao) {
+    if (packCodex.versao !== 7 || packCodex.descoberta?.schemaVersion !== "sema.discovery/v1" || packCodex.entrypointCodex !== "AGENTS.md" || !packCodex.codexNativo || !packCodex.cliLocalSemAutorizacao) {
       throw new Error("The installed public CLI generated an outdated Agent Context Pack schema.");
     }
     await validarHandshakeCodexMaterializado(projetoCodex, agents, packCodex);
@@ -511,14 +625,287 @@ async function main() {
     for (const arquivoDoc of [
       "docs/cli.md",
       "docs/commands.md",
+      "docs/descoberta-capacidades.md",
       "docs/documentation.md",
       "docs/pipeline-conteudo.md",
       "docs/security.md",
+      "docs/sistemas-interativos.md",
       "docs/support.md",
     ]) {
       if (!(await existe(path.join(basePacote, arquivoDoc)))) {
         throw new Error(`The public package did not include ${arquivoDoc}.`);
       }
+    }
+
+    for (const arquivoExemplo of [
+      "exemplos/profile_simulation.sema",
+      ...EXEMPLOS_INTERATIVOS_PUBLICOS,
+    ]) {
+      if (!(await existe(path.join(basePacote, arquivoExemplo)))) {
+        throw new Error(`The public package did not include ${arquivoExemplo}.`);
+      }
+    }
+
+    const schemaInterativo = executarJsonCliInstalada(semaBin, ["interativo", "schema"], sandbox);
+    validarFronteiraInterativa(schemaInterativo, "interativo schema");
+    if (
+      schemaInterativo.readOnly !== true ||
+      schemaInterativo.schemaVersion !== "sema.interativo.schema/v1" ||
+      schemaInterativo.definitionSchema?.schemaVersion !== "1.0" ||
+      !schemaInterativo.definitionSchema?.requiredFields?.includes("spatialModel") ||
+      !schemaInterativo.definitionSchema?.requiredFields?.includes("renderMode") ||
+      !schemaInterativo.definitionSchema?.fields?.spatialModel ||
+      !schemaInterativo.definitionSchema?.fields?.renderMode ||
+      !schemaInterativo.matrix?.spatialModels?.includes("THREE_D") ||
+      !schemaInterativo.matrix?.renderModes?.includes("VISUAL") ||
+      !schemaInterativo.examplePaths?.includes("exemplos/sistemas-interativos/simulation-3d-calibrated-autonomous.json") ||
+      schemaInterativo.interactiveExtensions?.schemaVersion !== "sema.interactive.cli-extensions/v1" ||
+      Object.keys(schemaInterativo.interactiveExtensions?.commands ?? {}).length !== 20 ||
+      Object.keys(schemaInterativo.interactiveExtensions?.dataSchemaShapes ?? {}).length !== Object.keys(schemaInterativo.interactiveExtensions?.dataSchemas ?? {}).length ||
+      !Object.values(schemaInterativo.interactiveExtensions?.commands ?? {}).every((command) => (
+        Array.isArray(command.inputSchemaKeys) &&
+        Array.isArray(command.outputSchemaKeys) &&
+        command.outputTargets && typeof command.outputTargets === "object" &&
+        command.outputSchemaKeys.every((key) => Array.isArray(command.outputTargets[key]) && command.outputTargets[key][0] === "resultado") &&
+        Array.isArray(command.officialFixturePaths)
+      )) ||
+      !Object.values(schemaInterativo.interactiveExtensions?.dataSchemaShapes ?? {}).every((shape) => (
+        shape.type === "object" &&
+        typeof shape.schemaVersion === "string" &&
+        Array.isArray(shape.requiredTopLevelFields) &&
+        shape.requiredTopLevelFields.length > 0
+      )) ||
+      schemaInterativo.interactiveExtensions?.dataSchemas?.experienceIr !== "sema.experience-ir/v1" ||
+      schemaInterativo.interactiveExtensions?.dataSchemas?.multiplayerAuthority !== "sema.interactive.multiplayer-authority/v1" ||
+      schemaInterativo.interactiveExtensions?.dataSchemas?.distributedWorkers !== "sema.interactive.distributed-jobs/v1"
+    ) {
+      throw new Error("The installed public CLI exposed an incomplete interactive definition schema.");
+    }
+
+    const capabilitiesInterativas = executarJsonCliInstalada(
+      semaBin,
+      ["interativo", "capabilities"],
+      sandbox,
+    );
+    validarFronteiraInterativa(capabilitiesInterativas, "interativo capabilities");
+    if (
+      !capabilitiesInterativas.capabilities?.length ||
+      !capabilitiesInterativas.pipelineIds?.includes("simulation.calibrate") ||
+      !capabilitiesInterativas.pipelineIds?.includes("interactive.portability") ||
+      capabilitiesInterativas.extensionCommands?.length !== 20 ||
+      !capabilitiesInterativas.extensionCommands?.includes("validar-ir") ||
+      !capabilitiesInterativas.extensionCommands?.includes("validar-workers")
+    ) {
+      throw new Error("The installed public CLI exposed an incomplete interactive capability catalog.");
+    }
+
+    const pipelinesInterativas = executarJsonCliInstalada(
+      semaBin,
+      ["interativo", "pipelines"],
+      sandbox,
+    );
+    validarFronteiraInterativa(pipelinesInterativas, "interativo pipelines");
+    if (
+      !pipelinesInterativas.pipelines?.some((item) => item.pipelineId === "simulation.safety") ||
+      !pipelinesInterativas.pipelines?.some((item) => item.pipelineId === "interactive.experience_ir") ||
+      !pipelinesInterativas.pipelines?.some((item) => item.pipelineId === "interactive.distributed_jobs") ||
+      !pipelinesInterativas.pipelines?.every((item) => (
+        Array.isArray(item.spatialModels) &&
+        Array.isArray(item.renderModes) &&
+        !("representations" in item)
+      ))
+    ) {
+      throw new Error("The installed public CLI exposed an outdated interactive pipeline catalog.");
+    }
+
+    const adaptersInterativos = executarJsonCliInstalada(
+      semaBin,
+      [
+        "interativo",
+        "adapters",
+        "--spatial-model",
+        "THREE_D",
+        "--render-mode",
+        "VISUAL",
+        "--role",
+        "ENGINE",
+      ],
+      sandbox,
+    );
+    validarFronteiraInterativa(adaptersInterativos, "interativo adapters");
+    if (
+      !adaptersInterativos.adapters?.length ||
+      !adaptersInterativos.adapters?.every((item) => (
+        item.role === "ENGINE" &&
+        item.spatialModels?.includes("THREE_D") &&
+        item.renderModes?.includes("VISUAL") &&
+        !("representations" in item)
+      ))
+    ) {
+      throw new Error("The installed public CLI did not apply the spatial/render adapter filters.");
+    }
+
+    const definicaoInterativa = path.join(
+      projetoCodex,
+      "exemplos",
+      "sistemas-interativos",
+      "simulation-3d-calibrated-autonomous.json",
+    );
+    const protocoloInterativo = path.join(
+      projetoCodex,
+      "exemplos",
+      "sistemas-interativos",
+      "protocol-read-only-valid.json",
+    );
+    const experienceIrInterativa = path.join(
+      projetoCodex,
+      "exemplos",
+      "sistemas-interativos",
+      "experience-ir-valid.json",
+    );
+    const validacaoInterativa = executarJsonCliInstalada(
+      semaBin,
+      ["interativo", "validar", definicaoInterativa],
+      sandbox,
+    );
+    validarFronteiraInterativa(validacaoInterativa, "interativo validar");
+    if (validacaoInterativa.valida !== true || validacaoInterativa.bloqueios?.length !== 0) {
+      throw new Error("The installed public CLI rejected its official calibrated 3D simulation example.");
+    }
+
+    const planoInterativo = executarJsonCliInstalada(
+      semaBin,
+      ["interativo", "planejar", definicaoInterativa],
+      sandbox,
+    );
+    validarFronteiraInterativa(planoInterativo, "interativo planejar");
+    if (
+      planoInterativo.bloqueios?.length !== 0 ||
+      planoInterativo.plano?.executed !== false ||
+      !Array.isArray(planoInterativo.plano?.adaptersSelecionados) ||
+      planoInterativo.plano?.adapterSelectionExplicit !== true ||
+      planoInterativo.plano?.adapterCoverageComplete !== true ||
+      planoInterativo.plano?.capabilitiesSemAdapter?.length !== 0 ||
+      !planoInterativo.plano?.stageProviderMap?.length ||
+      !planoInterativo.plano.stageProviderMap.every((item) => item.coveredBySelection === true)
+    ) {
+      throw new Error("The installed public CLI emitted an incomplete declarative interactive plan.");
+    }
+
+    const protocoloValidado = executarJsonCliInstalada(
+      semaBin,
+      ["interativo", "validar-protocolo", protocoloInterativo],
+      sandbox,
+    );
+    validarFronteiraInterativa(protocoloValidado, "interativo validar-protocolo");
+    if (
+      protocoloValidado.valido !== true ||
+      protocoloValidado.faseAtual !== "EVIDENCE" ||
+      protocoloValidado.exigeRollback !== false ||
+      protocoloValidado.bloqueios?.length !== 0
+    ) {
+      throw new Error("The installed public CLI rejected its official read-only adapter protocol.");
+    }
+
+    const irValidada = executarJsonCliInstalada(
+      semaBin,
+      ["interativo", "validar-ir", experienceIrInterativa],
+      sandbox,
+    );
+    validarFronteiraInterativa(irValidada, "interativo validar-ir");
+    if (irValidada.resultado?.valido !== true || !irValidada.resultado?.documentDigest) {
+      throw new Error("The installed public CLI rejected its official Experience IR document.");
+    }
+
+    const irConsultada = executarJsonCliInstalada(
+      semaBin,
+      ["interativo", "consultar-ir", experienceIrInterativa, "--semantic-id", "scene.main"],
+      sandbox,
+    );
+    validarFronteiraInterativa(irConsultada, "interativo consultar-ir");
+    if (irConsultada.resultado?.encontrado !== true || irConsultada.resultado?.entry?.semanticId !== "scene.main") {
+      throw new Error("The installed public CLI could not query its Experience IR semantic index.");
+    }
+
+    const serializacaoIr = executarJsonCliInstalada(semaBin, ["interativo", "descrever-ir"], sandbox);
+    validarFronteiraInterativa(serializacaoIr, "interativo descrever-ir");
+    if (
+      serializacaoIr.resultado?.descriptor?.json?.native !== true ||
+      serializacaoIr.resultado?.descriptor?.cbor?.support !== "EXTERNAL" ||
+      serializacaoIr.resultado?.descriptor?.cbor?.installed !== false
+    ) {
+      throw new Error("The installed public CLI misrepresented Experience IR serialization support.");
+    }
+
+    const fixtureAvancada = (nome) => path.join(
+      projetoCodex,
+      "exemplos",
+      "sistemas-interativos",
+      "advanced",
+      nome,
+    );
+    const snapshotAntes = fixtureAvancada("engine-snapshot-before-valid.json");
+    const snapshotDepois = fixtureAvancada("engine-snapshot-after-valid.json");
+    const acceptanceLock = fixtureAvancada("acceptance-lock-valid.json");
+    const temporal = fixtureAvancada("temporal-valid.json");
+    const comandosAvancadosInstalados = [
+      ["validar-ir", experienceIrInterativa],
+      ["indexar-ir", experienceIrInterativa],
+      ["consultar-ir", experienceIrInterativa, "--semantic-id", "scene.main"],
+      ["chunk-ir", experienceIrInterativa, "--semantic-id", "entity.player"],
+      ["descrever-ir"],
+      ["validar-engine-snapshot", snapshotAntes],
+      ["diff-engine-snapshots", snapshotAntes, snapshotDepois],
+      ["validar-asset-provenance", fixtureAvancada("asset-provenance-valid.json")],
+      ["validar-editor-state", fixtureAvancada("editor-state-valid.json")],
+      ["planejar-jobs", fixtureAvancada("job-orchestration-valid.json")],
+      ["validar-acceptance", acceptanceLock],
+      ["operar-acceptance", acceptanceLock, "--operation", "EVALUATE", "--context-file", fixtureAvancada("acceptance-context-evaluate-valid.json")],
+      ["validar-multimodal", fixtureAvancada("multimodal-evidence-valid.json")],
+      ["validar-temporal", temporal],
+      ["validar-evidencia-temporal", temporal, "--bundle-arquivo", fixtureAvancada("temporal-evidence-valid.json")],
+      ["validar-autonomia", fixtureAvancada("autonomy-repair-valid.json")],
+      ["validar-playtest-fuzz", fixtureAvancada("playtest-fuzz-valid.json")],
+      ["validar-multiplayer", fixtureAvancada("multiplayer-authority-valid.json")],
+      ["analisar-portabilidade", fixtureAvancada("portability-valid.json")],
+      ["validar-workers", fixtureAvancada("distributed-workers-valid.json")],
+    ];
+    if (comandosAvancadosInstalados.length !== 20 || new Set(comandosAvancadosInstalados.map(([command]) => command)).size !== 20) {
+      throw new Error("The installed-package advanced smoke matrix does not cover exactly 20 unique commands.");
+    }
+    for (const argumentos of comandosAvancadosInstalados) {
+      const payload = executarJsonCliInstalada(semaBin, ["interativo", ...argumentos], sandbox);
+      validarFronteiraInterativa(payload, `interativo ${argumentos[0]}`);
+      if (!payload.resultado || typeof payload.resultado !== "object") {
+        throw new Error(`The installed advanced command ${argumentos[0]} did not return a structured result.`);
+      }
+    }
+
+    const controlDefinition = fixtureAvancada("control-run-definition-valid.json");
+    const controlManifest = fixtureAvancada("control-run-valid.json");
+    const temporalEvidence = fixtureAvancada("temporal-evidence-valid.json");
+    const controlPlan = executarJsonCliInstalada(semaBin, ["interativo", "planejar", controlDefinition], sandbox);
+    const temporalResult = executarJsonCliInstalada(semaBin, ["interativo", "validar-evidencia-temporal", temporal, "--bundle-arquivo", temporalEvidence], sandbox);
+    const controlPlanFile = path.join(sandbox, "control-run-plan.json");
+    const controlResultFile = path.join(sandbox, "control-run-result.json");
+    await Promise.all([
+      writeFile(controlPlanFile, JSON.stringify(controlPlan.plano), "utf8"),
+      writeFile(controlResultFile, JSON.stringify(temporalResult), "utf8"),
+    ]);
+    const controlRun = executarJsonCliInstalada(semaBin, [
+      "interativo", "validar-control-run", controlManifest,
+      "--definition-arquivo", controlDefinition, "--plano-arquivo", controlPlanFile,
+      "--contrato-arquivo", temporal, "--entrada-arquivo", temporal,
+      "--entrada-auxiliar-arquivo", temporalEvidence, "--evidencia-arquivo", temporalEvidence,
+      "--resultado-arquivo", controlResultFile,
+    ], sandbox);
+    validarFronteiraInterativa(controlRun, "interativo validar-control-run");
+    const controlBindings = controlRun.resultado?.bindings;
+    if (controlRun.resultado?.valid !== true
+      || !Array.isArray(controlBindings)
+      || controlBindings.length !== 8
+      || !controlBindings.every((binding) => binding.matched === true)) {
+      throw new Error("The installed public CLI could not validate its fully bound control run.");
     }
 
     for (const arquivoPrivado of [
@@ -541,6 +928,7 @@ async function main() {
       ["workflow", "profile_workflow_n8n.sema"],
       ["ops", "profile_ops.sema"],
       ["game", "profile_game.sema"],
+      ["simulation", "profile_simulation.sema"],
       ["legal", "profile_legal.sema"],
       ["research", "profile_research.sema"],
     ]) {
