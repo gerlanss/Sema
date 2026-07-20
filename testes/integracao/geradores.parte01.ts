@@ -609,3 +609,83 @@ module exemplo.geracao.desigualdade_lua {
   assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
   assert.match(execucao.stdout, /ok 1 testes/);
 });
+
+test("gerador Lua preserva saida estruturada em caso de falha esperada", async () => {
+  const codigo = `
+module exemplo.geracao.falha_estruturada_lua {
+  task validar {
+    input {
+      operacao: Texto required
+    }
+    output {
+      exit_code: Inteiro
+      payload: Objeto
+    }
+    guarantees {
+      exit_code existe
+      payload existe
+    }
+    tests {
+      caso "falha estruturada" {
+        given {
+          operacao: "DESCONHECIDA"
+        }
+        expect {
+          sucesso: falso
+          exit_code: 1
+        }
+      }
+    }
+  }
+}
+`;
+  const resultado = compilarCodigo(codigo, "falha_estruturada_lua.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+  const arquivosLua = gerarLua(resultado.ir);
+  const moduloLua = arquivosLua.find((arquivo) => !path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  const testeLua = arquivosLua.find((arquivo) => path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  assert.match(moduloLua?.conteudo ?? "", /exit_code = 1/);
+  assert.match(testeLua?.conteudo ?? "", /if saida == nil then/);
+  assert.doesNotMatch(testeLua?.conteudo ?? "", /if saida ~= nil then/);
+  const execucao = await executarLuaGeradoTemporario(arquivosLua);
+  assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+  assert.match(execucao.stdout, /ok 1 testes/);
+});
+
+test("gerador Lua preserva falha sem saida quando sucesso falso e a unica expectativa", async () => {
+  const codigo = `
+module exemplo.geracao.falha_sem_saida_lua {
+  task validar {
+    input {
+      drift: Texto required
+    }
+    output {
+      valido: Booleano
+    }
+    guarantees {
+      valido existe
+    }
+    tests {
+      caso "drift bloqueante falha sem saida" {
+        given {
+          drift: "sucesso:false"
+        }
+        expect {
+          sucesso: falso
+        }
+      }
+    }
+  }
+}
+`;
+  const resultado = compilarCodigo(codigo, "falha_sem_saida_lua.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+  const arquivosLua = gerarLua(resultado.ir);
+  const testeLua = arquivosLua.find((arquivo) => path.basename(arquivo.caminhoRelativo).startsWith("test_"));
+  assert.match(testeLua?.conteudo ?? "", /if saida ~= nil then/);
+  const execucao = await executarLuaGeradoTemporario(arquivosLua);
+  assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+  assert.match(execucao.stdout, /ok 1 testes/);
+});

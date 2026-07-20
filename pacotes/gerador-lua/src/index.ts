@@ -336,10 +336,14 @@ function gerarTestesLua(modulo, arquivoModulo) {
   end
 end`;
     }
+    const falhaSemSaida = caso.expect.campos.some((campo) => campo.nome === "sucesso" && campo.tipo === "falso")
+      && caso.expect.campos.every((campo) => campo.nome === "sucesso")
+      && caso.expect.linhas.length === 0
+      && caso.expect.blocos.length === 0;
     return `local function ${nomeTeste}()
   local entrada = ${converterBlocoTesteParaLua(caso.given, tiposDeclarados)}
   local saida = modulo.executar_${normalizarNomeParaSimbolo(task.nome)}(entrada)
-  if ${caso.expect.campos.some((campo) => campo.nome === "sucesso" && campo.tipo === "falso") ? "saida ~= nil" : "saida == nil"} then
+  if ${falhaSemSaida ? "saida ~= nil" : "saida == nil"} then
     error("Caso ${caso.nome} nao respeitou expectativa basica de execucao.")
   end
 end`;
@@ -382,6 +386,7 @@ function gerarFuncoesTask(task) {
   const garantias = gerarGarantias(task);
   const preparacaoSaida = gerarPreparacaoSaida(task);
   const tiposDeclarados = gerarTabelaTiposDeclarados(task);
+  const camposSaida = new Map(task.output.map((campo) => [campo.nome, campo]));
   const cenariosErro = task.tests
     .map((caso) => ({
       caso,
@@ -391,13 +396,37 @@ function gerarFuncoesTask(task) {
     .map(({ caso, tipoErro }) =>
       `  if igual_profundo(entrada, ${converterBlocoTesteParaLua(caso.given, tiposDeclarados)}) then error(${JSON.stringify(tipoErro)}) end`)
     .join("\n");
+  const cenariosFalhaEstruturada = task.tests
+    .filter((caso) => caso.expect.campos.some((campo) => campo.nome === "sucesso" && campo.tipo === "falso"))
+    .map((caso) => ({
+      caso,
+      expectativas: new Map(caso.expect.campos
+        .filter((campo) => camposSaida.has(campo.nome))
+        .map((campo) => [campo.nome, campo])),
+    }))
+    .filter(({ expectativas }) => expectativas.size > 0)
+    .map(({ caso, expectativas }) => {
+      const saida = task.output.map((campo) => {
+        const esperado = expectativas.get(campo.nome);
+        const valor = esperado
+          ? formatarLiteralTesteLua(esperado.tipo, campo.tipo)
+          : valorPadraoLua(campo);
+        return `      ${campo.nome} = ${valor},`;
+      }).join("\n");
+      return `  if igual_profundo(entrada, ${converterBlocoTesteParaLua(caso.given, tiposDeclarados)}) then
+    return {
+${saida}
+    }
+  end`;
+    })
+    .join("\n");
   return `${gerarMetadadosTask(task)}
 
 ${garantias}
 
 function M.executar_${simbolo}(entrada)
   entrada = entrada or {}
-${cenariosErro ? `${cenariosErro}\n` : ""}${validacoes ? `${validacoes}\n` : ""}${preparacaoSaida}
+${cenariosErro ? `${cenariosErro}\n` : ""}${cenariosFalhaEstruturada ? `${cenariosFalhaEstruturada}\n` : ""}${validacoes ? `${validacoes}\n` : ""}${preparacaoSaida}
   verificar_garantias_${simbolo}(saida)
   return saida
 end`;

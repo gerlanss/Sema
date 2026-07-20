@@ -16,6 +16,7 @@ module sema.produto.geradores_codigo_governado {
     arquivo: "pacotes/gerador-cpp/src/index.ts"
     arquivo: "pacotes/cli/src/index.ts"
     arquivo: "docs/ai-integration.md"
+    arquivo: "testes/integracao/geradores.parte01.ts"
   }
 
   task emitir_cabecalho_codigo_governado {
@@ -32,6 +33,7 @@ module sema.produto.geradores_codigo_governado {
       cobertura_ia_fraca_media_forte: Booleano
       comentario_compacto: Booleano
       testes_lua_erro_nao_tautologicos: Booleano
+      falhas_lua_distinguidas_por_shape: Booleano
       operadores_lua_validos: Booleano
     }
     rules {
@@ -39,6 +41,7 @@ module sema.produto.geradores_codigo_governado {
       alvo deve_ser em [typescript, javascript, python, php, dart, lua, html, css, dotnet, cpp, nestjs, fastapi]
       capacidade_ia deve_ser em [fraca, media, forte]
       alvo deve_ser quando_lua_gerar_testes_de_erro_sem_injetar_erro_esperado_na_execucao
+      alvo deve_ser quando_lua_distinguir_falha_sem_saida_de_falha_com_outputs_observaveis
       alvo deve_ser quando_lua_mapear_operadores_da_DSL_para_sintaxe_valida_do_destino
     }
     effects {
@@ -65,6 +68,7 @@ module sema.produto.geradores_codigo_governado {
         cobertura_ia_fraca_media_forte: publico
         comentario_compacto: publico
         testes_lua_erro_nao_tautologicos: publico
+        falhas_lua_distinguidas_por_shape: publico
         operadores_lua_validos: publico
       }
     }
@@ -82,6 +86,7 @@ module sema.produto.geradores_codigo_governado {
       copiar_contrato_inteiro_para_comentario
       substituir_drift_por_comentario_no_codigo
       teste_lua_gerado_induzir_a_propria_falha_por_contexto_erro_esperado
+      teste_lua_descartar_outputs_de_falha_estruturada
       operador_da_DSL_emitido_com_sintaxe_invalida_no_lua
     }
     impl {
@@ -124,6 +129,7 @@ module sema.produto.geradores_codigo_governado {
       cobertura_ia_fraca_media_forte == verdadeiro
       comentario_compacto == verdadeiro
       testes_lua_erro_nao_tautologicos == verdadeiro
+      falhas_lua_distinguidas_por_shape == verdadeiro
       operadores_lua_validos == verdadeiro
     }
     tests {
@@ -179,6 +185,7 @@ module sema.produto.geradores_codigo_governado {
         expect {
           sucesso: verdadeiro
           testes_lua_erro_nao_tautologicos: verdadeiro
+          falhas_lua_distinguidas_por_shape: verdadeiro
           operadores_lua_validos: verdadeiro
         }
       }

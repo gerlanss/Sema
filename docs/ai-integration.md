@@ -73,6 +73,12 @@ Generated or governed code should keep a short `SEMA-GOVERNED` marker that
 points back to the applicable contract. The marker is not a substitute for
 validation, drift, impact, or finalization gates.
 
+Generated Lua tests preserve the contract's failure shape. A case whose only
+expectation is `sucesso: falso` may terminate without an output, while a case
+that also declares observable output fields must return a structured failure
+result. The generator keeps these paths distinct instead of forcing every
+failure into one representation.
+
 Governed code above 1000 lines requires a
 split plan. Governed code above 2000
 lines blocks closure. Markdown documentation is not counted as governed code
