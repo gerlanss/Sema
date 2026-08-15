@@ -22,9 +22,7 @@ In this real red-to-green demo, Sema catches a partial payment rename, preserves
 the `receipt_id` guarantee, and verifies contract, code, tests, drift, and
 documentation before closing the change.
 
-**[Watch on YouTube](https://youtu.be/IXkIlC9FxIs)** |
-**[Run the deterministic proof](./docs/build-week-2026/judge-guide.md)** |
-[See what changed during Build Week](./docs/build-week-2026/new-work.md)
+**[Watch on YouTube](https://youtu.be/IXkIlC9FxIs)**
 
 Codex is Sema's first native agent integration, and software is its first
 proving ground. The same governance model already supports workflows,
@@ -43,20 +41,6 @@ This public repository is intentionally scoped to the local CLI experience.
 It does not publish private or sensitive operational material.
 
 Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
-
-## OpenAI Build Week 2026
-
-The Build Week showcase presents **Sema — The semantic governance layer for AI
-agents** in the Developer Tools category. It demonstrates a concrete Codex
-workflow in which Sema detects semantic drift, preserves a critical guarantee,
-and verifies the repair end to end.
-
-- [Judge guide](./docs/build-week-2026/judge-guide.md)
-- [What was built during Build Week](./docs/build-week-2026/new-work.md)
-- [Submission copy](./docs/build-week-2026/submission.md)
-- [Reproducible demo harness](./showcase/build-week-2026/demo/README.md)
-- [Demo and recording plan](./docs/build-week-2026/storyboard.md)
-- [Public launch kit](./docs/build-week-2026/launch-kit.md)
 
 ## What Sema Does
 

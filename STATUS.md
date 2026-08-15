@@ -8,16 +8,14 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.3.1`
+- Version: `2.3.2`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-15
-- Reference commit: `5119dbf`
-- Build Week entry: Devpost submission `1102882` is `Submitted`; the final
-  source snapshot is `build-week-2026`.
+- Reference commit: `2abfe9c`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, thin Codex bootstrap skill, repo marketplace,
   `AGENTS.md` protocol, contracts, examples, tests, release scripts, and English
-  documentation, including the reproducible Build Week showcase and judge path.
+  documentation, without competition-specific workflows or submission assets.
 - License: public source with non-commercial terms; resale and commercial
   replication require written permission from OtimiTare.
 
@@ -39,8 +37,8 @@ Every public publication must pass:
 - Keep the skill limited to first-contact bootstrap and delegate ongoing
   governance to `AGENTS.md`.
 - Keep public documentation in English.
-- Keep the Build Week harness deterministic, local-only, and reproducible from
-  the published `@semacode/cli@2.0.1` package without rebuilding the CLI.
+- Keep product capabilities independent from competitions, event workflows,
+  submission platforms, and one-off showcase harnesses.
 - Keep support metadata pointed to `suporte@otimitare.online`.
 - Keep commercial resale and commercial replication blocked unless OtimiTare
   grants written permission.
