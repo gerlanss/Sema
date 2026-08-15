@@ -186,8 +186,9 @@ export async function comandoInspecionar(entrada: string | undefined, emJson: bo
   return 0;
 }
 export async function comandoDrift(entrada: string | undefined, args: string[], emJson: boolean, cwd = process.cwd()): Promise<number> {
-  const contextoProjeto = await carregarProjeto(entrada, cwd);
-  const resultado = await analisarDriftLegado(contextoProjeto, resolverOpcoesDriftCli(args));
+  const opcoes = resolverOpcoesDriftCli(args);
+  const contextoProjeto = await carregarProjeto(entrada, cwd, { escopo: opcoes.escopo });
+  const resultado = await analisarDriftLegado(contextoProjeto, opcoes);
   if (emJson) {
     console.log(JSON.stringify(resultado, null, 2));
     return resultado.sucesso ? 0 : 1;
@@ -286,12 +287,13 @@ export async function comandoImpacto(
     console.error("Uso: sema impacto <arquivo-ou-pasta> --alvo <token-semântico> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]");
     return 1;
   }
-  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const opcoes = resolverOpcoesDriftCli(args);
+  const contextoProjeto = await carregarProjeto(entrada, cwd, { escopo: opcoes.escopo });
   const resultado = await gerarMapaImpactoSemantico(
     contextoProjeto,
     alvoSemantico,
     obterOpcao(args, "--mudanca", `avaliar impacto de ${alvoSemantico}`)!,
-    resolverOpcoesDriftCli(args),
+    opcoes,
   );
   if (emJson) {
     console.log(JSON.stringify(resultado, null, 2));
@@ -330,12 +332,13 @@ export async function comandoRenomearSemantico(
     console.error("Uso: sema renomear-semantico <arquivo-ou-pasta> --de <nome-atual> --para <nome-novo> [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]");
     return 1;
   }
-  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const opcoes = resolverOpcoesDriftCli(args);
+  const contextoProjeto = await carregarProjeto(entrada, cwd, { escopo: opcoes.escopo });
   const resultado = await assistirRenomeacaoSemantica(
     contextoProjeto,
     nomeAtual,
     nomeNovo,
-    resolverOpcoesDriftCli(args),
+    opcoes,
   );
   if (emJson) {
     console.log(JSON.stringify(resultado, null, 2));

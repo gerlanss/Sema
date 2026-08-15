@@ -7,6 +7,7 @@ module sema.produto.governanca_ia.contexto.projeto {
     input {
       entrada: Texto required
       explicito: Booleano required
+      escopo_real: Texto required
     }
     output {
       base_resolvida: Booleano
@@ -16,18 +17,27 @@ module sema.produto.governanca_ia.contexto.projeto {
       ambiente_cliente_questionado: Booleano
       espelho_contratos_remoto: Booleano
       codigo_local_opcional_para_contrato: Booleano
+      contratos_descobertos_separados: Booleano
+      contratos_carregados_minimos: Booleano
+      fechamento_uses_aplicado: Booleano
     }
     forbidden {
       fallback_para_projeto_padrao_sem_workspace
       validar_repositorio_errado_por_omissao_de_contexto
       exigir_runtime_remoto_para_operacao_de_contrato
+      compilar_contrato_lateral_apenas_por_ter_sido_descoberto
     }
     impl {
       ts: cli.src.projeto.carregarProjeto
     }
     vinculos {
       arquivo: "pacotes/cli/src/projetoCarregar.ts"
+      arquivo: "pacotes/cli/src/projetoCatalogo.ts"
+      arquivo: "pacotes/cli/src/projetoTipos.ts"
+      arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
+      arquivo: "testes/unidade/projeto-carregamento-escopo.test.ts"
       simbolo: cli.src.projeto.carregarProjeto
+      simbolo: nucleo.semantico.listarCandidatosUseRelativo
     }
     execucao {
       idempotencia: verdadeiro
@@ -44,12 +54,16 @@ module sema.produto.governanca_ia.contexto.projeto {
       ambiente_cliente_questionado existe
       espelho_contratos_remoto existe
       codigo_local_opcional_para_contrato existe
+      contratos_descobertos_separados existe
+      contratos_carregados_minimos existe
+      fechamento_uses_aplicado existe
     }
     tests {
       caso "entrada explicita vence chute" {
         given {
           entrada: "exemplos/calculadora.sema"
           explicito: verdadeiro
+          escopo_real: "modulo"
         }
 
         expect {
@@ -58,6 +72,9 @@ module sema.produto.governanca_ia.contexto.projeto {
           ambiente_cliente_questionado: verdadeiro
           espelho_contratos_remoto: verdadeiro
           codigo_local_opcional_para_contrato: verdadeiro
+          contratos_descobertos_separados: verdadeiro
+          contratos_carregados_minimos: verdadeiro
+          fechamento_uses_aplicado: verdadeiro
         }
       }
     }

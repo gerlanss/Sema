@@ -5,6 +5,9 @@ export type {
   ConfiguracaoPersistenciaProjeto,
   ConfiguracaoProjetoCarregada,
   ContextoProjetoCarregado,
+  EscopoCarregamentoProjeto,
+  ModuloProjetoCarregado,
+  OpcoesCarregarProjeto,
   SemaConfigProjeto,
 } from './projetoTipos.js';
 export {

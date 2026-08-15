@@ -3,8 +3,17 @@
 
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import { compilarProjeto, lerArquivoTexto, listarArquivosSema, type ResultadoCompilacaoProjetoModulo } from '@sema/nucleo';
-import type { ContextoProjetoCarregado } from './projetoTipos.js';
+import { compilarProjeto, listarArquivosSema, type ResultadoCompilacaoProjetoModulo } from '@sema/nucleo';
+import {
+  canonicalizarContratosNoProjeto,
+  carregarFechamentoContratosSema,
+  carregarFontesContratos,
+} from './projetoCatalogo.js';
+import type {
+  ContextoProjetoCarregado,
+  ModuloProjetoCarregado,
+  OpcoesCarregarProjeto,
+} from './projetoTipos.js';
 import { carregarConfiguracaoProjeto, normalizarModoAdocao } from './projetoConfig.js';
 import { inferirFontesLegado } from './projetoLegado.js';
 import {
@@ -18,52 +27,79 @@ import {
 export async function carregarProjeto(
   entrada: string | undefined,
   cwd: string,
+  opcoes: OpcoesCarregarProjeto = {},
 ): Promise<ContextoProjetoCarregado> {
   const entradaBase = entrada ? path.resolve(cwd, entrada) : cwd;
   const configCarregada = await carregarConfiguracaoProjeto(entradaBase);
   const entradaResolvida = entrada ? path.resolve(cwd, entrada) : await resolverEntradaPadrao(cwd, configCarregada);
   const baseProjeto = await resolverBaseProjeto(entradaResolvida, configCarregada);
   const infoEntrada = await stat(entradaResolvida);
-  const origensProjeto = await resolverOrigensProjeto(baseProjeto, entradaResolvida, configCarregada);
-  const arquivosProjeto = await listarArquivosDeOrigens(origensProjeto);
+  if (infoEntrada.isFile() && path.extname(entradaResolvida).toLowerCase() !== ".sema") {
+    throw new Error(`Entrada de contrato precisa terminar em .sema: ${entradaResolvida}`);
+  }
+  const escopo = opcoes.escopo ?? (infoEntrada.isFile() ? "modulo" : "projeto");
+  const carregarProjetoCompleto = !infoEntrada.isFile() || escopo === "projeto";
+  const origensBase = infoEntrada.isFile()
+    ? await resolverOrigensProjeto(baseProjeto, baseProjeto, configCarregada)
+    : await resolverOrigensProjeto(baseProjeto, entradaResolvida, configCarregada);
+  const origensProjeto = [...new Set([
+    ...origensBase,
+    ...(infoEntrada.isFile() ? [path.dirname(entradaResolvida)] : []),
+  ].map((origem) => path.resolve(origem)))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const arquivosDescobertosSet = new Set(await listarArquivosDeOrigens(origensProjeto));
+  if (infoEntrada.isFile()) {
+    arquivosDescobertosSet.add(path.resolve(entradaResolvida));
+  }
+  const arquivosDescobertos = await canonicalizarContratosNoProjeto(
+    baseProjeto,
+    [...arquivosDescobertosSet],
+  );
+  const entradaContrato = infoEntrada.isFile()
+    ? (await canonicalizarContratosNoProjeto(baseProjeto, [entradaResolvida]))[0]
+    : undefined;
+  // O escopo estreito limita contratos compilados, não a evidência de código vivo.
+  // Drift/impacto ainda precisam detectar frameworks e fontes mesmo com um único contrato alvo.
   const diretoriosCodigo = await inferirDiretoriosCodigo(baseProjeto, configCarregada);
   const fontesLegado = await inferirFontesLegado(diretoriosCodigo, baseProjeto, configCarregada);
   const modoAdocao = normalizarModoAdocao(configCarregada?.config.modoAdocao);
 
-  const arquivosSelecionados = infoEntrada.isFile()
-    ? new Set([path.resolve(entradaResolvida)])
+  const arquivosSelecionados = carregarProjetoCompleto && escopo === "projeto"
+    ? new Set(arquivosDescobertos.map((arquivo) => path.resolve(arquivo)))
+    : infoEntrada.isFile()
+    ? new Set([entradaContrato!])
     : new Set((
       configCarregada && path.resolve(entradaResolvida) === path.resolve(configCarregada.baseDiretorio)
-        ? arquivosProjeto
+        ? arquivosDescobertos
         : await listarArquivosSema(entradaResolvida)
     ).map((arquivo) => path.resolve(arquivo)));
 
-  const fontes = [];
-  for (const arquivo of arquivosProjeto) {
-    const codigo = await lerArquivoTexto(arquivo);
-    fontes.push({ caminho: arquivo, codigo });
-  }
+  const fontes = carregarProjetoCompleto
+    ? await carregarFontesContratos(arquivosDescobertos)
+    : (await carregarFechamentoContratosSema([entradaContrato!], arquivosDescobertos)).fontes;
 
   const resultadoProjeto = compilarProjeto(fontes);
   const resultados = new Map<string, ResultadoCompilacaoProjetoModulo>(
     resultadoProjeto.modulos.map((modulo) => [path.resolve(modulo.caminho), modulo]),
   );
+  const modulosCarregados: ModuloProjetoCarregado[] = fontes.map((fonte) => ({
+    caminho: fonte.caminho,
+    codigo: fonte.codigo,
+    resultado: resultados.get(path.resolve(fonte.caminho))!,
+  }));
 
   return {
     entradaResolvida,
     baseProjeto,
     configCarregada,
-    arquivosProjeto,
+    arquivosProjeto: fontes.map((fonte) => fonte.caminho),
+    arquivosDescobertos,
     origensProjeto,
     diretoriosCodigo,
     fontesLegado,
     modoAdocao,
-    modulosSelecionados: fontes
-      .filter((fonte) => arquivosSelecionados.has(path.resolve(fonte.caminho)))
-      .map((fonte) => ({
-        caminho: fonte.caminho,
-        codigo: fonte.codigo,
-        resultado: resultados.get(path.resolve(fonte.caminho))!,
-      })),
+    modulosCarregados,
+    modulosSelecionados: modulosCarregados
+      .filter((modulo) => arquivosSelecionados.has(path.resolve(modulo.caminho))),
   };
 }
