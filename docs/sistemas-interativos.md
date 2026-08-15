@@ -330,33 +330,33 @@ only that local structural coverage is complete; it deliberately keeps
 editor was inspected, a plug-in existed, a worker accepted a job, a package
 launched, or an external observer attested the result.
 
-## Semantic budget split plan
+## Semantic responsibility split
 
-The current operational facade remains compatible, but three governed artifacts
-have crossed the planning threshold: `operations.ts` has 1,112 lines,
-`sistemas_interativos_operacao.sema` has 304 lines, and the installed-package
-smoke `scripts/testar-pacote-cli-publico.mjs` has 1,009 lines. Before any of
-them reaches its blocking limit, split by responsibility as follows:
+The operational surface is divided by responsibility while preserving
+`operations.ts` as the stable explicit export facade:
 
-- move engine snapshots, semantic diffs, asset provenance, and editor-state
-  observation into `engineObservation.ts`;
-- move queues, locks, budgets, leases, checkpoints, and recovery planning into
-  `jobOrchestration.ts`;
-- move acceptance locks, invalidation, and multimodal claim evidence into
-  `acceptanceEvidence.ts`;
-- keep `operations.ts` as the stable re-export facade while callers migrate;
-- split the contract into `sistemas_interativos_observacao_engine.sema`,
-  `sistemas_interativos_orquestracao_jobs.sema`, and
-  `sistemas_interativos_acceptance_evidencias.sema`, with all three contracts
-  linked to the shared facade and their actual implementation files;
-- split the installed-package smoke into helpers for public-boundary security,
-  Codex bootstrap, content-pipeline compatibility, interactive systems, and
-  generated toolchains, while retaining the current script as the stable
-  orchestrator and preserving one end-to-end isolated installation.
+- `operationPrimitives.ts` contains shared validation, canonicalization, digest,
+  and evidence primitives;
+- `engineObservation.ts` owns engine snapshots, semantic diffs, asset
+  provenance, and editor-state observation;
+- `jobOrchestration.ts` owns queues, locks, budgets, leases, checkpoints, and
+  recovery planning;
+- `acceptanceEvidence.ts` owns acceptance locks, invalidation, and multimodal
+  claim evidence.
+
+The contracts follow the same boundaries through
+`sistemas_interativos_operacao.sema`,
+`sistemas_interativos_observacao_engine.sema`,
+`sistemas_interativos_orquestracao_jobs.sema`, and
+`sistemas_interativos_acceptance_evidencias.sema`. The installed-package smoke
+also keeps one stable orchestrator and one isolated installation, delegating
+public-boundary security, Codex bootstrap, content-pipeline compatibility,
+interactive systems, and generated toolchains to named helpers under
+`scripts/cli-publico/`.
 
 This is a responsibility split, not a numbered-file workaround. Existing
-exports, schema versions, fixtures, digests, and fail-closed behavior must remain
-backward compatible through the migration.
+exports, schema versions, fixtures, digests, and fail-closed behavior remain
+backward compatible across the facades.
 
 ## Fidelity rules
 

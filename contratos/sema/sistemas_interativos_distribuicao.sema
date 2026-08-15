@@ -69,6 +69,7 @@ module sema.produto.sistemas_interativos.distribuicao {
     vinculos {
       arquivo: "scripts/empacotar-cli-publica.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
       arquivo: "pacotes/cli/scripts/prepack-exemplos.mjs"
       arquivo: "pacotes/cli/package.json"
       arquivo: "pacotes/cli/src/exemplosOficiais.ts"

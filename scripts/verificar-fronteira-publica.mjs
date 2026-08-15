@@ -39,6 +39,11 @@ const arquivosObrigatorios = [
   "pacotes/cli/README.md",
   "scripts/empacotar-cli-publica.mjs",
   "scripts/testar-pacote-cli-publico.mjs",
+  "scripts/cli-publico/bootstrap-codex.mjs",
+  "scripts/cli-publico/fronteira-publica.mjs",
+  "scripts/cli-publico/pipeline-conteudo.mjs",
+  "scripts/cli-publico/sistemas-interativos.mjs",
+  "scripts/cli-publico/toolchains-geradas.mjs",
   ".agents/plugins/marketplace.json",
   "plugins/sema/.codex-plugin/plugin.json",
   "logo.png",
@@ -206,7 +211,11 @@ function removerDetectorMigracaoLegada(arquivo, conteudo) {
 }
 
 function removerFixturesDoScannerDeSegredos(arquivo, conteudo) {
-  if (arquivo !== "scripts/testar-pacote-cli-publico.mjs") {
+  const arquivosComFixturesDoScanner = new Set([
+    "scripts/testar-pacote-cli-publico.mjs",
+    "scripts/cli-publico/fronteira-publica.mjs",
+  ]);
+  if (!arquivosComFixturesDoScanner.has(arquivo)) {
     return conteudo;
   }
   return conteudo

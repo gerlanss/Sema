@@ -38,11 +38,12 @@ sema finalizar-mudanca \
 - Prefer local CLI examples.
 - Point support requests to suporte@otimitare.online.
 
-## Contract Split Plan
+## Contract Structure
 
-`contratos/sema/governanca_ia_documentacao.sema` is close to the 500-line
-blocking limit. Before adding another documentation capability, split it by
-responsibility into contracts for required-document resolution, localization,
-and change-finalization evidence. Preserve the existing task names, guarantees,
-implementations, and links; the contracts may continue to govern the same CLI
-files through multiple `vinculos`. Do not create numbered part files.
+Documentation governance is split by capability: required-document resolution
+stays in `governanca_ia_documentacao.sema`, while localization and
+change-finalization evidence live in explicitly named child contracts. The
+same rule applies to drift and semantic-budget governance: keep a cohesive
+primary capability in the root contract and move secondary responsibilities to
+named children. Preserve task names, guarantees, implementations, and
+`vinculos`; never create numbered part files.

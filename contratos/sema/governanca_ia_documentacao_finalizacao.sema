@@ -1,0 +1,177 @@
+module sema.produto.governanca_ia.documentacao.finalizacao {
+  docs {
+    resumo: "Comprova leitura e decisao documental antes de finalizar uma mudanca governada."
+    arquivo: "contratos/sema/governanca_ia_documentacao.sema"
+    arquivo: "docs/documentation.md"
+  }
+
+  task validar_leitura_documental_da_mudanca {
+    input {
+      base_projeto: Texto required
+      intencao: Texto required
+      arquivos_alvo: Texto
+      docs_lidas: Texto
+      docs_criadas: Texto
+      docs_editadas: Texto
+      docs_removidas: Texto
+      docs_sem_impacto: Texto
+      sem_impacto_doc: Texto
+    }
+    output {
+      docs_obrigatorias_lidas: Booleano
+      docs_impactadas_cobertas: Booleano
+      decisao_documental_comprovada: Booleano
+      documentacao_atualizada_ou_justificada: Booleano
+      docs_sem_decisao: Lista
+      bloqueio_emitido_quando_falta_leitura: Booleano
+      templates_crus_bloqueados: Booleano
+      diagnostico_compacto_emitido: Booleano
+    }
+    authz {
+      escopo: sema.docs.finalizar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        base_projeto: interno
+        intencao: interno
+        arquivos_alvo: interno
+        docs_lidas: interno
+        docs_criadas: interno
+        docs_editadas: interno
+        docs_removidas: interno
+        docs_sem_impacto: interno
+        sem_impacto_doc: interno
+      }
+      output {
+        docs_obrigatorias_lidas: interno
+        docs_impactadas_cobertas: interno
+        decisao_documental_comprovada: interno
+        documentacao_atualizada_ou_justificada: interno
+        docs_sem_decisao: interno
+        bloqueio_emitido_quando_falta_leitura: interno
+        templates_crus_bloqueados: interno
+        diagnostico_compacto_emitido: interno
+      }
+    }
+    audit {
+      evento: sema.docs.mudanca_finalizada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      retornar_conteudo_documental_no_fechamento
+      ocultar_diagnostico_atras_de_contexto_longo
+      finalizar_somente_com_doc_lida
+      concluir_sem_decisao_documental
+      deixar_doc_operacional_relacionada_sem_decisao
+      marcar_doc_nao_relacionada_como_evidencia
+      usar_sem_impacto_doc_sem_motivo
+      usar_motivo_sem_impacto_sem_doc
+      finalizar_com_template_cru_criado_pela_sema
+    }
+    impl {
+      ts: cli.src.docs.verificarDocumentacaoMudanca
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/docs.ts"
+      arquivo: "pacotes/cli/src/docs.part02.ts"
+      arquivo: "pacotes/cli/src/index.part04.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      simbolo: cli.src.docs.verificarDocumentacaoMudanca
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "ler docs obrigatorias e declarar por arquivo doc criada editada removida ou sem impacto justificado antes de concluir"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      docs_obrigatorias_lidas existe
+      docs_impactadas_cobertas existe
+      decisao_documental_comprovada existe
+      documentacao_atualizada_ou_justificada existe
+      docs_sem_decisao existe
+      docs_sem_decisao deve_ser vazia_quando_sem_impacto_doc_ausente
+      bloqueio_emitido_quando_falta_leitura existe
+      templates_crus_bloqueados existe
+      diagnostico_compacto_emitido existe
+      documentacao_atualizada_ou_justificada == verdadeiro
+    }
+    error {
+      leitura_obrigatoria_nao_comprovada {
+        mensagem: IA tentou concluir sem comprovar leitura das docs obrigatorias
+        categoria: negocio
+        recuperabilidade: permanente
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+      decisao_documental_nao_comprovada {
+        mensagem: IA tentou concluir sem declarar se a documentacao foi criada editada removida ou sem impacto justificado
+        categoria: negocio
+        recuperabilidade: permanente
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+      documentacao_template_cru {
+        mensagem: IA tentou concluir usando esqueleto criado pela Sema sem preencher procedimento validacao e rollback reais
+        categoria: negocio
+        recuperabilidade: permanente
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+    }
+    tests {
+      caso "mudanca nao fecha sem docs lidas" {
+        given {
+          base_projeto: "."
+          intencao: "alterar CLI local"
+          docs_lidas: ""
+        }
+
+        expect {
+          sucesso: verdadeiro
+          bloqueio_emitido_quando_falta_leitura: verdadeiro
+          diagnostico_compacto_emitido: verdadeiro
+        }
+      }
+      caso "mudanca nao fecha somente com doc lida" {
+        given {
+          base_projeto: "."
+          intencao: "alterar painel admin"
+          docs_lidas: "AGENTS.md docs/frontend.md docs/i18n.md"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          decisao_documental_comprovada: falso
+          documentacao_atualizada_ou_justificada: falso
+        }
+      }
+      caso "mudanca fecha com doc editada declarada" {
+        given {
+          base_projeto: "."
+          intencao: "alterar painel admin"
+          docs_lidas: "AGENTS.md docs/frontend.md docs/i18n.md"
+          docs_editadas: "docs/frontend.md"
+          docs_sem_impacto: "docs/i18n.md"
+          sem_impacto_doc: "continua valida para esta mudanca"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          decisao_documental_comprovada: verdadeiro
+          documentacao_atualizada_ou_justificada: verdadeiro
+        }
+      }
+    }
+  }
+}

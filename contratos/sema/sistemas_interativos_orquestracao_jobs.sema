@@ -1,0 +1,47 @@
+module sema.produto.sistemas_interativos.operacao.orquestracao_jobs {
+  docs {
+    resumo: "Planeja filas, locks, budgets, heartbeat, checkpoints e retomada sem reservar recursos ou executar jobs."
+    arquivo: "contratos/sema/sistemas_interativos_operacao.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  task planejar_orquestracao_jobs_interativos {
+    input {
+      requisicao: Objeto required
+    }
+    output {
+      resultado: Objeto
+    }
+    rules {
+      requisicao deve_ser JSON_v1_com_fila_jobs_dependencias_aciclicas_e_ids_unicos
+      requisicao deve_ser declarar_locks_GPU_EDITOR_CACHE_e_budgets_RAM_VRAM_DISK
+      requisicao deve_ser declarar_kind_priority_adapter_heartbeat_checkpoint_resume_e_recovery_token_opaco_e_gerar_request_digest_canonico_completo
+    }
+    effects {
+      auditoria orquestracao_jobs_interativos_planejada criticidade = media
+    }
+    forbidden {
+      adquirir_lock_alocar_gpu_abrir_editor_escrever_cache_ou_iniciar_job
+      aceitar_budget_negativo_dependencia_quebrada_ciclo_ou_token_cru
+      omitir_kind_priority_adapter_ou_qualquer_campo_validado_do_request_digest_e_plan_digest_ou_tratar_plano_como_execucao
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.operations.planejarOrquestracaoJobs
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/jobOrchestration.ts"
+      simbolo: cli.src.sistemas_interativos.operations.planejarOrquestracaoJobs
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      resultado existe
+      resultado deve_ser fail_closed_executed_false_resources_reserved_false_authoritative_false
+    }
+  }
+}

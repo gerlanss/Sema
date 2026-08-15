@@ -1,13 +1,21 @@
 module sema.produto.fronteira_repositorios {
   docs {
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento.sema"
     resumo: "Contrato de fronteira publica Codex-native e local-only do Sema. O repositorio publico contem CLI local sem autorizacao, licenca, credito, token ou painel, alem da skill oficial de bootstrap do Codex, contratos, exemplos, testes locais e documentacao em ingles. A skill apresenta o Sema em projetos ainda nao inicializados; depois de sema iniciar, AGENTS.md e o protocolo automatico e fonte de governanca do Codex. Matrizes de outros clientes ficam fora da distribuicao. Materiais privados ou sensiveis ficam fora da distribuicao publica. A fonte e publica, mas nao pode ser replicada para venda comercial sem permissao escrita da OtimiTare."
   }
+
+  use sema.produto.fronteira_repositorios.empacotamento
 
   vinculos {
     arquivo: "scripts/verificar-fronteira-publica.mjs"
     arquivo: "scripts/empacotar-cli-publica.mjs"
     arquivo: "scripts/publicar-cli-npm.mjs"
     arquivo: "scripts/testar-pacote-cli-publico.mjs"
+    arquivo: "scripts/cli-publico/bootstrap-codex.mjs"
+    arquivo: "scripts/cli-publico/fronteira-publica.mjs"
+    arquivo: "scripts/cli-publico/pipeline-conteudo.mjs"
+    arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
+    arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
     arquivo: "scripts/testar-plugin-codex.mjs"
     arquivo: "README.md"
     arquivo: "LICENSE"
@@ -139,6 +147,11 @@ module sema.produto.fronteira_repositorios {
       arquivo: "scripts/verificar-fronteira-publica.mjs"
       arquivo: "scripts/empacotar-cli-publica.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "scripts/cli-publico/bootstrap-codex.mjs"
+      arquivo: "scripts/cli-publico/fronteira-publica.mjs"
+      arquivo: "scripts/cli-publico/pipeline-conteudo.mjs"
+      arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
+      arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
       arquivo: "scripts/testar-plugin-codex.mjs"
       arquivo: "package.json"
       arquivo: "pacotes/cli/package.json"
@@ -206,97 +219,6 @@ module sema.produto.fronteira_repositorios {
           texto_publico_sem_mojibake: verdadeiro
         }
       }
-    }
-  }
-
-  task empacotar_cli_publica_local_only {
-    input {
-      versao: Texto required
-      incluir_docs_ingles: Booleano required
-    }
-    output {
-      pacote_gerado: Booleano
-      dependencias_file_removidas: Booleano
-      metadados_suporte_email: Booleano
-      licenca_nao_comercial_incluida: Booleano
-      produto_codex_native: Booleano
-      cli_sem_autorizacao_local: Booleano
-      npm_execucao_windows_isolada: Booleano
-    }
-    rules {
-      versao deve_ser preenchido
-      incluir_docs_ingles == verdadeiro
-    }
-    effects {
-      fs.write pacote_cli_publico criticidade = alta
-      auditoria pacote_publico criticidade = alta
-    }
-    authz {
-      escopo: sema.publico.cli.empacotar
-      tenant: opcional
-    }
-    dados {
-      classificacao_padrao: publico
-      redacao_log: obrigatoria
-      input {
-        versao: publico
-        incluir_docs_ingles: publico
-      }
-      output {
-        pacote_gerado: publico
-        dependencias_file_removidas: publico
-        metadados_suporte_email: publico
-        licenca_nao_comercial_incluida: publico
-        produto_codex_native: publico
-        cli_sem_autorizacao_local: publico
-        npm_execucao_windows_isolada: publico
-      }
-    }
-    audit {
-      evento: sema.publico.cli.empacotada
-      ator: agente.sema
-      correlacao: request_id
-      retencao: "365d"
-      motivo: obrigatorio
-    }
-    forbidden {
-      incluir_agent_context_privado
-      incluir_indice_workspace
-      incluir_artefato_sensivel
-      incluir_dependencia_file_no_tarball_publico
-      incluir_doc_removida
-      incluir_preflight_de_autorizacao_local
-      incluir_entrypoint_para_cliente_nao_codex
-      empacotar_tarball_sem_preservar_exports_map
-      permitir_deep_import_dist_pipelineConteudo
-      publicar_avaliador_interno_pipeline_conteudo_em_subpath_publico
-      usar_wrapper_ou_cache_npm_global_quando_execucao_local_isolada_existe
-    }
-    impl {
-      ts: scripts.empacotar_cli_publica.main
-    }
-    vinculos {
-      arquivo: "scripts/empacotar-cli-publica.mjs"
-      arquivo: "scripts/publicar-cli-npm.mjs"
-      arquivo: "scripts/testar-pacote-cli-publico.mjs"
-      arquivo: "pacotes/cli/README.md"
-      arquivo: "docs/README.md"
-    }
-    execucao {
-      idempotencia: verdadeiro
-      timeout: "120s"
-      retry: "nenhum"
-      compensacao: "apagar stage e bloquear publicacao"
-      criticidade_operacional: alta
-    }
-    guarantees {
-      pacote_gerado existe
-      dependencias_file_removidas == verdadeiro
-      metadados_suporte_email == verdadeiro
-      licenca_nao_comercial_incluida == verdadeiro
-      produto_codex_native == verdadeiro
-      cli_sem_autorizacao_local == verdadeiro
-      npm_execucao_windows_isolada == verdadeiro
     }
   }
 }

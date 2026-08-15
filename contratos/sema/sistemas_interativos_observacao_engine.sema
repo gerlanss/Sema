@@ -1,0 +1,116 @@
+module sema.produto.sistemas_interativos.operacao.observacao_engine {
+  docs {
+    resumo: "Valida proveniencia de assets e estado declarado do editor sem sondar engine, host ou processo."
+    arquivo: "contratos/sema/sistemas_interativos_operacao.sema"
+    arquivo: "contratos/sema/sistemas_interativos_evidencias.sema"
+    arquivo: "contratos/sema/sistemas_interativos_ir.sema"
+    arquivo: "docs/sistemas-interativos.md"
+  }
+
+  type ProvenienciaAssetOperacional {
+    fields {
+      schema_version: Texto
+      asset_id: Texto
+      source_uri_ref: Texto
+      source_uri_redacted: Booleano
+      license: Objeto
+      source_hash: Texto
+      content_hash: Texto
+      transforms: Lista
+      derivatives: Lista
+      authoritative: Booleano
+    }
+    invariants {
+      schema_version existe
+      asset_id existe
+      source_uri_ref existe
+      source_uri_redacted == verdadeiro
+      license existe
+      source_hash existe
+      content_hash existe
+      transforms existe
+      derivatives existe
+      authoritative == falso
+    }
+  }
+
+  task validar_proveniencia_asset_operacional {
+    input {
+      proveniencia: ProvenienciaAssetOperacional required
+    }
+    output {
+      resultado: Objeto
+    }
+    rules {
+      proveniencia deve_ser JSON_v1_plain
+      proveniencia deve_ser ter_source_uri_ref_opaco_redigido_licenca_e_hashes_sha256
+      proveniencia deve_ser ter_transforms_encadeados_e_derivados_ligados_a_hash_conhecido
+    }
+    effects {
+      auditoria proveniencia_asset_operacional_validada criticidade = media
+    }
+    forbidden {
+      aceitar_uri_path_credencial_ou_licenca_implicita
+      aceitar_transform_ou_derivado_sem_linhagem_de_hash
+      ecoar_valor_invalido_ou_declarar_autoridade
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.operations.validarProvenienciaAsset
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/engineObservation.ts"
+      simbolo: cli.src.sistemas_interativos.operations.validarProvenienciaAsset
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      resultado existe
+      resultado deve_ser deterministico_no_echo_e_nao_autoritativo
+    }
+  }
+
+  task validar_estado_editor_operacional {
+    input {
+      estado: Objeto required
+    }
+    output {
+      resultado: Objeto
+    }
+    rules {
+      estado deve_ser JSON_v1_plain_read_only
+      estado deve_ser declarar_scene_selection_mode_unsaved_shader_import_plugins_modals_e_processes
+      estado deve_ser usar_ids_semanticos_ou_referencias_opacas_sem_pid_comando_path_ou_segredo
+    }
+    effects {
+      auditoria estado_editor_operacional_validado criticidade = media
+    }
+    forbidden {
+      abrir_editor_consultar_host_ou_executar_processo
+      inferir_estado_ausente
+      ecoar_valor_controlado_em_issue
+    }
+    impl {
+      ts: cli.src.sistemas_interativos.operations.validarEstadoEditor
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/engineObservation.ts"
+      simbolo: cli.src.sistemas_interativos.operations.validarEstadoEditor
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      resultado existe
+      resultado deve_ser read_only_local_authoritative_false
+    }
+  }
+}

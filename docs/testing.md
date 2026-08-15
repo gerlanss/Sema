@@ -38,6 +38,11 @@ definition validation, planning, and adapter-protocol validation through the
 installed binary. Passing this smoke proves the local tarball only; it does not
 mean that npm or a GitHub release was published.
 
+The public-package smoke has one orchestrator and named helpers under
+`scripts/cli-publico/`. All helpers share the same temporary sandbox and the
+same installed tarball; splitting the checks must never multiply installations
+or weaken the single `try/finally` cleanup boundary.
+
 Native generator evidence is mandatory when changing C#/.NET or C++ support.
 The `dotnet` smoke must compile and execute through the local .NET SDK. The
 `cpp` smoke must compile and execute through GCC, Clang, or MSVC; checking only

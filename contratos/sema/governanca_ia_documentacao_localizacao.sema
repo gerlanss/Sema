@@ -1,0 +1,191 @@
+module sema.produto.governanca_ia.documentacao.localizacao {
+  docs {
+    resumo: "Publica documentacao localizada sem perder acentos, exemplos ou identificadores tecnicos."
+    arquivo: "contratos/sema/governanca_ia_documentacao.sema"
+    arquivo: "docs/documentation.md"
+  }
+
+  task publicar_documentacao_localizada {
+    input {
+      documentos: Texto required
+      idiomas_solicitados: Lista required
+      ordem_idiomas: Texto
+      idioma_padrao: Texto
+      publico_alvo: Texto required
+      superficie: Texto required
+    }
+    output {
+      portugues_com_acentos: Booleano
+      espanhol_com_acentos: Booleano
+      idiomas_solicitados_cobertos: Booleano
+      quantidade_idiomas_variavel: Booleano
+      texto_visivel_no_idioma_do_usuario: Booleano
+      documentacao_privada_ptbr_permitida: Booleano
+      docs_com_suporte_multilingue: Booleano
+      github_npm_alinhados: Booleano
+      descricao_npm_publica: Booleano
+      geracao_futura_preserva_i18n: Booleano
+      exemplos_codigo_preservados: Booleano
+      identificadores_tecnicos_preservados: Booleano
+    }
+    rules {
+      documentos deve_ser preenchido
+      idiomas_solicitados deve_ser nao_vazio
+      publico_alvo deve_ser em [agente, operador, publico, interno]
+      superficie deve_ser preenchida
+    }
+    effects {
+      fs.write documentacao_governada criticidade = media
+      auditoria documentacao_localizada criticidade = media
+    }
+    authz {
+      escopo: sema.docs.i18n
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: parcial
+      input {
+        documentos: publico
+        idiomas_solicitados: publico
+        ordem_idiomas: publico
+        idioma_padrao: publico
+        publico_alvo: publico
+        superficie: publico
+      }
+      output {
+        portugues_com_acentos: publico
+        espanhol_com_acentos: publico
+        idiomas_solicitados_cobertos: publico
+        quantidade_idiomas_variavel: publico
+        texto_visivel_no_idioma_do_usuario: publico
+        documentacao_privada_ptbr_permitida: publico
+        docs_com_suporte_multilingue: publico
+        github_npm_alinhados: publico
+        descricao_npm_publica: publico
+        geracao_futura_preserva_i18n: publico
+        exemplos_codigo_preservados: publico
+        identificadores_tecnicos_preservados: publico
+      }
+    }
+    audit {
+      evento: sema.docs.i18n_localizada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      documentacao_publica_monolingue_quando_multiplos_idiomas_solicitados
+      idioma_solicitado_ausente
+      idioma_do_usuario_ignorado
+      portugues_sem_acentos
+      espanhol_sem_acentos
+      documentacao_privada_com_ingles_ou_espanhol_sem_pedido
+      idiomas_hardcoded_como_quantidade_fixa
+      quantidade_idiomas_fixa_sem_pedido
+      ordem_idiomas_inventada
+      texto_ascii_por_padrao_em_idioma_com_acento
+      mojibake_em_texto_humano
+      caractere_substituicao_em_texto_humano
+      evento_tecnico_cru_como_rotulo_principal
+      readme_npm_desalinhado_do_github
+      publicar_npm_com_readme_antigo
+      descricao_npm_sem_idioma_externo_quando_publico
+      sobrescrever_exemplo_de_codigo_por_traducao
+      traduzir_identificador_tecnico_sem_intencao
+    }
+    impl {
+      ts: cli.src.docs.criarTemplateDoc
+    }
+    vinculos {
+      arquivo: "README.md"
+      arquivo: "docs/README.md"
+      arquivo: "docs/documentation.md"
+      arquivo: "docs/i18n.md"
+      arquivo: "pacotes/cli/README.md"
+      arquivo: "pacotes/cli/package.json"
+      arquivo: "pacotes/cli/src/docs.ts"
+      arquivo: "pacotes/cli/src/docs.part01.ts"
+      simbolo: cli.src.docs.criarTemplateDoc
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "restaurar documento anterior se i18n quebrar links ou exemplos"
+      criticidade_operacional: media
+    }
+    guarantees {
+      portugues_com_acentos == verdadeiro
+      idiomas_solicitados_cobertos == verdadeiro
+      quantidade_idiomas_variavel == verdadeiro
+      texto_visivel_no_idioma_do_usuario == verdadeiro
+      documentacao_privada_ptbr_permitida == verdadeiro
+      github_npm_alinhados == verdadeiro
+      geracao_futura_preserva_i18n == verdadeiro
+      exemplos_codigo_preservados == verdadeiro
+      identificadores_tecnicos_preservados == verdadeiro
+    }
+    error {
+      i18n_documental_incompleto {
+        mensagem: documentacao precisa seguir a superficie declarada e usar PT-BR privado por padrao e cobrir idiomas solicitados quando externos e preservar acentos e nao inventar quantidade fixa
+        categoria: negocio
+        recuperabilidade: permanente
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+    }
+    tests {
+      caso "texto publico cobre idiomas solicitados sem fixar quantidade" {
+        given {
+          documentos: "README.md docs/README.md docs/documentation.md pacotes/cli/README.md"
+          idiomas_solicitados: "Português, Español, Français"
+          ordem_idiomas: "Português Español Français"
+          idioma_padrao: "Português"
+          publico_alvo: "publico"
+          superficie: "docs site app painel admin"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          portugues_com_acentos: verdadeiro
+          espanhol_com_acentos: verdadeiro
+          idiomas_solicitados_cobertos: verdadeiro
+          quantidade_idiomas_variavel: verdadeiro
+          texto_visivel_no_idioma_do_usuario: verdadeiro
+          docs_com_suporte_multilingue: verdadeiro
+          github_npm_alinhados: verdadeiro
+          descricao_npm_publica: verdadeiro
+          geracao_futura_preserva_i18n: verdadeiro
+          exemplos_codigo_preservados: verdadeiro
+          identificadores_tecnicos_preservados: verdadeiro
+        }
+      }
+      caso "readme privado pode ser somente ptbr" {
+        given {
+          documentos: "README.md docs/README.md docs/documentation.md docs/i18n.md"
+          idiomas_solicitados: "Português"
+          ordem_idiomas: "Português"
+          idioma_padrao: "Português"
+          publico_alvo: "interno"
+          superficie: "repositorio privado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          portugues_com_acentos: verdadeiro
+          idiomas_solicitados_cobertos: verdadeiro
+          quantidade_idiomas_variavel: verdadeiro
+          texto_visivel_no_idioma_do_usuario: verdadeiro
+          documentacao_privada_ptbr_permitida: verdadeiro
+          github_npm_alinhados: verdadeiro
+          geracao_futura_preserva_i18n: verdadeiro
+          exemplos_codigo_preservados: verdadeiro
+          identificadores_tecnicos_preservados: verdadeiro
+        }
+      }
+    }
+  }
+}

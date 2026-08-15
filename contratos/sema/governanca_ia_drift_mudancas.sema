@@ -1,0 +1,153 @@
+module sema.produto.governanca_ia.drift.mudancas {
+  docs {
+    resumo: "Mapeia impacto e assiste renomeacoes semanticas sem quebrar consumidores laterais."
+    arquivo: "contratos/sema/governanca_ia_drift.sema"
+    arquivo: "docs/ai-workflow.md"
+  }
+
+  task mapear_impacto_semantico {
+    input {
+      contrato_alvo: Texto required
+      alvo_semantico: Texto required
+      mudanca_proposta: Texto required
+    }
+    output {
+      arquivos_afetados: Booleano
+      superfices_afetadas: Booleano
+      ordem_operacional_emitida: Booleano
+    }
+    authz {
+      escopo: sema.impacto.mapear
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        alvo_semantico: interno
+        mudanca_proposta: interno
+      }
+      output {
+        arquivos_afetados: interno
+        superfices_afetadas: interno
+        ordem_operacional_emitida: interno
+      }
+    }
+    audit {
+      evento: sema.impacto.mapeado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: cli.src.drift.gerarMapaImpactoSemantico
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      arquivo: "pacotes/cli/src/drift.part12.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "pacotes/cli/src/index.part05.ts"
+      simbolo: cli.src.drift.gerarMapaImpactoSemantico
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      arquivos_afetados existe
+      superfices_afetadas existe
+      ordem_operacional_emitida existe
+    }
+    tests {
+      caso "mudanca semantica vira plano acionavel" {
+        given {
+          contrato_alvo: "contratos/colaboradores_whatsapp.sema"
+          alvo_semantico: "ranking_geral"
+          mudanca_proposta: "substituir classificacao_atual por ranking_geral e ranking_loja"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          arquivos_afetados: "contratos/colaboradores_whatsapp.sema"
+          ordem_operacional_emitida: verdadeiro
+        }
+      }
+    }
+  }
+
+  task assistir_renomeacao_semantica {
+    input {
+      contrato_alvo: Texto required
+      nome_atual: Texto required
+      nome_novo: Texto required
+    }
+    output {
+      contrato_reescrito: Booleano
+      codigo_relacionado_mapeado: Booleano
+      testes_afetados_sugeridos: Booleano
+    }
+    authz {
+      escopo: sema.renomeacao.executar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+        nome_atual: interno
+        nome_novo: interno
+      }
+      output {
+        contrato_reescrito: interno
+        codigo_relacionado_mapeado: interno
+        testes_afetados_sugeridos: interno
+      }
+    }
+    audit {
+      evento: sema.renomeacao.assistida
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    impl {
+      ts: cli.src.drift.assistirRenomeacaoSemantica
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.ts"
+      arquivo: "pacotes/cli/src/drift.part12.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "pacotes/cli/src/index.part05.ts"
+      simbolo: cli.src.drift.assistirRenomeacaoSemantica
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      contrato_reescrito existe
+      codigo_relacionado_mapeado existe
+      testes_afetados_sugeridos existe
+    }
+    tests {
+      caso "renomeacao guiada evita quebra lateral" {
+        given {
+          contrato_alvo: "contratos/colaboradores_whatsapp.sema"
+          nome_atual: "classificacao_atual"
+          nome_novo: "ranking_geral"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          contrato_reescrito: verdadeiro
+          codigo_relacionado_mapeado: verdadeiro
+        }
+      }
+    }
+  }
+}

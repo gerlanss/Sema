@@ -127,6 +127,7 @@ module sema.produto.governanca_ia.contexto.agent_pack {
       arquivo: "pacotes/cli/src/discovery/index.ts"
       arquivo: "scripts/empacotar-cli-publica.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "scripts/cli-publico/bootstrap-codex.mjs"
       simbolo: cli.src.agent_context_pack.criarAgentContextPack
     }
     execucao {

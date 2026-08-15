@@ -1,13 +1,26 @@
 module sema.produto.sistemas_interativos.operacao {
   docs {
-    resumo: "Fundacao operacional AI-native e fail-closed para sistemas interativos. Valida snapshots e diffs read-only, proveniencia de assets, estado de editor, filas de jobs, acceptance locks e evidencia multimodal sem executar engine, editor, processo ou job."
+    resumo: "Fachada contratual de snapshots e indice das operacoes interativas puras, locais e fail-closed."
     arquivo: "contratos/sema/sistemas_interativos.sema"
-    arquivo: "contratos/sema/sistemas_interativos_evidencias.sema"
-    arquivo: "contratos/sema/sistemas_interativos_ir.sema"
+    arquivo: "contratos/sema/sistemas_interativos_observacao_engine.sema"
+    arquivo: "contratos/sema/sistemas_interativos_orquestracao_jobs.sema"
+    arquivo: "contratos/sema/sistemas_interativos_acceptance_evidencias.sema"
     arquivo: "docs/sistemas-interativos.md"
   }
 
   use sema.produto.sistemas_interativos
+
+  use sema.produto.sistemas_interativos.operacao.observacao_engine
+
+  use sema.produto.sistemas_interativos.operacao.orquestracao_jobs
+
+  use sema.produto.sistemas_interativos.operacao.acceptance_evidencias
+
+  vinculos {
+    arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
+    arquivo: "pacotes/cli/src/sistemasInterativos/operationPrimitives.ts"
+    arquivo: "pacotes/cli/src/sistemasInterativos/operationsTypes.ts"
+  }
 
   type SnapshotEngineOperacional {
     fields {
@@ -30,33 +43,6 @@ module sema.produto.sistemas_interativos.operacao {
       semantic_objects existe
       artifact_digest existe
       read_only == verdadeiro
-      authoritative == falso
-    }
-  }
-
-  type ProvenienciaAssetOperacional {
-    fields {
-      schema_version: Texto
-      asset_id: Texto
-      source_uri_ref: Texto
-      source_uri_redacted: Booleano
-      license: Objeto
-      source_hash: Texto
-      content_hash: Texto
-      transforms: Lista
-      derivatives: Lista
-      authoritative: Booleano
-    }
-    invariants {
-      schema_version existe
-      asset_id existe
-      source_uri_ref existe
-      source_uri_redacted == verdadeiro
-      license existe
-      source_hash existe
-      content_hash existe
-      transforms existe
-      derivatives existe
       authoritative == falso
     }
   }
@@ -87,6 +73,7 @@ module sema.produto.sistemas_interativos.operacao {
     }
     vinculos {
       arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
+      arquivo: "pacotes/cli/src/sistemasInterativos/engineObservation.ts"
       arquivo: "pacotes/cli/src/sistemasInterativos/operationsTypes.ts"
       arquivo: "testes/unidade/sistemas-interativos-operations.test.ts"
       simbolo: cli.src.sistemas_interativos.operations.derivarDiffSnapshotsEngine
@@ -101,204 +88,6 @@ module sema.produto.sistemas_interativos.operacao {
       resultado existe
       resultado deve_ser executed_false_workspace_mutated_false_engine_probed_false_authoritative_false
       resultado deve_ser invalido_sem_payload_quando_entrada_falhar
-    }
-  }
-
-  task validar_proveniencia_asset_operacional {
-    input {
-      proveniencia: ProvenienciaAssetOperacional required
-    }
-    output {
-      resultado: Objeto
-    }
-    rules {
-      proveniencia deve_ser JSON_v1_plain
-      proveniencia deve_ser ter_source_uri_ref_opaco_redigido_licenca_e_hashes_sha256
-      proveniencia deve_ser ter_transforms_encadeados_e_derivados_ligados_a_hash_conhecido
-    }
-    effects {
-      auditoria proveniencia_asset_operacional_validada criticidade = media
-    }
-    forbidden {
-      aceitar_uri_path_credencial_ou_licenca_implicita
-      aceitar_transform_ou_derivado_sem_linhagem_de_hash
-      ecoar_valor_invalido_ou_declarar_autoridade
-    }
-    impl {
-      ts: cli.src.sistemas_interativos.operations.validarProvenienciaAsset
-    }
-    vinculos {
-      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
-      simbolo: cli.src.sistemas_interativos.operations.validarProvenienciaAsset
-    }
-    execucao {
-      idempotencia: verdadeiro
-      timeout: "5s"
-      retry: "nenhum"
-      criticidade_operacional: media
-    }
-    guarantees {
-      resultado existe
-      resultado deve_ser deterministico_no_echo_e_nao_autoritativo
-    }
-  }
-
-  task validar_estado_editor_operacional {
-    input {
-      estado: Objeto required
-    }
-    output {
-      resultado: Objeto
-    }
-    rules {
-      estado deve_ser JSON_v1_plain_read_only
-      estado deve_ser declarar_scene_selection_mode_unsaved_shader_import_plugins_modals_e_processes
-      estado deve_ser usar_ids_semanticos_ou_referencias_opacas_sem_pid_comando_path_ou_segredo
-    }
-    effects {
-      auditoria estado_editor_operacional_validado criticidade = media
-    }
-    forbidden {
-      abrir_editor_consultar_host_ou_executar_processo
-      inferir_estado_ausente
-      ecoar_valor_controlado_em_issue
-    }
-    impl {
-      ts: cli.src.sistemas_interativos.operations.validarEstadoEditor
-    }
-    vinculos {
-      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
-      simbolo: cli.src.sistemas_interativos.operations.validarEstadoEditor
-    }
-    execucao {
-      idempotencia: verdadeiro
-      timeout: "5s"
-      retry: "nenhum"
-      criticidade_operacional: media
-    }
-    guarantees {
-      resultado existe
-      resultado deve_ser read_only_local_authoritative_false
-    }
-  }
-
-  task planejar_orquestracao_jobs_interativos {
-    input {
-      requisicao: Objeto required
-    }
-    output {
-      resultado: Objeto
-    }
-    rules {
-      requisicao deve_ser JSON_v1_com_fila_jobs_dependencias_aciclicas_e_ids_unicos
-      requisicao deve_ser declarar_locks_GPU_EDITOR_CACHE_e_budgets_RAM_VRAM_DISK
-      requisicao deve_ser declarar_kind_priority_adapter_heartbeat_checkpoint_resume_e_recovery_token_opaco_e_gerar_request_digest_canonico_completo
-    }
-    effects {
-      auditoria orquestracao_jobs_interativos_planejada criticidade = media
-    }
-    forbidden {
-      adquirir_lock_alocar_gpu_abrir_editor_escrever_cache_ou_iniciar_job
-      aceitar_budget_negativo_dependencia_quebrada_ciclo_ou_token_cru
-      omitir_kind_priority_adapter_ou_qualquer_campo_validado_do_request_digest_e_plan_digest_ou_tratar_plano_como_execucao
-    }
-    impl {
-      ts: cli.src.sistemas_interativos.operations.planejarOrquestracaoJobs
-    }
-    vinculos {
-      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
-      simbolo: cli.src.sistemas_interativos.operations.planejarOrquestracaoJobs
-    }
-    execucao {
-      idempotencia: verdadeiro
-      timeout: "5s"
-      retry: "nenhum"
-      criticidade_operacional: media
-    }
-    guarantees {
-      resultado existe
-      resultado deve_ser fail_closed_executed_false_resources_reserved_false_authoritative_false
-    }
-  }
-
-  task operar_acceptance_lock_interativo {
-    input {
-      operacao: Texto required
-      lock: Objeto required
-      contexto: Objeto required
-    }
-    output {
-      resultado: Objeto
-    }
-    rules {
-      operacao deve_ser em [VALIDATE, EVALUATE, INVALIDATE]
-      lock deve_ser ligado_a_artifact_digest_scene_time_range_approver_e_decision_ACCEPTED
-      contexto deve_ser exigir_binding_exato_para_EVALUATE_e_invalidacao_explicita_ligada_ao_lock_digest_para_INVALIDATE
-    }
-    effects {
-      auditoria acceptance_lock_interativo_operado criticidade = media
-    }
-    forbidden {
-      reutilizar_lock_em_artifact_scene_ou_time_range_divergente
-      invalidar_implicitamente_ou_sem_ator_motivo_e_lock_digest
-      escrever_estado_externo_ou_declarar_aprovacao_autoritativa
-    }
-    impl {
-      ts: cli.src.sistemas_interativos.operations.operarAcceptanceLock
-    }
-    vinculos {
-      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
-      simbolo: cli.src.sistemas_interativos.operations.operarAcceptanceLock
-    }
-    execucao {
-      idempotencia: verdadeiro
-      timeout: "5s"
-      retry: "nenhum"
-      criticidade_operacional: media
-    }
-    guarantees {
-      resultado existe
-      resultado deve_ser deterministico_explicito_nao_mutante_e_authoritative_false
-    }
-  }
-
-  task validar_evidencia_multimodal_operacional {
-    input {
-      descriptor: Objeto required
-    }
-    output {
-      resultado: Objeto
-    }
-    rules {
-      descriptor deve_ser JSON_v1_ligado_a_claim_id_definition_plan_contract_artifact_scene_time_range_por_claim_binding_digest_canonico
-      descriptor deve_ser ter_required_modalities_unicas_e_canais_unicos_em [SCREENSHOT, VIDEO, DEPTH, NORMALS, OBJECT_ID, MOTION, TRANSFORMS, EVENTS, AUDIO, TELEMETRY]
-      descriptor deve_ser ter_digest_e_media_type_por_canal_e_identidade_versao_configuracao_de_producer_e_verifier_estruturalmente_distintos
-      descriptor deve_ser authoritative_false_e_sem_valor_sensivel_em_qualquer_profundidade
-    }
-    effects {
-      auditoria evidencia_multimodal_operacional_validada criticidade = media
-    }
-    forbidden {
-      capturar_midia_executar_verifier_ou_inferir_canal_ausente
-      aceitar_PASS_com_menos_de_duas_modalities_sem_toda_required_modality_sem_claim_binding_ou_sem_producer_verifier_independente_ou_confiar_apenas_em_flag_independent
-      ecoar_payload_invalido_ou_tratar_descriptor_como_atestacao_forte
-    }
-    impl {
-      ts: cli.src.sistemas_interativos.operations.validarEvidenciaMultimodal
-    }
-    vinculos {
-      arquivo: "pacotes/cli/src/sistemasInterativos/operations.ts"
-      simbolo: cli.src.sistemas_interativos.operations.validarEvidenciaMultimodal
-    }
-    execucao {
-      idempotencia: verdadeiro
-      timeout: "5s"
-      retry: "nenhum"
-      criticidade_operacional: media
-    }
-    guarantees {
-      resultado existe
-      resultado deve_ser local_descriptor_only_executed_false_authoritative_false
     }
   }
 }

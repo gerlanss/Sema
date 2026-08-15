@@ -16,6 +16,7 @@ module sema.produto.geradores_nativos {
     arquivo: "pacotes/cli/src/projetoResolucao.ts"
     arquivo: "pacotes/cli/src/nativeToolchains.ts"
     arquivo: "pacotes/cli/src/index.part01.ts"
+    arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
     arquivo: "testes/integracao/geradores-nativos.test.ts"
   }
 

@@ -8,10 +8,10 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.3.2`
+- Version: `2.3.3`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-15
-- Reference commit: `2abfe9c`
+- Reference commit: `48f14ea`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, thin Codex bootstrap skill, repo marketplace,
   `AGENTS.md` protocol, contracts, examples, tests, release scripts, and English
@@ -37,6 +37,8 @@ Every public publication must pass:
 - Keep the skill limited to first-contact bootstrap and delegate ongoing
   governance to `AGENTS.md`.
 - Keep public documentation in English.
+- Keep governance contracts split by named capability before they cross the
+  semantic line budget; never use numbered part files.
 - Keep product capabilities independent from competitions, event workflows,
   submission platforms, and one-off showcase harnesses.
 - Keep support metadata pointed to `suporte@otimitare.online`.
