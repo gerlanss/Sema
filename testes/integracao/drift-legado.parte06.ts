@@ -26,7 +26,7 @@ import {
   criarProjetoRustAxum,
   criarProjetoSpringBoot,
 } from "./futebot-fixture.ts";
-const CLI = path.resolve("pacotes/cli/dist/index.js");
+const CLI = path.resolve("pacotes/cli/dist/bin.js");
 const GESTECH_BASE = "C:\\GitHub\\Gestech";
 const SEMA_SMOKE_REAL = process.env.SEMA_SMOKE_REAL === "1";
 const RAIZ_CACHE_SENTINELA = path.join(os.tmpdir(), `sema-drift-legado-cache-none-parte06-${process.pid}`);
@@ -39,7 +39,7 @@ function executar(args: string[], cwd?: string) {
   if (isolarCache) {
     assert.equal(existsSync(RAIZ_CACHE_SENTINELA), false, "a raiz sentinela do cache legado deve iniciar ausente");
   }
-  const resultado = spawnSync("node", [CLI, ...argumentos], {
+  const resultado = spawnSync(process.execPath, [CLI, ...argumentos], {
     stdio: "pipe",
     encoding: "utf8",
     cwd,

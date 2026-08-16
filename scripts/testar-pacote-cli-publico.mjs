@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.produto.fronteira_repositorios, sema.produto.fronteira_repositorios.empacotamento, sema.produto.fronteira_repositorios.empacotamento.smoke
+// SEMA-GOVERNED: sema.produto.fronteira_repositorios, sema.produto.fronteira_repositorios.empacotamento, sema.produto.fronteira_repositorios.empacotamento.smoke, sema.produto.cli_invocacao_publica
 // Consulte contratos/sema/fronteira_repositorios_empacotamento_smoke.sema antes de editar.
 // Descricao: orquestra uma unica instalacao isolada do pacote publico e delega as validacoes por responsabilidade.
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -82,6 +82,121 @@ function executarComSaida(comando, argumentos, cwd, opcoes = {}) {
   return resultado.stdout;
 }
 
+function executarCliCapturada(semaBin, argumentos, cwd, ambiente) {
+  const resultado = spawnSync(process.execPath, [semaBin, ...argumentos], {
+    cwd,
+    env: ambiente,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+    timeout: 10_000,
+    windowsHide: true,
+  });
+  if (resultado.error) {
+    throw resultado.error;
+  }
+  return resultado;
+}
+
+function executarLauncherCapturado(launcher, argumentos, cwd, ambiente) {
+  if (process.platform !== "win32") {
+    const resultado = spawnSync(launcher, argumentos, {
+      cwd,
+      env: ambiente,
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+      timeout: 10_000,
+    });
+    if (resultado.error) throw resultado.error;
+    return resultado;
+  }
+
+  const systemRoot = ambiente.SystemRoot?.trim();
+  const cmd = path.join(
+    systemRoot && path.isAbsolute(systemRoot) ? systemRoot : "C:\\Windows",
+    "System32",
+    "cmd.exe",
+  );
+  const env = { ...ambiente, SEMA_SMOKE_LAUNCHER: launcher };
+  const referencias = ['"%SEMA_SMOKE_LAUNCHER%"'];
+  argumentos.forEach((argumento, indice) => {
+    const nome = `SEMA_SMOKE_ARG_${indice}`;
+    env[nome] = argumento;
+    referencias.push(`"%${nome}%"`);
+  });
+  const resultado = spawnSync(cmd, [
+    "/d",
+    "/s",
+    "/v:off",
+    "/c",
+    `"${referencias.join(" ")}"`,
+  ], {
+    cwd,
+    env,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+    timeout: 10_000,
+    windowsHide: true,
+    windowsVerbatimArguments: true,
+  });
+  if (resultado.error) throw resultado.error;
+  return resultado;
+}
+
+function ambienteComPath(ambiente, valorPath) {
+  const isolado = {};
+  for (const [chave, valor] of Object.entries(ambiente)) {
+    if (chave.toLowerCase() !== "path") isolado[chave] = valor;
+  }
+  isolado.PATH = valorPath;
+  return isolado;
+}
+
+function contemStackOuErroInterno(texto) {
+  return /\b(?:Aggregate|Eval|Internal|Range|Reference|Syntax|Type|URI)?Error\s*:/iu.test(texto)
+    || /(?:^|[\s;|=(:,])at\s+(?:async\s+)?(?:new\s+)?[^\n]{0,240}?(?:\([^()\n]*:\d+:\d+\)|[^\s()\n]+:\d+:\d+)/iu.test(texto);
+}
+
+function validarEnvelopeControleJson(resultado, contexto, esperado, caminhosSensiveis) {
+  if (resultado.stderr !== "") {
+    throw new Error(`The installed public CLI wrote JSON control output to stderr during ${contexto}.`);
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(resultado.stdout);
+  } catch {
+    throw new Error(`The installed public CLI did not emit exactly one JSON document during ${contexto}.`);
+  }
+
+  const chavesEsperadas = ["code", "exitCode", "kind", "message", "ok", "schemaVersion"];
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    Object.keys(payload).sort().join("\n") !== chavesEsperadas.join("\n") ||
+    payload.schemaVersion !== "sema.cli.control/v1" ||
+    payload.ok !== esperado.ok ||
+    payload.kind !== esperado.kind ||
+    payload.exitCode !== resultado.status ||
+    typeof payload.code !== "string" ||
+    payload.code.length === 0 ||
+    typeof payload.message !== "string" ||
+    payload.message.length === 0
+  ) {
+    throw new Error(`The installed public CLI emitted an invalid JSON control envelope during ${contexto}.`);
+  }
+  if (esperado.code && payload.code !== esperado.code) {
+    throw new Error(`The installed public CLI emitted ${payload.code} instead of ${esperado.code} during ${contexto}.`);
+  }
+  if (payloadContemCaminhoSensivel(payload, caminhosSensiveis)) {
+    throw new Error(`The installed public CLI exposed a sensitive path during ${contexto}.`);
+  }
+  if (contemStackOuErroInterno(resultado.stdout)) {
+    throw new Error(`The installed public CLI exposed an internal error or stack during ${contexto}.`);
+  }
+  return payload;
+}
+
 function executarJsonCliInstalada(semaBin, argumentos, cwd, opcoes = {}) {
   return JSON.parse(executarComSaida(
     process.execPath,
@@ -99,6 +214,250 @@ function ambienteCacheIsolado(raizCache) {
     LOCALAPPDATA: raizCache,
     XDG_CACHE_HOME: raizCache,
   };
+}
+
+async function prepararSentinelaPurezaHelp({ sandbox, workspace, home, cache, ambiente }) {
+  const sentinela = path.join(sandbox, "PUREZA_HELP_INSTALADO_VIOLADA.txt");
+  const preload = path.join(sandbox, "cli-help-purity-installed.cjs");
+  await writeFile(preload, [
+    '"use strict";',
+    'const childProcess = require("node:child_process");',
+    'const dns = require("node:dns");',
+    'const fs = require("node:fs");',
+    'const fsPromises = require("node:fs/promises");',
+    'const http = require("node:http");',
+    'const https = require("node:https");',
+    'const net = require("node:net");',
+    'const path = require("node:path");',
+    'const tls = require("node:tls");',
+    'const { fileURLToPath } = require("node:url");',
+    'const { syncBuiltinESMExports } = require("node:module");',
+    'const appendFileSyncOriginal = fs.appendFileSync.bind(fs);',
+    'const sentinela = process.env.SEMA_TEST_PURITY_SENTINEL;',
+    'const raizes = JSON.parse(process.env.SEMA_TEST_PURITY_ROOTS || "[]")',
+    '  .map((item) => path.resolve(item).toLowerCase());',
+    'function caminhoMonitorado(valor) {',
+    '  if (typeof valor === "number" || valor === undefined || valor === null) return false;',
+    '  let candidato = valor;',
+    '  if (candidato instanceof URL) candidato = fileURLToPath(candidato);',
+    '  if (Buffer.isBuffer(candidato)) candidato = candidato.toString("utf8");',
+    '  if (typeof candidato !== "string") return false;',
+    '  const absoluto = path.resolve(candidato).toLowerCase();',
+    '  return raizes.some((raiz) => absoluto === raiz || absoluto.startsWith(`${raiz}${path.sep}`));',
+    '}',
+    'function bloquear(tipo, nome, alvo) {',
+    '  appendFileSyncOriginal(sentinela, `${tipo}:${nome}:${String(alvo ?? "")}\\n`, "utf8");',
+    '  const erro = new Error(`Pureza de --help violada: ${tipo}:${nome}`);',
+    '  erro.code = "SEMA_TEST_HELP_PURITY_BLOCKED";',
+    '  throw erro;',
+    '}',
+    'function bloquearSempre(tipo, nome) {',
+    '  return (...args) => bloquear(tipo, nome, args[0]);',
+    '}',
+    'function protegerLeitura(objeto, nome) {',
+    '  const original = objeto[nome];',
+    '  if (typeof original !== "function") return;',
+    '  objeto[nome] = function(alvo, ...args) {',
+    '    if (caminhoMonitorado(alvo)) bloquear("read", nome, alvo);',
+    '    return original.call(this, alvo, ...args);',
+    '  };',
+    '}',
+    'for (const nome of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"]) childProcess[nome] = bloquearSempre("child_process", nome);',
+    'for (const nome of ["access", "accessSync", "createReadStream", "existsSync", "lstat", "lstatSync", "open", "openSync", "readFile", "readFileSync", "readdir", "readdirSync", "readlink", "readlinkSync", "realpath", "realpathSync", "stat", "statSync", "watch", "watchFile"]) protegerLeitura(fs, nome);',
+    'for (const nome of ["access", "lstat", "open", "readFile", "readdir", "readlink", "realpath", "stat", "watch"]) protegerLeitura(fsPromises, nome);',
+    'for (const [objeto, nomes] of [[net, ["connect", "createConnection"]], [tls, ["connect"]], [http, ["get", "request"]], [https, ["get", "request"]], [dns, ["lookup", "resolve", "resolve4", "resolve6", "resolveAny", "reverse"]]]) {',
+    '  for (const nome of nomes) objeto[nome] = bloquearSempre("network", nome);',
+    '}',
+    'if (net.Socket?.prototype) net.Socket.prototype.connect = bloquearSempre("network", "Socket.connect");',
+    'if (dns.promises) {',
+    '  for (const nome of ["lookup", "resolve", "resolve4", "resolve6", "resolveAny", "reverse"]) {',
+    '    if (typeof dns.promises[nome] === "function") dns.promises[nome] = bloquearSempre("network", `promises.${nome}`);',
+    '  }',
+    '}',
+    'if (typeof globalThis.fetch === "function") globalThis.fetch = bloquearSempre("network", "fetch");',
+    'syncBuiltinESMExports();',
+    '',
+  ].join("\n"), "utf8");
+
+  return {
+    sentinela,
+    ambiente: {
+      ...ambiente,
+      NODE_OPTIONS: `--require="${preload.replaceAll(path.sep, "/").replaceAll('"', '\\"')}"`,
+      SEMA_TEST_PURITY_SENTINEL: sentinela,
+      SEMA_TEST_PURITY_ROOTS: JSON.stringify([workspace, home, cache]),
+    },
+  };
+}
+
+async function validarHelpPuroEControleJsonInstalado({
+  semaBin,
+  launcherNpm,
+  basePacote,
+  sandbox,
+  versaoEsperada,
+}) {
+  const workspaceHelp = path.join(sandbox, "workspace-help-isolado");
+  const homeHelp = path.join(sandbox, "home-help-isolado");
+  const cacheHelp = path.join(sandbox, "cache-help-isolado");
+  const pathVazio = path.join(sandbox, "path-help-vazio");
+  await Promise.all([
+    mkdir(workspaceHelp, { recursive: true }),
+    mkdir(homeHelp, { recursive: true }),
+    mkdir(pathVazio, { recursive: true }),
+  ]);
+  const pureza = await prepararSentinelaPurezaHelp({
+    sandbox,
+    workspace: workspaceHelp,
+    home: homeHelp,
+    cache: cacheHelp,
+    ambiente: ambienteInstalacaoIsolada(homeHelp, cacheHelp),
+  });
+  const ambienteHelp = ambienteComPath(pureza.ambiente, pathVazio);
+  const ambienteLauncher = ambienteComPath(
+    pureza.ambiente,
+    process.env.PATH ?? process.env.Path ?? path.dirname(process.execPath),
+  );
+  const caminhosSensiveis = [
+    sandbox,
+    basePacote,
+    semaBin,
+    launcherNpm,
+    workspaceHelp,
+    homeHelp,
+    cacheHelp,
+    raiz,
+    process.execPath,
+  ];
+  const caminhosImutaveis = [
+    workspaceHelp,
+    homeHelp,
+    cacheHelp,
+    pathVazio,
+    ...caminhosEstadoSemaReal(raiz),
+  ];
+  const fingerprintAntes = await fingerprintCaminhos(caminhosImutaveis);
+  async function exigirPureza(contexto) {
+    if (await existe(pureza.sentinela)) {
+      throw new Error(`The installed public CLI performed a forbidden read, subprocess, or network call during ${contexto}.`);
+    }
+    if (await fingerprintCaminhos(caminhosImutaveis) !== fingerprintAntes) {
+      throw new Error(`The installed public CLI mutated HOME, workspace, PATH, or cache during ${contexto}.`);
+    }
+  }
+
+  const argvVazio = executarCliCapturada(semaBin, [], workspaceHelp, ambienteHelp);
+  await exigirPureza("argv vazio");
+  if (argvVazio.status !== 0 || argvVazio.stderr !== "" || argvVazio.stdout.trim().length === 0) {
+    throw new Error("The installed public CLI did not render pure help for an empty argv.");
+  }
+
+  const versao = executarCliCapturada(semaBin, ["--version"], workspaceHelp, ambienteHelp);
+  await exigirPureza("--version");
+  if (versao.status !== 0 || versao.stderr !== "" || versao.stdout.trim() !== versaoEsperada) {
+    throw new Error("The installed public CLI did not render a pure exact version response.");
+  }
+
+  const argumentoInvalido = executarCliCapturada(
+    semaBin,
+    ["iniciar", "--template", "template-invalido-segredo-82c1", "--json"],
+    workspaceHelp,
+    ambienteHelp,
+  );
+  await exigirPureza("invalid argument --json");
+  if (!Number.isInteger(argumentoInvalido.status) || argumentoInvalido.status <= 0) {
+    throw new Error("The installed public CLI did not fail an invalid-argument control response.");
+  }
+  validarEnvelopeControleJson(argumentoInvalido, "invalid argument --json", {
+    ok: false,
+    kind: "ARGUMENT_ERROR",
+    code: "CLI_ARGUMENT_ERROR",
+  }, caminhosSensiveis);
+  const casosHelp = [
+    { nome: "root --help", argumentos: ["--help"] },
+    { nome: "root -h", argumentos: ["-h"] },
+    { nome: "iniciar --help", argumentos: ["iniciar", "--help"] },
+    { nome: "dev --help", argumentos: ["dev", "--help"] },
+    { nome: "formatar --help", argumentos: ["formatar", "--help"] },
+    { nome: "sync-codex --help", argumentos: ["sync-codex", "--help"] },
+    { nome: "skill sync --help", argumentos: ["skill", "sync", "--help"] },
+    {
+      nome: "help after unknown arguments",
+      argumentos: ["comando-inexistente", "--opcao", "valor", "--help"],
+    },
+  ];
+  let ajudaRaiz = "";
+
+  for (const [indice, caso] of casosHelp.entries()) {
+    const texto = executarCliCapturada(semaBin, caso.argumentos, workspaceHelp, ambienteHelp);
+    await exigirPureza(caso.nome);
+    if (texto.status !== 0 || texto.stderr !== "" || texto.stdout.trim().length === 0) {
+      throw new Error(`The installed public CLI did not render pure text help for ${caso.nome}.`);
+    }
+    if (indice === 0) ajudaRaiz = texto.stdout;
+
+    const json = executarCliCapturada(
+      semaBin,
+      [...caso.argumentos, "--json"],
+      workspaceHelp,
+      ambienteHelp,
+    );
+    await exigirPureza(`${caso.nome} --json`);
+    if (json.status !== 0) {
+      throw new Error(`The installed public CLI returned a non-zero JSON help status for ${caso.nome}.`);
+    }
+    validarEnvelopeControleJson(json, `${caso.nome} --json`, {
+      ok: true,
+      kind: "HELP",
+      code: "CLI_HELP",
+    }, caminhosSensiveis);
+  }
+
+  const tokenDesconhecido = "comando-inexistente-segredo-7f3a";
+  const desconhecido = executarCliCapturada(
+    semaBin,
+    [tokenDesconhecido, "--json"],
+    workspaceHelp,
+    ambienteHelp,
+  );
+  await exigirPureza("unknown command --json");
+  if (!Number.isInteger(desconhecido.status) || desconhecido.status <= 0) {
+    throw new Error("The installed public CLI did not fail a JSON unknown-command control response.");
+  }
+  const envelopeDesconhecido = validarEnvelopeControleJson(desconhecido, "unknown command --json", {
+    ok: false,
+    kind: "UNKNOWN_COMMAND",
+    code: "CLI_UNKNOWN_COMMAND",
+  }, caminhosSensiveis);
+  if (desconhecido.stdout.includes(tokenDesconhecido)
+    || JSON.stringify(envelopeDesconhecido).includes(tokenDesconhecido)) {
+    throw new Error("The installed public CLI exposed the raw unknown-command argv token.");
+  }
+
+  for (const caso of [
+    { nome: "installed npm launcher --help", argumentos: ["--help"], json: false },
+    { nome: "installed npm launcher iniciar --help --json", argumentos: ["iniciar", "--help", "--json"], json: true },
+  ]) {
+    const resultado = executarLauncherCapturado(
+      launcherNpm,
+      caso.argumentos,
+      workspaceHelp,
+      ambienteLauncher,
+    );
+    await exigirPureza(caso.nome);
+    if (resultado.status !== 0 || resultado.stderr !== "" || resultado.stdout.trim().length === 0) {
+      throw new Error(`The installed npm launcher did not preserve pure help during ${caso.nome}.`);
+    }
+    if (caso.json) {
+      validarEnvelopeControleJson(resultado, caso.nome, {
+        ok: true,
+        kind: "HELP",
+        code: "CLI_HELP",
+      }, caminhosSensiveis);
+    }
+  }
+
+  return ajudaRaiz;
 }
 
 function validarConsultaSemDrift(payload, comando) {
@@ -272,7 +631,13 @@ async function main() {
       throw new Error("The workspace-local npm install created or mutated an AI plugin cache.");
     }
     const basePacote = path.join(sandbox, "node_modules", "@semacode", "cli");
-    const semaBin = path.join(basePacote, "dist", "index.js");
+    const semaBin = path.join(basePacote, "dist", "bin.js");
+    const launcherNpm = path.join(
+      sandbox,
+      "node_modules",
+      ".bin",
+      process.platform === "win32" ? "sema.cmd" : "sema",
+    );
     const deepImport = spawnSync(
       process.execPath,
       ["--input-type=module", "--eval", "await import('@semacode/cli/dist/pipelineConteudo/trust.js')"],
@@ -281,7 +646,13 @@ async function main() {
     if (deepImport.status === 0 || !/ERR_PACKAGE_PATH_NOT_EXPORTED/u.test(deepImport.stderr)) {
       throw new Error(`The installed public CLI did not block the internal pipeline deep import: ${deepImport.stderr}`);
     }
-    const ajuda = executarComSaida(process.execPath, [semaBin, "--help"], sandbox);
+    const ajuda = await validarHelpPuroEControleJsonInstalado({
+      semaBin,
+      launcherNpm,
+      basePacote,
+      sandbox,
+      versaoEsperada,
+    });
     if (/\bpreflight\b/i.test(ajuda)) {
       throw new Error("The installed public CLI help still exposes the removed preflight command.");
     }

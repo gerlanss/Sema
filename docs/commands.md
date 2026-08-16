@@ -13,6 +13,13 @@ sema docs-impacto --intencao "<acao>" --json
 
 If `sema` is absent from `PATH`, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH, cmd.exe resolves `sema.cmd`, and the absolute fallback is `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version`. `sema skill sync --json` repairs launcher and skill without touching the workspace or plugin caches.
 
+## Invocation control
+
+- `--help` and `-h` win in any argv position and exit before operational modules or handlers are imported.
+- `dist/bin.js` is the executable bootstrap; `dist/index.js` is the package API.
+- With `--json`, help and unknown/invalid CLI syntax use exactly one `sema.cli.control/v1` document on stdout with empty stderr.
+- Valid command payloads and structured domain-level failures keep their command-specific shape in 2.4; uncaught runtime exceptions use redacted `FATAL_ERROR`. The general result envelope starts only in 3.0.
+
 Then read every required doc returned by `docs-impacto`.
 
 ## Global Distribution

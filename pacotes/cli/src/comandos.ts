@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.distribuicao_global
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.distribuicao_global, sema.produto.cli_invocacao_publica.argumentos
 // Descricao: dispatcher de comandos publicos da CLI local; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
 
 import { comandoDev } from "./dev/index.js";
@@ -20,12 +20,8 @@ async function comandoInitHandler(
   args: string[],
   _emJson: boolean,
 ): Promise<number> {
-  try {
-    await comandoInit([...posicionais, ...args]);
-    return 0;
-  } catch {
-    return 1;
-  }
+  await comandoInit([...posicionais, ...args]);
+  return 0;
 }
 
 async function comandoDevHandler(
@@ -33,12 +29,8 @@ async function comandoDevHandler(
   args: string[],
   _emJson: boolean,
 ): Promise<number> {
-  try {
-    await comandoDev([...posicionais, ...args]);
-    return 0;
-  } catch {
-    return 1;
-  }
+  await comandoDev([...posicionais, ...args]);
+  return 0;
 }
 
 async function comandoSyncPrismaHandler(
@@ -46,12 +38,8 @@ async function comandoSyncPrismaHandler(
   args: string[],
   _emJson: boolean,
 ): Promise<number> {
-  try {
-    await comandoSyncPrisma([...posicionais, ...args]);
-    return 0;
-  } catch {
-    return 1;
-  }
+  await comandoSyncPrisma([...posicionais, ...args]);
+  return 0;
 }
 
 async function comandoGuard(

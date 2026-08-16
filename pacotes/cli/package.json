@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "2.3.6",
+  "version": "2.4.0",
   "type": "module",
   "description": "Codex-native local semantic governance CLI for contracts, drift, impact, documentation gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",
@@ -34,7 +34,7 @@
   },
   "icon": "logo.png",
   "bin": {
-    "sema": "dist/index.js"
+    "sema": "dist/bin.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

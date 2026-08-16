@@ -72,7 +72,7 @@ test("doctor bloqueia os alvos nativos antes de gerar quando as toolchains falta
 test("sema testar falha antes de materializar saída quando a toolchain nativa falta", { concurrency: false }, async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-native-missing-toolchain-"));
   const saida = path.join(base, "saida-nao-criada");
-  const cli = path.resolve("pacotes/cli/dist/index.js");
+  const cli = path.resolve("pacotes/cli/dist/bin.js");
   const contrato = path.resolve("exemplos/crud_simples.sema");
   const env = { ...process.env, PATH: path.dirname(process.execPath) };
   delete env["ProgramFiles(x86)"];
@@ -170,7 +170,7 @@ test("verificação de projeto executa os dois alvos nativos quando configurados
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-native-verify-"));
   const contratos = path.join(base, "contratos");
   const saida = path.join(base, ".tmp", "verificacao");
-  const cli = path.resolve("pacotes/cli/dist/index.js");
+  const cli = path.resolve("pacotes/cli/dist/bin.js");
   try {
     await mkdir(contratos, { recursive: true });
     await writeFile(

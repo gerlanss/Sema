@@ -15,14 +15,14 @@ if (!entradaArquivo) {
   falhar("Uso: node scripts/preparar-contexto-ia.mjs <arquivo.sema> [pasta-saida]");
 }
 
-const cli = path.resolve(process.cwd(), "pacotes", "cli", "dist", "index.js");
+const cli = path.resolve(process.cwd(), "pacotes", "cli", "dist", "bin.js");
 const args = [cli, "contexto-ia", entradaArquivo];
 
 if (entradaSaida) {
   args.push("--saida", entradaSaida);
 }
 
-const execucao = spawnSync("node", args, {
+const execucao = spawnSync(process.execPath, args, {
   stdio: "inherit",
   cwd: process.cwd(),
 });

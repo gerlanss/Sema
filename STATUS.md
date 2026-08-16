@@ -8,10 +8,10 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.3.6`
+- Version: `2.4.0`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-16
-- Reference commit: `8c44eaf`
+- Reference commit: `a29c3e3`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -34,6 +34,12 @@ Every public publication must pass:
 
 ## Maintenance Focus
 
+- Keep `--help` and `-h` side-effect-free in every argv position, before
+  operational runtime import, dispatch, handler resolution, workspace access,
+  cache access, subprocesses, or network calls.
+- Keep `sema.cli.control/v1` limited to JSON help and command-control failures
+  in `2.4.0`; preserve successful command payloads unchanged and reserve the
+  general result envelope for `3.0.0`.
 - Keep the repository local-only and source-first.
 - Keep the skill limited to first-contact bootstrap and delegate ongoing
   governance to `AGENTS.md`.

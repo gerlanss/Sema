@@ -50,12 +50,18 @@ module sema.produto.cli_dev_mode {
       consulta pasta_local criticidade = media
       auditoria dev_mode_iniciado criticidade = baixa
     }
+    forbidden {
+      resolver_node_pelo_PATH
+      resolver_npm_pelo_PATH
+      usar_shell_para_invocar_node_ou_npm
+    }
     impl {
       ts: cli.src.dev.iniciarModoDev
     }
     vinculos {
       arquivo: "pacotes/cli/src/dev/watcher.ts"
       arquivo: "pacotes/cli/src/dev/index.ts"
+      arquivo: "scripts/dev-cli.mjs"
       simbolo: cli.src.dev.iniciarModoDev
     }
     execucao {

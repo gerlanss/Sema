@@ -1,0 +1,159 @@
+module sema.produto.cli_invocacao_publica.argumentos {
+  docs {
+    resumo: "Governa a validacao fail-closed da sintaxe publica da CLI antes de qualquer handler ou efeito e a classificacao tipada das falhas de controle em 2.4."
+    versao: "2.4.0"
+    status: "MODELADA"
+    arquivo: "contratos/sema/cli_invocacao_publica.sema"
+    arquivo: "docs/cli.md"
+    arquivo: "docs/testing.md"
+  }
+
+  enum CategoriaFalhaControleCli {
+    UNKNOWN_COMMAND,
+    ARGUMENT_ERROR,
+    FATAL_ERROR
+  }
+
+  task validar_sintaxe_invocacao_publica {
+    input {
+      argv: Lista<Texto> required
+    }
+    output {
+      comando: Texto
+      sintaxe_valida: Booleano
+      dispatch_permitido: Booleano
+      handler_resolvido: Booleano
+      efeitos_permitidos: Booleano
+      categoria_falha: CategoriaFalhaControleCli optional
+      codigo_publico: Texto optional
+    }
+    rules {
+      argv deve_ser lista_ordenada_de_tokens_cli
+      argv deve_ser iniciar_com_comando_publico_conhecido
+      argv deve_ser aderente_a_gramatica_do_comando
+      argv deve_ser validado_antes_de_resolver_handler
+    }
+    forbidden {
+      normalizar_argumento_invalido_para_default
+      ignorar_subcomando_desconhecido
+      ignorar_opcao_invalida
+      consultar_workspace_home_cache_ou_rede_durante_validacao
+      iniciar_subprocesso_durante_validacao
+      resolver_handler_antes_de_validar_sintaxe
+      executar_handler_com_sintaxe_invalida
+      emitir_saida_antes_de_classificar_falha
+      mutar_workspace_com_argumento_invalido
+    }
+    impl {
+      ts: cli.src.cli_grammar.validarSintaxeInvocacaoPublica
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/cliGrammar.ts"
+      arquivo: "pacotes/cli/src/cliControlError.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "pacotes/cli/src/comandos.ts"
+      arquivo: "testes/integracao/cli-controle-argumentos.test.ts"
+      simbolo: cli.src.cli_grammar.validarSintaxeInvocacaoPublica
+      simbolo: cli.src.cli_control_error.ehCliControlError
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_permitida"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      comando existe
+      sintaxe_valida existe
+      dispatch_permitido existe
+      handler_resolvido existe
+      efeitos_permitidos existe
+      sintaxe_valida == verdadeiro
+      handler_resolvido == falso
+      efeitos_permitidos deve_ser verdadeiro quando dispatch_permitido == verdadeiro
+      efeitos_permitidos deve_ser falso quando dispatch_permitido == falso
+      categoria_falha deve_ser nulo
+      codigo_publico deve_ser nulo
+    }
+    tests {
+      caso "template invalido bloqueia iniciar antes de escrever" {
+        given {
+          argv: "iniciar --template banana --json"
+        }
+
+        expect {
+          sucesso: falso
+        }
+
+        error {
+          tipo: "CLI_ARGUMENT_ERROR"
+        }
+      }
+      caso "subcomando profile desconhecido nao ecoa argv" {
+        given {
+          argv: "profile file:%252Ftmp%252Fargv-secreto --json"
+        }
+
+        expect {
+          sucesso: falso
+        }
+
+        error {
+          tipo: "CLI_ARGUMENT_ERROR"
+        }
+      }
+    }
+  }
+
+  task classificar_falha_controle_cli {
+    input {
+      categoria: CategoriaFalhaControleCli required
+      codigo_publico: Texto required
+      codigo_saida: Inteiro required
+    }
+    output {
+      erro_tipado: Booleano
+      mensagem_estavel: Booleano
+      argv_redigido: Booleano
+      stack_redigida: Booleano
+      codigo_saida_nao_zero: Booleano
+    }
+    rules {
+      categoria deve_ser falha_de_controle_suportada
+      codigo_publico deve_ser constante_publica
+      codigo_saida deve_ser nao_zero
+    }
+    forbidden {
+      construir_mensagem_publica_com_argv_bruto
+      construir_mensagem_publica_com_stack
+      construir_mensagem_publica_com_caminho_absoluto
+      reclassificar_erro_de_dominio_valido_como_erro_de_controle
+      imprimir_falha_antes_do_emissor_central
+    }
+    impl {
+      ts: cli.src.cli_control_error.ehCliControlError
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/cliControlError.ts"
+      arquivo: "pacotes/cli/src/bin.ts"
+      arquivo: "pacotes/cli/src/saidaCli.ts"
+      arquivo: "testes/integracao/cli-controle-argumentos.test.ts"
+      simbolo: cli.src.cli_control_error.ehCliControlError
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_permitida"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      erro_tipado == verdadeiro
+      mensagem_estavel == verdadeiro
+      argv_redigido == verdadeiro
+      stack_redigida == verdadeiro
+      codigo_saida_nao_zero == verdadeiro
+    }
+  }
+}

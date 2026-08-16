@@ -78,11 +78,12 @@ module sema.produto.pipeline_conteudo.cli {
     }
     vinculos {
       arquivo: "pacotes/cli/src/pipelineConteudo/command.ts"
+      arquivo: "pacotes/cli/src/pipelineConteudo/help.ts"
       arquivo: "pacotes/cli/src/comandos.ts"
-      arquivo: "pacotes/cli/src/index.part01.ts"
       arquivo: "pacotes/cli/src/index.ts"
       arquivo: "scripts/cli-publico/pipeline-conteudo.mjs"
       simbolo: cli.src.pipeline_conteudo.command.comandoPipelineConteudo
+      simbolo: cli.src.pipeline_conteudo.help.criarAjudaPipelineConteudo
     }
     execucao {
       idempotencia: condicional

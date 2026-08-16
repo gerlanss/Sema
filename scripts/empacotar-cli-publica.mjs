@@ -773,7 +773,7 @@ async function executarEmpacotamento(contexto) {
   ]);
   const arquivosRuntimeAnalisados = await validarDistLocalDireto(contexto.stageDir);
   const arquivosLauncherEmpacotados = await Promise.all([
-    "dist/index.js", "dist/distribuicao/index.js", "dist/distribuicao/filesystemGlobal.js",
+    "dist/bin.js", "dist/index.js", "dist/distribuicao/index.js", "dist/distribuicao/filesystemGlobal.js",
     "dist/distribuicao/launcherGlobal.js", "dist/distribuicao/launcherWindows.js",
   ].map((arquivo) => arquivoRegular(path.join(contexto.stageDir, arquivo))));
   const resultado = {
@@ -784,7 +784,8 @@ async function executarEmpacotamento(contexto) {
     licenca_nao_comercial_incluida: license.includes("commercial replica") && license.includes("resale permission"),
     produto_codex_native: String(manifest.description ?? "").includes("Codex-native") && readme.includes("AGENTS.md"),
     cli_sem_autorizacao_local: arquivosRuntimeAnalisados > 0,
-    launcher_absoluto_empacotado: manifest.bin?.sema === "dist/index.js"
+    launcher_absoluto_empacotado: manifest.bin?.sema === "dist/bin.js"
+      && manifest.main === "dist/index.js"
       && manifest.files?.includes("dist")
       && manifest.files?.includes("scripts/postinstall.mjs")
       && postinstall === postinstallOrigem.bytes.toString("utf8")

@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { planejarExemplosOficiais } from "../../pacotes/cli/src/exemplosOficiais.js";
 
-const CLI = path.resolve("pacotes/cli/dist/index.js");
+const CLI = path.resolve("pacotes/cli/dist/bin.js");
 const MARCADOR_INICIO = "<!-- sema:agent-entrypoint:start -->";
 const MARCADOR_FIM = "<!-- sema:agent-entrypoint:end -->";
 
@@ -158,6 +158,25 @@ function diagnosticoCli(resultado: ReturnType<typeof executarCli>): string {
   return `status=${resultado.status}\nstdout:\n${resultado.stdout}\nstderr:\n${resultado.stderr}`;
 }
 
+function exigirFalhaFatalTexto(resultado: ReturnType<typeof executarCli>): void {
+  assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
+  assert.equal(resultado.stdout, "");
+  assert.equal(resultado.stderr.trim(), "Falha ao executar a CLI da Sema.");
+}
+
+function exigirFalhaFatalJson(resultado: ReturnType<typeof executarCli>): void {
+  assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
+  assert.equal(resultado.stderr, "");
+  assert.deepEqual(JSON.parse(resultado.stdout), {
+    schemaVersion: "sema.cli.control/v1",
+    ok: false,
+    kind: "FATAL_ERROR",
+    code: "CLI_FATAL_ERROR",
+    message: "Falha ao executar a CLI da Sema.",
+    exitCode: 1,
+  });
+}
+
 async function criarJunction(alvo: string, caminhoJunction: string): Promise<void> {
   await symlink(alvo, caminhoJunction, process.platform === "win32" ? "junction" : "dir");
 }
@@ -249,8 +268,7 @@ test("sema iniciar recusa junction em contratos sem criar pedidos.sema fora do r
     await criarJunction(outside, path.join(repo, "contratos"));
     const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
-    assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
-    assert.match(resultado.stderr, /symlink|junction/i);
+    exigirFalhaFatalTexto(resultado);
     assert.equal(existsSync(path.join(outside, "pedidos.sema")), false);
     assert.equal(existsSync(path.join(repo, "README.md")), false);
     assert.equal(existsSync(path.join(repo, "sema.config.json")), false);
@@ -267,8 +285,7 @@ test("sema iniciar prevalida exemplos e docs antes de criar qualquer arquivo", a
       await criarJunction(outside, path.join(repo, diretorio));
       const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
-      assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
-      assert.match(resultado.stderr, /symlink|junction/i);
+      exigirFalhaFatalTexto(resultado);
       assert.equal(existsSync(path.join(repo, "README.md")), false);
       assert.equal(existsSync(path.join(repo, "sema.config.json")), false);
       assert.equal(existsSync(path.join(repo, "contratos")), false);
@@ -338,8 +355,7 @@ test("sema iniciar recusa junction aninhada em exemplos sem escrita externa", as
     await criarJunction(outside, path.join(repo, "exemplos", "sistemas-interativos"));
     const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
-    assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
-    assert.match(resultado.stderr, /symlink|junction/i);
+    exigirFalhaFatalTexto(resultado);
     assert.deepEqual(await readdir(outside), []);
     assert.equal(existsSync(path.join(repo, "README.md")), false);
     assert.equal(existsSync(path.join(repo, "sema.config.json")), false);
@@ -370,8 +386,7 @@ test("sync-codex recusa junction em docs sem escrever fora do repositório", asy
     await criarJunction(outside, path.join(repo, "docs"));
     const resultado = executarCli(repo, ["sync-codex", "--json"], base);
 
-    assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
-    assert.match(resultado.stderr, /symlink|junction/i);
+    exigirFalhaFatalJson(resultado);
     assert.deepEqual(await readdir(outside), []);
   } finally {
     await limparSandbox(base);
@@ -428,8 +443,7 @@ test("contexto-ia recusa junction tardia antes de escrever qualquer artefato", a
       "--json",
     ], base);
 
-    assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
-    assert.match(resultado.stderr, /symlink|junction/i);
+    exigirFalhaFatalJson(resultado);
     assert.deepEqual(await readdir(pastaSaida), ["agent-context-pack.json"]);
     assert.deepEqual(await readdir(outside), []);
   } finally {

@@ -120,6 +120,7 @@ module sema.produto.fronteira_repositorios.empacotamento {
       arquivo: "testes/unidade/empacotamento-publico.test.ts"
       arquivo: "package.json"
       arquivo: "pacotes/cli/package.json"
+      arquivo: "pacotes/cli/src/bin.ts"
       arquivo: "plugins/sema/skills/sema/SKILL.md"
       arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
       arquivo: "pacotes/cli/README.md"

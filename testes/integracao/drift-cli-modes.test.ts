@@ -97,7 +97,7 @@ interface OpcoesSandboxCli {
 
 const require = createRequire(import.meta.url);
 const TSX_CLI = require.resolve("tsx/cli");
-const CLI_FONTE = fileURLToPath(new URL("../../pacotes/cli/src/index.ts", import.meta.url));
+const CLI_FONTE = fileURLToPath(new URL("../../pacotes/cli/src/bin.ts", import.meta.url));
 
 async function criarSandboxCli(base: string, opcoes: OpcoesSandboxCli = {}): Promise<SandboxCli> {
   const raiz = path.join(base, "workspace");
@@ -629,15 +629,12 @@ test("CLI falha para modo inválido e combinações conflitantes sem criar cache
     const casos = [
       {
         argumentos: ["resumo", sandbox.contratoRelativo, "--drift", "automatico", "--json"],
-        mensagem: /Modo inválido para --drift/u,
       },
       {
         argumentos: ["resumo", sandbox.contratoRelativo, "--cache", "cache", "--json"],
-        mensagem: /resumo usa --drift/u,
       },
       {
         argumentos: ["drift", sandbox.contratoRelativo, "--drift", "cache", "--json"],
-        mensagem: /sema drift usa --cache/u,
       },
       {
         argumentos: [
@@ -649,7 +646,6 @@ test("CLI falha para modo inválido e combinações conflitantes sem criar cache
           "fresh",
           "--json",
         ],
-        mensagem: /Use somente uma das flags --cache ou --drift/u,
       },
       {
         argumentos: [
@@ -660,15 +656,22 @@ test("CLI falha para modo inválido e combinações conflitantes sem criar cache
           "fresh",
           "--json",
         ],
-        mensagem: /Não combine --com-drift com --drift/u,
       },
     ];
 
     for (const [indice, caso] of casos.entries()) {
       const raizCache = path.join(base, `cache-erro-${indice}`);
       const execucao = await executarCli(sandbox, caso.argumentos, raizCache);
-      assert.notEqual(execucao.codigo, 0);
-      assert.match(execucao.stderr, caso.mensagem);
+      assert.equal(execucao.codigo, 1);
+      assert.equal(execucao.stderr, "");
+      assert.deepEqual(JSON.parse(execucao.stdout), {
+        schemaVersion: "sema.cli.control/v1",
+        ok: false,
+        kind: "ARGUMENT_ERROR",
+        code: "CLI_ARGUMENT_ERROR",
+        message: "Argumentos inválidos. Consulte a ajuda do comando.",
+        exitCode: 1,
+      });
       await assertCaminhoAusente(raizCache);
     }
   } finally {

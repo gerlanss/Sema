@@ -115,6 +115,7 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
       arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
       arquivo: "pacotes/cli/scripts/bloquear-pack-workspace.mjs"
       arquivo: "pacotes/cli/package.json"
+      arquivo: "pacotes/cli/src/bin.ts"
       arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
       arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
       arquivo: "pacotes/cli/src/distribuicao/index.ts"

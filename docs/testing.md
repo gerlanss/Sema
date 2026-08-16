@@ -11,12 +11,12 @@ npm run repo:verificar-publico
 npm run plugin:testar-codex
 npm run cli:empacotar-publica
 npm run cli:testar-pacote-publico
-node pacotes/cli/dist/index.js --help
-node pacotes/cli/dist/index.js --version
-node pacotes/cli/dist/index.js resumo exemplos/calculadora.sema --micro --json
-node pacotes/cli/dist/index.js validar exemplos/calculadora.sema --json
-node pacotes/cli/dist/index.js testar exemplos/calculadora.sema --alvo dotnet --saida .tmp/testing-dotnet
-node pacotes/cli/dist/index.js testar exemplos/calculadora.sema --alvo cpp --saida .tmp/testing-cpp
+node pacotes/cli/dist/bin.js --help
+node pacotes/cli/dist/bin.js --version
+node pacotes/cli/dist/bin.js resumo exemplos/calculadora.sema --micro --json
+node pacotes/cli/dist/bin.js validar exemplos/calculadora.sema --json
+node pacotes/cli/dist/bin.js testar exemplos/calculadora.sema --alvo dotnet --saida .tmp/testing-dotnet
+node pacotes/cli/dist/bin.js testar exemplos/calculadora.sema --alvo cpp --saida .tmp/testing-cpp
 npm run release:preparar-publica
 npm run release:verificar-drift
 ```
@@ -60,6 +60,29 @@ from a restricted `PATH`, invoke `sema-managed.ps1` with the absolute system
 Byte-exact arbitrary argv is proved through the PowerShell entrypoints. Passing this smoke proves
 the local tarball only; it does not mean that npm or a GitHub release was
 published.
+
+The same installed-package smoke must execute root help plus `iniciar --help`,
+`dev --help`, `formatar --help`, `sync-codex --help`, `skill sync --help`, short
+`-h`, and help after unknown arguments. Each text and `--json` invocation runs
+from an empty isolated workspace with an isolated HOME, user cache, plugin
+cache, and npm cache. A recursive content fingerprint before and after every
+invocation must remain identical, and every help path must finish within the
+smoke timeout with exit code `0` and empty stderr.
+
+The purity preload also fails on reads under the isolated workspace, HOME, or
+cache roots, subprocess creation, and network primitives. Module reads from the
+installed package itself remain allowed. The smoke invokes the real installed
+launcher with PATH emptied, so a passing direct `node dist/bin.js` probe alone
+is not accepted as launcher evidence.
+
+JSON help must be one parseable `sema.cli.control/v1` document containing
+exactly `schemaVersion`, `ok`, `kind`, `code`, `message`, and `exitCode`. The
+smoke must also prove a non-zero `UNKNOWN_COMMAND` control response whose
+process status equals `exitCode`, with no stack, absolute path, raw argv, or
+second JSON document. Successful command payloads remain unwrapped in `2.4.0`;
+existing smoke assertions against their top-level fields are compatibility
+evidence. The general success envelope belongs to `3.0.0` after handlers share
+one result abstraction.
 
 Focused distribution tests live in
 `testes/unidade/distribuicao-launcher-global.test.ts`,

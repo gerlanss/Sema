@@ -133,6 +133,33 @@ user authorization, product-license check, activation key, token, credits, or
 control panel. The repository license still governs use and redistribution; it
 is not a runtime activation gate.
 
+## Side-Effect-Free Help And JSON Control
+
+`--help` and `-h` take precedence wherever they appear in an invocation. Help
+exits with status `0` before the operational runtime or any handler is imported,
+resolved, or dispatched, and does not
+inspect or mutate the workspace, home, user cache, or plugin cache. It also does
+not start a subprocess or make a network call.
+
+```bash
+sema iniciar --help
+sema skill sync --help
+sema comando-inexistente --opcao valor --help --json
+```
+
+With `--json`, help and command-control failures emit exactly one
+`sema.cli.control/v1` document on stdout and keep stderr empty. The envelope has
+only `schemaVersion`, `ok`, `kind`, `code`, `message`, and `exitCode`; error
+messages do not expose a stack, absolute path, or raw argv. Successful command
+payloads keep their existing top-level shapes in `2.4.0`. A general envelope
+for successful results is reserved for `3.0.0` after all handlers share one
+result abstraction. See [CLI](./docs/cli.md) for the complete contract.
+
+The npm executable is `dist/bin.js`; the package API remains `dist/index.js`.
+Control failures cover unknown commands/subcommands, missing or invalid CLI
+syntax, and uncaught runtime exceptions. A valid command's structured domain
+result keeps its legacy payload in `2.4.0`.
+
 ## Codex Setup
 
 The CLI is the local engine and source of truth. `AGENTS.md` is the automatic

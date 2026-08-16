@@ -1,6 +1,6 @@
 module sema.produto.distribuicao_global {
   docs {
-    resumo: "Diagnostica e sincroniza um launcher global estavel da CLI Sema sem depender de PATH. O launcher usa caminhos absolutos para o executavel Node e para dist/index.js, fica confinado a ~/.sema/bin e preserva destinos nao gerenciados."
+    resumo: "Diagnostica e sincroniza um launcher global estavel da CLI Sema sem depender de PATH. O launcher usa caminhos absolutos para o executavel Node e para dist/bin.js, fica confinado a ~/.sema/bin e preserva destinos nao gerenciados."
     arquivo: "contratos/sema/cli_distribuicao_transacao.sema"
     arquivo: "docs/security.md"
     arquivo: "docs/testing.md"
@@ -196,6 +196,7 @@ module sema.produto.distribuicao_global {
     vinculos {
       arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
       arquivo: "pacotes/cli/src/distribuicao/launcherWindows.ts"
+      arquivo: "pacotes/cli/src/bin.ts"
       arquivo: "pacotes/cli/scripts/postinstall.mjs"
       arquivo: "testes/unidade/distribuicao-launcher-global.test.ts"
       simbolo: cli.src.distribuicao.launcher_global.sincronizarLauncherGlobal

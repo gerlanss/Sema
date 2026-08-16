@@ -1,6 +1,6 @@
 {
   "name": "sema",
-  "version": "2.3.6",
+  "version": "2.4.0",
   "private": true,
   "description": "Sema is a Codex-native local semantic governance layer for contract-first work across software, workflows, documents, and operational systems.",
   "license": "SEE LICENSE IN LICENSE",
@@ -13,7 +13,7 @@
     "build": "tsc -b --clean && node -e \"require('node:fs').rmSync('pacotes/cli/dist',{recursive:true,force:true})\" && tsc -b",
     "test": "npm run build && node --import tsx --test --test-concurrency=1 --test-force-exit testes/unidade/**/*.test.ts testes/integracao/**/*.test.ts",
     "lint": "tsc -b --pretty false",
-    "cli": "node pacotes/cli/dist/index.js",
+    "cli": "node pacotes/cli/dist/bin.js",
     "cli:instalar-local": "npm run cli:empacotar-publica && node scripts/instalar-cli-local.mjs",
     "cli:desinstalar-local": "npm unlink -g @semacode/cli",
     "cli:empacotar": "npm run cli:empacotar-publica",
@@ -25,7 +25,7 @@
     "cli:publicar-npm-dry-run": "npm run release:preparar-publica && node scripts/publicar-cli-npm.mjs --dry-run",
     "cli:publicar-npm": "npm run release:preparar-publica && node scripts/publicar-cli-npm.mjs",
     "release:verificar-versao": "node scripts/verificar-versao-release.mjs",
-    "release:verificar-drift": "node pacotes/cli/dist/index.js drift . --escopo projeto --cache fresh --incluir-consumidores-laterais --json",
+    "release:verificar-drift": "node pacotes/cli/dist/bin.js drift . --escopo projeto --cache fresh --incluir-consumidores-laterais --json",
     "release:verificar-distribuicao": "node scripts/verificar-distribuicao-publica.mjs --json",
     "release:verificar-publica": "npm run release:preparar-publica",
     "release:preparar-publica": "npm run codex:sync-entrypoint && npm run release:verificar-versao && npm run status:check && npm run repo:verificar-publico && npm run plugin:testar-codex && npm test && npm run release:verificar-drift && npm run cli:empacotar-publica && npm run cli:testar-pacote-publico",
@@ -34,13 +34,13 @@
     "repo:verificar-publico": "node scripts/verificar-fronteira-publica.mjs",
     "repo:verificar-publico-json": "node scripts/verificar-fronteira-publica.mjs --json",
     "dev:cli": "node scripts/dev-cli.mjs",
-    "format:check": "node pacotes/cli/dist/index.js formatar contratos/sema --check",
+    "format:check": "node pacotes/cli/dist/bin.js formatar contratos/sema --check",
     "ia:preparar-contexto": "node scripts/preparar-contexto-ia.mjs",
-    "codex:sync-entrypoint": "npm run build && node pacotes/cli/dist/index.js sync-codex --json",
+    "codex:sync-entrypoint": "npm run build && node pacotes/cli/dist/bin.js sync-codex --json",
     "status:sync": "node scripts/sync-status.mjs",
     "status:check": "node scripts/check-status.mjs",
     "docs:prepare": "npm run status:sync && npm run status:check",
-    "project:check": "npm run status:check && npm run repo:verificar-publico && npm test && npm run format:check && npm run cli:testar-runtime && node pacotes/cli/dist/index.js verificar . --saida ./.tmp/verificacao-project-check"
+    "project:check": "npm run status:check && npm run repo:verificar-publico && npm test && npm run format:check && npm run cli:testar-runtime && node pacotes/cli/dist/bin.js verificar . --saida ./.tmp/verificacao-project-check"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",

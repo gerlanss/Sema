@@ -187,6 +187,7 @@ function variantesSegmentoDiretorio(segmento: string): string[] {
   return [...new Set([
     segmento,
     segmento.includes("_") ? segmento.replace(/_/g, "-") : undefined,
+    segmento.includes("_") && camel !== segmento ? camel : undefined,
     /(?:^|_)id$/i.test(segmento) ? `[${segmento}]` : undefined,
     /(?:^|_)id$/i.test(segmento) && camel !== segmento ? `[${camel}]` : undefined,
   ].filter((item): item is string => Boolean(item)))];

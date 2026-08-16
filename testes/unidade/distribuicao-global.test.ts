@@ -63,7 +63,7 @@ async function criarPacoteCompleto(
     name: "@semacode/cli",
     version: versao,
   }), "utf8");
-  await writeFile(path.join(raiz, "dist", "index.js"), "process.exitCode = 0;\n", "utf8");
+  await writeFile(path.join(raiz, "dist", "bin.js"), "process.exitCode = 0;\n", "utf8");
   await writeFile(path.join(raiz, "skills", "sema", "SKILL.md"), `${skill}\n`, "utf8");
   await writeFile(
     path.join(raiz, "skills", "sema", "agents", "openai.yaml"),
@@ -222,7 +222,7 @@ test("coordenador oferece status e sync combinados com ambiente totalmente injet
     assert.equal(repetido.estado, "READY");
     assert.equal(repetido.alterado, false);
 
-    await rm(path.join(raizPacote, "dist", "index.js"));
+    await rm(path.join(raizPacote, "dist", "bin.js"));
     const fechado = await statusDistribuicaoGlobal(opcoes);
     assert.equal(fechado.estado, "BROKEN_TARGET");
     assert.equal(fechado.launcher.estado, "BROKEN_TARGET");

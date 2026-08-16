@@ -104,6 +104,9 @@ export function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperad
   if (!String(json.description ?? "").includes("Codex-native")) {
     throw new Error("The public package manifest must describe Sema as Codex-native.");
   }
+  if (json.bin?.sema !== "dist/bin.js" || json.main !== "dist/index.js" || json.types !== "dist/index.d.ts") {
+    throw new Error("The public package must separate the executable bin from the root API entrypoint.");
+  }
   const exportRaiz = json.exports?.["."];
   if (
     Object.keys(json.exports ?? {}).length !== 1 ||
@@ -120,6 +123,11 @@ export function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperad
   }
 
   const arquivos = listarTarball(caminhoTarball, raiz);
+  for (const entrada of ["package/dist/bin.js", "package/dist/index.js", "package/dist/index.d.ts"]) {
+    if (!arquivos.includes(entrada)) {
+      throw new Error(`The public package is missing CLI entrypoint ${entrada}.`);
+    }
+  }
   const artefatoNaoPublicavel = arquivos.find((arquivo) => ARTEFATO_NAO_PUBLICAVEL.test(arquivo));
   if (artefatoNaoPublicavel) {
     throw new Error(`The public package contains forbidden artifact ${artefatoNaoPublicavel}.`);

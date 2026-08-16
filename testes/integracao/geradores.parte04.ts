@@ -230,8 +230,8 @@ module exemplo.operacao {
 
 test("cli verifica o projeto inteiro em lote", () => {
   const execucao = spawnSync(
-    "node",
-    ["pacotes/cli/dist/index.js", "verificar", ".", "--saida", "./.tmp/verificacao-integracao"],
+    process.execPath,
+    ["pacotes/cli/dist/bin.js", "verificar", ".", "--saida", "./.tmp/verificacao-integracao"],
     { stdio: "pipe", encoding: "utf8" },
   );
 
@@ -318,8 +318,8 @@ test("cli compila arquivo com use usando modulos vizinhos como contexto do proje
   );
 
   const execucao = spawnSync(
-    "node",
-    ["pacotes/cli/dist/index.js", "compilar", path.join(pastaProjeto, "app.sema"), "--alvo", "typescript", "--saida", pastaSaida],
+    process.execPath,
+    ["pacotes/cli/dist/bin.js", "compilar", path.join(pastaProjeto, "app.sema"), "--alvo", "typescript", "--saida", pastaSaida],
     { stdio: "pipe", encoding: "utf8" },
   );
 
@@ -336,9 +336,9 @@ test("cli compila com estrutura por modulos quando solicitado", async () => {
   const pastaSaida = path.join(baseTemporaria, "generated");
 
   const execucao = spawnSync(
-    "node",
+    process.execPath,
     [
-      "pacotes/cli/dist/index.js",
+      "pacotes/cli/dist/bin.js",
       "compilar",
       "exemplos/calculadora.sema",
       "--alvo",
@@ -378,9 +378,9 @@ test("cli compila geradores web como alvos publicos", async () => {
     for (const item of alvos) {
       const pastaSaida = path.join(baseTemporaria, item.alvo);
       const execucao = spawnSync(
-        "node",
+        process.execPath,
         [
-          "pacotes/cli/dist/index.js",
+          "pacotes/cli/dist/bin.js",
           "compilar",
           "exemplos/calculadora.sema",
           "--alvo",

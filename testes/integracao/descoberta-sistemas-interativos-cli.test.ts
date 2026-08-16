@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-const CLI = path.resolve("pacotes/cli/dist/index.js");
+const CLI = path.resolve("pacotes/cli/dist/bin.js");
 
 interface ExecucaoCli {
   readonly status: number | null;
@@ -209,15 +209,20 @@ test("erros desconhecidos e JSON inválido não ecoam caminho nem segredo contro
   const segredo = `ghp_${"X".repeat(40)}`;
 
   const desconhecido = executarJson(["interativo", segredo], 1);
-  assert.equal(desconhecido.sucesso, false);
-  assert.equal(desconhecido.errorCode, "INTERATIVO_SUBCOMANDO_DESCONHECIDO");
+  assert.equal(desconhecido.schemaVersion, "sema.cli.control/v1");
+  assert.equal(desconhecido.ok, false);
+  assert.equal(desconhecido.kind, "ARGUMENT_ERROR");
+  assert.equal(desconhecido.code, "CLI_ARGUMENT_ERROR");
+  assert.equal(desconhecido.exitCode, 1);
   assert.equal(JSON.stringify(desconhecido).includes(segredo), false);
-  provarFronteiraInterativa(desconhecido);
 
-  const descobertaDesconhecida = executarJson(["descobrir", segredo], 2);
-  assert.equal(descobertaDesconhecida.success, false);
+  const descobertaDesconhecida = executarJson(["descobrir", segredo], 1);
+  assert.equal(descobertaDesconhecida.schemaVersion, "sema.cli.control/v1");
+  assert.equal(descobertaDesconhecida.ok, false);
+  assert.equal(descobertaDesconhecida.kind, "ARGUMENT_ERROR");
+  assert.equal(descobertaDesconhecida.code, "CLI_ARGUMENT_ERROR");
+  assert.equal(descobertaDesconhecida.exitCode, 1);
   assert.equal(JSON.stringify(descobertaDesconhecida).includes(segredo), false);
-  provarFronteiraDescoberta(descobertaDesconhecida);
 
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-interactive-cli-no-echo-"));
   try {

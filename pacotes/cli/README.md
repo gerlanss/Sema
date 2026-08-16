@@ -37,6 +37,35 @@ authorization, product-license check, activation key, token, credits, billing
 service, control panel, or external service credentials. The license governs
 use and redistribution; it is not a runtime activation gate.
 
+## Side-Effect-Free Help And JSON Control
+
+`--help` and `-h` short-circuit before the operational runtime or handlers are
+imported wherever they appear. Help exits with status `0` without inspecting or mutating the workspace, home,
+user cache, or plugin cache, and without starting subprocesses or network
+calls.
+
+```bash
+sema iniciar --help
+sema dev --help --json
+sema skill sync --help
+```
+
+When `--json` is present, help and command-control failures emit exactly one
+`sema.cli.control/v1` document on stdout with empty stderr. Its only fields are
+`schemaVersion`, `ok`, `kind`, `code`, `message`, and `exitCode`. Failures are
+redacted and never expose a stack, absolute path, or raw argv.
+
+This control envelope does not wrap successful command payloads in `2.4.0`.
+Existing consumers must continue reading each command's current top-level
+fields. A general success envelope is reserved for `3.0.0`, after all handlers
+return one shared result abstraction.
+
+The package separates execution from imports: `bin.sema` points to
+`dist/bin.js`, while `main` and the root export remain `dist/index.js`.
+Unknown commands/subcommands, missing or invalid CLI syntax, and uncaught
+runtime exceptions use the control envelope; structured domain-level failures
+preserve their existing payloads.
+
 ## Codex Setup
 
 `AGENTS.md` is the official Sema entrypoint for Codex:

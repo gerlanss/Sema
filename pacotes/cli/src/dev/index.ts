@@ -82,16 +82,16 @@ function iniciarWatcher(sessao: SessaoDev): void {
 
 async function validarAlteracao(caminhoArquivo: string, modo: 'rigoroso' | 'permissivo'): Promise<void> {
   // Executar validacao via CLI
-  const semaPath = path.resolve('pacotes/cli/dist/index.js');
+  const semaPath = path.resolve('pacotes/cli/dist/bin.js');
   const args = ['validar', caminhoArquivo];
 
   if (modo === 'permissivo') {
     console.log('   🟡 Modo permissivo: mostrando apenas warnings\n');
   }
 
-  const processo = spawn('node', [semaPath, ...args], {
+  const processo = spawn(process.execPath, [semaPath, ...args], {
     stdio: 'inherit',
-    shell: true
+    shell: false
   });
 
   processo.on('close', (codigo) => {
@@ -112,11 +112,11 @@ export async function promoverParaProduction(
   console.log(`\n🚀 Promovendo ${path.basename(caminhoContrato)} para PRODUCTION...`);
 
   // Validar rigorosamente
-  const semaPath = path.resolve('pacotes/cli/dist/index.js');
+  const semaPath = path.resolve('pacotes/cli/dist/bin.js');
 
   return new Promise((resolve) => {
-    const processo = spawn('node', [semaPath, 'validar', caminhoContrato, '--json'], {
-      shell: true
+    const processo = spawn(process.execPath, [semaPath, 'validar', caminhoContrato, '--json'], {
+      shell: false
     });
 
     let saida = '';

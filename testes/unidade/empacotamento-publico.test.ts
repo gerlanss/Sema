@@ -24,6 +24,39 @@ import { fingerprintCaminhos } from "../../scripts/cli-publico/distribuicao-glob
 const raiz = path.resolve(".");
 const packer = path.join(raiz, "scripts", "empacotar-cli-publica.mjs");
 
+test("manifesto separa bootstrap executável da API e mantém help puro antes do runtime", async () => {
+  const [manifesto, raizManifesto, bin, api, ajudaRaiz, ajudaConteudo] = await Promise.all([
+    readFile(path.join(raiz, "pacotes", "cli", "package.json"), "utf8").then(JSON.parse),
+    readFile(path.join(raiz, "package.json"), "utf8").then(JSON.parse),
+    readFile(path.join(raiz, "pacotes", "cli", "src", "bin.ts"), "utf8"),
+    readFile(path.join(raiz, "pacotes", "cli", "src", "index.ts"), "utf8"),
+    readFile(path.join(raiz, "pacotes", "cli", "src", "cliHelpTexto.ts"), "utf8"),
+    readFile(path.join(raiz, "pacotes", "cli", "src", "pipelineConteudo", "help.ts"), "utf8"),
+  ]);
+
+  assert.equal(manifesto.bin?.sema, "dist/bin.js");
+  assert.equal(manifesto.main, "dist/index.js");
+  assert.equal(manifesto.types, "dist/index.d.ts");
+  assert.deepEqual(manifesto.exports?.["."], {
+    types: "./dist/index.d.ts",
+    import: "./dist/index.js",
+    default: "./dist/index.js",
+  });
+  for (const script of ["cli", "release:verificar-drift", "format:check", "codex:sync-entrypoint", "project:check"]) {
+    assert.match(raizManifesto.scripts?.[script] ?? "", /pacotes\/cli\/dist\/bin\.js/u);
+  }
+
+  assert.doesNotMatch(api, /^#!|process\.argv|moduloExecutadoDiretamente|\bprincipal\(\)/mu);
+  assert.doesNotMatch(bin, /^import .*index\.part08/mu);
+  const importRuntime = bin.indexOf('await import("./index.part08.js")');
+  assert.ok(importRuntime > 0);
+  for (const marcador of ["argv.length === 0", "deteccaoHelp.ajudaSolicitada", "FLAGS_VERSAO.has(argv[0]!)"]) {
+    const indice = bin.indexOf(marcador);
+    assert.ok(indice >= 0 && indice < importRuntime, `${marcador} deve preceder o import do runtime`);
+  }
+  assert.doesNotMatch(`${ajudaRaiz}\n${ajudaConteudo}`, /from\s+["']node:|node:child_process|node:fs/u);
+});
+
 function resolverNpmExecpath(): string {
   const candidatos = [
     process.env.npm_execpath?.trim(),
@@ -370,8 +403,16 @@ test("dois packs públicos não contaminam stage e o tarball instala", { timeout
       windowsHide: true,
     });
     assert.equal(instalacao.status, 0, instalacao.stderr || instalacao.stdout);
+    const api = spawnSync(process.execPath, [
+      "--input-type=module",
+      "--eval",
+      "await import('@semacode/cli'); process.stdout.write('API_ONLY');",
+    ], { cwd: sandbox, encoding: "utf8", windowsHide: true });
+    assert.equal(api.status, 0, api.stderr);
+    assert.equal(api.stdout, "API_ONLY");
+    assert.equal(api.stderr, "");
     const versao = spawnSync(process.execPath, [
-      path.join(sandbox, "node_modules", "@semacode", "cli", "dist", "index.js"),
+      path.join(sandbox, "node_modules", "@semacode", "cli", "dist", "bin.js"),
       "--version",
     ], { cwd: sandbox, encoding: "utf8", windowsHide: true });
     assert.equal(versao.status, 0, versao.stderr);

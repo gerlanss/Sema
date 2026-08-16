@@ -1,0 +1,295 @@
+module sema.produto.cli_invocacao_publica {
+  docs {
+    resumo: "Governa a invocacao publica da CLI 2.4: --help ou -h em qualquer posicao encerra antes do dispatch, e o modo JSON usa um envelope de controle v1 somente para help e falhas de comando, argumento ou runtime. Payloads JSON de sucesso continuam inalterados."
+    versao: "2.4.0"
+    status: "MODELADA"
+    arquivo: "docs/cli.md"
+    arquivo: "docs/commands.md"
+    arquivo: "docs/testing.md"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento_smoke.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_argumentos.sema"
+  }
+
+  use sema.produto.cli_invocacao_publica.argumentos
+
+  type EnvelopeControleJsonV1 {
+    fields {
+      schemaVersion: Texto
+      ok: Booleano
+      kind: TipoControleCli
+      code: Texto
+      message: Texto
+      exitCode: Inteiro
+    }
+    invariants {
+      schemaVersion deve_ser sema_cli_control_v1
+      code existe
+      message existe
+      exitCode existe
+    }
+  }
+
+  enum TipoControleCli {
+    HELP,
+    UNKNOWN_COMMAND,
+    ARGUMENT_ERROR,
+    FATAL_ERROR
+  }
+
+  enum TipoResultadoInvocacaoCli {
+    SUCCESS,
+    HELP,
+    UNKNOWN_COMMAND,
+    ARGUMENT_ERROR,
+    FATAL_ERROR
+  }
+
+  task detectar_help_antes_dispatch {
+    input {
+      argv: Lista<Texto> required
+    }
+    output {
+      ajuda_solicitada: Booleano
+      modo_json: Booleano
+      encerrar_antes_dispatch: Booleano
+      dispatch_permitido: Booleano
+      handler_resolvido: Booleano
+      codigo_saida: Inteiro
+      help_em_qualquer_posicao_respeitado: Booleano
+    }
+    rules {
+      argv deve_ser lista_ordenada_de_tokens_cli
+      argv deve_ser reconhecer_help_longo_e_curto_em_qualquer_posicao
+      argv deve_ser examinado_integralmente_para_help_antes_do_dispatch
+    }
+    forbidden {
+      consultar_workspace_home_ou_cache_durante_help
+      consultar_rede_durante_help
+      iniciar_subprocesso_durante_help
+      consultar_ou_persistir_cache_durante_help
+      resolver_handler_durante_help
+      executar_handler_durante_help
+      despachar_comando_durante_help
+      validar_comando_antes_de_short_circuit_help
+    }
+    impl {
+      ts: cli.src.cli_help.detectarHelpAntesDispatch
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/cliHelp.ts"
+      arquivo: "pacotes/cli/src/cliHelpTexto.ts"
+      arquivo: "pacotes/cli/src/bin.ts"
+      arquivo: "pacotes/cli/src/pipelineConteudo/help.ts"
+      arquivo: "testes/integracao/cli-invocacao-publica.test.ts"
+      simbolo: cli.src.cli_help.detectarHelpAntesDispatch
+      simbolo: cli.src.cli_help_texto.criarAjudaRaiz
+      simbolo: cli.src.pipeline_conteudo.help.criarAjudaPipelineConteudo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_permitida"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      ajuda_solicitada existe
+      modo_json existe
+      help_em_qualquer_posicao_respeitado == verdadeiro
+      encerrar_antes_dispatch deve_ser verdadeiro quando ajuda_solicitada == verdadeiro
+      dispatch_permitido deve_ser falso quando ajuda_solicitada == verdadeiro
+      handler_resolvido deve_ser falso quando ajuda_solicitada == verdadeiro
+      codigo_saida deve_ser zero quando ajuda_solicitada == verdadeiro
+    }
+    tests {
+      caso "help depois de argumentos desconhecidos ainda encerra puro" {
+        given {
+          argv: "comando-inexistente --opcao valor --help"
+        }
+
+        expect {
+          ajuda_solicitada: verdadeiro
+          encerrar_antes_dispatch: verdadeiro
+          dispatch_permitido: falso
+          handler_resolvido: falso
+          codigo_saida: 0
+          help_em_qualquer_posicao_respeitado: verdadeiro
+        }
+      }
+    }
+  }
+
+  task criar_envelope_controle_json_v1 {
+    input {
+      categoria: TipoControleCli required
+      codigo_publico: Texto required
+      mensagem_publica: Texto required
+      codigo_saida: Inteiro required
+    }
+    output {
+      envelope: EnvelopeControleJsonV1
+      stdout_json_unico: Booleano
+      stderr_vazio: Booleano
+      campos_publicos_mapeados: Booleano
+      ok_coerente_com_categoria: Booleano
+    }
+    rules {
+      codigo_publico deve_ser estavel
+      mensagem_publica deve_ser sem_stack_sem_caminho_absoluto_sem_argv
+      categoria deve_ser controle_suportado_v1
+      codigo_saida deve_ser zero_para_help_e_nao_zero_para_erros
+    }
+    forbidden {
+      incluir_stack_no_envelope
+      incluir_caminho_absoluto_no_envelope
+      incluir_argv_bruto_no_envelope
+      incluir_causa_interna_nao_redigida_no_envelope
+      emitir_json_em_stderr
+      emitir_mais_de_um_documento_json
+      usar_envelope_sem_schema_version
+    }
+    impl {
+      ts: cli.src.saida_cli.criarEnvelopeControleJsonV1
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/saidaCli.ts"
+      arquivo: "testes/integracao/cli-invocacao-publica.test.ts"
+      simbolo: cli.src.saida_cli.criarEnvelopeControleJsonV1
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_permitida"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      envelope existe
+      envelope deve_ser schema_sema_cli_control_v1
+      envelope deve_ser conter_kind
+      envelope deve_ser conter_code
+      envelope deve_ser conter_message
+      envelope deve_ser conter_exit_code
+      envelope deve_ser conter_ok
+      campos_publicos_mapeados == verdadeiro
+      ok_coerente_com_categoria == verdadeiro
+      stdout_json_unico == verdadeiro
+      stderr_vazio == verdadeiro
+    }
+    tests {
+      caso "help json usa envelope v1 e stdout" {
+        given {
+          categoria: "HELP"
+          codigo_publico: "CLI_HELP"
+          mensagem_publica: "Sema CLI help"
+          codigo_saida: 0
+        }
+
+        expect {
+          sucesso: verdadeiro
+          stdout_json_unico: verdadeiro
+          stderr_vazio: verdadeiro
+          campos_publicos_mapeados: verdadeiro
+          ok_coerente_com_categoria: verdadeiro
+        }
+      }
+    }
+  }
+
+  task emitir_resultado_invocacao_publica {
+    input {
+      resultado: TipoResultadoInvocacaoCli required
+      modo_json: Booleano required
+      payload_sucesso: Mapa optional
+      envelope_controle: EnvelopeControleJsonV1 optional
+    }
+    output {
+      payload_sucesso_preservado: Booleano
+      envelope_controle_emitido: Booleano
+      stderr_vazio: Booleano
+      handler_executado: Booleano
+      politica_sucesso_2_4_respeitada: Booleano
+      politica_controle_json_v1_respeitada: Booleano
+      politica_help_puro_respeitada: Booleano
+      codigo_saida: Inteiro
+    }
+    rules {
+      payload_sucesso deve_ser fornecido quando resultado == SUCCESS
+      envelope_controle deve_ser ausente quando resultado == SUCCESS
+      envelope_controle deve_ser fornecido quando (modo_json == verdadeiro e resultado em [HELP, UNKNOWN_COMMAND, ARGUMENT_ERROR, FATAL_ERROR])
+    }
+    forbidden {
+      envolver_payload_sucesso_em_envelope_controle
+      renomear_chaves_do_payload_sucesso
+      remover_campos_do_payload_sucesso
+      acrescentar_campos_ao_payload_sucesso
+      normalizar_payload_sucesso_em_2_4
+      emitir_envelope_controle_para_sucesso
+      emitir_json_em_stderr
+      executar_handler_durante_help
+    }
+    impl {
+      ts: cli.src.saida_cli.executarInvocacaoPublica
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/cliHelp.ts"
+      arquivo: "pacotes/cli/src/saidaCli.ts"
+      arquivo: "pacotes/cli/src/bin.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "testes/integracao/cli-invocacao-publica.test.ts"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      simbolo: cli.src.saida_cli.executarInvocacaoPublica
+      simbolo: cli.src.bin.executarCliPublica
+      simbolo: scripts.testar_pacote_cli_publico.main
+    }
+    execucao {
+      idempotencia: falso
+      timeout: "herdado_do_comando"
+      retry: "nenhum"
+      compensacao: "delegada_ao_comando"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      payload_sucesso_preservado existe
+      envelope_controle_emitido existe
+      stderr_vazio existe
+      handler_executado existe
+      politica_sucesso_2_4_respeitada == verdadeiro
+      politica_controle_json_v1_respeitada == verdadeiro
+      politica_help_puro_respeitada == verdadeiro
+      codigo_saida existe
+    }
+    tests {
+      caso "sucesso json preserva o payload legado de 2.4" {
+        given {
+          resultado: "SUCCESS"
+          modo_json: verdadeiro
+          payload_sucesso: "payload_original_sem_wrapper"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          payload_sucesso_preservado: verdadeiro
+          envelope_controle_emitido: falso
+          stderr_vazio: verdadeiro
+          politica_sucesso_2_4_respeitada: verdadeiro
+        }
+      }
+      caso "comando desconhecido json usa envelope e nao stderr" {
+        given {
+          resultado: "UNKNOWN_COMMAND"
+          modo_json: verdadeiro
+          envelope_controle: "sema.cli.control/v1"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          envelope_controle_emitido: verdadeiro
+          stderr_vazio: verdadeiro
+          politica_controle_json_v1_respeitada: verdadeiro
+        }
+      }
+    }
+  }
+}

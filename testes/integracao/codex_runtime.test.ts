@@ -19,7 +19,7 @@ import {
 import { avaliarDependenciasVerificacao } from "../../pacotes/cli/src/doctorCommand.ts";
 import { PACOTES_RUNTIME } from "../../scripts/empacotar-cli-publica.mjs";
 
-const CLI = path.resolve("pacotes/cli/dist/index.js");
+const CLI = path.resolve("pacotes/cli/dist/bin.js");
 
 const ENTRYPOINTS_LEGADOS = [
   ".github/copilot-instructions.md",
@@ -494,7 +494,7 @@ test("superfície pública não oferece o antigo porteiro preflight", () => {
 });
 
 test("import programático da raiz não executa a CLI e preserva APIs públicas", () => {
-  const modulo = pathToFileURL(CLI).href;
+  const modulo = pathToFileURL(path.resolve("pacotes/cli/dist/index.js")).href;
   const resultado = spawnSync(process.execPath, [
     "--input-type=module",
     "--eval",

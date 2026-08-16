@@ -220,6 +220,57 @@ test("implementacao usa o candidato de arquivo mais especifico sem abrir barrel 
   }
 });
 
+test("segmento semantico snake_case resolve diretorio camelCase declarado", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-escopo-camel-"));
+  try {
+    const arquivoRelativo = "pacotes/cli/src/pipelineConteudo/adapters.ts";
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await mkdir(path.join(base, "pacotes", "cli", "src", "pipelineConteudo"), { recursive: true });
+    await writeFile(path.join(base, "sema.config.json"), JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./pacotes"],
+    }), "utf8");
+    await writeFile(path.join(base, "contratos", "pipeline.sema"), `module app.pipeline {
+  task executar {
+    output { ok: Booleano }
+    impl { ts: cli.src.pipeline_conteudo.adapters.executar }
+    vinculos {
+      arquivo: "${arquivoRelativo}"
+      simbolo: cli.src.pipeline_conteudo.adapters.executar
+    }
+    guarantees { ok existe }
+  }
+}
+`, "utf8");
+    await writeFile(
+      path.join(base, ...arquivoRelativo.split("/")),
+      "export function executar() { return { ok: true }; }\n",
+      "utf8",
+    );
+
+    const contexto = await carregarProjeto("contratos/pipeline.sema", base, {
+      escopo: "modulo",
+      adiarDescobertaCodigo: true,
+    });
+    const plano = await planejarEscopoDrift(contexto, {
+      escopo: "modulo",
+      ignorarWorktrees: true,
+      ignorarConsumidoresLaterais: true,
+      termosEscopo: [],
+    });
+    const relativos = (arquivos: readonly string[]) => arquivos
+      .map((arquivo) => path.relative(base, arquivo).replace(/\\/g, "/"));
+
+    assert.deepEqual(relativos(plano.arquivos), [arquivoRelativo]);
+    assert.deepEqual(relativos(plano.arquivosDeclarados), [arquivoRelativo]);
+    assert.deepEqual(plano.arquivosInferidos, []);
+    assert.deepEqual(plano.arquivosAusentes, []);
+    assert.equal(plano.cobertura, "completa");
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
 test("vinculo absoluto externo e redigido sem expor o caminho fisico", async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-escopo-redacao-"));
   const externo = await mkdtemp(path.join(os.tmpdir(), "sema-drift-segredo-"));

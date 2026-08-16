@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos, sema.produto.cli_invocacao_publica, sema.produto.cli_invocacao_publica.argumentos
 // Descrição: encaminha argumentos validados para as consultas e o comando de drift.
 
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
@@ -86,6 +86,8 @@ import {
   type ExecucaoComandoExterno,
 } from './execucoesExternas.js';
 import { avaliarDependenciasVerificacao, comandoDoctor, imprimirFalhaDependenciasVerificacao } from './doctorCommand.js';
+import { erroArgumentoInvalido, erroComandoDesconhecido } from './cliControlError.js';
+import { validarSintaxeInvocacaoPublica } from './cliGrammar.js';
 import {
   aplicarEstruturaSaida,
   contarCasosDeTesteGerados,
@@ -104,34 +106,31 @@ import {
   type SaidaTesteCapturada,
 } from './geracaoCore.js';
 
-import { VERSAO_CLI, ajuda, obterArgumentos } from "./index.part01.js";
+import { obterArgumentos } from "./index.part01.js";
 import { comandoDocsImpacto, comandoFinalizarMudanca, comandoValidar, comandoValidarJson } from "./index.part04.js";
 import { comandoAst, comandoAstJson, comandoDrift, comandoImpacto, comandoImportar, comandoInspecionar, comandoIr, comandoIrJson, comandoRenomearSemantico } from "./index.part05.js";
 import { comandoAjudaIa, comandoCompilar, comandoDiagnosticos, comandoExemplosPromptIa, comandoFormatar, comandoPromptIa, comandoPromptIaReact, comandoPromptIaSemaPrimeiro, comandoPromptIaUi, comandoResumo, comandoStarterIa, comandoSyncCodex } from "./index.part06.js";
 import { comandoContextoIa, comandoPromptCurto, comandoTestar, comandoVerificar, comandoVerificarJson } from "./index.part07.js";
 
-export async function principal(): Promise<void> {
-  const { comando, resto } = obterArgumentos();
-  const comandoCru = process.argv[2];
-  if (comandoCru === "--versao" || comandoCru === "--version" || comandoCru === "-v") {
-    console.log(VERSAO_CLI);
-    process.exit(0);
-  }
-  if (!comando || comandoCru === "--help" || comandoCru === "-h") {
-    console.log(ajuda());
-    process.exit(0);
-  }
+export async function principal(): Promise<number> {
+  const argvPublico = process.argv.slice(2);
+  const sintaxe = validarSintaxeInvocacaoPublica(argvPublico);
+  if (!sintaxe.dispatchPermitido) return 0;
 
-  const cwd = process.cwd();
+  const { comando, resto } = obterArgumentos();
+  if (!comando) return 0;
+
   const posicionais = obterPosicionais(resto);
-  let codigoSaida = 0;
+  const modoJson = argvPublico.includes("--json");
+  const cwd = process.cwd();
 
   // --- Comandos registrados via REGISTRO_COMANDOS (guard, init, dev, sync) ---
   const handlerRegistrado = REGISTRO_COMANDOS[comando];
   if (handlerRegistrado) {
-    codigoSaida = await handlerRegistrado(posicionais, resto, possuiFlag(resto, "--json"));
-    process.exit(codigoSaida);
+    return handlerRegistrado(posicionais, resto, modoJson);
   }
+
+  let codigoSaida = 0;
 
   switch (comando) {
     case "iniciar":
@@ -162,13 +161,13 @@ export async function principal(): Promise<void> {
       break;
     case "ast":
       codigoSaida = possuiFlag(resto, "--json")
-        ? await comandoAstJson(resto[0] ?? "")
-        : await comandoAst(resto[0] ?? "");
+        ? await comandoAstJson(posicionais[0] ?? "")
+        : await comandoAst(posicionais[0] ?? "");
       break;
     case "ir":
       codigoSaida = possuiFlag(resto, "--json")
-        ? await comandoIrJson(resto[0] ?? "")
-        : await comandoIr(resto[0] ?? "");
+        ? await comandoIrJson(posicionais[0] ?? "")
+        : await comandoIr(posicionais[0] ?? "");
       break;
     case "compilar":
       {
@@ -238,9 +237,7 @@ export async function principal(): Promise<void> {
       {
         const fonte = normalizarFonteImportacao(posicionais[0]);
         if (!fonte || !posicionais[1]) {
-          console.error("Uso: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|php|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]");
-          codigoSaida = 1;
-          break;
+          throw erroArgumentoInvalido();
         }
         codigoSaida = await comandoImportar(
           fonte,
@@ -316,10 +313,8 @@ export async function principal(): Promise<void> {
       );
       break;
     default:
-      console.log(ajuda());
-      codigoSaida = 1;
-      break;
+      throw erroComandoDesconhecido();
   }
 
-  process.exit(codigoSaida);
+  return codigoSaida;
 }

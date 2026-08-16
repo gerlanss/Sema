@@ -28,7 +28,7 @@ async function criarPacote(base: string, nome: string, versao = "2.3.6-test"): P
     name: "@semacode/cli",
     version: versao,
   }), "utf8");
-  await writeFile(path.join(raiz, "dist", "index.js"), [
+  await writeFile(path.join(raiz, "dist", "bin.js"), [
     "const partes = [];",
     "process.stdin.on('data', (parte) => partes.push(Buffer.from(parte)));",
     "process.stdin.on('end', () => {",
@@ -629,7 +629,7 @@ test("launcher diferencia stale gerenciado de conteúdo sem recibo e target queb
     assert.equal(naoSobrescrito.estado, "BROKEN_TARGET");
     assert.equal(await readFile(launcher, "utf8"), "SEMA-MANAGED-LAUNCHER v1\nsem recibo válido\n");
 
-    await rm(path.join(pacoteB, "dist", "index.js"));
+    await rm(path.join(pacoteB, "dist", "bin.js"));
     const targetQuebrado = await statusLauncherGlobal({ ...baseOpcoes, raizPacote: pacoteB });
     assert.equal(targetQuebrado.estado, "BROKEN_TARGET");
     assert.equal(targetQuebrado.codigo, "TARGET_CLI_INVALIDO");
@@ -792,9 +792,9 @@ test("launcher canonicaliza junctions informadas de Node e pacote sem relaxar a 
     const nodeCanonico = await realpath(nodeViaJunction);
     const pacoteCanonico = await realpath(pacoteLink);
     assert.equal(companion.includes(nodeCanonico), true);
-    assert.equal(companion.includes(path.join(pacoteCanonico, "dist", "index.js")), true);
+    assert.equal(companion.includes(path.join(pacoteCanonico, "dist", "bin.js")), true);
     assert.equal(companion.includes(nodeViaJunction), false);
-    assert.equal(companion.includes(path.join(pacoteLink, "dist", "index.js")), false);
+    assert.equal(companion.includes(path.join(pacoteLink, "dist", "bin.js")), false);
 
     const args = ["via junction %META% &^!", "--exit", "7"];
     const execucao = await executarFallbackWindows(home, args, "stdin junction");

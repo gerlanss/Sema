@@ -34,8 +34,60 @@ For development inside this repository:
 ```bash
 npm install
 npm run build
-node pacotes/cli/dist/index.js --help
+node pacotes/cli/dist/bin.js --help
 ```
+
+## Side-Effect-Free Help
+
+`--help` and `-h` take precedence wherever they appear in argv, including after
+an unknown command or option. The CLI exits with status `0` before command
+runtime import, command dispatch, or handler resolution. Help does not inspect or mutate the workspace,
+home, user cache, or plugin cache, start a subprocess, or make a network call.
+
+`dist/bin.js` is the executable bootstrap and imports the operational runtime
+only after these control paths finish. `dist/index.js` remains the package API
+entrypoint and is not an executable alias.
+
+```bash
+sema iniciar --help
+sema formatar --help
+sema sync-codex --help
+sema skill sync --help
+sema unknown --option value --help
+```
+
+## JSON Control Output
+
+Adding `--json` to help or a command-control failure emits exactly one JSON
+document on stdout and keeps stderr empty:
+
+```json
+{
+  "schemaVersion": "sema.cli.control/v1",
+  "ok": true,
+  "kind": "HELP",
+  "code": "CLI_HELP",
+  "message": "Sema CLI help",
+  "exitCode": 0
+}
+```
+
+The envelope contains exactly `schemaVersion`, `ok`, `kind`, `code`, `message`,
+and `exitCode`. Supported control kinds are `HELP`, `UNKNOWN_COMMAND`,
+`ARGUMENT_ERROR`, and `FATAL_ERROR`. Help uses exit code `0`; failures preserve
+a non-zero process status equal to `exitCode`. Failure messages are public and
+redacted: they do not include stacks, absolute paths, raw argv, or internal
+causes.
+
+In `2.4.0`, this envelope is only for help and command-control failures.
+Command-control failures are unknown top-level commands or subcommands and
+missing or invalid required CLI arguments/options rejected before effects.
+Structured failures returned by a syntactically valid domain operation retain
+their legacy command payload. An uncaught runtime exception is a control failure
+and uses the redacted `FATAL_ERROR` envelope.
+Successful command-specific JSON payloads retain their existing top-level
+shapes without added, removed, renamed, or wrapped fields. A general result
+envelope is reserved for `3.0.0`, after handlers return a shared result type.
 
 ## Codex Setup
 

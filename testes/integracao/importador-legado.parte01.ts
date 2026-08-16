@@ -24,10 +24,10 @@ import {
   criarProjetoRustAxum,
   criarProjetoSpringBoot,
 } from "./futebot-fixture.ts";
-const CLI = path.resolve("pacotes/cli/dist/index.js");
+const CLI = path.resolve("pacotes/cli/dist/bin.js");
 const SEMA_SMOKE_REAL = process.env.SEMA_SMOKE_REAL === "1";
 function executarImportacao(args: string[], cwd?: string) {
-  return spawnSync("node", [CLI, ...args], {
+  return spawnSync(process.execPath, [CLI, ...args], {
     stdio: "pipe",
     encoding: "utf8",
     cwd,

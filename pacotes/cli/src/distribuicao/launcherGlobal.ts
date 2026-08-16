@@ -218,7 +218,7 @@ async function resolverAmbiente(
     if (falha.estado === "PERMISSION_DENIED") throw falha;
     throw new FalhaDistribuicaoGlobal("BROKEN_TARGET", "EXECUTAVEL_NODE_INVALIDO");
   }
-  const targetCli = path.resolve(raizPacote, "dist", "index.js");
+  const targetCli = path.resolve(raizPacote, "dist", "bin.js");
   try {
     if (!await diretorioExisteSeguro(path.join(raizPacote, "dist"))) throw new Error("dist ausente");
     await validarArquivoRegular(targetCli, raizPacote);

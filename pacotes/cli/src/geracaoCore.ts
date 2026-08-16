@@ -355,7 +355,7 @@ export function executarTestesGerados(
         saidaErro: "Nao foi possivel localizar o runner tsx junto da CLI para executar testes TypeScript.",
       };
     }
-    const execucao = spawnSync("node", [TSX_EXECUTOR_CLI, arquivoTeste], {
+    const execucao = spawnSync(process.execPath, [TSX_EXECUTOR_CLI, arquivoTeste], {
       stdio: silencioso ? "pipe" : "inherit",
       cwd: baseSaida,
       encoding: silencioso ? "utf8" : undefined,
@@ -376,7 +376,7 @@ export function executarTestesGerados(
       }
       return { codigoSaida: 0, quantidadeTestes, saidaPadrao: "", saidaErro: "" };
     }
-    const execucao = spawnSync("node", ["--test", path.join(baseSaida, arquivoTeste)], {
+    const execucao = spawnSync(process.execPath, ["--test", path.join(baseSaida, arquivoTeste)], {
       stdio: silencioso ? "pipe" : "inherit",
       encoding: silencioso ? "utf8" : undefined,
     });
