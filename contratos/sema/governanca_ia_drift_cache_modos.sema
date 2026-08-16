@@ -1,0 +1,156 @@
+module sema.produto.governanca_ia.drift.cache.modos {
+  docs {
+    resumo: "Normaliza none, cache e fresh sem fallback silencioso e distingue executar drift sem cache de pular analise em consultas."
+    arquivo: "contratos/sema/governanca_ia_drift_cache.sema"
+    arquivo: "docs/commands.md"
+    arquivo: "docs/drift-cache.md"
+  }
+
+  task selecionar_modo_cache_comando_drift {
+    input {
+      argumentos: Lista required
+    }
+    output {
+      modo: Texto
+      executar: Booleano
+      avisos: Lista
+    }
+    rules {
+      argumentos deve_ser lista_de_flags_cli
+    }
+    effects {
+      consulta argumentos_cli criticidade = baixa
+    }
+    forbidden {
+      aceitar_valor_desconhecido_por_fallback_silencioso
+      aceitar_flag_duplicada_ou_conflitante
+      usar_flag_drift_no_comando_drift
+      interpretar_none_como_nao_executar_no_comando_drift
+      esconder_alias_depreciado_sem_aviso_estruturado
+      tocar_cache_persistente_no_modo_none
+    }
+    impl {
+      ts: cli.src.drift_cache_modes.resolverModoCacheComandoDrift
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/driftCacheModes.ts"
+      arquivo: "pacotes/cli/src/cliArgs.ts"
+      arquivo: "pacotes/cli/src/index.part01.ts"
+      arquivo: "pacotes/cli/src/index.part05.ts"
+      arquivo: "testes/unidade/drift-cache-modes.test.ts"
+      arquivo: "testes/integracao/drift-cli-modes.test.ts"
+      simbolo: cli.src.drift_cache_modes.resolverModoCacheComandoDrift
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "2s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      modo existe
+      modo deve_ser em [none, cache, fresh]
+      executar == verdadeiro
+      avisos existe
+    }
+    tests {
+      caso "none executa drift sem cache persistente" {
+        given {
+          argumentos: "--cache none"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          modo: "none"
+          executar: verdadeiro
+        }
+      }
+    }
+  }
+
+  task selecionar_modo_drift_consulta {
+    input {
+      comando: Texto required
+      argumentos: Lista required
+    }
+    output {
+      modo: Texto
+      executar: Booleano
+      avisos: Lista
+    }
+    rules {
+      comando deve_ser em [resumo, inspecionar]
+      argumentos deve_ser lista_de_flags_cli
+    }
+    effects {
+      consulta argumentos_cli criticidade = baixa
+    }
+    forbidden {
+      fabricar_score_confianca_impl_rotas_ou_vinculos_quando_drift_nao_executou
+      aceitar_com_drift_com_modo_explicito
+      aceitar_flag_duplicada_ou_conflitante
+      usar_flag_cache_em_resumo_ou_inspecionar
+      executar_drift_implicitamente_em_consulta_padrao
+      projetar_executada_verdadeiro_quando_modo_none
+      projetar_score_confianca_implementacao_rotas_ou_superficies_com_zero_quando_nao_avaliados
+      omitir_sucesso_do_drift_quando_consulta_executa_analise
+      retornar_exit_zero_quando_drift_solicitado_falha
+      ensinar_consulta_padrao_com_drift_implicitamente
+      ensinar_cache_como_prova_final_de_fechamento
+    }
+    impl {
+      ts: cli.src.drift_cache_modes.resolverModoCacheConsultaDrift
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/driftCacheModes.ts"
+      arquivo: "pacotes/cli/src/cliArgs.ts"
+      arquivo: "pacotes/cli/src/index.part01.ts"
+      arquivo: "pacotes/cli/src/index.part02.ts"
+      arquivo: "pacotes/cli/src/index.part03.ts"
+      arquivo: "pacotes/cli/src/index.part04.ts"
+      arquivo: "pacotes/cli/src/index.part05.ts"
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "pacotes/cli/src/index.part07.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "pacotes/cli/src/agentEntryPoints.ts"
+      arquivo: "pacotes/cli/src/agentContextPack.ts"
+      arquivo: "pacotes/cli/src/iaPrompts.ts"
+      arquivo: "pacotes/cli/src/initTemplatesBase.ts"
+      arquivo: "pacotes/cli/src/contexto.ts"
+      arquivo: "pacotes/cli/src/discovery/catalog.ts"
+      arquivo: "pacotes/cli/src/profileAuthorCommand.ts"
+      arquivo: "pacotes/cli/src/profileCommand.ts"
+      arquivo: "pacotes/cli/src/projetoCarregar.ts"
+      arquivo: "testes/integracao/codex_runtime.test.ts"
+      arquivo: "testes/unidade/drift-cache-modes.test.ts"
+      arquivo: "testes/integracao/drift-cli-modes.test.ts"
+      simbolo: cli.src.drift_cache_modes.resolverModoCacheConsultaDrift
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "2s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      modo existe
+      modo deve_ser em [none, cache, fresh]
+      executar existe
+      avisos existe
+    }
+    tests {
+      caso "consulta padrao nao inventa evidencia" {
+        given {
+          comando: "resumo"
+          argumentos: ""
+        }
+
+        expect {
+          sucesso: verdadeiro
+          modo: "none"
+          executar: falso
+        }
+      }
+    }
+  }
+}

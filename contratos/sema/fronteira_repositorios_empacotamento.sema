@@ -2,6 +2,7 @@ module sema.produto.fronteira_repositorios.empacotamento {
   docs {
     resumo: "Empacota e testa a CLI publica local-only sem publicar release ou depender de artefato privado."
     arquivo: "contratos/sema/fronteira_repositorios.sema"
+    arquivo: "docs/drift-cache.md"
     arquivo: "docs/testing.md"
   }
 
@@ -18,6 +19,8 @@ module sema.produto.fronteira_repositorios.empacotamento {
       produto_codex_native: Booleano
       cli_sem_autorizacao_local: Booleano
       npm_execucao_windows_isolada: Booleano
+      consulta_none_honesta: Booleano
+      drift_fresh_comprovado: Booleano
     }
     rules {
       versao deve_ser preenchido
@@ -46,6 +49,8 @@ module sema.produto.fronteira_repositorios.empacotamento {
         produto_codex_native: publico
         cli_sem_autorizacao_local: publico
         npm_execucao_windows_isolada: publico
+        consulta_none_honesta: publico
+        drift_fresh_comprovado: publico
       }
     }
     audit {
@@ -67,6 +72,8 @@ module sema.produto.fronteira_repositorios.empacotamento {
       permitir_deep_import_dist_pipelineConteudo
       publicar_avaliador_interno_pipeline_conteudo_em_subpath_publico
       usar_wrapper_ou_cache_npm_global_quando_execucao_local_isolada_existe
+      aceitar_resumo_default_com_score_ou_implementacao_fabricados
+      tratar_cache_persistente_como_prova_final_no_pacote_instalado
     }
     impl {
       ts: scripts.empacotar_cli_publica.main
@@ -83,6 +90,7 @@ module sema.produto.fronteira_repositorios.empacotamento {
       arquivo: "pacotes/cli/scripts/prepack-exemplos.mjs"
       arquivo: "pacotes/cli/README.md"
       arquivo: "docs/README.md"
+      arquivo: "docs/drift-cache.md"
     }
     execucao {
       idempotencia: verdadeiro
@@ -99,6 +107,8 @@ module sema.produto.fronteira_repositorios.empacotamento {
       produto_codex_native == verdadeiro
       cli_sem_autorizacao_local == verdadeiro
       npm_execucao_windows_isolada == verdadeiro
+      consulta_none_honesta == verdadeiro
+      drift_fresh_comprovado == verdadeiro
     }
   }
 }

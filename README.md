@@ -157,12 +157,20 @@ Use the CLI from the project root:
 
 ```bash
 sema --version
-sema resumo
+sema resumo --drift none
 sema docs-impacto --intencao "describe the change" --json
-sema inspecionar contratos/sema/software.sema --json
-sema drift contratos/sema/software.sema --escopo modulo --json
+sema inspecionar contratos/sema/software.sema --drift none --json
+sema drift contratos/sema/software.sema --escopo modulo --cache fresh --json
 sema impacto contratos/sema/software.sema --alvo app.software --mudanca "describe the change" --json
 ```
+
+`resumo` and `inspecionar` skip drift by default and leave unobserved code
+evidence as `null`. Request `--drift cache` or `--drift fresh` when needed.
+Direct `sema drift` defaults to `--cache fresh`; `--cache none` executes without
+persistent-cache I/O, while `cache` reuses only validated extraction data. The
+cache lives in the operating system's user-cache directory outside the
+workspace, and final diagnostics, links, score, and success are always
+recalculated.
 
 If a contract changes, validate it:
 

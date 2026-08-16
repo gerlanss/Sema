@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: preserva modos explícitos nas superfícies auxiliares de contexto.
 
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -124,7 +124,11 @@ export async function comandoPromptCurto(
   const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
 
   if (entrada && entrada.toLowerCase().endsWith(".sema")) {
-    const contexto = await carregarContextoModuloIa(alvo);
+    const contexto = await carregarContextoModuloIa(alvo, {
+      modo: "none",
+      executar: false,
+      avisos: [],
+    });
     const resumoSemantico = coletarResumoSemanticoModulo(contexto);
     const capacidade: CapacidadeIa = tamanho === "micro" ? "fraca" : tamanho === "curto" ? "media" : "forte";
     const prompt = criarPromptCurtoModulo(resumoSemantico, modo, tamanho, capacidade);

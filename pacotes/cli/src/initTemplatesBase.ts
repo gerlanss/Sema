@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.produto.cli_init_templates
+// SEMA-GOVERNED: sema.produto.cli_init_templates, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: contrato base e dispatcher dos templates Codex-native de inicialização.
 
 
@@ -95,11 +95,13 @@ Antes de alterar codigo, contrato ou documentacao:
 
 1. leia \`AGENTS.md\`;
 2. rode \`sema --version\`;
-3. rode \`sema resumo\`;
+3. rode \`sema resumo --drift none\` para contexto contratual; score, confiança e implementação ficam não avaliados;
 4. rode \`sema docs-impacto --intencao "<acao>" --json\`;
 5. leia \`docs/commands.md\` antes de escolher comando ou interpretar \`--saida\`;
 6. use \`sema descobrir recomendar --intencao "<objetivo>" --json\` quando não souber qual capacidade ou pipeline aplicar;
 7. use \`exemplos/\` e \`docs/syntax.md\` antes de criar ou corrigir \`.sema\`.
+
+Quando precisar comprovar o código vivo, rode \`sema drift <contrato.sema> --escopo modulo --cache fresh --json\`. Cache acelera navegação, mas não é prova final de fechamento.
 
 ## Estrutura criada
 

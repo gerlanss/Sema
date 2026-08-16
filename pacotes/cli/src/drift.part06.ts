@@ -86,6 +86,80 @@ export function inferirConsumerFrameworkPrincipal(
   return null;
 }
 
+function fonteDeclaraRotasReactVite(
+  relacaoArquivo: string,
+  sourceFile: ts.SourceFile,
+): boolean {
+  if (arquivoEhRotasReactViteConsumer(relacaoArquivo)) {
+    return true;
+  }
+
+  let encontrouDeclaracao = false;
+  const nomeExpressao = (expressao: ts.Expression | ts.JsxTagNameExpression): string | undefined => {
+    if (ts.isIdentifier(expressao)) return expressao.text;
+    if (ts.isPropertyAccessExpression(expressao)) return expressao.name.text;
+    return undefined;
+  };
+  const nomePropriedade = (elemento: ts.ObjectLiteralElementLike): string | undefined => {
+    if (!("name" in elemento) || !elemento.name) return undefined;
+    if (ts.isIdentifier(elemento.name) || ts.isStringLiteralLike(elemento.name)) {
+      return elemento.name.text;
+    }
+    return undefined;
+  };
+  const visitar = (node: ts.Node): void => {
+    if (encontrouDeclaracao) return;
+    if (ts.isCallExpression(node)
+      && ["createBrowserRouter", "createRoutesFromElements", "useRoutes"]
+        .includes(nomeExpressao(node.expression) ?? "")) {
+      encontrouDeclaracao = true;
+      return;
+    }
+    if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))
+      && ["Route", "Routes", "RouterProvider"].includes(nomeExpressao(node.tagName) ?? "")) {
+      encontrouDeclaracao = true;
+      return;
+    }
+    if (ts.isObjectLiteralExpression(node)) {
+      const propriedades = new Set(node.properties.map(nomePropriedade).filter(Boolean));
+      if ((propriedades.has("path") || propriedades.has("index"))
+        && (propriedades.has("element") || propriedades.has("Component"))) {
+        encontrouDeclaracao = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, visitar);
+  };
+  visitar(sourceFile);
+  return encontrouDeclaracao;
+}
+
+function resolverArquivoConsumerCatalogado(
+  diretorio: string,
+  caminhoRelativo: string,
+  arquivosCatalogados: ReadonlyMap<string, string>,
+): string | undefined {
+  const normalizado = caminhoRelativo.replace(/\\/g, "/");
+  const semExtensao = normalizado.replace(/\.(?:ts|tsx|js|jsx)$/i, "");
+  const candidatos = [
+    normalizado,
+    `${semExtensao}.ts`,
+    `${semExtensao}.tsx`,
+    `${semExtensao}.js`,
+    `${semExtensao}.jsx`,
+    `${semExtensao}/index.ts`,
+    `${semExtensao}/index.tsx`,
+    `${semExtensao}/index.js`,
+    `${semExtensao}/index.jsx`,
+  ];
+  for (const candidato of candidatos) {
+    const absoluto = path.resolve(diretorio, ...candidato.split("/"));
+    const catalogado = arquivosCatalogados.get(chaveCaminhoCanonicoDrift(absoluto));
+    if (catalogado) return catalogado;
+  }
+  return undefined;
+}
+
 export function extrairColecoesFirebase(arquivo: string, codigo: string): RecursoResolvido[] {
   const recursos = new Map<string, RecursoResolvido>();
   const registrar = (nome: string) => {
@@ -231,6 +305,9 @@ export async function indexarTypeScript(
         .filter((arquivo) => arquivoEhRotasAngularConsumerRaiz(path.relative(diretorio, arquivo)))
         .map((arquivo) => path.resolve(arquivo)),
     );
+    const arquivosCatalogadosRaiz = new Map(
+      arquivos.map((arquivo) => [chaveCaminhoCanonicoDrift(arquivo), arquivo]),
+    );
     const usarApenasRotasAngularRaiz = arquivosRotasAngularRaiz.size > 0;
     let encontrouSuperficieAngularPorRotas = false;
     const reexportacoes: ReexportacaoTypeScript[] = [];
@@ -303,7 +380,7 @@ export async function indexarTypeScript(
         });
       }
 
-      if (arquivoEhRotasReactViteConsumer(relacao, codigo)) {
+      if (fonteDeclaraRotasReactVite(relacao, sourceFile)) {
         for (const rotaReact of extrairRotasReactViteConsumer(relacao, codigo)) {
           consumerSurfaces.set(`${rotaReact.rota}:${arquivo}:router`, {
             rota: rotaReact.rota,
@@ -318,12 +395,18 @@ export async function indexarTypeScript(
             simbolo: "router",
           });
           if (rotaReact.arquivoComponente) {
-            const arquivoComponente = path.join(diretorio, rotaReact.arquivoComponente);
-            consumerSurfaces.set(`${rotaReact.rota}:${arquivoComponente}:page`, {
-              rota: rotaReact.rota,
-              arquivo: arquivoComponente,
-              tipoArquivo: "page",
-            });
+            const arquivoComponente = resolverArquivoConsumerCatalogado(
+              diretorio,
+              rotaReact.arquivoComponente,
+              arquivosCatalogadosRaiz,
+            );
+            if (arquivoComponente) {
+              consumerSurfaces.set(`${rotaReact.rota}:${arquivoComponente}:page`, {
+                rota: rotaReact.rota,
+                arquivo: arquivoComponente,
+                tipoArquivo: "page",
+              });
+            }
           }
         }
       }
@@ -337,7 +420,12 @@ export async function indexarTypeScript(
           new Set<string>(),
           adaptadorLeitura,
         )) {
-          const arquivoRotasAngular = path.join(diretorio, rotaAngular.arquivoRotas);
+          const arquivoRotasAngular = resolverArquivoConsumerCatalogado(
+            diretorio,
+            rotaAngular.arquivoRotas,
+            arquivosCatalogadosRaiz,
+          );
+          if (!arquivoRotasAngular) continue;
           consumerSurfaces.set(`${rotaAngular.rota}:${arquivoRotasAngular}:routes`, {
             rota: rotaAngular.rota,
             arquivo: arquivoRotasAngular,
@@ -351,12 +439,18 @@ export async function indexarTypeScript(
             simbolo: rotaAngular.componente ?? "routes",
           });
           if (rotaAngular.arquivoComponente) {
-            const arquivoComponente = path.join(diretorio, rotaAngular.arquivoComponente);
-            consumerSurfaces.set(`${rotaAngular.rota}:${arquivoComponente}:component`, {
-              rota: rotaAngular.rota,
-              arquivo: arquivoComponente,
-              tipoArquivo: "component",
-            });
+            const arquivoComponente = resolverArquivoConsumerCatalogado(
+              diretorio,
+              rotaAngular.arquivoComponente,
+              arquivosCatalogadosRaiz,
+            );
+            if (arquivoComponente) {
+              consumerSurfaces.set(`${rotaAngular.rota}:${arquivoComponente}:component`, {
+                rota: rotaAngular.rota,
+                arquivo: arquivoComponente,
+                tipoArquivo: "component",
+              });
+            }
           }
         }
       }

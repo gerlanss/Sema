@@ -7,7 +7,7 @@ Use this file when Codex does not know which command to run. A Sema command is a
 
 ```bash
 sema --version
-sema resumo
+sema resumo --drift none
 sema docs-impacto --intencao "<acao>" --json
 ```
 
@@ -19,7 +19,7 @@ Then read every required doc returned by `docs-impacto`.
 - `sema validar <arquivo-ou-pasta> --json`: validates `.sema` contracts.
 - `sema diagnosticos <arquivo.sema> --json`: details errors and warnings.
 - `sema formatar <arquivo-ou-pasta>`: formats contracts.
-- `sema inspecionar <arquivo-ou-pasta> --json`: shows modules, tasks, routes, entities, links, and expected files.
+- `sema inspecionar <arquivo-ou-pasta> [--drift <none|cache|fresh>] --json`: shows the contract surface; drift is skipped by default.
 - `sema ast <arquivo.sema> --json`: shows AST for syntax debugging.
 - `sema ir <arquivo.sema> --json`: shows the IR used by gates and generators.
 - `sema descobrir catalogo --json`: lists governance flows, profiles, specialized workflows, pipelines, generators, capability tokens, and adapters from their canonical registries.
@@ -30,7 +30,7 @@ Then read every required doc returned by `docs-impacto`.
 ## Change and Closure
 
 - `sema docs-impacto --intencao "<acao>" --json`: discovers required docs and documentary blockers.
-- `sema drift <arquivo-ou-pasta> --escopo modulo --json`: plans a safe physical scope, then compares contract and implementation without a global fallback.
+- `sema drift <arquivo-ou-pasta> --escopo modulo [--cache <none|cache|fresh>] --json`: plans a safe physical scope, then compares contract and implementation without a global fallback.
 - `sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca "<descricao>" --json`: maps impact before changing behavior.
 - `sema verificar <arquivo-ou-pasta> --json`: runs aggregated final verification.
 - `sema finalizar-mudanca --intencao "<acao>" --doc-lida <arquivo> --json`: proves documentation reading before closure.
@@ -38,6 +38,16 @@ Then read every required doc returned by `docs-impacto`.
 Honest closure: treat drift JSON as the source of truth. `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes`, or broken impls mean the change is not complete yet. Do not report "clean drift" without green JSON.
 
 Focused drift exposes its planned, declared, inferred, and missing files plus catalog visit/read metrics in `escopo_aplicado`. File and module scopes fail closed without a safe anchor, with homonymous implementation candidates, or with missing local dependencies; only `--escopo projeto` may walk every configured code root. Logical roots such as `src` are probed deterministically without a discovery walk. Configured contract origins and code roots are confined before enumeration, and `inspecionar`, `impacto`, and `renomear-semantico` reuse the same directed boundary without reopening arbitrary external paths.
+
+Drift analysis and cache modes are explicit:
+
+- `sema drift` defaults to `--cache fresh`. `none` still executes drift but performs zero persistent-cache I/O; `cache` reuses a fully validated extraction hit and publishes misses; `fresh` ignores hits, recalculates, and publishes the new extraction.
+- `sema resumo` and `sema inspecionar` default to `--drift none`. In that mode they do not execute drift and return `null` for score, confidence, implementation, routes, or other code evidence that was not observed. Use `--drift cache` or `--drift fresh` when that evidence is required. `--com-drift` remains a temporary alias for `--drift fresh`.
+- When a query explicitly runs drift, `analiseDrift.sucesso` exposes the result and a failed requested analysis returns a nonzero exit code.
+- The value aliases `off`, `auto`, and `refresh` normalize to `none`, `cache`, and `fresh` for one compatibility release and emit a structured deprecation warning. Wrong flags, repeated flags, conflicts, and invalid values fail instead of falling back silently.
+- Persistent cache objects live outside the workspace under the operating system's user-cache directory. Workspace identity is hashed; public JSON and events expose only an opaque key and `$SEMA_CACHE/...` paths. Corruption or cache unavailability becomes a miss and never changes the drift result. Only validated extraction data is reused; links, diagnostics, scores, and the final success decision are recalculated.
+
+A cache hit is acceleration, not final evidence; closure still requires fresh drift.
 
 ## Sema Code
 
@@ -65,6 +75,7 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 - `sema ajuda-ia`: short guidance for Codex.
 - `sema starter-ia`: operational starter.
 - `sema contexto-ia <arquivo.sema> --saida <dir> --json`: AI context package.
+- `sema resumo <arquivo-ou-pasta> [--drift <none|cache|fresh>] --json`: compact context; drift is not executed unless requested.
 - `sema prompt-curto <arquivo-ou-pasta> --json`: compact prompt.
 - `sema sync-codex --json`: synchronizes the official Codex entrypoint and local support docs.
 - `sema instalar-exemplos --json`: installs official examples in the workspace.
@@ -126,7 +137,7 @@ Spatial model and render mode are orthogonal: `THREE_D + HEADLESS` is valid, whi
 - Do not stop after `sema compilar` if the contract target files still do not exist.
 - Do not replace `sema compilar` with `sema testar` when the contract requires generated code.
 - Do not create a Markdown report to pretend a gate ran.
-- Do not say drift passed when `sema drift --json` returned `sucesso:false`, broken link, divergent route, or broken impl.
+- Do not say drift passed when `sema drift --cache fresh --json` returned `sucesso:false`, broken link, divergent route, or broken impl.
 - Do not declare a UI responsive without mobile/desktop proof; horizontal scroll at 390px blocks closure.
 
 Governed code policy: keep the `SEMA-GOVERNED` marker, split large code by real responsibility, preserve contract links, and never treat a generated output directory as the final delivery.

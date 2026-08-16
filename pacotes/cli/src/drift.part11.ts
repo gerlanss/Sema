@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.store
+// Descrição: integra índices calculados ou reutilizados e sempre recalcula o resultado final do drift.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -221,6 +221,8 @@ export async function analisarDriftLegado(
   try {
   const indicesPreparados = await prepararIndicesDrift(contexto, configuracaoEscopo, {
     observador: opcoesResolvidas.observador,
+    modoCache: opcoesResolvidas.modoCache,
+    avisosModoCache: opcoesResolvidas.avisosModoCache,
   });
   const {
     detalhesPersistencia,
@@ -233,6 +235,7 @@ export async function analisarDriftLegado(
     todosRecursos,
     todosSimbolos,
     planoEscopo,
+    cache: estadoCache,
     catalogo: metricasCatalogo,
     leitorArquivosPlanejados,
   } = indicesPreparados;
@@ -251,6 +254,7 @@ export async function analisarDriftLegado(
   const bloqueiosAnalise = new Set(planoEscopo.bloqueios);
   configuracaoEscopo.bloqueios = [...bloqueiosAnalise];
   configuracaoEscopo.catalogo = metricasCatalogo;
+  configuracaoEscopo.cache = estadoCache;
 
   const { mapaImplHonesto, ambiguidades, substituicoesCaminho } = prepararMapaImplementacoesHonestoDrift(
     contexto,

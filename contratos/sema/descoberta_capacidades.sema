@@ -65,6 +65,8 @@ module sema.produto.descoberta_capacidades {
       duplicar_fontes_autoritativas_em_catalogos_divergentes
       executar_template_durante_catalogo
       inferir_plugin_instalado_por_descriptor
+      template_inspecionar_executando_drift_implicitamente
+      template_fechamento_usando_cache_como_prova_final
     }
     impl {
       ts: cli.src.discovery.catalog.montarCatalogoCapacidades

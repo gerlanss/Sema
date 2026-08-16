@@ -29,13 +29,32 @@ import {
 const CLI = path.resolve("pacotes/cli/dist/index.js");
 const GESTECH_BASE = "C:\\GitHub\\Gestech";
 const SEMA_SMOKE_REAL = process.env.SEMA_SMOKE_REAL === "1";
+const RAIZ_CACHE_SENTINELA = path.join(os.tmpdir(), `sema-drift-legado-cache-none-parte07-${process.pid}`);
+function temModoDriftExplicito(args: string[]): boolean {
+  return args.some((arg) => arg === "--cache" || arg.startsWith("--cache=") || arg === "--drift" || arg.startsWith("--drift="));
+}
 function executar(args: string[], cwd?: string) {
-  const resultado = spawnSync("node", [CLI, ...args], {
+  const isolarCache = ["drift", "impacto", "renomear-semantico"].includes(args[0] ?? "") && !temModoDriftExplicito(args);
+  const argumentos = isolarCache ? [...args, "--cache", "none"] : args;
+  if (isolarCache) {
+    assert.equal(existsSync(RAIZ_CACHE_SENTINELA), false, "a raiz sentinela do cache legado deve iniciar ausente");
+  }
+  const resultado = spawnSync("node", [CLI, ...argumentos], {
     stdio: "pipe",
     encoding: "utf8",
     cwd,
+    env: isolarCache ? {
+      ...process.env,
+      HOME: RAIZ_CACHE_SENTINELA,
+      USERPROFILE: RAIZ_CACHE_SENTINELA,
+      LOCALAPPDATA: RAIZ_CACHE_SENTINELA,
+      XDG_CACHE_HOME: RAIZ_CACHE_SENTINELA,
+    } : process.env,
   });
-  if (args[0] === "drift" && resultado.status === 1 && driftFalhouSomentePorPontuacao(resultado.stdout)) {
+  if (isolarCache) {
+    assert.equal(existsSync(RAIZ_CACHE_SENTINELA), false, "comando legado com --cache none nao pode materializar a raiz de cache");
+  }
+  if (argumentos[0] === "drift" && resultado.status === 1 && driftFalhouSomentePorPontuacao(resultado.stdout)) {
     resultado.status = 0;
   }
   return resultado;

@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: gera um pacote local de contexto Sema sem depender de servico externo.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: gera um pacote local de contexto Sema e distingue contexto contratual de evidência fresh de drift.
 
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -102,8 +102,8 @@ export async function gerarPacoteContextoChat(
   ].join("\n");
 
   const driftResumido = entrada.incluirDrift
-    ? "## Drift\nRun `sema drift` locally for the authoritative drift result.\n"
-    : "## Drift\nNot included. Run `sema drift` locally when drift evidence is required.\n";
+    ? "## Drift\nRun `sema drift --cache fresh` locally for authoritative closing evidence. Persistent cache is navigation evidence only.\n"
+    : "## Drift\nNot evaluated. Run `sema drift --cache fresh` locally when live implementation evidence is required; do not interpret missing score or implementation as zero.\n";
 
   const impactMap = entrada.incluirImpacto
     ? tarefas.map((tarefa) => `- \`${tarefa}\`: local contract and linked implementation must be inspected with \`sema impacto\`.`)
@@ -142,7 +142,7 @@ export async function gerarPacoteContextoChat(
     "1. Read the contracts above. They are the source of truth.",
     "2. Treat selected code as context, not as a substitute for the contract.",
     "3. Run `sema docs-impacto` with the declared intention before changing files.",
-    "4. Run `sema drift` and `sema impacto` locally before editing governed code.",
+    "4. Run `sema drift --cache fresh` and `sema impacto` locally before editing governed code.",
     "5. Close with `sema finalizar-mudanca` and concrete evidence.",
   ].join("\n");
 

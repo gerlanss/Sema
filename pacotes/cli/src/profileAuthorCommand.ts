@@ -1,10 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: codigo governado pelo Sema; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descricao: comandos de profiles semanticos e Author, com gates de score e decis?o de agente.
-
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: comando Author com próximos passos explícitos de drift fresh.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { formatarDiagnosticos, temErros, type IrModulo } from "@sema/nucleo";
@@ -143,7 +138,7 @@ export async function criarAuthorBriefing(entrada: string | undefined, preset: P
       "sema author validar-narrativa <arquivo> --texto <texto> --json",
       "sema author validar-proibicoes <arquivo> --texto <texto> --json",
       "sema validar <arquivo> --json",
-      "sema drift <arquivo> --json",
+      "sema drift <arquivo> --cache fresh --json",
     ],
     diagnosticos: escolhido.resultado.diagnosticos,
   };

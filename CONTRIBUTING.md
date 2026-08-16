@@ -24,11 +24,18 @@ For governed changes, use the Sema CLI before editing behavior:
 
 ```bash
 sema --version
-sema resumo
+sema resumo --drift none
 sema docs-impacto --intencao "describe the change" --json
-sema inspecionar contratos/sema/software.sema --json
-sema drift contratos/sema/software.sema --escopo modulo --json
+sema inspecionar contratos/sema/software.sema --drift none --json
+sema drift contratos/sema/software.sema --escopo modulo --cache fresh --json
 ```
+
+`resumo` and `inspecionar` default to `--drift none`; in that mode,
+`analiseDrift` records that drift was not executed and drift-derived evidence is
+`null`, not zero or passing. Direct `drift` defaults to `--cache fresh`. Its
+persistent cache is non-authoritative and external to the workspace. See
+[Drift Cache And Query Evidence](./docs/drift-cache.md) for all modes and cache
+locations.
 
 Do not add login, user-authorization, activation, license, token, credit,
 billing, or panel gates to local CLI execution. `AGENTS.md` is the official

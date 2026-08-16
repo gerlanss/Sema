@@ -26,7 +26,11 @@ async function sincronizarKitIaInicial(cwd: string): Promise<{
     import("./index.part04.js"),
     import("./agentEntryPoints.js"),
   ]);
-  const resumoProjeto = await gerarResumoProjetoIa(cwd, undefined, true);
+  const resumoProjeto = await gerarResumoProjetoIa(cwd, undefined, true, {
+    modo: "fresh",
+    executar: true,
+    avisos: [],
+  });
   const indexJson = JSON.parse(fs.readFileSync(path.join(resumoProjeto.pastaSaida, "SEMA_INDEX.json"), "utf8"));
   const codex = await sincronizarEntrypointCodex(
     resumoProjeto.baseProjeto,

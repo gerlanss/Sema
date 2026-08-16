@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.produto.governanca_ia.contexto
-// Descrição: orquestra leitura de contratos, compila??o e sele??o de m?dulos do projeto.
+// SEMA-GOVERNED: sema.produto.governanca_ia.contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: orquestra leitura de contratos, compilação e seleção de módulos do projeto.
 
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -83,7 +83,7 @@ export async function carregarProjeto(
     : undefined;
   // Escopos estreitos recebem apenas raizes logicas declaradas (ou a raiz local)
   // para que o planner decida o que pode ser tocado antes de qualquer caminhada.
-  const adiarDescobertaCodigo = opcoes.adiarDescobertaCodigo === true && escopo !== "projeto";
+  const adiarDescobertaCodigo = opcoes.adiarDescobertaCodigo === true;
   const diretoriosCodigo = adiarDescobertaCodigo
     ? await resolverDiretoriosCodigoSemCaminhada(baseProjeto, configCarregada)
     : await inferirDiretoriosCodigo(baseProjeto, configCarregada);

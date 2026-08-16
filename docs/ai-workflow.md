@@ -5,21 +5,25 @@ This is the minimum workflow for Codex in a local workspace.
 
 1. Read `SEMA_BOOT.md`.
 2. Run `sema --version`. Success enables direct local execution; there is no login, license, token, billing, panel, or authorization gate.
-3. Run `sema resumo`.
+3. Run `sema resumo --drift none` for contract-only orientation; request `--drift cache` or `--drift fresh` only when code evidence is needed.
 4. Run `sema docs-impacto --intencao "<change>" --json`.
 5. Read every required document returned by the command.
 6. Read `docs/commands.md` before selecting a command or interpreting `--saida`.
 7. If the right capability is unclear, run `sema descobrir recomendar --intencao "<goal>" --json`; do not auto-run ambiguous recommendations.
 8. Use `exemplos/` and `docs/syntax.md` before creating or editing a contract.
-9. Run `sema drift` and `sema impacto` before editing existing code.
+9. Run `sema drift --cache fresh` and `sema impacto` before editing existing code.
 10. Run `sema formatar` and `sema validar` after changing a `.sema` contract.
 11. Run `sema finalizar-mudanca` with the documents read before closure.
 
 Contract edit rule: `.sema` has its own size budget. Above 300 lines, plan a split by domain/capability; above 500, do not create or edit before splitting. Do not use parte_1/parte_2 and do not force a 1:1 contract-to-file relationship; several contracts can govern the same file through `vinculos`.
 
-Closing rule: `sema drift --json` must return `sucesso:true`. If it reports `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes`, or broken impls, the task is still blocked. Passing unit tests do not replace green drift.
+Closing rule: `sema drift --cache fresh --json` must return `sucesso:true`. If it reports `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes`, or broken impls, the task is still blocked. Passing unit tests or a cache hit do not replace fresh green drift.
 
 Focused drift rule: file and module scopes plan their physical file set before cataloging. They never fall back to a whole-project walk when no safe anchor exists. All indexers and semantic-budget checks reuse the same in-memory source read; a global walk is reserved for explicit `--escopo projeto`. Code discovery is deferred until that plan exists, homonymous candidates fail as ambiguous, and configured contract origins or code roots resolving outside the workspace are rejected before enumeration. `inspecionar`, `impacto`, and `renomear-semantico` preserve the same directed boundary. Missing local dependencies make coverage partial and block success.
+
+Cache rule: a closure gate should use `sema drift <contrato> --escopo modulo --cache fresh --json`. `--cache none` executes the same analysis without persistent-cache I/O, while `--cache cache` may reuse only extraction data whose schema, workspace identity, Git HEAD, plan, configuration, contracts, member paths, and strong content digests all match. Cache objects are stored in the operating system's user-cache directory, never below the workspace. A hit is acceleration, not evidence: final links, diagnostics, score, and success are always recalculated. Corruption or an unavailable cache degrades to an in-memory calculation.
+
+Query honesty rule: `resumo` and `inspecionar` default to `--drift none`. When analysis is skipped, score, confidence, implementation, routes, and other unobserved code claims must be `null` or explicitly marked not evaluated; zero is not a substitute for absent evidence.
 
 UI rule: if the task involves an interface, minimum evidence includes desktop and mobile. On a narrow viewport such as 390px, `document.documentElement.scrollWidth <= document.documentElement.clientWidth` must pass; horizontal scroll blocks closure.
 

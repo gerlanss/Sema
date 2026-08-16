@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.produto.governanca_ia.contexto.agent_pack
+// SEMA-GOVERNED: sema.produto.governanca_ia.contexto.agent_pack, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: monta o Agent Context Pack e políticas que agentes fracos, médios e fortes consomem antes do código.
 
 import {
@@ -209,7 +209,7 @@ function criarFailClosedAgentContext(): string[] {
     "Um mesmo arquivo de codigo pode ser governado por varios contratos .sema via vinculos; Sema Codigo deve preservar essa rastreabilidade.",
     "Se score, achados ou decisaoAgente parecerem bons, trate como sinal de triagem e confira evidência concreta no contrato e no código.",
     "Se validar artefato inline com 100/100, ainda preserve cabeçalho SEMA-GOVERNED no arquivo físico sincronizado.",
-    "Se `sema drift` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, a mudanca nao pode ser declarada concluida; corrija contrato/codigo e rode drift de novo.",
+    "Se `sema drift --cache fresh` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, a mudança não pode ser declarada concluída; corrija contrato/código e rode drift fresh de novo.",
     "Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, nao conclua sem acabamento moderno, contextual e evidenciado; em UI mobile estreita (ex. 390px), `document.documentElement.scrollWidth <= document.documentElement.clientWidth` precisa ser verdadeiro.",
     "Se texto visivel PT-BR perder acento ou cedilha em termos como descricao, lancamentos, saude ou alimentacao, trate como defeito bloqueante quando houver i18n/idioma declarado.",
     "Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.",
@@ -340,11 +340,13 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       "Leia docs/commands.md antes de escolher comando Sema, interpretar um gate ou usar --saida de sema compilar.",
       "Quando a intenção não deixar claro qual profile, workflow, pipeline, gerador ou adapter usar, rode `sema descobrir recomendar --intencao \"<objetivo>\" --json`; a recomendação informa, mas nunca se autoexecuta.",
       "Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, use diretamente sema resumo, docs-impacto, inspecionar, drift e impacto sobre a pasta local.",
-      "Antes de editar, rode `sema inspecionar <contrato.sema> --json`, `sema drift <contrato.sema> --escopo modulo --json` e `sema impacto <contrato.sema> --alvo <token> --mudanca \"<descricao>\" --json`.",
+      "`sema resumo` e `sema inspecionar` usam análise `none` por padrão: não executam drift e mantêm score, confiança, implementação e superfícies derivadas como nulos/não avaliados; use `--drift cache|fresh` somente quando precisar dessa evidência.",
+      "Quando `resumo` ou `inspecionar` executa drift explicitamente, `analiseDrift.sucesso` deve ser verdadeiro ou falso e uma falha solicitada mantém exit code diferente de zero.",
+      "Antes de editar, rode `sema inspecionar <contrato.sema> --drift none --json`, `sema drift <contrato.sema> --escopo modulo --cache fresh --json` e `sema impacto <contrato.sema> --alvo <token> --mudanca \"<descricao>\" --json`.",
       "Use exemplos oficiais antes de criar ou corrigir sintaxe .sema.",
       "Use SEMA_INDEX.json para escolher contrato, módulo e arquivos prováveis antes de abrir código cru.",
       "Valide .sema alterado e rode drift antes de concluir.",
-      "Conclusao so e valida se `sema drift --json` retornar sucesso:true, sem `vinculos_quebrados`, sem `rotas_divergentes` e sem impls quebradas.",
+      "Conclusão só é válida se `sema drift --cache fresh --json` retornar sucesso:true, sem `vinculos_quebrados`, sem `rotas_divergentes` e sem impls quebradas; hit de cache orienta trabalho, mas não substitui evidência fresh de fechamento.",
       "Quando faltar contrato aplicável ou vínculo semântico do arquivo, inspecione o arquivo, crie/edite o contrato aplicável e vincule antes do código.",
       "Sema não contorna políticas da plataforma; ele governa contrato, escopo, drift, evidência e qualidade.",
       "Responda no idioma do usuário; em PT-BR, use vocabulário Sema canônico e preserve acentos, cedilha, pontuação e símbolos humanos.",
@@ -355,7 +357,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       `Nao crie nem conclua codigo governado acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas; acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO}, planeje divisao por responsabilidade. Documentacao Markdown nao entra nesse limite de codigo.`,
       `Nao crie nem edite contrato .sema acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} linhas; acima de ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA}, planeje split por dominio/capacidade.`,
       "Divida contratos .sema por capacidade real, nunca parte_1/parte_2; varios contratos podem apontar para o mesmo arquivo de codigo por vinculos.",
-        "Caminho fora do workspace local aberto pelo usuário não substitui o checkout local.",
+      "Caminho fora do workspace local aberto pelo usuário não substitui o checkout local.",
       "Se uma chamada Sema estourar por timeout local, aumente o timeout e tente novamente; não trate lentidão como sessão inativa.",
       "Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, trate acabamento moderno, contextual, responsividade real ou ergonomia de comando como requisito governado.",
     ],

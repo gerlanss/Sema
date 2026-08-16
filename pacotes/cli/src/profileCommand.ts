@@ -1,10 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: codigo governado pelo Sema; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descricao: comando profile da CLI e renderiza??o de valida??o sem?ntica por profile.
-
+// SEMA-GOVERNED: sema.produto.orquestracao_profiles, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: comando de profiles com fechamento explícito por drift fresh.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { temErros } from "@sema/nucleo";
@@ -146,7 +141,7 @@ export async function validarProfileSemantico(
     checks: [
       `sema profile validar ${profile} <arquivo> --preset ${preset ?? "<opcional>"} --artefato-arquivo <artefato> --json`,
       "sema validar <arquivo> --json",
-      "sema drift <arquivo> --escopo modulo --json",
+      "sema drift <arquivo> --escopo modulo --cache fresh --json",
       "sema contexto-ia <arquivo>",
     ],
     diagnosticos: escolhido.resultado.diagnosticos,

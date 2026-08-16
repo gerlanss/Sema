@@ -42,10 +42,10 @@ code, contracts, workflows, release scripts, or operational docs:
 
 ```bash
 sema --version
-sema resumo
+sema resumo --drift none
 sema docs-impacto --intencao "describe the change" --json
-sema inspecionar contratos/example.sema --json
-sema drift contratos/example.sema --escopo modulo --json
+sema inspecionar contratos/example.sema --drift none --json
+sema drift contratos/example.sema --escopo modulo --cache fresh --json
 sema impacto contratos/example.sema --alvo sema.example.target --mudanca "describe the change" --json
 ```
 
@@ -56,8 +56,8 @@ install or repair the npm package; there is no separate authorization gate.
 
 - `sema iniciar`: create a governed starting point.
 - `sema validar`: validate `.sema` contracts.
-- `sema inspecionar`: inspect the applicable contract surface.
-- `sema drift`: compare contracts and implementation.
+- `sema inspecionar`: inspect the applicable contract surface; add `--drift cache|fresh` to request code evidence.
+- `sema drift`: compare contracts and implementation with `--cache none|cache|fresh` (default `fresh`).
 - `sema impacto`: map the blast radius of a planned change.
 - `sema docs-impacto`: identify docs that must be read or updated.
 - `sema finalizar-mudanca`: close the governed change with evidence.
@@ -66,6 +66,14 @@ install or repair the npm package; there is no separate authorization gate.
 - `sema verificar`: run the final local verification bundle.
 - `sema contexto-ia`: build local AI context from a contract.
 - `sema sync-codex`: create or refresh the official `AGENTS.md` entrypoint.
+
+`resumo` and `inspecionar` default to `--drift none`, so they do not fabricate
+scores or implementation evidence. In this mode those fields are `null` or
+explicitly not evaluated. `sema drift --cache none` still runs the analysis but
+does not touch persistent cache. `cache` reuses only a validated extraction hit;
+`fresh` ignores hits and republishes recalculated extraction data. Cache objects
+live in the operating system's user-cache directory outside the workspace, and
+the final links, diagnostics, score, and success decision are always recomputed.
 
 Generation targets are `typescript`, `python`, `php`, `dart`, `lua`,
 `javascript`, `html`, `css`, `dotnet`, and `cpp`. The aliases `cs` and

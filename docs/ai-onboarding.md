@@ -32,10 +32,11 @@ This workspace is governed by Sema. Before editing code, contracts, docs,
 workflows, profiles, or release scripts, run:
 
 1. sema --version
-2. sema resumo
+2. sema resumo --drift none
 3. sema docs-impacto --intencao "<change>" --json
-4. sema inspecionar on the applicable .sema contract
-5. sema drift before editing existing code
+4. sema inspecionar <contract.sema> --drift none --json
+5. sema drift <contract.sema> --escopo modulo --cache fresh --json before
+   editing existing code
 6. sema impacto before changing behavior
 7. sema finalizar-mudanca before closing
 
@@ -43,6 +44,13 @@ If the CLI is unavailable, stop and install or repair @semacode/cli. There is
 no separate Sema login, license activation, or authorization gate. Do not
 replace Sema with manual search or guessed contracts.
 ```
+
+Query commands default to `--drift none`, so their `analiseDrift` envelope marks
+the analysis as not executed and keeps drift-derived evidence `null`. Direct
+`sema drift` defaults to `--cache fresh`; `--cache none` still executes drift
+without persistent cache access. The cache is non-authoritative, lives outside
+the workspace, and safely falls back to recalculation when unavailable or
+corrupt. See [Drift Cache And Query Evidence](./drift-cache.md).
 
 ## What Codex Should Not Do
 

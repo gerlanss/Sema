@@ -117,6 +117,7 @@ module sema.produto.governanca_ia.contexto.agent_pack {
       fatiar_arquivo_em_partes_sem_responsabilidade_real
       culpar_limite_500_por_arquitetura_monolitica_escolhida
       confundir_caminho_remoto_com_workspace_local_do_usuario
+      fabricar_evidencia_de_drift_em_consulta_none
     }
     impl {
       ts: cli.src.agent_context_pack.criarAgentContextPack
@@ -161,6 +162,8 @@ module sema.produto.governanca_ia.contexto.agent_pack {
       politicaDesignVisual existe
       politicaPlataforma existe
       failClosed existe
+      regrasObrigatorias deve_ser distinguir_consulta_none_de_drift_fresh
+      regrasObrigatorias deve_ser declarar_cache_como_aceleracao_nao_prova_final
     }
     tests {
       caso "gera pack a partir do guia completo por capacidade" {

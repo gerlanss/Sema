@@ -30,7 +30,7 @@ protocol automatically.
 
 ```bash
 sema --version
-sema resumo . --curto
+sema resumo . --curto --drift none
 ```
 
 Public Sema is local-only. The CLI runs directly without a Sema login, user
@@ -70,11 +70,18 @@ generated `AGENTS.md`. Installing this npm package never writes into
 
 ```bash
 sema docs-impacto --intencao "describe the change" --arquivo contratos/app.sema --json
-sema inspecionar contratos/app.sema --json
-sema drift contratos/app.sema --escopo modulo --json
+sema inspecionar contratos/app.sema --drift none --json
+sema drift contratos/app.sema --escopo modulo --cache fresh --json
 sema impacto contratos/app.sema --alvo app.modulo --mudanca "describe the change" --json
 sema finalizar-mudanca --intencao "describe the change" --doc-lida README.md --json
 ```
+
+`resumo` and `inspecionar` default to `--drift none`; unobserved score,
+confidence, implementation, and route evidence stays `null`. Use `--drift
+cache|fresh` to request analysis. Direct `sema drift` accepts `--cache
+none|cache|fresh` and defaults to `fresh`. Persistent objects are stored in the
+operating system's user-cache directory outside the workspace. They reuse only
+validated extraction data; the final drift decision is always recalculated.
 
 If the project has no `.sema` contract, create one before implementing behavior:
 

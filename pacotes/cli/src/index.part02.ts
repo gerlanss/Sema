@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: tipa contexto e evidência de drift opcional sem fabricar métricas.
 
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -137,8 +137,13 @@ export function coletarResumoSemanticoModulo(
   },
 ): ResumoSemanticoModuloIa {
   const { arquivo, modulo, geradoEm, ir, briefing, drift } = contexto;
-  const modoVerificacaoCodigo = contexto.modoVerificacaoCodigo ?? "codigo_completo";
-  const fontesConclusao = contexto.fontesConclusao ?? ["contrato", "codigo"];
+  const driftExecutado = drift.executada && drift.resumo !== null && drift.drift !== null;
+  const modoVerificacaoCodigo = driftExecutado
+    ? (contexto.modoVerificacaoCodigo ?? "codigo_completo")
+    : "contratos_apenas";
+  const fontesConclusao = driftExecutado
+    ? (contexto.fontesConclusao ?? ["contrato", "codigo"])
+    : ["contrato"];
   const tarefas = ir?.tasks ?? [];
   const rotas = ir?.routes ?? [];
   const superficies = ir?.superficies ?? [];
@@ -169,7 +174,7 @@ export function coletarResumoSemanticoModulo(
     modulo,
     modoVerificacaoCodigo,
     avisoVerificacaoCodigo: modoVerificacaoCodigo === "contratos_apenas"
-      ? "Somente contratos foram enviados; implementacao nao foi verificada neste modo."
+      ? "Somente contratos foram analisados; a implementação não foi verificada neste modo."
       : modoVerificacaoCodigo === "codigo_selecionado"
         ? "Codigo selecionado foi enviado; conclusoes de implementacao valem apenas para os arquivos do snapshot."
         : null,
@@ -177,7 +182,7 @@ export function coletarResumoSemanticoModulo(
     perfilCompatibilidade: ir?.perfilCompatibilidade ?? briefing.perfilCompatibilidade,
     scoreSemantico: briefing.scoreSemantico,
     confiancaGeral: briefing.confiancaGeral,
-    riscoOperacional: calcularRiscoOperacionalResumo(drift.resumo),
+    riscoOperacional: drift.resumo ? calcularRiscoOperacionalResumo(drift.resumo) : "nao_avaliado",
     faz: descreverFazModulo(ir, modulo),
     tarefasPrincipais: limitarLista(tarefas.map((task) => task.nome), 6),
     entradasChave: limitarLista(tarefas.map((task) => resumirCamposTask(task, "input", 4)), 4),
@@ -197,8 +202,8 @@ export function coletarResumoSemanticoModulo(
     inferido: limitarLista(unicosOrdenados(briefing.oQueFoiInferido), 6),
     checksSugeridos: limitarLista(unicosOrdenados(briefing.oQueValidar), 6),
     testesMinimos: limitarLista(unicosOrdenados(briefing.testesMinimos), 6),
-    consumerFramework: briefing.consumerFramework ?? drift.drift.consumerFramework ?? null,
-    appRoutes: limitarLista(unicosOrdenados(briefing.appRoutes ?? drift.drift.appRoutes ?? []), 8),
+    consumerFramework: briefing.consumerFramework ?? drift.drift?.consumerFramework ?? null,
+    appRoutes: limitarLista(unicosOrdenados(briefing.appRoutes ?? drift.drift?.appRoutes ?? []), 8),
     consumerSurfaces: limitarLista(unicosOrdenados(briefing.consumerSurfaces ?? []), 8),
     consumerBridges: limitarLista(unicosOrdenados(briefing.consumerBridges ?? []), 8),
     ancoragensVinculo: limitarLista(unicosOrdenados(briefing.ancoragensVinculo ?? []), 8),
@@ -232,6 +237,10 @@ export function normalizarResumoModoContratosApenas(resumo: ResumoSemanticoModul
 
   return {
     ...resumo,
+    appRoutes: modoContratosApenas ? null : resumo.appRoutes,
+    consumerSurfaces: modoContratosApenas ? null : resumo.consumerSurfaces,
+    consumerBridges: modoContratosApenas ? null : resumo.consumerBridges,
+    ancoragensVinculo: modoContratosApenas ? null : resumo.ancoragensVinculo,
     riscosPrincipais: limitarLista(unicosOrdenados([
       ...riscosPrincipais,
       ...(riscosCodigo || lacunasCodigo ? ["codigo_nao_verificado_neste_modo"] : []),
@@ -297,6 +306,9 @@ export function renderizarResumoModuloTexto(
   modo: ModoResumoIa,
 ): string {
   const limite = tamanho === "micro" ? 2 : tamanho === "curto" ? 4 : 6;
+  const consumerAvaliado = resumo.modoVerificacaoCodigo !== "contratos_apenas";
+  const resumirEvidenciaLista = (itens: string[] | null): string =>
+    itens === null ? "não avaliado" : resumirListaTexto(itens, limite);
   const linhas = [
     `MODO: ${modo}`,
     `MODULO: ${resumo.modulo}`,
@@ -305,11 +317,11 @@ export function renderizarResumoModuloTexto(
     `MODO_CODIGO: ${resumo.modoVerificacaoCodigo}`,
     ...(resumo.avisoVerificacaoCodigo ? [`AVISO_CODIGO: ${resumo.avisoVerificacaoCodigo}`] : []),
     `FONTES_CONCLUSAO: ${resumirListaTexto(resumo.fontesConclusao, limite)}`,
-    `CONSUMER_FRAMEWORK: ${resumo.consumerFramework ?? "nenhum"}`,
-    `APP_ROUTES: ${resumirListaTexto(resumo.appRoutes, limite)}`,
-    `CONSUMER_SURFACES: ${resumirListaTexto(resumo.consumerSurfaces, limite)}`,
-    `CONSUMER_BRIDGES: ${resumirListaTexto(resumo.consumerBridges, limite)}`,
-    `ANCORAGEM_VINCULO: ${resumirListaTexto(resumo.ancoragensVinculo, limite)}`,
+    `CONSUMER_FRAMEWORK: ${resumo.consumerFramework ?? (consumerAvaliado ? "nenhum" : "não avaliado")}`,
+    `APP_ROUTES: ${resumirEvidenciaLista(resumo.appRoutes)}`,
+    `CONSUMER_SURFACES: ${resumirEvidenciaLista(resumo.consumerSurfaces)}`,
+    `CONSUMER_BRIDGES: ${resumirEvidenciaLista(resumo.consumerBridges)}`,
+    `ANCORAGEM_VINCULO: ${resumirEvidenciaLista(resumo.ancoragensVinculo)}`,
     `PUBLICO: ${resumirListaTexto(resumo.superficiesPublicas, limite)}`,
     `TAREFAS: ${resumirListaTexto(resumo.tarefasPrincipais, limite)}`,
     `ENTRADAS: ${resumirListaTexto(resumo.entradasChave, limite)}`,
@@ -323,9 +335,9 @@ export function renderizarResumoModuloTexto(
     `RISCOS: ${resumirListaTexto(resumo.riscosPrincipais, limite)}`,
     `LACUNAS: ${resumirListaTexto(resumo.lacunas, limite)}`,
     `INFERIDO: ${resumirListaTexto(resumo.inferido, limite)}`,
-    `CONFIANCA: ${resumo.confiancaGeral}`,
+    `CONFIANCA: ${resumo.confiancaGeral ?? "não avaliada"}`,
     `RISCO_OPERACIONAL: ${resumo.riscoOperacional}`,
-    `SCORE: ${resumo.scoreSemantico}`,
+    `SCORE: ${resumo.scoreSemantico ?? "não avaliado"}`,
     `GERADO_EM: ${resumo.geradoEm}`,
   ];
 
@@ -341,6 +353,10 @@ export function renderizarResumoModuloMarkdown(
   modo: ModoResumoIa,
   guiaPorCapacidade: GuiaCapacidadeIaMap,
 ): string {
+  const consumerAvaliado = resumo.modoVerificacaoCodigo !== "contratos_apenas";
+  const resumirEvidenciaLista = (itens: string[] | null): string =>
+    itens === null ? "não avaliado" : resumirListaTexto(itens, 6);
+  const exibirConsumer = resumo.consumerFramework !== null || resumo.appRoutes === null;
   const linhas = [
     `# Resumo Sema para ${resumo.modulo}`,
     "",
@@ -351,8 +367,8 @@ export function renderizarResumoModuloMarkdown(
     `- Modo de codigo: \`${resumo.modoVerificacaoCodigo}\``,
     ...(resumo.avisoVerificacaoCodigo ? [`- Aviso de codigo: ${resumo.avisoVerificacaoCodigo}`] : []),
     `- Fontes de conclusao: ${resumirListaTexto(resumo.fontesConclusao, 6)}`,
-    `- Score: \`${resumo.scoreSemantico}\``,
-    `- Confianca: \`${resumo.confiancaGeral}\``,
+    `- Score: \`${resumo.scoreSemantico ?? "não avaliado"}\``,
+    `- Confiança: \`${resumo.confiancaGeral ?? "não avaliada"}\``,
     `- Risco operacional: \`${resumo.riscoOperacional}\``,
     "",
     "## O que este modulo faz",
@@ -370,14 +386,14 @@ export function renderizarResumoModuloMarkdown(
     `- Erros: ${resumirListaTexto(resumo.erros, 6)}`,
     `- Entidades afetadas: ${resumirListaTexto(resumo.entidadesAfetadas, 6)}`,
     "",
-    ...(resumo.consumerFramework
+    ...(exibirConsumer
       ? [
         "## Consumer IA-first",
         "",
-        `- Framework consumer: ${resumo.consumerFramework}`,
-        `- Rotas de app: ${resumirListaTexto(resumo.appRoutes, 6)}`,
-        `- Superficies consumer: ${resumirListaTexto(resumo.consumerSurfaces, 6)}`,
-        `- Bridges consumer: ${resumirListaTexto(resumo.consumerBridges, 6)}`,
+        `- Framework consumer: ${resumo.consumerFramework ?? (consumerAvaliado ? "nenhum" : "não avaliado")}`,
+        `- Rotas de app: ${resumirEvidenciaLista(resumo.appRoutes)}`,
+        `- Superficies consumer: ${resumirEvidenciaLista(resumo.consumerSurfaces)}`,
+        `- Bridges consumer: ${resumirEvidenciaLista(resumo.consumerBridges)}`,
         "",
       ]
       : []),

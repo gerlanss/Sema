@@ -12,6 +12,8 @@ import { pathToFileURL } from "node:url";
 import { criarAgentContextPack, criarGuiaCapacidadeIa } from "../../pacotes/cli/src/agentContextPack.ts";
 import {
   renderizarDocumentoAgentesPorCapacidade,
+  renderizarSemaBoot,
+  renderizarSemaSmallModel,
   sincronizarEntrypointCodex,
 } from "../../pacotes/cli/src/agentEntryPoints.ts";
 import { avaliarDependenciasVerificacao } from "../../pacotes/cli/src/doctorCommand.ts";
@@ -34,6 +36,16 @@ const BLOCO_SEMA_LEGADO = `<!-- sema:agent-entrypoint:start -->
 Execute sema preflight resumo --json.
 <!-- sema:agent-entrypoint:end -->
 `;
+
+function assertPoliticaModosDrift(conteudo: string, referencia: string): void {
+  assert.match(conteudo, /--drift none/u, `${referencia} não ensina consulta contratual sem drift`);
+  assert.match(conteudo, /--cache fresh/u, `${referencia} não ensina drift fresh para fechamento`);
+  assert.match(
+    conteudo,
+    /(?:cache[^\n.]{0,180}(?:n[aã]o|not)[^\n.]{0,80}(?:prova|evidence|proof)|cache hit[^\n.]{0,180}(?:do not|does not|never)[^\n.]{0,80}(?:replace|prove)|hit is acceleration, not evidence)/iu,
+    `${referencia} não deixa explícito que cache não é prova final`,
+  );
+}
 
 test("Agent Context Pack declara Codex nativo e CLI local direta", () => {
   const pack = criarAgentContextPack(criarGuiaCapacidadeIa());
@@ -94,6 +106,7 @@ test("resumo de modulo emite exatamente o payload contratado", () => {
     "modulo",
     "pastaSaida",
     "artefatosCompactos",
+    "analiseDrift",
     "guiaPorCapacidade",
     "resumo",
     "texto",
@@ -105,8 +118,20 @@ test("resumo de modulo emite exatamente o payload contratado", () => {
   assert.equal(payload.modulo, "exemplos.calculadora");
   assert.equal(payload.pastaSaida, null);
   assert.deepEqual(payload.artefatosCompactos, []);
+  assert.equal(payload.analiseDrift.modo, "none");
+  assert.equal(payload.analiseDrift.executada, false);
+  assert.equal(payload.analiseDrift.sucesso, null);
+  assert.equal(payload.analiseDrift.cache, null);
   assert.equal(typeof payload.guiaPorCapacidade, "object");
   assert.equal(typeof payload.resumo, "object");
+  assert.equal(payload.resumo.modoVerificacaoCodigo, "contratos_apenas");
+  assert.equal(payload.resumo.scoreSemantico, null);
+  assert.equal(payload.resumo.confiancaGeral, null);
+  assert.equal(payload.resumo.consumerFramework, null);
+  assert.equal(payload.resumo.appRoutes, null);
+  assert.equal(payload.resumo.consumerSurfaces, null);
+  assert.equal(payload.resumo.consumerBridges, null);
+  assert.equal(payload.resumo.ancoragensVinculo, null);
   assert.equal(typeof payload.texto, "string");
 });
 
@@ -133,6 +158,7 @@ test("resumo de projeto emite exatamente o payload contratado", () => {
     "baseProjeto",
     "pastaSaida",
     "artefatos",
+    "analiseDrift",
     "guiaPorCapacidade",
     "modulos",
     "texto",
@@ -145,10 +171,52 @@ test("resumo de projeto emite exatamente o payload contratado", () => {
   assert.ok(payload.pastaSaida.startsWith(path.resolve(".")));
   assert.ok(Array.isArray(payload.artefatos));
   assert.ok(payload.artefatos.length > 0);
+  assert.equal(payload.analiseDrift.modo, "none");
+  assert.equal(payload.analiseDrift.executada, false);
+  assert.equal(payload.analiseDrift.sucesso, null);
+  assert.equal(payload.analiseDrift.cache, null);
   assert.equal(typeof payload.guiaPorCapacidade, "object");
   assert.ok(Array.isArray(payload.modulos));
   assert.ok(payload.modulos.length > 0);
+  assert.equal(payload.modulos.every((modulo: Record<string, unknown>) =>
+    modulo.modoVerificacaoCodigo === "contratos_apenas" &&
+    modulo.scoreSemantico === null &&
+    modulo.confiancaGeral === null &&
+    modulo.consumerFramework === null &&
+    modulo.appRoutes === null &&
+    modulo.consumerSurfaces === null &&
+    modulo.consumerBridges === null &&
+    modulo.ancoragensVinculo === null), true);
   assert.equal(typeof payload.texto, "string");
+});
+
+test("inspecionar não fabrica evidência de código por padrão", () => {
+  const execucao = spawnSync(process.execPath, [
+    CLI,
+    "inspecionar",
+    "exemplos/calculadora.sema",
+    "--json",
+  ], {
+    cwd: path.resolve("."),
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+
+  assert.equal(execucao.status, 0, execucao.stderr);
+  const payload = JSON.parse(execucao.stdout);
+  assert.equal(payload.configuracao.analiseDrift.modo, "none");
+  assert.equal(payload.configuracao.analiseDrift.executada, false);
+  assert.equal(payload.configuracao.analiseDrift.sucesso, null);
+  assert.equal(payload.configuracao.analiseDrift.cache, null);
+  assert.equal(payload.configuracao.scoreDrift, null);
+  assert.equal(payload.configuracao.confiancaGeral, null);
+  assert.equal(payload.configuracao.consumerFramework, null);
+  assert.equal(payload.configuracao.appRoutes, null);
+  assert.equal(payload.configuracao.consumerSurfaces, null);
+  assert.equal(payload.configuracao.consumerBridges, null);
+  assert.ok(payload.projeto.modulos.length > 0);
+  assert.equal(payload.projeto.modulos.every((modulo: { implementacao: unknown }) =>
+    modulo.implementacao === null), true);
 });
 
 test("sincronização mantém somente o entrypoint oficial do Codex", async () => {
@@ -166,8 +234,11 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     const pack = criarAgentContextPack(criarGuiaCapacidadeIa());
     const resultado = await sincronizarEntrypointCodex(base, pack);
     const agents = await readFile(path.join(base, "AGENTS.md"), "utf8");
+    const boot = renderizarSemaBoot(pack);
+    const smallModel = renderizarSemaSmallModel(pack);
     const aiIntegration = renderizarDocumentoAgentesPorCapacidade(pack);
     const commands = await readFile(path.join(base, "docs", "commands.md"), "utf8");
+    const workflow = await readFile(path.join(base, "docs", "ai-workflow.md"), "utf8");
 
     assert.equal(resultado.entrypointCodex, "AGENTS.md");
     assert.equal(resultado.codexNativo, true);
@@ -177,6 +248,8 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     assert.equal(resultado.retryTimeoutProgressivo, true);
     assert.equal(resultado.politicaPlataformaExplicita, true);
     assert.equal(resultado.politicaSinalVsRitualExplicita, true);
+    assert.equal(resultado.politicaModosDriftExplicita, true);
+    assert.equal(resultado.docsComandos, true);
     assert.equal(resultado.divisaoPorResponsabilidadeExplicita, true);
     assert.equal(resultado.contextoLocalSemEspelho, true);
     assert.equal(resultado.entrypointsLegadosLimpos, true);
@@ -185,6 +258,16 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     assert.doesNotMatch(agents, /preflight/i);
     assert.match(aiIntegration, /Generated Lua tests preserve the contract's failure shape/);
     assert.equal(aiIntegration.endsWith("\n"), true);
+    for (const [referencia, conteudo] of [
+      ["AGENTS.md", agents],
+      ["SEMA_BOOT.md", boot],
+      ["SEMA_SMALL_MODEL.md", smallModel],
+      ["docs/ai-integration.md", aiIntegration],
+      ["docs/commands.md", commands],
+      ["docs/ai-workflow.md", workflow],
+    ] as const) {
+      assertPoliticaModosDrift(conteudo, referencia);
+    }
     assert.match(commands, /targetSetDigest/);
     assert.match(commands, /sema interativo validar-control-run/);
     assert.match(commands, /validar-evidencia-temporal --bundle-arquivo <file>/);
@@ -306,6 +389,7 @@ test("sincronização preserva AGENTS com marcador incompleto e falha fechada", 
 
 test("sema iniciar propaga pendência de AGENTS e retorna falha", async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-codex-iniciar-pendente-"));
+  const cacheUsuario = `${base}-cache`;
   const agentsPath = path.join(base, "AGENTS.md");
   const manual = "# Sema\n\n## Regras obrigatorias para IA\n\nNão apagar esta configuração manual.\n";
 
@@ -315,13 +399,27 @@ test("sema iniciar propaga pendência de AGENTS e retorna falha", async () => {
       cwd: base,
       encoding: "utf8",
       stdio: "pipe",
+      env: {
+        ...process.env,
+        HOME: cacheUsuario,
+        USERPROFILE: cacheUsuario,
+        LOCALAPPDATA: cacheUsuario,
+        XDG_CACHE_HOME: cacheUsuario,
+      },
     });
 
     assert.notEqual(iniciar.status, 0);
     assert.match(iniciar.stderr, /AGENTS\.md/);
     assert.match(await readFile(agentsPath, "utf8"), /Não apagar esta configuração manual\./);
+    const raizCacheEsperada = process.platform === "win32"
+      ? path.join(cacheUsuario, "Sema", "Cache")
+      : process.platform === "darwin"
+        ? path.join(cacheUsuario, "Library", "Caches", "Sema")
+        : path.join(cacheUsuario, "sema");
+    assert.equal(existsSync(raizCacheEsperada), true);
   } finally {
     await rm(base, { recursive: true, force: true });
+    await rm(cacheUsuario, { recursive: true, force: true });
   }
 });
 

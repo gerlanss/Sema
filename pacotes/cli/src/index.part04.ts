@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: gera contexto local e grava artefatos somente dentro da base validada.
 
 import { mkdir, readFile, readdir, stat } from "node:fs/promises";
@@ -108,9 +108,10 @@ import {
   type SaidaTesteCapturada,
 } from './geracaoCore.js';
 
-import { ContextoIaGerado, ResumoSemanticoModuloIa, VERSAO_CLI } from "./index.part01.js";
+import { ContextoIaGerado, ResumoSemanticoModuloIa, VERSAO_CLI, type ResultadoDriftIa } from "./index.part01.js";
 import { coletarResumoSemanticoModulo, descreverFontesConclusao, detectarFontesConclusaoSnapshot, detectarModoVerificacaoCodigo } from "./index.part02.js";
-import { ARQUIVOS_RESUMO_MODULO_IA, carregarContextoModuloIa, criarBriefingAgente, gerarArquivosResumoModuloIa, renderizarResumoProjetoMarkdown, resumirDriftPorModulo } from "./index.part03.js";
+import { ARQUIVOS_RESUMO_MODULO_IA, carregarContextoModuloIa, criarBriefingAgente, criarBriefingAgenteContratos, gerarArquivosResumoModuloIa, renderizarResumoProjetoMarkdown, resumirDriftPorModulo } from "./index.part03.js";
+import type { ResolucaoModoCacheDrift } from "./driftCacheModes.js";
 
 export const ARQUIVOS_RESUMO_PROJETO_IA = [
   ARQUIVO_SEMA_BOOT,
@@ -156,6 +157,7 @@ export async function gerarResumoProjetoIa(
   entrada: string | undefined,
   pastaSaidaOpcional?: string,
   escreverNaRaiz = false,
+  analiseDrift: ResolucaoModoCacheDrift = { modo: "none", executar: false, avisos: [] },
 ): Promise<{
   geradoEm: string;
   baseProjeto: string;
@@ -164,22 +166,46 @@ export async function gerarResumoProjetoIa(
   artefatos: string[];
   modulos: ResumoSemanticoModuloIa[];
   guiaPorCapacidade: GuiaCapacidadeIaMap;
+  analiseDrift: {
+    modo: ResolucaoModoCacheDrift["modo"];
+    executada: boolean;
+    sucesso: boolean | null;
+    aviso: string | null;
+    cache: ResultadoDriftIa["escopo_aplicado"]["cache"] | null;
+  };
 }> {
-  const contextoProjeto = await carregarProjeto(entrada, process.cwd());
+  const contextoProjeto = await carregarProjeto(entrada, process.cwd(), {
+    escopo: "projeto",
+    adiarDescobertaCodigo: !analiseDrift.executar,
+  });
   const geradoEm = new Date().toISOString();
   const guiaPorCapacidade = criarGuiaCapacidadeIa();
   const entradaCanonica = criarEntradaCanonicaProjeto(guiaPorCapacidade);
   const agentContextPack = entradaCanonica.agentContextPack;
-  const modoVerificacaoCodigo = await detectarModoVerificacaoCodigo(
-    contextoProjeto.baseProjeto,
-    contextoProjeto.diretoriosCodigo,
-  );
-  const fontesConclusao = await detectarFontesConclusaoSnapshot(contextoProjeto.baseProjeto);
-  const resultadoDrift = await analisarDriftLegado(contextoProjeto);
+  const modoVerificacaoCodigo = analiseDrift.executar
+    ? await detectarModoVerificacaoCodigo(
+      contextoProjeto.baseProjeto,
+      contextoProjeto.diretoriosCodigo,
+    )
+    : "contratos_apenas";
+  const fontesConclusao = analiseDrift.executar
+    ? await detectarFontesConclusaoSnapshot(contextoProjeto.baseProjeto)
+    : ["contrato"];
+  const resultadoDrift = analiseDrift.executar
+    ? await analisarDriftLegado(contextoProjeto, {
+      escopo: "projeto",
+      modoCache: analiseDrift.modo,
+      avisosModoCache: analiseDrift.avisos,
+    })
+    : null;
   const modulos = contextoProjeto.modulosSelecionados.map((item) => {
     const modulo = item.resultado.modulo?.nome ?? path.basename(item.caminho, ".sema");
-    const driftResumo = resumirDriftPorModulo(modulo, item.caminho, resultadoDrift);
-    const briefing = criarBriefingAgente(item.caminho, modulo, item.resultado.ir ?? null, driftResumo, resultadoDrift);
+    const driftResumo = resultadoDrift
+      ? resumirDriftPorModulo(modulo, item.caminho, resultadoDrift)
+      : null;
+    const briefing = resultadoDrift && driftResumo
+      ? criarBriefingAgente(item.caminho, modulo, item.resultado.ir ?? null, driftResumo, resultadoDrift)
+      : criarBriefingAgenteContratos(item.caminho, modulo, item.resultado.ir ?? null);
     return coletarResumoSemanticoModulo({
       arquivo: item.caminho,
       modulo,
@@ -190,7 +216,12 @@ export async function gerarResumoProjetoIa(
         comando: "drift",
         caminho: item.caminho,
         modulo,
-        sucesso: resultadoDrift.sucesso,
+        modo: analiseDrift.modo,
+        executada: analiseDrift.executar,
+        sucesso: resultadoDrift?.sucesso ?? null,
+        aviso: analiseDrift.executar
+          ? null
+          : "Análise de drift não executada; implementação, vínculos e rotas não foram verificados.",
         resumo: driftResumo,
         drift: resultadoDrift,
       },
@@ -198,7 +229,7 @@ export async function gerarResumoProjetoIa(
       fontesConclusao,
     });
   });
-  const arquivosCodigoDetectados = modoVerificacaoCodigo === "codigo_completo"
+  const arquivosCodigoDetectados = analiseDrift.executar && modoVerificacaoCodigo === "codigo_completo"
     ? await listarTopArquivosCodigoDetectados(contextoProjeto.diretoriosCodigo)
     : [];
   const topArquivosResumo = escolherTopArquivosResumo(modulos, arquivosCodigoDetectados);
@@ -222,6 +253,15 @@ export async function gerarResumoProjetoIa(
     cliVersao: VERSAO_CLI,
     baseProjeto,
     modoVerificacaoCodigo,
+    analiseDrift: {
+      modo: analiseDrift.modo,
+      executada: analiseDrift.executar,
+      sucesso: resultadoDrift?.sucesso ?? null,
+      aviso: analiseDrift.executar
+        ? null
+        : "Análise de drift não executada; o resumo contém somente evidência contratual.",
+      cache: resultadoDrift?.escopo_aplicado.cache ?? null,
+    },
     fontesConclusao,
     conclusoesPorFonte: descreverFontesConclusao(fontesConclusao, modoVerificacaoCodigo),
     totalModulos: modulos.length,
@@ -235,6 +275,7 @@ export async function gerarResumoProjetoIa(
     `PROJETO: ${path.basename(baseProjeto)}`,
     `MODULOS: ${modulos.length}`,
     `MODO_CODIGO: ${modoVerificacaoCodigo}`,
+    `RESULTADO_DRIFT: ${resultadoDrift ? (resultadoDrift.sucesso ? "sucesso" : "falha") : "não avaliado"}`,
     `FONTES_CONCLUSAO: ${resumirListaTexto(fontesConclusao, 4)}`,
     `ENTRADA_IA: ${entradaCanonica.porCapacidade.fraca.join(" -> ")}`,
     `POLITICA_PLATAFORMA: Sema governa projeto e nao contorna politicas da plataforma; se houver alerta externo, pare e explique sem burlar filtro`,
@@ -255,6 +296,7 @@ export async function gerarResumoProjetoIa(
     `BASE: ${baseProjeto}`,
     `MODULOS: ${modulos.length}`,
     `MODO_CODIGO: ${modoVerificacaoCodigo}`,
+    `RESULTADO_DRIFT: ${resultadoDrift ? (resultadoDrift.sucesso ? "sucesso" : "falha") : "não avaliado"}`,
     ...(modoVerificacaoCodigo === "contratos_apenas"
       ? ["AVISO_CODIGO: somente contratos enviados; implementacao nao verificada neste modo"]
       : modoVerificacaoCodigo === "codigo_selecionado"
@@ -308,6 +350,7 @@ export async function gerarResumoProjetoIa(
     artefatos: [...ARQUIVOS_RESUMO_PROJETO_IA],
     modulos,
     guiaPorCapacidade,
+    analiseDrift: indexJson.analiseDrift,
   };
 }
 
@@ -424,7 +467,7 @@ Antes de escolher arquivo de código, leia \`${ARQUIVO_SEMA_BOOT}\` e \`agent-co
 
 - Timeout local do agente não é falha do Sema.
 - Se uma chamada Sema estourar, aumente o timeout e tente de novo.
-- Se o projeto inteiro for lento, escopar para \`sema resumo "${contexto.arquivo}" --micro --para mudanca\`.
+- Se o projeto inteiro for lento, escopar para \`sema resumo "${contexto.arquivo}" --micro --para mudanca --drift none\`.
 - Se o ambiente impedir continuar, pare bloqueado e não avance com código sem Sema.
 
 ## Fechamento
@@ -432,13 +475,13 @@ Antes de escolher arquivo de código, leia \`${ARQUIVO_SEMA_BOOT}\` e \`agent-co
 1. Editar o arquivo \`.sema\`.
 2. Rodar \`sema formatar "${contexto.arquivo}"\`.
 3. Rodar \`sema validar "${contexto.arquivo}" --json\`.
-4. Rodar \`sema drift "${contexto.arquivo}" --json\`.
+4. Rodar \`sema drift "${contexto.arquivo}" --cache fresh --json\`.
 5. Fechar com \`sema verificar <arquivo-ou-pasta> --json --saida ./.tmp/verificacao-ia\`.
 
 ## Textos base para onboarding do agente
 
 - \`sema starter-ia\`
-- \`sema resumo "${contexto.arquivo}" --micro --para onboarding\`
+- \`sema resumo "${contexto.arquivo}" --micro --para onboarding --drift none\`
 - \`sema prompt-curto "${contexto.arquivo}" --para mudanca\`
 - \`sema prompt-ia\`
 `;

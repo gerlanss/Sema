@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: resume contrato ou projeto com política explícita de análise de drift.
 
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -109,7 +109,7 @@ import {
   type SaidaTesteCapturada,
 } from './geracaoCore.js';
 
-import { ResultadoFormatacaoArquivo, descobrirDocsIa, normalizarModoResumo, normalizarTamanhoResumo, renderizarCabecalhoDocsIa, renderizarCaixaAscii, renderizarSecaoAscii } from "./index.part01.js";
+import { ResultadoFormatacaoArquivo, descobrirDocsIa, normalizarModoResumo, normalizarTamanhoResumo, renderizarCabecalhoDocsIa, renderizarCaixaAscii, renderizarSecaoAscii, resolverAnaliseDriftConsultaCli } from "./index.part01.js";
 import { gerarResumoProjetoIa } from "./index.part04.js";
 import { carregarContextoModuloIa, gerarArquivosResumoModuloIa } from "./index.part03.js";
 import { coletarResumoSemanticoModulo, renderizarResumoModuloMarkdown, renderizarResumoModuloTexto } from "./index.part02.js";
@@ -237,7 +237,11 @@ export async function comandoStarterIa(): Promise<number> {
 }
 
 export async function comandoSyncCodex(emJson: boolean): Promise<number> {
-  const resumoProjeto = await gerarResumoProjetoIa(process.cwd(), undefined, true);
+  const resumoProjeto = await gerarResumoProjetoIa(process.cwd(), undefined, true, {
+    modo: "fresh",
+    executar: true,
+    avisos: [],
+  });
   const exemplos = await materializarExemplosOficiais(resumoProjeto.baseProjeto, true);
   if (!exemplos.sucesso) {
     if (emJson) {
@@ -321,8 +325,8 @@ export async function comandoAjudaIa(): Promise<number> {
   ]));
   console.log("");
   console.log(renderizarSecaoAscii("Capacidade de IA", [
-    "fraca: `sema resumo <arquivo> --micro --json` usa stdout compacto",
-    "média: `sema resumo <arquivo> --curto --json` + `sema drift <arquivo> --json`",
+    "fraca: `sema resumo <arquivo> --micro --drift none --json` usa stdout compacto sem inventar evidência de implementação",
+    "média: `sema resumo <arquivo> --curto --drift none --json` + `sema drift <arquivo> --cache fresh --json`",
     "forte: `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` materializa o pacote completo",
   ]));
   console.log("");
@@ -333,13 +337,13 @@ export async function comandoAjudaIa(): Promise<number> {
     "Use `sema interativo pipelines --json` para jogos, simulações e híbridos 3D, 2D, retro, texto, XR ou headless.",
     "Use `sema sync-codex` para regenerar o contexto governado do Codex na raiz.",
     "Use `sema instalar-exemplos` para materializar `exemplos/` oficiais sem sobrescrever arquivos locais.",
-    "Use `sema resumo <arquivo> --micro --para onboarding --json` para IA fraca; o resumo vem no stdout.",
+    "Use `sema resumo <arquivo> --micro --para onboarding --drift none --json` para IA fraca; o resumo contratual vem no stdout e campos derivados ficam não avaliados.",
     "Se `sema resumo` ou outro gate estourar timeout local, aumente o timeout e tente de novo; timeout do agente nao e falha do Sema.",
     "Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.",
     "Use `sema prompt-ia`, `sema prompt-ia-ui`, `sema prompt-ia-react` e `sema prompt-ia-sema-primeiro` conforme a tarefa.",
     "Use `sema exemplos-prompt-ia` para pegar modelos prontos de prompt.",
-    "Use `sema inspecionar` para descobrir base, codigo vivo e fontes legado.",
-    "Use `sema drift` para medir impls, vinculos, rotas, score e lacunas.",
+    "Use `sema inspecionar --drift none` para descobrir a superfície contratual sem executar drift implicitamente.",
+    "Use `sema drift --cache fresh` para medir impls, vínculos, rotas, score e lacunas no fechamento; cache é aceleração, não prova final.",
     "Use `sema docs-impacto --intencao <acao>` para ler ou criar docs obrigatorias antes de agir.",
     "Use `sema finalizar-mudanca --intencao <acao>` para bloquear conclusao sem leitura documental comprovada.",
     "Use `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json`.",
@@ -421,9 +425,11 @@ export async function comandoResumo(
   const pastaSaida = obterOpcao(args, "--saida");
   const escreverNaRaiz = possuiFlag(args, "--raiz");
   const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
+  const analiseDrift = resolverAnaliseDriftConsultaCli(args, "resumo");
+  const alvoEhArquivo = (await stat(alvo)).isFile();
 
-  if (entrada && entrada.toLowerCase().endsWith(".sema")) {
-    const contexto = await carregarContextoModuloIa(alvo);
+  if (alvoEhArquivo) {
+    const contexto = await carregarContextoModuloIa(alvo, analiseDrift);
     const resumoSemantico = coletarResumoSemanticoModulo(contexto);
     const guiaPorCapacidade = criarGuiaCapacidadeIa();
     const texto = tamanho === "medio"
@@ -449,11 +455,19 @@ export async function comandoResumo(
         modulo: contexto.modulo,
         pastaSaida: pastaResumo ?? null,
         artefatosCompactos,
+        analiseDrift: {
+          modo: contexto.drift.modo,
+          executada: contexto.drift.executada,
+          sucesso: contexto.drift.sucesso,
+          aviso: contexto.drift.aviso,
+          avisos: analiseDrift.avisos,
+          cache: contexto.drift.drift?.escopo_aplicado.cache ?? null,
+        },
         guiaPorCapacidade,
         resumo: resumoSemantico,
         texto,
       }, null, 2));
-      return 0;
+      return contexto.drift.sucesso === false ? 1 : 0;
     }
 
     if (pastaResumo) {
@@ -461,10 +475,10 @@ export async function comandoResumo(
       console.log("");
     }
     console.log(texto);
-    return 0;
+    return contexto.drift.sucesso === false ? 1 : 0;
   }
 
-  const resumoProjeto = await gerarResumoProjetoIa(alvo, pastaSaida, escreverNaRaiz);
+  const resumoProjeto = await gerarResumoProjetoIa(alvo, pastaSaida, escreverNaRaiz, analiseDrift);
   const arquivoResumo = tamanho === "micro"
     ? "SEMA_BRIEF.micro.txt"
     : tamanho === "curto"
@@ -481,15 +495,19 @@ export async function comandoResumo(
       baseProjeto: resumoProjeto.baseProjeto,
       pastaSaida: resumoProjeto.pastaSaida,
       artefatos: resumoProjeto.artefatos,
+      analiseDrift: {
+        ...resumoProjeto.analiseDrift,
+        avisos: analiseDrift.avisos,
+      },
       guiaPorCapacidade: resumoProjeto.guiaPorCapacidade,
       modulos: resumoProjeto.modulos,
       texto,
     }, null, 2));
-    return 0;
+    return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
   }
 
   console.log(`Resumo IA-first do projeto gerado em ${resumoProjeto.pastaSaida}`);
   console.log("");
   console.log(texto);
-  return 0;
+  return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
 }

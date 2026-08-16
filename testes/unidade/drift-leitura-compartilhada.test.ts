@@ -78,6 +78,37 @@ test("raiz unica nao inventa aliases para diretorios internos nao configurados",
   assert.equal(caminhos.has("modulo.executar"), false);
 });
 
+test("rotas em strings de template nao fabricam superficies fora do catalogo", async () => {
+  const base = path.join(os.tmpdir(), "sema-drift-rotas-template");
+  const arquivoTemplate = path.join(base, "initTemplatesWeb.ts");
+  const arquivoRotas = path.join(base, "src", "router.tsx");
+  const arquivoPagina = path.join(base, "src", "pages", "ranking.tsx");
+  const conteudos = new Map([
+    [
+      arquivoTemplate,
+      "export const template = `import { Route } from \"react-router-dom\"; <Route path=\"/fantasma\" element={<Fantasma />} />`;\n",
+    ],
+    [
+      arquivoRotas,
+      "import { Ranking } from \"./pages/ranking.tsx\"; export const routes = createBrowserRouter([{ path: \"/ranking\", Component: Ranking }]);\n",
+    ],
+    [arquivoPagina, "export function Ranking() { return null; }\n"],
+  ]);
+  const resultado = await indexarTypeScript([base], {
+    listarPorRaiz: () => [...conteudos.keys()],
+    lerTexto: async (arquivo) => conteudos.get(arquivo) ?? "",
+  });
+
+  assert.equal(resultado.rotas.some(({ caminho }) => caminho === "/fantasma"), false);
+  assert.equal(resultado.consumerSurfaces.some(({ rota }) => rota === "/fantasma"), false);
+  assert.equal(
+    resultado.consumerSurfaces.some(({ rota, arquivo }) => (
+      rota === "/ranking" && path.resolve(arquivo) === path.resolve(arquivoPagina)
+    )),
+    true,
+  );
+});
+
 test("cada indexador usa o adaptador uma vez mesmo com raizes sobrepostas", async (t) => {
   const base = path.join(os.tmpdir(), "sema-drift-indexadores-sobrepostos");
   const app = path.join(base, "app");

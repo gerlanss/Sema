@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace, sema.produto.governanca_ia.drift.cache.modos
 // Descricao: CLI particionada com saidas de contexto escritas por lote validado e troca atomica.
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -105,6 +105,7 @@ import {
 } from './geracaoCore.js';
 import { PacoteContextoModuloIa, ResumoSemanticoModuloIa } from "./index.part01.js";
 import { coletarResumoSemanticoModulo, criarBriefingMinimo, criarPromptCurtoModulo, renderizarResumoModuloMarkdown, renderizarResumoModuloTexto } from "./index.part02.js";
+import type { ResolucaoModoCacheDrift } from "./driftCacheModes.js";
 export function renderizarResumoProjetoMarkdown(
   geradoEm: string,
   modulos: ResumoSemanticoModuloIa[],
@@ -182,7 +183,7 @@ export function renderizarResumoProjetoMarkdown(
     linhas.push(`- Faz: ${modulo.faz}`);
     linhas.push(`- Publico: ${resumirListaTexto(modulo.superficiesPublicas, 4)}`);
     linhas.push(`- Tocar: ${resumirListaTexto(modulo.arquivosProvaveis, 4)}`);
-    linhas.push(`- Score: ${modulo.scoreSemantico} | Confianca: ${modulo.confiancaGeral} | Risco: ${modulo.riscoOperacional}`);
+    linhas.push(`- Score: ${modulo.scoreSemantico ?? "não avaliado"} | Confiança: ${modulo.confiancaGeral ?? "não avaliada"} | Risco: ${modulo.riscoOperacional}`);
     linhas.push(`- Lacunas: ${resumirListaTexto(modulo.lacunas, 4)}`);
     linhas.push("");
   }
@@ -362,15 +363,84 @@ export function criarBriefingAgente(
     ancoragensVinculo: resumoDrift.ancoragensVinculo,
     testesMinimos: [
       "sema validar <arquivo> --json",
-      "sema drift <arquivo> --json",
+      "sema drift <arquivo> --cache fresh --json",
       "sema verificar <arquivo-ou-pasta> --json",
     ],
   };
 }
-export async function carregarContextoModuloIa(arquivoEntrada: string): Promise<PacoteContextoModuloIa> {
+
+export function criarBriefingAgenteContratos(
+  arquivo: string,
+  modulo: string,
+  ir: IrModulo | null,
+) {
+  const vinculos = ir
+    ? [
+      ...ir.vinculos,
+      ...ir.tasks.flatMap((task) => task.vinculos),
+      ...ir.flows.flatMap((flow) => flow.vinculos),
+      ...ir.routes.flatMap((route) => route.vinculos),
+      ...ir.superficies.flatMap((superficie) => superficie.vinculos),
+    ]
+    : [];
+  const arquivosDeclarados = [...new Set(vinculos.flatMap((vinculo) => [
+    vinculo.arquivo,
+    vinculo.tipo === "arquivo" ? vinculo.valor : undefined,
+  ]).filter((valor): valor is string => Boolean(valor)))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const simbolosDeclarados = [...new Set(vinculos
+    .map((vinculo) => vinculo.simbolo)
+    .filter((valor): valor is string => Boolean(valor)))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return {
+    arquivo,
+    modulo,
+    perfilCompatibilidade: ir?.perfilCompatibilidade ?? "interno",
+    scoreSemantico: null,
+    confiancaGeral: null,
+    riscosPrincipais: [...new Set(ir?.resumoAgente.riscos ?? [])],
+    oQueTocar: arquivosDeclarados,
+    arquivosProvaveisEditar: arquivosDeclarados,
+    oQueValidar: [...new Set([
+      ...(ir?.resumoAgente.checks ?? []),
+      ...(ir?.tasks.flatMap((task) => task.resumoAgente.checks) ?? []),
+      "executar drift antes de concluir sobre a implementação",
+    ])],
+    oQueEstaFrouxo: [],
+    oQueFoiInferido: ["modo_contratos_apenas", "implementacao_nao_verificada"],
+    simbolosRelacionados: simbolosDeclarados,
+    superficiesImpactadas: [
+      ...(ir?.routes.map((route) => `${route.metodo ?? "?"} ${route.caminho ?? route.nome}`) ?? []),
+      ...(ir?.superficies.map((superficie) => `${superficie.tipo}:${superficie.nome}`) ?? []),
+    ],
+    consumerFramework: null,
+    appRoutes: [],
+    consumerSurfaces: [],
+    consumerBridges: [],
+    ancoragensVinculo: [],
+    testesMinimos: [
+      "sema validar <arquivo> --json",
+      "sema drift <arquivo> --cache fresh --json",
+    ],
+  };
+}
+
+const ANALISE_DRIFT_PADRAO_CONTEXTO: ResolucaoModoCacheDrift = {
+  modo: "fresh",
+  executar: true,
+  avisos: [],
+};
+
+export async function carregarContextoModuloIa(
+  arquivoEntrada: string,
+  analiseDrift: ResolucaoModoCacheDrift = ANALISE_DRIFT_PADRAO_CONTEXTO,
+): Promise<PacoteContextoModuloIa> {
   const arquivo = path.resolve(arquivoEntrada);
   garantirArquivoSema(arquivo);
-  const contextoProjeto = await carregarProjeto(arquivo, process.cwd());
+  const contextoProjeto = await carregarProjeto(arquivo, process.cwd(), {
+    escopo: "modulo",
+    adiarDescobertaCodigo: true,
+  });
   const resultadoModulo = contextoProjeto.modulosSelecionados.find((item) => path.resolve(item.caminho) === arquivo)?.resultado;
   if (!resultadoModulo) {
     falharContextoIa(`Nao foi possivel encontrar o modulo correspondente ao arquivo ${arquivo}.`);
@@ -378,13 +448,27 @@ export async function carregarContextoModuloIa(arquivoEntrada: string): Promise<
   const sucesso = !temErros(resultadoModulo.diagnosticos);
   const modulo = resultadoModulo.modulo?.nome ?? path.basename(arquivo, ".sema");
   const geradoEm = new Date().toISOString();
-  const resultadoDrift = await analisarDriftLegado(contextoProjeto);
+  const resultadoDrift = analiseDrift.executar
+    ? await analisarDriftLegado(contextoProjeto, {
+      escopo: "modulo",
+      modoCache: analiseDrift.modo,
+      avisosModoCache: analiseDrift.avisos,
+    })
+    : null;
+  const resumoDrift = resultadoDrift
+    ? resumirDriftPorModulo(resultadoModulo.modulo?.nome ?? null, arquivo, resultadoDrift)
+    : null;
   const drift = {
     comando: "drift" as const,
     caminho: arquivo,
     modulo: resultadoModulo.modulo?.nome ?? null,
-    sucesso: resultadoDrift.sucesso,
-    resumo: resumirDriftPorModulo(resultadoModulo.modulo?.nome ?? null, arquivo, resultadoDrift),
+    modo: analiseDrift.modo,
+    executada: analiseDrift.executar,
+    sucesso: resultadoDrift?.sucesso ?? null,
+    aviso: analiseDrift.executar
+      ? null
+      : "Análise de drift não executada; implementação, vínculos e rotas não foram verificados.",
+    resumo: resumoDrift,
     drift: resultadoDrift,
   };
   const validar = {
@@ -421,13 +505,15 @@ export async function carregarContextoModuloIa(arquivoEntrada: string): Promise<
     diagnosticos: resultadoModulo.diagnosticos,
     ir: resultadoModulo.ir ?? null,
   };
-  const briefing = criarBriefingAgente(
-    arquivo,
-    modulo,
-    resultadoModulo.ir ?? null,
-    drift.resumo,
-    resultadoDrift,
-  );
+  const briefing = resultadoDrift && resumoDrift
+    ? criarBriefingAgente(
+      arquivo,
+      modulo,
+      resultadoModulo.ir ?? null,
+      resumoDrift,
+      resultadoDrift,
+    )
+    : criarBriefingAgenteContratos(arquivo, modulo, resultadoModulo.ir ?? null);
   return {
     arquivo,
     modulo,

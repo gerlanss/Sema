@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.produto.descoberta_capacidades
+// SEMA-GOVERNED: sema.produto.descoberta_capacidades, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: registro canônico derivado de profiles, conteúdo e sistemas interativos.
 
 import type { AlvoGeracao } from "@sema/padroes";
@@ -152,8 +152,8 @@ function entradasGovernanca(): DiscoveryEntry[] {
       requiredInputs: ["<intenção>", "<contrato.sema>"],
       commandTemplates: [
         template("docs-impacto", "sema docs-impacto --intencao <intenção> --arquivo <contrato.sema> --json", "WORKSPACE_VERIFICATION", true),
-        template("inspecionar", "sema inspecionar <contrato.sema> --json", "READ_ONLY_VALIDATION"),
-        template("drift", "sema drift <contrato.sema> --escopo modulo --json", "READ_ONLY_VALIDATION"),
+        template("inspecionar", "sema inspecionar <contrato.sema> --drift none --json", "READ_ONLY_VALIDATION"),
+        template("drift", "sema drift <contrato.sema> --escopo modulo --cache fresh --json", "READ_ONLY_VALIDATION"),
         template("impacto", "sema impacto <contrato.sema> --alvo <token> --mudanca <descrição> --json", "READ_ONLY_VALIDATION"),
         template("finalizar", "sema finalizar-mudanca --intencao <intenção> --doc-lida <documento> --json", "WORKSPACE_VERIFICATION"),
       ],

@@ -15,6 +15,7 @@ Start here:
 
 - [CLI](./cli.md)
 - [Commands](./commands.md)
+- [Drift Cache And Query Evidence](./drift-cache.md)
 - [Syntax](./syntax.md)
 - [Profiles](./profiles.md)
 - [Capability Discovery](./descoberta-capacidades.md) — one explainable catalog

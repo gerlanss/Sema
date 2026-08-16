@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: executa drift sob modo explícito e mantém consultas honestas quando a análise é pulada.
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -107,12 +107,27 @@ import {
   type SaidaTesteCapturada,
 } from './geracaoCore.js';
 import { resumirDriftPorModulo } from "./index.part03.js";
-import { resolverOpcoesDriftCli } from "./index.part01.js";
-export async function comandoInspecionar(entrada: string | undefined, emJson: boolean, cwd = process.cwd()): Promise<number> {
+import { resolverAnaliseDriftConsultaCli, resolverOpcoesDriftCli } from "./index.part01.js";
+export async function comandoInspecionar(
+  entrada: string | undefined,
+  emJson: boolean,
+  cwd = process.cwd(),
+  args: string[] = [],
+): Promise<number> {
+  const analiseDrift = resolverAnaliseDriftConsultaCli(args, "inspecionar");
+  const alvo = entrada ? path.resolve(cwd, entrada) : cwd;
+  const alvoEhArquivo = (await stat(alvo)).isFile();
+  const escopoEstreito = analiseDrift.opcoes.escopo === "arquivo"
+    || analiseDrift.opcoes.escopo === "modulo"
+    || (analiseDrift.opcoes.escopo === undefined
+      && alvoEhArquivo);
   const contextoProjeto = await carregarProjeto(entrada, cwd, {
-    adiarDescobertaCodigo: true,
+    escopo: analiseDrift.opcoes.escopo,
+    adiarDescobertaCodigo: !analiseDrift.executar || escopoEstreito,
   });
-  const resultadoDrift = await analisarDriftLegado(contextoProjeto);
+  const resultadoDrift = analiseDrift.executar
+    ? await analisarDriftLegado(contextoProjeto, analiseDrift.opcoes)
+    : null;
   const framework = resolverFrameworkPadrao(undefined, contextoProjeto.configCarregada);
   const estruturaSaida = resolverEstruturaSaidaPadrao(undefined, framework, contextoProjeto.configCarregada);
   const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
@@ -131,12 +146,22 @@ export async function comandoInspecionar(entrada: string | undefined, emJson: bo
       diretoriosCodigo: contextoProjeto.diretoriosCodigo,
       fontesLegado: contextoProjeto.fontesLegado,
       modoAdocao: contextoProjeto.modoAdocao,
-      scoreDrift: resultadoDrift.resumo_operacional.scoreMedio,
-      confiancaGeral: resultadoDrift.resumo_operacional.confiancaGeral,
-      consumerFramework: resultadoDrift.consumerFramework,
-      appRoutes: resultadoDrift.appRoutes,
-      consumerSurfaces: resultadoDrift.consumerSurfaces,
-      consumerBridges: resultadoDrift.consumerBridges,
+      analiseDrift: {
+        modo: analiseDrift.modo,
+        executada: analiseDrift.executar,
+        sucesso: resultadoDrift?.sucesso ?? null,
+        aviso: analiseDrift.executar
+          ? null
+          : "Análise de drift não executada; implementação, vínculos e rotas não foram verificados.",
+        avisos: analiseDrift.avisos,
+        cache: resultadoDrift?.escopo_aplicado.cache ?? null,
+      },
+      scoreDrift: resultadoDrift?.resumo_operacional.scoreMedio ?? null,
+      confiancaGeral: resultadoDrift?.resumo_operacional.confiancaGeral ?? null,
+      consumerFramework: resultadoDrift?.consumerFramework ?? null,
+      appRoutes: resultadoDrift?.appRoutes ?? null,
+      consumerSurfaces: resultadoDrift?.consumerSurfaces ?? null,
+      consumerBridges: resultadoDrift?.consumerBridges ?? null,
     },
     projeto: {
       arquivos: contextoProjeto.arquivosProjeto,
@@ -146,25 +171,37 @@ export async function comandoInspecionar(entrada: string | undefined, emJson: bo
         sucesso: !temErros(item.resultado.diagnosticos),
         diagnosticos: item.resultado.diagnosticos.length,
         superficies: item.resultado.ir?.superficies.map((superficie) => `${superficie.tipo}:${superficie.nome}`) ?? [],
-        implementacao: resumirDriftPorModulo(item.resultado.modulo?.nome ?? null, item.caminho, resultadoDrift),
+        implementacao: resultadoDrift
+          ? resumirDriftPorModulo(item.resultado.modulo?.nome ?? null, item.caminho, resultadoDrift)
+          : null,
       })),
     },
   };
+  const codigoSaida = resultadoDrift?.sucesso === false ? 1 : 0;
   if (emJson) {
     console.log(JSON.stringify(payload, null, 2));
-    return 0;
+    return codigoSaida;
   }
-  console.log("Inspecao de projeto Sema");
+  console.log("Inspeção de projeto Sema");
   console.log(`- Entrada: ${payload.entrada}`);
-  console.log(`- Configuracao: ${payload.configuracao.caminho ?? "nenhuma"}`);
+  console.log(`- Configuração: ${payload.configuracao.caminho ?? "nenhuma"}`);
   console.log(`- Base do projeto: ${payload.configuracao.baseProjeto}`);
   console.log(`- Framework: ${payload.configuracao.framework}`);
   console.log(`- Estrutura de saida: ${payload.configuracao.estruturaSaida}`);
   console.log(`- Alvos: ${payload.configuracao.alvos.join(", ")}`);
-  console.log(`- Modo de adocao: ${payload.configuracao.modoAdocao}`);
-  console.log(`- Score medio de drift: ${payload.configuracao.scoreDrift}`);
-  console.log(`- Confianca geral: ${payload.configuracao.confiancaGeral}`);
-  console.log("- Saidas por alvo:");
+  console.log(`- Modo de adoção: ${payload.configuracao.modoAdocao}`);
+  console.log(`- Análise de drift: ${payload.configuracao.analiseDrift.modo} (${payload.configuracao.analiseDrift.executada ? "executada" : "não executada"})`);
+  if (payload.configuracao.analiseDrift.executada) {
+    console.log(`- Resultado do drift: ${payload.configuracao.analiseDrift.sucesso ? "sucesso" : "falha"}`);
+    console.log(`- Score médio de drift: ${payload.configuracao.scoreDrift}`);
+    console.log(`- Confiança geral: ${payload.configuracao.confiancaGeral}`);
+  } else {
+    console.log("- Resultado do drift: não avaliado");
+    console.log("- Score médio de drift: não avaliado");
+    console.log("- Confiança geral: não avaliada");
+    console.log(`- Aviso: ${payload.configuracao.analiseDrift.aviso}`);
+  }
+  console.log("- Saídas por alvo:");
   for (const [alvo, saida] of Object.entries(payload.configuracao.saidas)) {
     console.log(`  - ${alvo}: ${saida}`);
   }
@@ -172,20 +209,24 @@ export async function comandoInspecionar(entrada: string | undefined, emJson: bo
   for (const origem of payload.configuracao.origens) {
     console.log(`  - ${origem}`);
   }
-  console.log("- Diretorios de codigo:");
+  console.log("- Diretórios de código:");
   for (const diretorio of payload.configuracao.diretoriosCodigo) {
     console.log(`  - ${diretorio}`);
   }
   console.log(`- Fontes de legado detectadas: ${payload.configuracao.fontesLegado.join(", ") || "nenhuma"}`);
-  console.log("- Modulos selecionados:");
+  console.log("- Módulos selecionados:");
   for (const modulo of payload.projeto.modulos) {
     console.log(`  - ${modulo.modulo ?? "(sem modulo)"} :: ${modulo.caminho} :: diagnosticos=${modulo.diagnosticos}`);
-    console.log(`    impls validos=${modulo.implementacao.implsValidos} quebrados=${modulo.implementacao.implsQuebrados} recursos divergentes=${modulo.implementacao.recursosDivergentesCount} sem_impl=${modulo.implementacao.tasksSemImplementacao}`);
-    for (const arquivoRelacionado of modulo.implementacao.arquivosRelacionados.slice(0, 5)) {
-      console.log(`    arquivo relacionado: ${arquivoRelacionado}`);
+    if (modulo.implementacao) {
+      console.log(`    impls válidos=${modulo.implementacao.implsValidos} quebrados=${modulo.implementacao.implsQuebrados} recursos divergentes=${modulo.implementacao.recursosDivergentesCount} sem_impl=${modulo.implementacao.tasksSemImplementacao}`);
+      for (const arquivoRelacionado of modulo.implementacao.arquivosRelacionados.slice(0, 5)) {
+        console.log(`    arquivo relacionado: ${arquivoRelacionado}`);
+      }
+    } else {
+      console.log("    implementação: não verificada neste modo");
     }
   }
-  return 0;
+  return codigoSaida;
 }
 export async function comandoDrift(entrada: string | undefined, args: string[], emJson: boolean, cwd = process.cwd()): Promise<number> {
   const opcoes = resolverOpcoesDriftCli(args);
@@ -216,6 +257,13 @@ export async function comandoDrift(entrada: string | undefined, args: string[], 
       ? "plano explícito"
       : "caminhada";
     console.log(`- Catálogo: ${metricasCatalogo.arquivosCatalogados} arquivos, ${metricasCatalogo.diretoriosVisitados} diretórios visitados, ${metricasCatalogo.leiturasConteudo} leituras, ${metricasCatalogo.bytesLidos} bytes, ${metricasCatalogo.acertosMemoriaConteudo} reaproveitamentos em memória, origem ${origemCatalogo}`);
+  }
+  const estadoCache = resultado.escopo_aplicado.cache;
+  if (estadoCache) {
+    console.log(`- Cache: modo=${estadoCache.modo} origem=${estadoCache.origem} hits=${estadoCache.metricas.hits} misses=${estadoCache.metricas.misses} corrompidos=${estadoCache.metricas.corruptos} gravações=${estadoCache.metricas.gravacoes}`);
+    for (const aviso of estadoCache.avisos) {
+      console.log(`  - Aviso: ${aviso.mensagem}`);
+    }
   }
   console.log(`- Ignorar worktrees: ${resultado.escopo_aplicado.ignorarWorktrees ? "sim" : "nao"}`);
   console.log(`- Ignorar consumidores laterais: ${resultado.escopo_aplicado.ignorarConsumidoresLaterais ? "sim" : "nao"}`);

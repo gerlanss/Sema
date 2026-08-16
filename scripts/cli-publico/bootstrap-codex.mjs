@@ -6,6 +6,18 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { validarTextoHandshakePublico } from "./fronteira-publica.mjs";
 
+function validarPoliticaDriftMaterializada(conteudo, referencia) {
+  if (!conteudo.includes("--drift none")) {
+    throw new Error(`The generated Codex artifact ${referencia} does not teach contract-only queries with --drift none.`);
+  }
+  if (!conteudo.includes("--cache fresh")) {
+    throw new Error(`The generated Codex artifact ${referencia} does not teach fresh drift for closure.`);
+  }
+  if (!/(?:cache[^\n.]{0,180}(?:n[aã]o|not)[^\n.]{0,80}(?:prova|evidence|proof)|cache hit[^\n.]{0,180}(?:do not|does not|never)[^\n.]{0,80}(?:replace|prove)|hit is acceleration, not evidence)/iu.test(conteudo)) {
+    throw new Error(`The generated Codex artifact ${referencia} presents cache without saying it is not final evidence.`);
+  }
+}
+
 async function validarHandshakeCodexMaterializado(projetoCodex, agents, packCodex, existe) {
   const referencias = [...new Set([
     ...(packCodex.ordemLeitura ?? []),
@@ -22,19 +34,24 @@ async function validarHandshakeCodexMaterializado(projetoCodex, agents, packCode
     }
   }
 
-  for (const referencia of [
+  const artefatosPoliticaDrift = new Set([
     "AGENTS.md",
     "SEMA_BOOT.md",
     "SEMA_SMALL_MODEL.md",
-    "AGENT_CONTEXT_PACK.json",
-    "SEMA_INDEX.json",
+    "docs/ai-integration.md",
     "docs/commands.md",
     "docs/ai-workflow.md",
+  ]);
+  for (const referencia of [
+    ...artefatosPoliticaDrift,
+    "AGENT_CONTEXT_PACK.json",
+    "SEMA_INDEX.json",
   ]) {
-    validarTextoHandshakePublico(
-      await readFile(path.join(projetoCodex, referencia), "utf8"),
-      referencia,
-    );
+    const conteudo = await readFile(path.join(projetoCodex, referencia), "utf8");
+    validarTextoHandshakePublico(conteudo, referencia);
+    if (artefatosPoliticaDrift.has(referencia)) {
+      validarPoliticaDriftMaterializada(conteudo, referencia);
+    }
   }
 }
 
@@ -44,12 +61,28 @@ export async function validarBootstrapCodexInstalado({
   executarComSaida,
   existe,
   exemplosInterativosPublicos,
+  opcoesExecucao = {},
 }) {
+  const executarCliInstalada = (argumentos, cwd, { aceitarFalha = false } = {}) => {
+    if (aceitarFalha) {
+      return spawnSync(process.execPath, [semaBin, ...argumentos], {
+        cwd,
+        encoding: "utf8",
+        maxBuffer: 16 * 1024 * 1024,
+        ...opcoesExecucao,
+      });
+    }
+    return {
+      status: 0,
+      stdout: executarComSaida(process.execPath, [semaBin, ...argumentos], cwd, opcoesExecucao),
+      stderr: "",
+    };
+  };
   const projetoCodex = path.join(sandbox, "projeto-codex");
   await mkdir(projetoCodex, { recursive: true });
   const readmeOriginal = "# README original do projeto\n\nNao sobrescrever.\n";
   await writeFile(path.join(projetoCodex, "README.md"), readmeOriginal, "utf8");
-  executarComSaida(process.execPath, [semaBin, "iniciar", "--template", "base"], projetoCodex);
+  executarCliInstalada(["iniciar", "--template", "base"], projetoCodex);
   if (await readFile(path.join(projetoCodex, "README.md"), "utf8") !== readmeOriginal) {
     throw new Error("The installed CLI overwrote an existing README during Codex bootstrap.");
   }
@@ -64,8 +97,14 @@ export async function validarBootstrapCodexInstalado({
     "<!-- sema:agent-entrypoint:start -->\nsema preflight resumo --json\n<!-- sema:agent-entrypoint:end -->\n",
     "utf8",
   );
-  const syncCodex = JSON.parse(executarComSaida(process.execPath, [semaBin, "sync-codex", "--json"], projetoCodex));
-  if (syncCodex.comando !== "sync-codex" || !syncCodex.sucesso || !syncCodex.resultadosCodex?.entrypointsLegadosLimpos) {
+  const syncCodex = JSON.parse(executarCliInstalada(["sync-codex", "--json"], projetoCodex).stdout);
+  if (
+    syncCodex.comando !== "sync-codex" ||
+    !syncCodex.sucesso ||
+    !syncCodex.resultadosCodex?.entrypointsLegadosLimpos ||
+    !syncCodex.resultadosCodex.docsComandos ||
+    !syncCodex.resultadosCodex.politicaModosDriftExplicita
+  ) {
     throw new Error("The installed public CLI did not complete the Codex-native synchronization flow.");
   }
   const agents = await readFile(path.join(projetoCodex, "AGENTS.md"), "utf8");
@@ -89,10 +128,11 @@ export async function validarBootstrapCodexInstalado({
   await mkdir(path.join(projetoCodex, ".github"), { recursive: true });
   const legadoMalformadoPath = path.join(projetoCodex, ".github", "copilot-instructions.md");
   await writeFile(legadoMalformadoPath, legadoMalformado, "utf8");
-  const syncMalformado = spawnSync(process.execPath, [semaBin, "sync-codex", "--json"], {
-    cwd: projetoCodex,
-    encoding: "utf8",
-  });
+  const syncMalformado = executarCliInstalada(
+    ["sync-codex", "--json"],
+    projetoCodex,
+    { aceitarFalha: true },
+  );
   if (syncMalformado.status === 0 || await readFile(legadoMalformadoPath, "utf8") !== legadoMalformado) {
     throw new Error("The installed CLI did not fail closed while preserving a malformed managed block.");
   }
@@ -102,10 +142,11 @@ export async function validarBootstrapCodexInstalado({
   await mkdir(projetoJunction, { recursive: true });
   await mkdir(foraJunction, { recursive: true });
   await symlink(foraJunction, path.join(projetoJunction, "contratos"), process.platform === "win32" ? "junction" : "dir");
-  const iniciarJunction = spawnSync(process.execPath, [semaBin, "iniciar", "--template", "base"], {
-    cwd: projetoJunction,
-    encoding: "utf8",
-  });
+  const iniciarJunction = executarCliInstalada(
+    ["iniciar", "--template", "base"],
+    projetoJunction,
+    { aceitarFalha: true },
+  );
   if (iniciarJunction.status === 0 || await existe(path.join(foraJunction, "pedidos.sema"))) {
     throw new Error("The installed CLI followed a junction outside the bootstrap workspace.");
   }

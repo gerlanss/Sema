@@ -1,7 +1,5 @@
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descri??o: textos oficiais de prompt e onboarding IA-first usados pela CLI.
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift.cache.modos, sema.governanca_ia_contexto
+// Descrição: textos oficiais de prompt e onboarding que distinguem contrato resumido de evidência fresh do código vivo.
 
 export const STARTER_IA = `Voce esta trabalhando com Sema, um contrato semantico IA-first para agentes operarem software vivo em backend e front consumer.
 
@@ -31,7 +29,7 @@ Regras:
 - nao invente sintaxe fora da gramatica e dos exemplos oficiais
 - antes de qualquer acao, crie, edite ou remova o contrato .sema aplicavel; isso vale para Software, Author, Workflow, Ops, Game, Legal e Research
 - se a IA for fraca, nao tente abrir tudo de uma vez
-- use \`sema resumo <arquivo> --micro --json\` pelo stdout antes de subir para o pacote completo
+- use \`sema resumo <arquivo> --micro --drift none --json\` pelo stdout antes de subir para o pacote completo; score, confiança e implementação ficam não avaliados
 - se \`sema resumo . --micro\` estourar timeout local, repita com timeout maior ou escopo menor; nao avance com codigo
 - trate \`ir --json\` como fonte de verdade semantica
 - trate \`briefing.json\` como plano de intervencao antes de editar projeto vivo
@@ -41,10 +39,10 @@ Regras:
 - nao cobre da Sema adivinhacao de negocio que nao esta no contrato nem no codigo
 
 Comandos essenciais:
-- resumo compacto por capacidade: \`sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]\`
+- resumo compacto por capacidade: \`sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--drift <none|cache|fresh>]\` (padrão: none, sem evidência derivada)
 - prompt curto para IA fraca: \`sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>]\`
-- descoberta do projeto: \`sema inspecionar [arquivo-ou-pasta] --json\`
-- auditoria do contrato vivo: \`sema drift <arquivo-ou-pasta> [--escopo <arquivo|modulo|projeto>] [--json]\`
+- descoberta do projeto: \`sema inspecionar [arquivo-ou-pasta] [--drift <none|cache|fresh>] --json\` (padrão: none)
+- auditoria do contrato vivo: \`sema drift <arquivo-ou-pasta> [--escopo <arquivo|modulo|projeto>] [--cache <none|cache|fresh>] [--json]\` (padrão: fresh; none ainda executa sem cache persistente)
 - mapa de impacto: \`sema impacto <arquivo-ou-pasta> --alvo <token> [--mudanca <descricao>] [--json]\`
 - renomeacao assistida: \`sema renomear-semantico <arquivo-ou-pasta> --de <nome-atual> --para <nome-novo> [--json]\`
 - contexto completo do modulo: \`sema contexto-ia <arquivo.sema>\`
@@ -60,9 +58,9 @@ Comandos essenciais:
 
 Antes de editar:
 1. leia README, docs de IA e um exemplo oficial parecido
-2. se a IA for fraca, rode \`sema resumo <arquivo> --micro --json\` e use o stdout compacto
+2. se a IA for fraca, rode \`sema resumo <arquivo> --micro --drift none --json\` e use o stdout compacto sem inventar evidência de implementação
    - se timeout local estourar, aumente o timeout e tente de novo; timeout nao significa Sema inativo
-3. se a IA aguentar mais, rode \`sema drift\` para medir impls, vinculos, rotas, score e lacunas
+3. se a IA aguentar mais, rode \`sema drift --cache fresh\` para medir impls, vinculos, rotas, score e lacunas com evidência recalculada
 4. se a tarefa for pesada, rode \`sema contexto-ia\` e leia \`briefing.json\`
 5. consulte AST e IR do modulo alvo so quando a capacidade realmente aguentar
 
@@ -70,7 +68,7 @@ Depois de editar:
 1. rode \`sema formatar\`
 2. rode \`sema validar --json\`
 3. se houver falha, use \`diagnosticos --json\`
-4. rode \`sema drift\` de novo quando mexer em codigo vivo
+4. rode \`sema drift --cache fresh\` de novo quando mexer em codigo vivo
 5. se a tarefa pedir codigo derivado, rode \`sema compilar\`
 6. feche com \`sema verificar <arquivo-ou-pasta> --json\`
 
@@ -109,7 +107,7 @@ Fontes de verdade, em ordem:
 6. README do projeto
 7. gramatica e documentacao de sintaxe da Sema
 8. exemplos oficiais, com prioridade para o vertical de pagamento
-9. \`sema resumo <arquivo> --micro --json\` e o stdout compacto quando a IA for fraca
+9. \`sema resumo <arquivo> --micro --drift none --json\` e o stdout compacto quando a IA for fraca; campos derivados nulos significam não avaliados
 10. AST, IR e diagnosticos exportados pela CLI em JSON quando a capacidade aguentar
 
 Regras de operacao:
@@ -316,7 +314,7 @@ Comandos uteis da CLI para esse fluxo:
 - \`sema descobrir catalogo --json\`
 - \`sema descobrir recomendar --intencao "<objetivo>" --json\`
 - \`sema interativo pipelines --json\`
-- \`sema resumo <arquivo-ou-pasta>\`
+- \`sema resumo <arquivo-ou-pasta> --drift none\`
 - \`sema prompt-curto <arquivo-ou-pasta>\`
 - \`sema prompt-ia\`
 - \`sema prompt-ia-ui\`

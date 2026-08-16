@@ -1,7 +1,5 @@
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descri??o: parse comum de argumentos e flags da CLI.
+// SEMA-GOVERNED: sema.produto.orcamento_semantico, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: classifica flags públicas da CLI sem perder os modos explícitos de drift.
 
 export function obterOpcao(args: string[], nome: string, padrao?: string): string | undefined {
   const nomes = [nome, ...Object.entries(ALIAS_OPCOES).filter(([, v]) => v === nome).map(([k]) => k)];
@@ -31,6 +29,8 @@ export const OPCOES_COM_VALOR = new Set([
   "--template",
   "--alvo", "-a",
   "--escopo",
+  "--cache",
+  "--drift",
   "--saida", "-s",
   "--estrutura",
   "--framework",

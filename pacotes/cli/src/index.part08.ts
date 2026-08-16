@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: encaminha argumentos validados para as consultas e o comando de drift.
 
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -223,7 +223,7 @@ export async function principal(): Promise<void> {
         );
       break;
     case "inspecionar":
-      codigoSaida = await comandoInspecionar(posicionais[0], possuiFlag(resto, "--json"), cwd);
+      codigoSaida = await comandoInspecionar(posicionais[0], possuiFlag(resto, "--json"), cwd, resto);
       break;
     case "drift":
       codigoSaida = await comandoDrift(posicionais[0], resto, possuiFlag(resto, "--json"), cwd);

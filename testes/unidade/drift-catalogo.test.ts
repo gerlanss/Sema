@@ -91,12 +91,13 @@ test("catalogo guarda identidade ate a primeira leitura", async () => {
   }
 });
 
-test("catalogo deduplica hardlinks pela identidade fisica", async (t) => {
-  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-catalogo-hardlink-"));
+test("catalogo rejeita hardlink que pode ter alias fora do workspace", async (t) => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-drift-catalogo-hardlink-workspace-"));
+  const externo = await mkdtemp(path.join(os.tmpdir(), "sema-drift-catalogo-hardlink-externo-"));
   try {
-    const original = path.join(base, "original.ts");
+    const original = path.join(externo, "segredo.ts");
     const alias = path.join(base, "alias.ts");
-    await writeFile(original, "export const valor = 1;\n", "utf8");
+    await writeFile(original, "export const segredo = 'NAO_LER_FORA';\n", "utf8");
     try {
       await link(original, alias);
     } catch (erro) {
@@ -109,17 +110,16 @@ test("catalogo deduplica hardlinks pela identidade fisica", async (t) => {
     const eventos: EventoOperacaoDrift[] = [];
     const catalogo = await criarCatalogoDrift({
       baseDiretorio: base,
-      arquivos: [original, alias],
+      arquivos: [alias],
       observador: (evento) => eventos.push(evento),
     });
 
-    assert.equal(catalogo.arquivosCatalogados().length, 1);
-    assert.equal(catalogo.contem(original), true);
-    assert.equal(catalogo.contem(alias), true);
-    await Promise.all([catalogo.lerTexto(original), catalogo.digest(alias)]);
-    assert.equal(eventos.filter((evento) => evento.tipo === "content.read").length, 1);
+    assert.equal(catalogo.arquivosCatalogados().length, 0);
+    assert.equal(catalogo.contem(alias), false);
+    assert.equal(eventos.filter((evento) => evento.tipo === "content.read").length, 0);
   } finally {
     await rm(base, { recursive: true, force: true });
+    await rm(externo, { recursive: true, force: true });
   }
 });
 

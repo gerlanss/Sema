@@ -1,9 +1,12 @@
 module sema.produto.governanca_ia.drift {
   docs {
-    resumo: "Mede drift contra codigo vivo e agrega impacto e renomeacao semantica."
+    resumo: "Mede drift contra codigo vivo, agrega impacto e renomeacao semantica e delega o cache persistente seguro a uma capacidade propria."
+    arquivo: "contratos/sema/governanca_ia_drift_cache.sema"
     arquivo: "contratos/sema/governanca_ia_drift_mudancas.sema"
     arquivo: "docs/ai-workflow.md"
   }
+
+  use sema.produto.governanca_ia.drift.cache
 
   use sema.produto.governanca_ia.drift.mudancas
 
@@ -15,6 +18,7 @@ module sema.produto.governanca_ia.drift {
       alvo_explicito: Booleano required
       ignorar_worktrees: Booleano required
       ignorar_consumidores_laterais: Booleano required
+      modo_cache: Texto required
     }
     output {
       impls_resolvidas: Booleano
@@ -32,11 +36,15 @@ module sema.produto.governanca_ia.drift {
       catalogo_compartilhado: Booleano
       metricas_operacionais_expostas: Booleano
       cobertura_dependencias_completa: Booleano
+      cache_fora_workspace: Booleano
+      resultado_equivalente_sem_cache: Booleano
+      zero_mutacao_workspace_por_cache: Booleano
     }
     rules {
       contrato_alvo deve_ser informado
       escopo_real deve_ser projeto_ou_alvo_explicitado
       alvo_explicito deve_ser verdadeiro quando escopo_real em [arquivo, modulo]
+      modo_cache deve_ser em [none, cache, fresh]
     }
     authz {
       escopo: sema.drift.executar
@@ -52,6 +60,7 @@ module sema.produto.governanca_ia.drift {
         alvo_explicito: interno
         ignorar_worktrees: interno
         ignorar_consumidores_laterais: interno
+        modo_cache: publico
       }
       output {
         impls_resolvidas: interno
@@ -69,6 +78,9 @@ module sema.produto.governanca_ia.drift {
         catalogo_compartilhado: interno
         metricas_operacionais_expostas: interno
         cobertura_dependencias_completa: interno
+        cache_fora_workspace: interno
+        resultado_equivalente_sem_cache: interno
+        zero_mutacao_workspace_por_cache: interno
       }
     }
     audit {
@@ -92,8 +104,12 @@ module sema.produto.governanca_ia.drift {
       resolver_impl_homonima_por_ordem_de_arquivos
       inferir_ancora_em_raiz_lateral_sem_vinculo
       expor_caminho_absoluto_fora_do_workspace
+      ler_arquivo_com_hardlink_sem_identidade_unica
       concluir_sucesso_com_dependencia_local_ausente
       tratar_vinculo_fisico_explicito_fora_da_raiz_codigo_como_inexistente
+      tratar_cache_como_evidencia_final_de_drift
+      escrever_cache_em_tmp_sema_cache_ou_qualquer_pasta_do_workspace
+      mudar_resultado_funcional_por_hit_miss_corrupcao_ou_indisponibilidade_do_cache
     }
     impl {
       ts: cli.src.drift.analisarDriftLegado
@@ -148,6 +164,9 @@ module sema.produto.governanca_ia.drift {
       catalogo_compartilhado existe
       metricas_operacionais_expostas existe
       cobertura_dependencias_completa existe
+      cache_fora_workspace == verdadeiro
+      resultado_equivalente_sem_cache == verdadeiro
+      zero_mutacao_workspace_por_cache == verdadeiro
     }
     error {
       simbolo_ambiguo {
@@ -176,6 +195,7 @@ module sema.produto.governanca_ia.drift {
           alvo_explicito: verdadeiro
           ignorar_worktrees: verdadeiro
           ignorar_consumidores_laterais: verdadeiro
+          modo_cache: "none"
         }
 
         expect {
@@ -190,6 +210,9 @@ module sema.produto.governanca_ia.drift {
           catalogo_compartilhado: verdadeiro
           metricas_operacionais_expostas: verdadeiro
           cobertura_dependencias_completa: verdadeiro
+          cache_fora_workspace: verdadeiro
+          resultado_equivalente_sem_cache: verdadeiro
+          zero_mutacao_workspace_por_cache: verdadeiro
         }
       }
       caso "vinculo documental em modulo publico resolve" {
@@ -200,6 +223,7 @@ module sema.produto.governanca_ia.drift {
           alvo_explicito: verdadeiro
           ignorar_worktrees: verdadeiro
           ignorar_consumidores_laterais: verdadeiro
+          modo_cache: "fresh"
         }
 
         expect {
@@ -216,10 +240,11 @@ module sema.produto.governanca_ia.drift {
           alvo_explicito: falso
           ignorar_worktrees: verdadeiro
           ignorar_consumidores_laterais: verdadeiro
+          modo_cache: "none"
         }
 
         expect {
-          sucesso: verdadeiro
+          sucesso: falso
           escopo_estreito_sem_alvo_bloqueado: verdadeiro
         }
       }

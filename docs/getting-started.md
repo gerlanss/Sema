@@ -17,7 +17,7 @@ Then verify the local engine:
 
 ```bash
 sema --version
-sema resumo
+sema resumo --drift none
 ```
 
 The CLI is ready when `sema --version` succeeds. No Sema login, user
@@ -34,7 +34,7 @@ Plugin installation is explicit and does not happen from npm lifecycle scripts.
 ```bash
 sema iniciar --template base
 sema validar contratos/*.sema --json
-sema resumo
+sema resumo --drift none
 ```
 
 `sema iniciar` preserves existing project files and refuses symlink or junction
@@ -44,12 +44,19 @@ human decision.
 ## Existing Project
 
 ```bash
-sema resumo
+sema resumo --drift none
 sema docs-impacto --intencao "describe the change" --json
-sema inspecionar contratos/example.sema --json
-sema drift contratos/example.sema --escopo modulo --json
+sema inspecionar contratos/example.sema --drift none --json
+sema drift contratos/example.sema --escopo modulo --cache fresh --json
 sema impacto contratos/example.sema --alvo sema.example.target --mudanca "describe the change" --json
 ```
+
+`sema resumo` and `sema inspecionar` default to `--drift none`: they skip drift
+analysis and report drift-derived evidence as `null`, meaning not evaluated.
+Direct `sema drift` defaults to `--cache fresh`; its `--cache none` mode still
+runs the analysis, but without reading or writing persistent cache. See
+[Drift Cache And Query Evidence](./drift-cache.md) for the complete mode table,
+external cache locations, and recovery behavior.
 
 The public CLI does not require private service credentials or an external
 request before local commands run.

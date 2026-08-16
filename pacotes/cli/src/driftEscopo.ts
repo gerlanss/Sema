@@ -7,7 +7,10 @@ import type { BigIntStats } from "node:fs";
 import type { IrImplementacaoTask, IrModulo, IrVinculo } from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
 import type { ConfiguracaoEscopoDriftAplicada, EscopoDriftReal } from "./drift.part01.js";
-import { resolverDiretoriosCodigoEscopoReal } from "./drift.part02.js";
+import {
+  filtrarCaminhosEscopoReal,
+  resolverDiretoriosCodigoEscopoReal,
+} from "./drift.part02.js";
 import type { CatalogoDrift } from "./driftCatalogo.js";
 import {
   candidatosReferenciaLocalDrift,
@@ -216,6 +219,24 @@ function variantesNomeArquivo(segmento: string): string[] {
     segmento.includes("_") ? segmento.replace(/_/g, ".") : undefined,
     pascal && pascal !== segmento ? pascal : undefined,
   ].filter((item): item is string => Boolean(item)))];
+}
+
+function resolverDiretoriosCodigoPlanejados(
+  contexto: ContextoProjetoCarregado,
+  irs: readonly IrModulo[],
+  configuracao: ConfiguracaoEscopoDriftAplicada,
+): string[] {
+  const raizesModulo = irs.flatMap((ir) => {
+    const primeiroSegmento = ir.nome.split(".").map((item) => item.trim()).find(Boolean);
+    return primeiroSegmento
+      ? variantesNomeArquivo(primeiroSegmento).map((segmento) => path.resolve(contexto.baseProjeto, segmento))
+      : [];
+  });
+  const candidatos = [...resolverDiretoriosCodigoEscopoReal(contexto, configuracao), ...raizesModulo];
+  return [...new Map(
+    filtrarCaminhosEscopoReal(candidatos, contexto, configuracao)
+      .map((diretorio) => [chaveCaminho(diretorio), diretorio] as const),
+  ).values()];
 }
 
 function variantesCaminhoSegmentos(segmentos: string[]): string[][] {
@@ -462,7 +483,7 @@ export async function planejarEscopoDrift(
   const inferidos = new Map<string, string>();
   const bloqueiosPlano = new Set<string>();
   const raizReal = await realpath(contexto.baseProjeto);
-  const diretoriosCodigoPermitidos = resolverDiretoriosCodigoEscopoReal(contexto, configuracao);
+  const diretoriosCodigoPermitidos = resolverDiretoriosCodigoPlanejados(contexto, irs, configuracao);
 
   const vinculosPlanejados = irs.flatMap((ir) => vinculosModulo(ir))
     .map((vinculo) => vinculo.arquivo ?? (vinculo.tipo === "arquivo" ? vinculo.valor : undefined))

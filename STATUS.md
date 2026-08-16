@@ -8,10 +8,10 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.3.4`
+- Version: `2.3.5`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-15
-- Reference commit: `e025ab5`
+- Reference commit: `c057e7e`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, thin Codex bootstrap skill, repo marketplace,
   `AGENTS.md` protocol, contracts, examples, tests, release scripts, and English
@@ -41,6 +41,10 @@ Every public publication must pass:
   semantic line budget; never use numbered part files.
 - Plan focused drift before cataloging, share one in-memory source read across
   indexers, and reserve whole-project walks for explicit project scope.
+- Keep `resumo` and `inspecionar` contract-only by default, with unobserved
+  implementation evidence represented as `null`, never fabricated zeros.
+- Keep drift cache non-authoritative, content-addressed, and outside the
+  workspace; use fresh analysis for closure evidence.
 - Keep product capabilities independent from competitions, event workflows,
   submission platforms, and one-off showcase harnesses.
 - Keep support metadata pointed to `suporte@otimitare.online`.

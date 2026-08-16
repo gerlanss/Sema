@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.produto.governanca_ia.drift
-// Descricao: cataloga somente o plano fisico do drift e compartilha uma leitura estavel por arquivo.
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift, sema.produto.governanca_ia.drift.cache.store
+// Descrição: cataloga somente o plano físico do drift e compartilha uma leitura estável por arquivo.
 
 import { createHash } from "node:crypto";
 import type { BigIntStats } from "node:fs";
@@ -11,7 +11,12 @@ export type TipoEventoOperacaoDrift =
   | "content.open"
   | "content.read"
   | "ast.create"
-  | "extractor.run";
+  | "extractor.run"
+  | "cache.hit"
+  | "cache.miss"
+  | "cache.corrupt"
+  | "cache.write"
+  | "cache.unavailable";
 
 export interface EventoOperacaoDrift {
   tipo: TipoEventoOperacaoDrift;
@@ -98,6 +103,7 @@ interface IdentidadeArquivoCatalogado {
   caminhoReal: string;
   dev: bigint;
   ino: bigint;
+  nlink: bigint;
   size: bigint;
   mtimeNs: bigint;
   ctimeNs: bigint;
@@ -189,6 +195,8 @@ function identidadeArquivoEstavel(a: BigIntStats, b: BigIntStats): boolean {
     && b.isFile()
     && !a.isSymbolicLink()
     && !b.isSymbolicLink()
+    && a.nlink === 1n
+    && b.nlink === 1n
     && a.dev === b.dev
     && a.ino === b.ino
     && a.size === b.size
@@ -204,6 +212,7 @@ function criarIdentidadeArquivoCatalogado(
     caminhoReal: path.resolve(caminhoReal),
     dev: informacao.dev,
     ino: informacao.ino,
+    nlink: informacao.nlink,
     size: informacao.size,
     mtimeNs: informacao.mtimeNs,
     ctimeNs: informacao.ctimeNs,
@@ -218,6 +227,8 @@ function identidadeCatalogadaCorresponde(
   return chaveCaminho(identidade.caminhoReal) === chaveCaminho(caminhoReal)
     && informacao.isFile()
     && !informacao.isSymbolicLink()
+    && identidade.nlink === 1n
+    && informacao.nlink === 1n
     && identidade.dev === informacao.dev
     && identidade.ino === informacao.ino
     && identidade.size === informacao.size
@@ -609,7 +620,7 @@ class CatalogoDriftImplementacao implements CatalogoDrift {
     }
     try {
       const informacaoAntes = await lstat(absoluto, { bigint: true });
-      if (!informacaoAntes.isFile() || informacaoAntes.isSymbolicLink()) {
+      if (!informacaoAntes.isFile() || informacaoAntes.isSymbolicLink() || informacaoAntes.nlink !== 1n) {
         return undefined;
       }
       const [baseReal, caminhoReal] = await Promise.all([

@@ -1,6 +1,6 @@
 {
   "name": "sema",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "Codex bootstrap for discovering @semacode/cli and initializing Sema before a workspace has its AGENTS.md protocol.",
   "author": {
     "name": "OtimiTare",

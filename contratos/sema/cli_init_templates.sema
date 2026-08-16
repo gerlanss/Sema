@@ -121,6 +121,7 @@ module sema.produto.cli_init_templates {
       sobrescrever_arquivo_existente_sem_force_explicito
       escrever_bootstrap_antes_de_validar_todos_os_destinos
       seguir_symlink_ou_junction_fora_do_workspace
+      readme_inicial_prometendo_evidencia_de_implementacao_em_resumo_default
     }
     impl {
       ts: cli.src.init_command.comandoIniciar

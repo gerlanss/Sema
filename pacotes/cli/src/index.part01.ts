@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
+// Descrição: expõe e valida os modos públicos de análise de drift da CLI.
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -85,7 +85,14 @@ import {
   type ResumoModuloVerificacao,
   type SaidaTesteCapturada,
 } from './geracaoCore.js';
-import { criarBriefingAgente, resumirDriftPorModulo } from "./index.part03.js";
+import { criarBriefingAgente, criarBriefingAgenteContratos, resumirDriftPorModulo } from "./index.part03.js";
+import {
+  resolverModoCacheComandoDrift,
+  resolverModoCacheConsultaDrift,
+  type ComandoConsultaDrift,
+  type ModoCacheDrift,
+  type ResolucaoModoCacheDrift,
+} from "./driftCacheModes.js";
 export type Comando =
   | "iniciar"
   | "init"
@@ -196,11 +203,14 @@ export interface PacoteContextoModuloIa {
     comando: "drift";
     caminho: string;
     modulo: string | null;
-    sucesso: boolean;
-    resumo: ResumoModuloDrift;
-    drift: ResultadoDriftIa;
+    modo: ModoCacheDrift;
+    executada: boolean;
+    sucesso: boolean | null;
+    aviso: string | null;
+    resumo: ResumoModuloDrift | null;
+    drift: ResultadoDriftIa | null;
   };
-  briefing: ReturnType<typeof criarBriefingAgente>;
+  briefing: ReturnType<typeof criarBriefingAgente> | ReturnType<typeof criarBriefingAgenteContratos>;
 }
 export interface ResumoSemanticoModuloIa {
   geradoEm: string;
@@ -210,8 +220,8 @@ export interface ResumoSemanticoModuloIa {
   avisoVerificacaoCodigo: string | null;
   fontesConclusao: string[];
   perfilCompatibilidade: string;
-  scoreSemantico: number;
-  confiancaGeral: string;
+  scoreSemantico: number | null;
+  confiancaGeral: string | null;
   riscoOperacional: string;
   faz: string;
   tarefasPrincipais: string[];
@@ -230,10 +240,10 @@ export interface ResumoSemanticoModuloIa {
   checksSugeridos: string[];
   testesMinimos: string[];
   consumerFramework: string | null;
-  appRoutes: string[];
-  consumerSurfaces: string[];
-  consumerBridges: string[];
-  ancoragensVinculo: string[];
+  appRoutes: string[] | null;
+  consumerSurfaces: string[] | null;
+  consumerBridges: string[] | null;
+  ancoragensVinculo: string[] | null;
   arquivosProvaveisEditar: string[];
 }
 export const DIRETORIO_CLI_ATUAL = path.dirname(fileURLToPath(import.meta.url));
@@ -274,9 +284,9 @@ export function ajuda(): string {
       "sema verificar <arquivo-ou-pasta> --json",
       "",
       "[2] Editar projeto que já usa Sema",
-      "sema inspecionar . --json",
-      "sema resumo <arquivo-ou-pasta> --micro --para mudanca",
-      "sema drift <arquivo-ou-pasta> --escopo modulo --json",
+      "sema inspecionar . [--drift <none|cache|fresh>] --json",
+      "sema resumo <arquivo-ou-pasta> --micro --para mudanca [--drift <none|cache|fresh>]",
+      "sema drift <arquivo-ou-pasta> --escopo modulo [--cache <none|cache|fresh>] --json",
       "sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca <descricao> --json",
       "sema docs-impacto --intencao \"fazer deploy\" --criar-ausentes --json",
       "sema contexto-ia <arquivo.sema> --saida ./.tmp/contexto --json",
@@ -337,21 +347,22 @@ export function ajuda(): string {
       "sema importar <fonte> <diretorio> --saida <diretorio> --json",
       "sema formatar <arquivo-ou-pasta>",
       "sema validar <arquivo-ou-pasta> --json",
-      "sema drift <arquivo-ou-pasta> --escopo modulo --json",
+      "sema drift <arquivo-ou-pasta> --escopo modulo --cache fresh --json",
     ]),
     "",
     renderizarSecaoAscii("IA por capacidade", [
-      "fraca: sema resumo <arquivo> --micro --json (stdout compacto)",
-      "média: sema resumo <arquivo> --curto --json + sema drift <arquivo> --json",
+      "fraca: sema resumo <arquivo> --micro --drift none --json (contrato compacto; implementação não avaliada)",
+      "média: sema resumo <arquivo> --curto --drift none --json + sema drift <arquivo> --cache fresh --json",
       "forte: sema contexto-ia <arquivo.sema> --saida <diretorio> --json",
     ]),
     "",
     renderizarSecaoAscii("Comandos principais", [
-      "descoberta: sema inspecionar [arquivo-ou-pasta] [--json]",
+      "descoberta: sema inspecionar [arquivo-ou-pasta] [--drift <none|cache|fresh>] [--json] (padrão: none)",
       "catálogo: sema descobrir <catalogo|recomendar|explicar> [id] [--intencao <objetivo>] [--json]",
       "pipelines: sema pipeline <listar|descrever> [id] [--json]",
       "todas as capacidades: sema capabilities [--json]",
-      "auditoria: sema drift <arquivo-ou-pasta> [--escopo <arquivo|modulo|projeto>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]",
+      "auditoria: sema drift <arquivo-ou-pasta> [--escopo <arquivo|modulo|projeto>] [--cache <none|cache|fresh>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]",
+      "modos: drift direto usa fresh por padrão; --cache none ainda executa sem cache persistente; resumo/inspecionar usam --drift none por padrão e não fabricam evidência",
       "impacto: sema impacto <arquivo-ou-pasta> --alvo <token> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--json]",
       "renomeação: sema renomear-semantico <arquivo-ou-pasta> --de <nome-atual> --para <nome-novo> [--escopo <arquivo|modulo|projeto>] [--json]",
       "importação: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|php|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]",
@@ -373,7 +384,7 @@ export function ajuda(): string {
     renderizarSecaoAscii("Ajuda IA-first", [
       "sema ajuda-ia",
       "sema starter-ia",
-      "sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--saida <diretorio>] [--raiz] [--json]",
+      "sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--drift <none|cache|fresh>] [--saida <diretorio>] [--raiz] [--json]",
       "sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--json]",
       "sema prompt-ia",
       "sema prompt-ia-ui",
@@ -405,12 +416,30 @@ export function ajuda(): string {
     ]),
   ].join("\n");
 }
-export function resolverOpcoesDriftCli(args: string[]): OpcoesDriftLegado {
+function criarOpcoesDriftCli(
+  args: string[],
+  resolucao: ResolucaoModoCacheDrift,
+): OpcoesDriftLegado {
   const escopo = obterOpcao(args, "--escopo");
   return {
     escopo: escopo === "arquivo" || escopo === "modulo" || escopo === "projeto" ? escopo : undefined,
     ignorarWorktrees: !possuiFlag(args, "--incluir-worktrees"),
     ignorarConsumidoresLaterais: !possuiFlag(args, "--incluir-consumidores-laterais"),
+    modoCache: resolucao.modo,
+    avisosModoCache: resolucao.avisos,
+  };
+}
+export function resolverOpcoesDriftCli(args: string[]): OpcoesDriftLegado {
+  return criarOpcoesDriftCli(args, resolverModoCacheComandoDrift(args));
+}
+export function resolverAnaliseDriftConsultaCli(
+  args: string[],
+  comando: ComandoConsultaDrift,
+): ResolucaoModoCacheDrift & { opcoes: OpcoesDriftLegado } {
+  const resolucao = resolverModoCacheConsultaDrift(args, comando);
+  return {
+    ...resolucao,
+    opcoes: criarOpcoesDriftCli(args, resolucao),
   };
 }
 export function normalizarTamanhoResumo(args: string[]): TamanhoResumoIa {
@@ -487,8 +516,8 @@ export function renderizarCabecalhoDocsIa(descoberta: DescobertaDocsIa): string 
     "- Use `sema` como interface publica principal.",
     "- A Sema entra em projeto novo, projeto ja semantizado e adocao incremental em legado sem contrato inicial.",
     "- Nao assuma monorepo, `node pacotes/cli/dist/index.js`, `npm run project:check` ou uma pasta `exemplos` externa ao projeto atual.",
-    "- Se a IA tiver contexto curto, comece por `sema resumo` e `sema prompt-curto`.",
-    "- Se a IA aguentar mais contexto, suba para `sema drift --json` e `sema contexto-ia`.",
+    "- Se a IA tiver contexto curto, comece por `sema resumo --drift none` e `sema prompt-curto`; implementação e score ficam não avaliados.",
+    "- Se a IA aguentar mais contexto e precisar de evidência viva, suba para `sema drift --cache fresh --json` e `sema contexto-ia`.",
     "- So leia `ast.json` e `ir.json` completos quando a capacidade da IA realmente aguentar esse volume.",
   ];
   if (documentos.length > 0) {

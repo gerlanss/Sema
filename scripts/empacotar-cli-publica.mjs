@@ -24,6 +24,7 @@ const DOCS_PUBLICOS = [
   "descoberta-capacidades.md",
   "deploy.md",
   "documentation.md",
+  "drift-cache.md",
   "env.md",
   "frontend.md",
   "getting-started.md",

@@ -5,12 +5,12 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 ## Primeira ação
 
 1. Confirme `AGENTS.md` na raiz e rode `sema --version`; se o comando não existir, pare e peça a instalação da CLI.
-2. Use a CLI local diretamente para ler o workspace: `sema resumo`, `sema docs-impacto`, `sema inspecionar`, `sema drift` e `sema impacto`.
+2. Use a CLI local diretamente para ler o workspace: `sema resumo --drift none`, `sema docs-impacto`, `sema inspecionar --drift none`, `sema drift --cache fresh` e `sema impacto`.
 3. Se não estiver claro qual profile, workflow, pipeline, gerador ou adapter usar, rode `sema descobrir recomendar --intencao "<objetivo>" --json`; não execute automaticamente uma recomendação ambígua.
 4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
 6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato `.sema` aplicável.
-7. Antes de editar código existente, rode drift e impacto pela CLI local.
+7. Antes de editar código existente, rode `sema drift --cache fresh` e impacto pela CLI local.
 8. Antes de criar ou corrigir `.sema`, use os exemplos oficiais na CLI local.
 9. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
@@ -55,7 +55,10 @@ Score composto, `achados[]` e `decisaoAgente` são sinais para guiar a próxima 
 - Fraca: se o score passou, confira se cada achado tem evidência concreta; se não souber provar, pare.
 - Média: conecte regra, arquivo, contrato e evidência antes de concluir aderência.
 - Forte: não transforme regex, palavra-chave ou score 100 em ritual vazio; valide substância, risco e comportamento.
-- Fechamento governado: se `sema drift --json` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, não diga que passou limpo. Corrija e rode drift de novo.
+- Consultas honestas: `resumo` e `inspecionar` usam `--drift none` por padrão; score, confiança, implementação, rotas e superfícies não observadas ficam nulos/não avaliados.
+- Se uma consulta executar drift explicitamente, `analiseDrift.sucesso` expõe o resultado e uma falha solicitada retorna exit code diferente de zero.
+- Cache: `sema drift` usa `fresh` por padrão. `--cache none` ainda executa sem persistência; `cache` acelera extrações validadas, mas não é prova final.
+- Fechamento governado: se `sema drift --cache fresh --json` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, não diga que passou limpo. Corrija e rode drift de novo.
 - Experiência governada: se a tarefa cria ou altera site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, prove acabamento moderno, contextual e não genérico. Em UI estreita (ex. 390px), `document.documentElement.scrollWidth <= document.documentElement.clientWidth` precisa ser verdadeiro.
 - Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
@@ -104,7 +107,7 @@ A linguagem humana da resposta deve seguir o idioma do usuário e preservar acen
 - Um mesmo arquivo de codigo pode ser governado por varios contratos .sema via vinculos; Sema Codigo deve preservar essa rastreabilidade.
 - Se score, achados ou decisaoAgente parecerem bons, trate como sinal de triagem e confira evidência concreta no contrato e no código.
 - Se validar artefato inline com 100/100, ainda preserve cabeçalho SEMA-GOVERNED no arquivo físico sincronizado.
-- Se `sema drift` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, a mudanca nao pode ser declarada concluida; corrija contrato/codigo e rode drift de novo.
+- Se `sema drift --cache fresh` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, a mudança não pode ser declarada concluída; corrija contrato/código e rode drift fresh de novo.
 - Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, nao conclua sem acabamento moderno, contextual e evidenciado; em UI mobile estreita (ex. 390px), `document.documentElement.scrollWidth <= document.documentElement.clientWidth` precisa ser verdadeiro.
 - Se texto visivel PT-BR perder acento ou cedilha em termos como descricao, lancamentos, saude ou alimentacao, trate como defeito bloqueante quando houver i18n/idioma declarado.
 - Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.

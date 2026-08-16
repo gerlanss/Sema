@@ -1,0 +1,256 @@
+module sema.produto.governanca_ia.drift.cache.store {
+  docs {
+    resumo: "Materializa indices canonicos content-addressed em cache global externo, recuperavel, nao autoritativo e com corrupcao detectavel."
+    arquivo: "contratos/sema/governanca_ia_drift_cache.sema"
+    arquivo: "docs/drift-cache.md"
+    arquivo: "docs/testing.md"
+  }
+
+  task resolver_store_cache_global {
+    input {
+      workspace: Texto required
+      plataforma: Texto required
+    }
+    output {
+      disponivel: Booleano
+      workspace_key: Texto
+      caminho_publico_virtual: Texto
+      cache_fora_workspace: Booleano
+    }
+    rules {
+      workspace deve_ser caminho_local_canonico
+      plataforma deve_ser win32_darwin_ou_unix
+    }
+    effects {
+      consulta filesystem_local criticidade = media
+      fs.write cache_global_usuario criticidade = baixa
+    }
+    authz {
+      escopo: sema.drift.cache.local
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: proibida
+      input {
+        workspace: interno
+        plataforma: publico
+      }
+      output {
+        disponivel: publico
+        workspace_key: publico
+        caminho_publico_virtual: publico
+        cache_fora_workspace: publico
+      }
+    }
+    audit {
+      evento: sema.drift.cache_store_resolvido
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      usar_tmp_sema_cache_ou_qualquer_fallback_dentro_do_workspace
+      aceitar_raiz_relativa_ou_raiz_global_que_resolva_dentro_do_workspace
+      seguir_symlink_junction_ou_hardlink_no_store
+      persistir_ou_expor_home_workspace_variavel_de_ambiente_config_ou_segredo
+      lancar_falha_funcional_do_drift_por_cache_indisponivel
+    }
+    impl {
+      ts: cli.src.drift_cache_store.criarStoreCacheDrift
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/driftCacheStore.ts"
+      arquivo: "pacotes/cli/src/driftCacheFilesystem.ts"
+      arquivo: "pacotes/cli/src/driftCacheCas.ts"
+      arquivo: "testes/unidade/drift-cache-store.test.ts"
+      simbolo: cli.src.drift_cache_store.criarStoreCacheDrift
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      disponivel existe
+      workspace_key existe
+      workspace_key deve_ser sha256_de_identidade_canonica_sem_path_persistido
+      caminho_publico_virtual existe
+      caminho_publico_virtual deve_ser prefixado_por_SEMA_CACHE
+      cache_fora_workspace == verdadeiro
+    }
+    tests {
+      caso "store externo nao suja workspace" {
+        given {
+          workspace: "repo-local"
+          plataforma: "win32"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          cache_fora_workspace: verdadeiro
+          caminho_publico_virtual: "$SEMA_CACHE/drift/v3"
+        }
+      }
+    }
+  }
+
+  task reutilizar_extracoes_drift {
+    input {
+      modo: Texto required
+      plano: Objeto required
+      contratos: Lista required
+      membros: Lista required
+      git_head: Texto optional
+    }
+    output {
+      origem: Texto
+      hits: Inteiro
+      misses: Inteiro
+      corruptos: Inteiro
+      gravacoes: Inteiro
+      resultado_equivalente: Booleano
+      resultado_final_recalculado: Booleano
+      zero_mutacao_workspace: Booleano
+      agregados_derivados_dos_indices: Booleano
+      corrupcao_estrutural_ou_semantica_detectavel_vira_miss: Booleano
+      limite_confianca_explicito: Booleano
+    }
+    rules {
+      modo deve_ser em [none, cache, fresh]
+      plano deve_ser calculado_antes_do_cache
+      membros deve_ser ter_digest_forte_de_conteudo
+      contratos deve_ser representar_ir_e_diagnosticos_atuais
+    }
+    effects {
+      consulta arquivos_planejados_workspace criticidade = media
+      fs.write cache_global_usuario criticidade = baixa
+      auditoria cache_drift_reutilizado criticidade = baixa
+    }
+    authz {
+      escopo: sema.drift.cache.local
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: proibida
+      input {
+        modo: publico
+        plano: interno
+        contratos: interno
+        membros: interno
+        git_head: interno
+      }
+      output {
+        origem: publico
+        hits: publico
+        misses: publico
+        corruptos: publico
+        gravacoes: publico
+        resultado_equivalente: publico
+        resultado_final_recalculado: publico
+        zero_mutacao_workspace: publico
+        agregados_derivados_dos_indices: publico
+        corrupcao_estrutural_ou_semantica_detectavel_vira_miss: publico
+        limite_confianca_explicito: publico
+      }
+    }
+    audit {
+      evento: sema.drift.cache_extracoes_reutilizadas
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      usar_metadata_como_prova_unica_de_conteudo
+      cachear_resultado_final_score_diagnosticos_vinculos_ou_decisao_como_verdade
+      aceitar_path_absoluto_traversal_nul_backslash_ou_path_fora_catalogo_no_payload
+      aceitar_hit_sem_validar_schema_chave_digest_shape_tamanho_e_identidade
+      omitir_schema_cli_typescript_extrator_workspace_git_head_plano_config_contratos_ou_membros_da_identidade
+      publicar_objeto_parcial_ou_substituir_vencedor_concorrente_sem_validacao
+      persistir_todos_simbolos_rotas_ou_recursos_como_fonte_redundante_do_resultado
+      aceitar_payload_com_invariante_cruzada_ou_integridade_derivada_divergente
+      tratar_sha256_ou_integridade_derivada_como_autenticacao_contra_usuario_local
+      alterar_resultado_por_hit_miss_corrupcao_ou_cache_indisponivel
+      expor_caminho_real_do_cache_em_stdout_stderr_json_ou_evento
+    }
+    impl {
+      ts: cli.src.drift_part13.prepararIndicesDrift
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/drift.part01.ts"
+      arquivo: "pacotes/cli/src/drift.part11.ts"
+      arquivo: "pacotes/cli/src/drift.part13.ts"
+      arquivo: "pacotes/cli/src/driftCatalogo.ts"
+      arquivo: "pacotes/cli/src/driftCacheStore.ts"
+      arquivo: "pacotes/cli/src/driftCacheFilesystem.ts"
+      arquivo: "pacotes/cli/src/driftCacheCas.ts"
+      arquivo: "testes/integracao/drift-cache-persistente.test.ts"
+      arquivo: "testes/integracao/drift-cli-modes.test.ts"
+      simbolo: cli.src.drift_part13.prepararIndicesDrift
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "recalcular_sem_cache"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      origem em [nao_aplicavel, calculado, cache, indisponivel]
+      hits >= 0
+      misses >= 0
+      corruptos >= 0
+      gravacoes >= 0
+      resultado_equivalente == verdadeiro
+      resultado_final_recalculado == verdadeiro
+      zero_mutacao_workspace == verdadeiro
+      agregados_derivados_dos_indices == verdadeiro
+      corrupcao_estrutural_ou_semantica_detectavel_vira_miss == verdadeiro
+      limite_confianca_explicito == verdadeiro
+    }
+    tests {
+      caso "cache corrompido vira miss recuperavel" {
+        given {
+          modo: "cache"
+          plano: "escopo modulo confinado"
+          contratos: "contrato validado"
+          membros: "conteudo com sha256"
+          git_head: "head atual"
+          objeto_cache: "json truncado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          origem: "calculado"
+          corruptos: 1
+          resultado_equivalente: verdadeiro
+          resultado_final_recalculado: verdadeiro
+          zero_mutacao_workspace: verdadeiro
+        }
+      }
+      caso "payload semanticamente adulterado vira miss" {
+        given {
+          modo: "cache"
+          plano: "escopo modulo confinado"
+          contratos: "contrato validado"
+          membros: "conteudo com sha256"
+          objeto_cache: "shape valido com indice alterado"
+          payload_digest: "recalculado"
+          integridade_derivada: "divergente"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          origem: "calculado"
+          corruptos: 1
+          resultado_equivalente: verdadeiro
+          agregados_derivados_dos_indices: verdadeiro
+          limite_confianca_explicito: verdadeiro
+        }
+      }
+    }
+  }
+}

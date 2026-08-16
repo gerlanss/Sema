@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "type": "module",
   "description": "Codex-native local semantic governance CLI for contracts, drift, impact, documentation gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",

@@ -90,6 +90,13 @@ interface Sandbox {
   outside: string;
 }
 
+interface AmbienteCliIsolado {
+  home: string;
+  localAppData: string;
+  xdgCacheHome: string;
+  raizCacheEsperada: string;
+}
+
 async function criarSandbox(prefixo: string): Promise<Sandbox> {
   const base = await mkdtemp(path.join(os.tmpdir(), prefixo));
   const repo = path.join(base, "repo");
@@ -114,9 +121,30 @@ async function prepararArquivosExistentes(repo: string): Promise<void> {
   ]);
 }
 
-function executarCli(cwd: string, args: string[]) {
+function resolverAmbienteCliIsolado(baseSandbox: string): AmbienteCliIsolado {
+  const raizAmbiente = path.join(path.resolve(baseSandbox), ".sema-cli-env");
+  const home = path.join(raizAmbiente, "home");
+  const localAppData = path.join(raizAmbiente, "local-app-data");
+  const xdgCacheHome = path.join(raizAmbiente, "xdg-cache");
+  const raizCacheEsperada = process.platform === "win32"
+    ? path.join(localAppData, "Sema", "Cache")
+    : process.platform === "darwin"
+      ? path.join(home, "Library", "Caches", "Sema")
+      : path.join(xdgCacheHome, "sema");
+  return { home, localAppData, xdgCacheHome, raizCacheEsperada };
+}
+
+function executarCli(cwd: string, args: string[], baseSandbox: string) {
+  const ambiente = resolverAmbienteCliIsolado(baseSandbox);
   const resultado = spawnSync(process.execPath, [CLI, ...args], {
     cwd,
+    env: {
+      ...process.env,
+      HOME: ambiente.home,
+      USERPROFILE: ambiente.home,
+      LOCALAPPDATA: ambiente.localAppData,
+      XDG_CACHE_HOME: ambiente.xdgCacheHome,
+    },
     encoding: "utf8",
     stdio: "pipe",
     timeout: 120_000,
@@ -137,10 +165,18 @@ async function criarJunction(alvo: string, caminhoJunction: string): Promise<voi
 async function provarSyncCodexFalhaFechado(conteudoOriginal: Buffer): Promise<void> {
   const { base, repo } = await criarSandbox("sema-sync-codex-fail-closed-");
   const agents = path.join(repo, "AGENTS.md");
+  const ambiente = resolverAmbienteCliIsolado(base);
+  const sentinelaCache = path.join(ambiente.raizCacheEsperada, "sentinela-bootstrap-seguro.txt");
+  const conteudoSentinela = Buffer.from("cache isolado do bootstrap seguro\n", "utf8");
 
   try {
+    const relativoCache = path.relative(base, ambiente.raizCacheEsperada);
+    assert.equal(path.isAbsolute(relativoCache), false);
+    assert.equal(relativoCache === ".." || relativoCache.startsWith(`..${path.sep}`), false);
+    await mkdir(ambiente.raizCacheEsperada, { recursive: true });
+    await writeFile(sentinelaCache, conteudoSentinela);
     await writeFile(agents, conteudoOriginal);
-    const resultado = executarCli(repo, ["sync-codex", "--json"]);
+    const resultado = executarCli(repo, ["sync-codex", "--json"], base);
 
     assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
     const payload = JSON.parse(resultado.stdout) as {
@@ -159,6 +195,11 @@ async function provarSyncCodexFalhaFechado(conteudoOriginal: Buffer): Promise<vo
       "pendente",
     );
     assert.deepEqual(await readFile(agents), conteudoOriginal);
+    assert.deepEqual(await readFile(sentinelaCache), conteudoSentinela);
+    assert.equal(
+      existsSync(path.join(ambiente.raizCacheEsperada, "drift", "v3", "workspaces")),
+      true,
+    );
   } finally {
     await limparSandbox(base);
   }
@@ -169,7 +210,7 @@ test("sema iniciar preserva README, configuração e contrato existentes por pad
 
   try {
     await prepararArquivosExistentes(repo);
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"]);
+    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     assert.deepEqual(await readFile(path.join(repo, "README.md")), README_EXISTENTE);
@@ -185,7 +226,7 @@ test("sema iniciar --force sobrescreve explicitamente os destinos do template", 
 
   try {
     await prepararArquivosExistentes(repo);
-    const resultado = executarCli(repo, ["iniciar", "--template", "base", "--force"]);
+    const resultado = executarCli(repo, ["iniciar", "--template", "base", "--force"], base);
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     const readme = await readFile(path.join(repo, "README.md"), "utf8");
@@ -206,7 +247,7 @@ test("sema iniciar recusa junction em contratos sem criar pedidos.sema fora do r
 
   try {
     await criarJunction(outside, path.join(repo, "contratos"));
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"]);
+    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
     assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
     assert.match(resultado.stderr, /symlink|junction/i);
@@ -224,7 +265,7 @@ test("sema iniciar prevalida exemplos e docs antes de criar qualquer arquivo", a
 
     try {
       await criarJunction(outside, path.join(repo, diretorio));
-      const resultado = executarCli(repo, ["iniciar", "--template", "base"]);
+      const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
       assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
       assert.match(resultado.stderr, /symlink|junction/i);
@@ -267,7 +308,7 @@ test("sema iniciar materializa e preserva exemplos oficiais aninhados", async ()
   try {
     await mkdir(path.dirname(preservado), { recursive: true });
     await writeFile(preservado, sentinela);
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"]);
+    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     assert.deepEqual(await readFile(preservado), sentinela);
@@ -295,7 +336,7 @@ test("sema iniciar recusa junction aninhada em exemplos sem escrita externa", as
   try {
     await mkdir(path.join(repo, "exemplos"), { recursive: true });
     await criarJunction(outside, path.join(repo, "exemplos", "sistemas-interativos"));
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"]);
+    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
 
     assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
     assert.match(resultado.stderr, /symlink|junction/i);
@@ -327,7 +368,7 @@ test("sync-codex recusa junction em docs sem escrever fora do repositório", asy
 
   try {
     await criarJunction(outside, path.join(repo, "docs"));
-    const resultado = executarCli(repo, ["sync-codex", "--json"]);
+    const resultado = executarCli(repo, ["sync-codex", "--json"], base);
 
     assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
     assert.match(resultado.stderr, /symlink|junction/i);
@@ -360,7 +401,7 @@ test("resumo e contexto-ia substituem hardlink local sem alterar o arquivo exter
         "--saida",
         pastaSaida,
         "--json",
-      ]);
+      ], base);
 
       assert.equal(resultado.status, 0, diagnosticoCli(resultado));
       assert.deepEqual(await readFile(externo), sentinela);
@@ -385,7 +426,7 @@ test("contexto-ia recusa junction tardia antes de escrever qualquer artefato", a
       "--saida",
       pastaSaida,
       "--json",
-    ]);
+    ], base);
 
     assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
     assert.match(resultado.stderr, /symlink|junction/i);

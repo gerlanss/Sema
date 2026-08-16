@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.store
+// Descrição: declara o estado público de cache sem transformar aceleração em evidência final.
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
@@ -32,6 +32,7 @@ import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 import { paraIdentificadorModulo } from "./drift.part04.js";
 import type { MetricasCatalogoDrift, ObservadorOperacaoDrift } from "./driftCatalogo.js";
 import type { CoberturaEscopoDrift, EstrategiaEscopoDrift } from "./driftEscopo.js";
+import type { AvisoModoCacheDrift, ModoCacheDrift } from "./driftCacheModes.js";
 export type OrigemCodigoDrift = "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
 export type OrigemSimboloDrift = OrigemCodigoDrift | "sql";
 export interface SimboloResolvido {
@@ -63,6 +64,8 @@ export interface OpcoesDriftLegado {
   escopo?: EscopoDriftReal;
   ignorarWorktrees?: boolean;
   ignorarConsumidoresLaterais?: boolean;
+  modoCache?: ModoCacheDrift;
+  avisosModoCache?: readonly AvisoModoCacheDrift[];
   observador?: ObservadorOperacaoDrift | undefined;
 }
 export interface DiagnosticoDrift {
@@ -212,6 +215,22 @@ export interface ConfiguracaoEscopoDriftAplicada {
   arquivosAusentes?: string[];
   bloqueios?: string[];
   catalogo?: MetricasCatalogoDrift;
+  cache?: EstadoCacheDriftAplicado;
+}
+export interface MetricasCacheDriftAplicado {
+  hits: number;
+  misses: number;
+  corruptos: number;
+  gravacoes: number;
+  errosGravacao: number;
+}
+export interface EstadoCacheDriftAplicado {
+  modo: ModoCacheDrift;
+  origem: "cache" | "calculado" | "indisponivel" | "nao_aplicavel";
+  schema: string;
+  workspaceId?: string;
+  metricas: MetricasCacheDriftAplicado;
+  avisos: readonly AvisoModoCacheDrift[];
 }
 export interface RegistroImpactoSemanticoArquivo {
   arquivo: string;
@@ -387,6 +406,8 @@ export function resolverOpcoesDrift(opcoes?: OpcoesDriftLegado):
     escopo: normalizarEscopoDrift(opcoes?.escopo),
     ignorarWorktrees: opcoes?.ignorarWorktrees !== false,
     ignorarConsumidoresLaterais: opcoes?.ignorarConsumidoresLaterais !== false,
+    modoCache: opcoes?.modoCache ?? "none",
+    avisosModoCache: opcoes?.avisosModoCache ?? [],
     observador: opcoes?.observador,
   };
 }

@@ -14,6 +14,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       agents_md: Texto
       docs_sintaxe: Texto
       docs_fluxo_pratico: Texto
+      docs_comandos: Texto
       codex_entrypoint: Texto
       codex_nativo: Booleano
       cli_local_sem_autorizacao: Booleano
@@ -27,6 +28,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       divisao_por_responsabilidade_explicita: Booleano
       contexto_local_sem_espelho: Booleano
       destinos_entrypoint_prevalidados: Booleano
+      politica_modos_drift_explicita: Booleano
     }
     rules {
       base_projeto deve_ser preenchido
@@ -53,6 +55,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
         agents_md: publico
         docs_sintaxe: publico
         docs_fluxo_pratico: publico
+        docs_comandos: publico
         codex_entrypoint: publico
         codex_nativo: publico
         cli_local_sem_autorizacao: publico
@@ -66,6 +69,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
         divisao_por_responsabilidade_explicita: publico
         contexto_local_sem_espelho: publico
         destinos_entrypoint_prevalidados: publico
+        politica_modos_drift_explicita: publico
       }
     }
     audit {
@@ -123,6 +127,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       agents_md existe
       docs_sintaxe existe
       docs_fluxo_pratico existe
+      docs_comandos existe
       codex_entrypoint existe
       codex_nativo == verdadeiro
       cli_local_sem_autorizacao == verdadeiro
@@ -135,10 +140,15 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       politica_sinal_vs_ritual_explicita == verdadeiro
       divisao_por_responsabilidade_explicita == verdadeiro
       contexto_local_sem_espelho == verdadeiro
+      politica_modos_drift_explicita == verdadeiro
       agents_md deve_ser referenciar_somente_artefatos_materializados
       destinos_entrypoint_prevalidados == verdadeiro
       agents_md deve_ser usar_comandos_cli_locais
       sema_boot deve_ser usar_comandos_cli_locais
+      agents_md deve_ser distinguir_consulta_none_de_drift_fresh
+      sema_boot deve_ser distinguir_consulta_none_de_drift_fresh
+      sema_small_model deve_ser distinguir_consulta_none_de_drift_fresh
+      docs_comandos deve_ser distinguir_consulta_none_de_drift_fresh
     }
     tests {
       caso "sincroniza apenas o entrypoint oficial do Codex" {
@@ -159,6 +169,8 @@ module sema.produto.governanca_ia.contexto.entrypoints {
           politica_plataforma_explicita: verdadeiro
           agents_md: verdadeiro
           docs_sintaxe: verdadeiro
+          docs_comandos: verdadeiro
+          politica_modos_drift_explicita: verdadeiro
         }
       }
     }

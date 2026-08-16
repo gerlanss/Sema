@@ -1,12 +1,16 @@
 module sema.produto.cli_runtime_local {
   docs {
     resumo: "Execucao direta da CLI local do Sema. O comando resumo possui dois payloads JSON reais e distintos: um para modulo .sema e outro para projeto. Nenhuma variante exige autenticacao, autorizacao de produto, licenca, credito, token, billing, painel ou consulta externa."
+    arquivo: "contratos/sema/governanca_ia_drift_cache_modos.sema"
   }
+
+  use sema.produto.governanca_ia.drift.cache.modos
 
   task resumir_modulo_local {
     input {
       arquivo: Texto required
       tamanho: Texto required
+      modo_drift: Texto optional
     }
     output {
       comando: Texto
@@ -17,6 +21,7 @@ module sema.produto.cli_runtime_local {
       modulo: Texto
       pastaSaida: Opcional<Texto>
       artefatosCompactos: Lista
+      analiseDrift: Objeto
       guiaPorCapacidade: Objeto
       resumo: Objeto
       texto: Texto
@@ -24,9 +29,11 @@ module sema.produto.cli_runtime_local {
     rules {
       arquivo deve_ser arquivo_sema
       tamanho deve_ser micro_curto_ou_medio
+      modo_drift deve_ser none_cache_ou_fresh_quando_informado
     }
     effects {
       consulta contrato_local criticidade = media
+      fs.write cache_global_usuario criticidade = baixa
       auditoria resumo_modulo_local criticidade = baixa
     }
     authz {
@@ -39,6 +46,7 @@ module sema.produto.cli_runtime_local {
       input {
         arquivo: interno
         tamanho: publico
+        modo_drift: publico
       }
       output {
         comando: publico
@@ -49,6 +57,7 @@ module sema.produto.cli_runtime_local {
         modulo: publico
         pastaSaida: interno
         artefatosCompactos: interno
+        analiseDrift: publico
         guiaPorCapacidade: publico
         resumo: interno
         texto: interno
@@ -70,6 +79,9 @@ module sema.produto.cli_runtime_local {
       emitir_nome_de_tool_mcp_em_saida_cli
       emitir_texto_visivel_com_mojibake
       emitir_baseProjeto_artefatos_ou_modulos_na_variante_modulo
+      fabricar_score_confianca_impl_rotas_consumer_ou_vinculos_quando_analiseDrift_executada_for_falso
+      retornar_exit_zero_quando_analiseDrift_executada_falha
+      escrever_cache_de_drift_no_workspace
     }
     impl {
       ts: cli.src.index_part06.comandoResumo
@@ -79,6 +91,7 @@ module sema.produto.cli_runtime_local {
       arquivo: "pacotes/cli/src/index.part08.ts"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
       arquivo: "testes/integracao/codex_runtime.test.ts"
+      arquivo: "testes/integracao/drift-cli-modes.test.ts"
       simbolo: cli.src.index_part06.comandoResumo
     }
     execucao {
@@ -95,6 +108,7 @@ module sema.produto.cli_runtime_local {
       arquivo existe
       modulo existe
       artefatosCompactos existe
+      analiseDrift existe
       guiaPorCapacidade existe
       resumo existe
       texto existe
@@ -104,6 +118,7 @@ module sema.produto.cli_runtime_local {
         given {
           arquivo: "exemplos/calculadora.sema"
           tamanho: "micro"
+          modo_drift: "none"
         }
 
         expect {
@@ -112,6 +127,7 @@ module sema.produto.cli_runtime_local {
           modo: "resumo"
           tamanho: "micro"
           modulo: "exemplos.calculadora"
+          analiseDrift: "modo none executada false"
         }
       }
     }
@@ -121,6 +137,7 @@ module sema.produto.cli_runtime_local {
     input {
       baseProjeto: Texto required
       tamanho: Texto required
+      modo_drift: Texto optional
     }
     output {
       comando: Texto
@@ -130,6 +147,7 @@ module sema.produto.cli_runtime_local {
       baseProjeto: Texto
       pastaSaida: Texto
       artefatos: Lista
+      analiseDrift: Objeto
       guiaPorCapacidade: Objeto
       modulos: Lista
       texto: Texto
@@ -137,10 +155,12 @@ module sema.produto.cli_runtime_local {
     rules {
       baseProjeto deve_ser pasta_workspace_local
       tamanho deve_ser micro_curto_ou_medio
+      modo_drift deve_ser none_cache_ou_fresh_quando_informado
     }
     effects {
       consulta contratos_workspace_local criticidade = media
       fs.write resumo_projeto_local criticidade = media
+      fs.write cache_global_usuario criticidade = baixa
       auditoria resumo_projeto_local criticidade = baixa
     }
     authz {
@@ -153,6 +173,7 @@ module sema.produto.cli_runtime_local {
       input {
         baseProjeto: interno
         tamanho: publico
+        modo_drift: publico
       }
       output {
         comando: publico
@@ -162,6 +183,7 @@ module sema.produto.cli_runtime_local {
         baseProjeto: interno
         pastaSaida: interno
         artefatos: interno
+        analiseDrift: publico
         guiaPorCapacidade: publico
         modulos: interno
         texto: interno
@@ -183,6 +205,9 @@ module sema.produto.cli_runtime_local {
       emitir_nome_de_tool_mcp_em_saida_cli
       emitir_texto_visivel_com_mojibake
       emitir_arquivo_modulo_resumo_ou_artefatosCompactos_na_variante_projeto
+      fabricar_score_confianca_impl_rotas_consumer_ou_vinculos_quando_analiseDrift_executada_for_falso
+      retornar_exit_zero_quando_analiseDrift_executada_falha
+      escrever_cache_de_drift_no_workspace
     }
     impl {
       ts: cli.src.index_part06.comandoResumo
@@ -192,6 +217,7 @@ module sema.produto.cli_runtime_local {
       arquivo: "pacotes/cli/src/index.part08.ts"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
       arquivo: "testes/integracao/codex_runtime.test.ts"
+      arquivo: "testes/integracao/drift-cli-modes.test.ts"
       simbolo: cli.src.index_part06.comandoResumo
     }
     execucao {
@@ -208,6 +234,7 @@ module sema.produto.cli_runtime_local {
       baseProjeto existe
       pastaSaida existe
       artefatos existe
+      analiseDrift existe
       guiaPorCapacidade existe
       modulos existe
       texto existe
@@ -217,6 +244,7 @@ module sema.produto.cli_runtime_local {
         given {
           baseProjeto: "."
           tamanho: "micro"
+          modo_drift: "none"
         }
 
         expect {
@@ -224,6 +252,7 @@ module sema.produto.cli_runtime_local {
           comando: "resumo"
           modo: "resumo"
           tamanho: "micro"
+          analiseDrift: "modo none executada false"
         }
       }
     }

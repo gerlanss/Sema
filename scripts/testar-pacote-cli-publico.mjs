@@ -1,7 +1,7 @@
 // SEMA-GOVERNED: sema.produto.fronteira_repositorios
 // Consulte contratos/sema/fronteira_repositorios.sema antes de editar.
 // Descricao: orquestra uma unica instalacao isolada do pacote publico e delega as validacoes por responsabilidade.
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -50,11 +50,12 @@ function executar(comando, argumentos, cwd) {
   });
 }
 
-function executarComSaida(comando, argumentos, cwd) {
+function executarComSaida(comando, argumentos, cwd, opcoes = {}) {
   const resultado = spawnSync(comando, argumentos, {
     cwd,
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
+    ...opcoes,
   });
   if (resultado.error) {
     throw resultado.error;
@@ -67,12 +68,110 @@ function executarComSaida(comando, argumentos, cwd) {
   return resultado.stdout;
 }
 
-function executarJsonCliInstalada(semaBin, argumentos, cwd) {
+function executarJsonCliInstalada(semaBin, argumentos, cwd, opcoes = {}) {
   return JSON.parse(executarComSaida(
     process.execPath,
     [semaBin, ...argumentos, "--json"],
     cwd,
+    opcoes,
   ));
+}
+
+function ambienteCacheIsolado(raizCache) {
+  return {
+    ...process.env,
+    HOME: raizCache,
+    USERPROFILE: raizCache,
+    LOCALAPPDATA: raizCache,
+    XDG_CACHE_HOME: raizCache,
+  };
+}
+
+function validarConsultaSemDrift(payload, comando) {
+  const configuracao = comando === "resumo" ? payload : payload.configuracao;
+  if (
+    configuracao.analiseDrift?.modo !== "none" ||
+    configuracao.analiseDrift.executada !== false ||
+    configuracao.analiseDrift.sucesso !== null ||
+    configuracao.analiseDrift.cache !== null
+  ) {
+    throw new Error(`The installed public CLI executed drift implicitly during ${comando}.`);
+  }
+
+  if (comando === "resumo") {
+    if (
+      payload.resumo?.modoVerificacaoCodigo !== "contratos_apenas" ||
+      payload.resumo.scoreSemantico !== null ||
+      payload.resumo.confiancaGeral !== null ||
+      payload.resumo.consumerFramework !== null ||
+      payload.resumo.appRoutes !== null ||
+      payload.resumo.consumerSurfaces !== null ||
+      payload.resumo.consumerBridges !== null ||
+      payload.resumo.ancoragensVinculo !== null
+    ) {
+      throw new Error("The installed public CLI fabricated code evidence in the default resumo response.");
+    }
+    return;
+  }
+
+  if (
+    configuracao.scoreDrift !== null ||
+    configuracao.confiancaGeral !== null ||
+    configuracao.consumerFramework !== null ||
+    configuracao.appRoutes !== null ||
+    configuracao.consumerSurfaces !== null ||
+    configuracao.consumerBridges !== null ||
+    !payload.projeto?.modulos?.every((modulo) => modulo.implementacao === null)
+  ) {
+    throw new Error("The installed public CLI fabricated code evidence in the default inspecionar response.");
+  }
+}
+
+function validarDriftComCache(payload, modo, origem) {
+  const cache = payload.escopo_aplicado?.cache;
+  if (
+    payload.sucesso !== true ||
+    cache?.modo !== modo ||
+    cache.origem !== origem ||
+    cache.schema !== "sema.drift-cache/v3"
+  ) {
+    throw new Error(`The installed public CLI did not execute drift --cache ${modo} with ${origem} extraction data.`);
+  }
+  const metricaEsperada = origem === "cache" ? cache.metricas?.hits : cache.metricas?.gravacoes;
+  if (typeof metricaEsperada !== "number" || metricaEsperada < 1) {
+    throw new Error(`The installed public CLI did not report the expected ${origem} cache metric.`);
+  }
+}
+
+async function prepararFixtureDriftPublico(projetoCodex) {
+  const configPath = path.join(projetoCodex, "sema.config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8"));
+  await mkdir(path.join(projetoCodex, "src"), { recursive: true });
+  await writeFile(path.join(projetoCodex, "contratos", "cache-smoke.sema"), `module app.cache_smoke {
+  vinculos { arquivo: "src/service.ts" }
+  task executar {
+    input { valor: Texto required }
+    output { ok: Booleano }
+    impl { ts: service.executar }
+    guarantees { ok existe }
+  }
+}
+`, "utf8");
+  await writeFile(path.join(projetoCodex, "src", "service.ts"), [
+    "// SEMA-GOVERNED: app.cache_smoke",
+    "// Descrição: implementação mínima para o smoke do cache público instalado.",
+    "export function executar(valor: string) { return { ok: valor.length > 0 }; }",
+    "",
+  ].join("\n"), "utf8");
+  await writeFile(configPath, `${JSON.stringify({
+    ...config,
+    diretoriosCodigo: ["./src"],
+    fontesLegado: ["typescript"],
+    pontuacaoSemanticaMinimaOperacional: 0,
+    pontuacaoSemanticaAlvo: 0,
+    pontuacaoSemanticaAlvoFinal: 0,
+  }, null, 2)}\n`, "utf8");
+  return "contratos/cache-smoke.sema";
 }
 
 function validarFronteiraDescoberta(payload, comando) {
@@ -236,13 +335,59 @@ async function main() {
       throw new Error("The installed public CLI still executes the removed preflight command.");
     }
 
+    const raizCacheBootstrap = path.join(sandbox, "cache-bootstrap-isolado");
     const projetoCodex = await validarBootstrapCodexInstalado({
       semaBin,
       sandbox,
       executarComSaida,
       existe,
       exemplosInterativosPublicos: EXEMPLOS_INTERATIVOS_PUBLICOS,
+      opcoesExecucao: { env: ambienteCacheIsolado(raizCacheBootstrap) },
     });
+    const cacheBootstrapEsperado = process.platform === "win32"
+      ? path.join(raizCacheBootstrap, "Sema", "Cache")
+      : process.platform === "darwin"
+        ? path.join(raizCacheBootstrap, "Library", "Caches", "Sema")
+        : path.join(raizCacheBootstrap, "sema");
+    if (!(await existe(cacheBootstrapEsperado))) {
+      throw new Error("Installed sync-codex did not publish fresh drift into the isolated bootstrap cache.");
+    }
+
+    const contratoCache = await prepararFixtureDriftPublico(projetoCodex);
+    const raizCacheDrift = path.join(sandbox, "cache-drift-isolado");
+    const opcoesCache = { env: ambienteCacheIsolado(raizCacheDrift) };
+    const resumoSemDrift = executarJsonCliInstalada(
+      semaBin,
+      ["resumo", contratoCache, "--micro"],
+      projetoCodex,
+      opcoesCache,
+    );
+    validarConsultaSemDrift(resumoSemDrift, "resumo");
+    const inspecaoSemDrift = executarJsonCliInstalada(
+      semaBin,
+      ["inspecionar", contratoCache],
+      projetoCodex,
+      opcoesCache,
+    );
+    validarConsultaSemDrift(inspecaoSemDrift, "inspecionar");
+    if (await existe(raizCacheDrift)) {
+      throw new Error("Default resumo/inspecionar created persistent cache despite --drift none semantics.");
+    }
+
+    const driftFresh = executarJsonCliInstalada(
+      semaBin,
+      ["drift", contratoCache, "--escopo", "modulo", "--cache", "fresh"],
+      projetoCodex,
+      opcoesCache,
+    );
+    validarDriftComCache(driftFresh, "fresh", "calculado");
+    const driftCache = executarJsonCliInstalada(
+      semaBin,
+      ["drift", contratoCache, "--escopo", "modulo", "--cache", "cache"],
+      projetoCodex,
+      opcoesCache,
+    );
+    validarDriftComCache(driftCache, "cache", "cache");
 
     const resumoSaida = executarComSaida(
       process.execPath,
@@ -250,7 +395,12 @@ async function main() {
       sandbox,
     );
     const resumo = JSON.parse(resumoSaida);
-    if (resumo.comando !== "resumo" || resumo.modulo !== "exemplos.calculadora") {
+    if (
+      resumo.comando !== "resumo" ||
+      resumo.modulo !== "exemplos.calculadora" ||
+      resumo.analiseDrift?.modo !== "none" ||
+      resumo.analiseDrift.executada !== false
+    ) {
       throw new Error("The installed public CLI did not execute resumo directly against a local contract.");
     }
 
@@ -263,6 +413,7 @@ async function main() {
       "docs/commands.md",
       "docs/descoberta-capacidades.md",
       "docs/documentation.md",
+      "docs/drift-cache.md",
       "docs/pipeline-conteudo.md",
       "docs/security.md",
       "docs/sistemas-interativos.md",

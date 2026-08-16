@@ -1,0 +1,15 @@
+module sema.produto.governanca_ia.drift.cache {
+  docs {
+    resumo: "Indice da politica de cache de drift: modos publicos honestos e store global externo ao workspace."
+    arquivo: "contratos/sema/governanca_ia_drift_cache_modos.sema"
+    arquivo: "contratos/sema/governanca_ia_drift_cache_store.sema"
+    arquivo: "contratos/sema/governanca_ia_drift.sema"
+    arquivo: "docs/commands.md"
+    arquivo: "docs/drift-cache.md"
+    arquivo: "docs/testing.md"
+  }
+
+  use sema.produto.governanca_ia.drift.cache.modos
+
+  use sema.produto.governanca_ia.drift.cache.store
+}

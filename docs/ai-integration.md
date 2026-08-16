@@ -32,7 +32,7 @@ For a local workspace, use the local CLI:
 
 ```bash
 sema --version
-sema resumo
+sema resumo --drift none
 ```
 
 A successful `sema --version` is enough to use the local CLI directly. Local
@@ -43,13 +43,15 @@ service, control panel, or external authorization request.
 
 ```bash
 sema docs-impacto --intencao "describe the change" --json
-sema inspecionar contratos/example.sema --json
-sema drift contratos/example.sema --escopo modulo --json
+sema inspecionar contratos/example.sema --drift none --json
+sema drift contratos/example.sema --escopo modulo --cache fresh --json
 sema impacto contratos/example.sema --alvo app.example --mudanca "describe the change" --json
 ```
 
 Read every document listed by `docs-impacto` before changing code, contracts,
 operational docs, generated artifacts, workflows, profiles, or release material.
+A cache hit is acceleration, not evidence: closing requires `--cache fresh`,
+while contract-only queries keep unobserved implementation fields null.
 
 ## Codex Context Tiers
 
