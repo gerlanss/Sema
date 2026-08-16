@@ -1,8 +1,9 @@
 # Deployment Boundary
 
-The public Sema repository documents two coordinated release surfaces: the
-local npm CLI and the Codex bootstrap skill. The skill remains a separate,
-explicit Codex installation and is never injected by npm lifecycle scripts.
+The public Sema repository documents one coordinated npm artifact containing
+the local CLI, its absolute managed launcher, and the portable bootstrap skill.
+The repository Codex plugin remains an optional namespaced distribution channel
+for the same versioned skill.
 
 Run the complete public gate:
 
@@ -22,11 +23,23 @@ npm run release:publicar-npm-dry-run
 the public boundary, so a clean clone does not depend on ignored generated
 handshake files left by a previous local run.
 
-The plugin smoke installs the repo marketplace into an isolated `CODEX_HOME`,
-installs `sema@sema`, compares the cached skill with the versioned source, and
-proves no Sema MCP server was registered. Plugin and CLI versions must match
-before the commit is pushed. The release command itself runs the full test suite
-and project-wide Sema drift gate; these are not optional manual preliminaries.
+All release and local-install routes delegate to `npm run
+cli:empacotar-publica`. The factory uses a unique private stage, disables npm
+lifecycle scripts while packing that stage, and publishes only a fully
+validated tarball. Do not use `npm pack --workspace @semacode/cli`; the source
+package guard rejects that unsupported path without staging files in the
+workspace.
+
+The public-package smoke performs a global install with isolated home, npm
+prefix, npm cache, and user cache. It proves the launcher works through its
+absolute path with Node.js and npm removed from `PATH`. On Windows it exercises
+`sema.ps1` as the PowerShell `PATH` entrypoint, `sema-managed.ps1` through the
+absolute `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`, and
+`sema.cmd` through `cmd.exe`. The smoke also proves the synchronized
+skill matches the packaged source, the real user home is unchanged, and local
+installs leave global state untouched. The plugin smoke independently compares
+its cached skill with the versioned source and proves no Sema MCP server was
+registered. Plugin and CLI versions must match before the commit is pushed.
 
 Push the commit containing `.agents/plugins/marketplace.json` and
 `plugins/sema/` before telling users to install from `gerlanss/Sema`. Publish

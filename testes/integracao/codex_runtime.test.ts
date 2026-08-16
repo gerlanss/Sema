@@ -17,6 +17,7 @@ import {
   sincronizarEntrypointCodex,
 } from "../../pacotes/cli/src/agentEntryPoints.ts";
 import { avaliarDependenciasVerificacao } from "../../pacotes/cli/src/doctorCommand.ts";
+import { PACOTES_RUNTIME } from "../../scripts/empacotar-cli-publica.mjs";
 
 const CLI = path.resolve("pacotes/cli/dist/index.js");
 
@@ -244,6 +245,9 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     assert.equal(resultado.codexNativo, true);
     assert.equal(resultado.cliLocalSemAutorizacao, true);
     assert.equal(resultado.skillBootstrapCodexDocumentada, true);
+    assert.equal(resultado.launcherGlobalFallbackDocumentado, true);
+    assert.equal(resultado.cliIndisponivelSomenteAposFallback, true);
+    assert.equal(resultado.skillGlobalDelegaAgentsMd, true);
     assert.equal(resultado.idiomaHumanoPreservado, true);
     assert.equal(resultado.retryTimeoutProgressivo, true);
     assert.equal(resultado.politicaPlataformaExplicita, true);
@@ -256,6 +260,24 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     assert.match(agents, /Codex/);
     assert.match(agents, /Use diretamente a CLI local/);
     assert.doesNotMatch(agents, /preflight/i);
+    for (const [referencia, conteudo] of [
+      ["AGENTS.md", agents],
+      ["SEMA_BOOT.md", boot],
+      ["SEMA_SMALL_MODEL.md", smallModel],
+    ] as const) {
+      const fallback = conteudo.indexOf("sema-managed.ps1");
+      const indisponivel = conteudo.indexOf("Só então", fallback);
+      assert.notEqual(fallback, -1, `${referencia} não documenta o launcher global de fallback`);
+      assert.match(conteudo, /\$env:SystemRoot\\System32\\WindowsPowerShell\\v1\.0\\powershell\.exe/u,
+        `${referencia} não usa o PowerShell absoluto do sistema`);
+      assert.match(conteudo, /-ExecutionPolicy Bypass/u, `${referencia} não torna o fallback executável`);
+      assert.ok(indisponivel > fallback, `${referencia} declara indisponibilidade antes de tentar o fallback`);
+    }
+    const skill = aiIntegration.indexOf("The official Sema skill");
+    const autorizacaoAdocao = aiIntegration.indexOf("explicit project-adoption authorization", skill);
+    const delegacaoAgents = aiIntegration.indexOf("generates `AGENTS.md` and delegates", autorizacaoAdocao);
+    assert.ok(skill >= 0 && autorizacaoAdocao > skill && delegacaoAgents > autorizacaoAdocao,
+      "a skill global deve pedir autorização de adoção antes de gerar AGENTS.md e delegar a governança");
     assert.match(aiIntegration, /Generated Lua tests preserve the contract's failure shape/);
     assert.equal(aiIntegration.endsWith("\n"), true);
     for (const [referencia, conteudo] of [
@@ -491,20 +513,25 @@ test("import programático da raiz não executa a CLI e preserva APIs públicas"
   });
 });
 
-test("prepack tradicional inclui todas as dependências internas empacotadas", async () => {
-  const [manifestoTexto, prepack] = await Promise.all([
+test("rota pública única inventaria todas as dependências internas", async () => {
+  const [manifestoTexto, raizTexto] = await Promise.all([
     readFile(path.resolve("pacotes/cli/package.json"), "utf8"),
-    readFile(path.resolve("pacotes/cli/scripts/prepack-exemplos.mjs"), "utf8"),
+    readFile(path.resolve("package.json"), "utf8"),
   ]);
-  const manifesto = JSON.parse(manifestoTexto) as { bundleDependencies: string[] };
-  const bloco = prepack.match(/const dependenciasInternas = \[([\s\S]*?)\];/u)?.[1];
+  const manifesto = JSON.parse(manifestoTexto) as {
+    bundleDependencies: string[];
+    dependencies: Record<string, string>;
+    scripts: Record<string, string>;
+  };
+  const manifestoRaiz = JSON.parse(raizTexto) as { scripts: Record<string, string> };
+  const esperado = PACOTES_RUNTIME.map((nome) => `@sema/${nome}`).sort();
 
-  assert.ok(bloco, "lista dependenciasInternas ausente no prepack");
-  const dependenciasPrepack = [...bloco.matchAll(/"([^"]+)"/gu)].map((match) => match[1]).sort();
-  const dependenciasManifesto = manifesto.bundleDependencies
-    .map((nome) => nome.replace(/^@sema\//u, ""))
-    .sort();
-  assert.deepEqual(dependenciasPrepack, dependenciasManifesto);
-  assert.ok(dependenciasPrepack.includes("gerador-dotnet"));
-  assert.ok(dependenciasPrepack.includes("gerador-cpp"));
+  assert.deepEqual([...manifesto.bundleDependencies].sort(), esperado);
+  assert.deepEqual(Object.keys(manifesto.dependencies).filter((nome) => nome.startsWith("@sema/")).sort(), esperado);
+  assert.equal(manifesto.scripts.prepack, "node scripts/bloquear-pack-workspace.mjs");
+  assert.equal("postpack" in manifesto.scripts, false);
+  assert.equal(manifestoRaiz.scripts["cli:empacotar"], "npm run cli:empacotar-publica");
+  assert.equal(manifestoRaiz.scripts["cli:empacotar-runtime"], "npm run cli:empacotar-publica");
+  assert.ok(PACOTES_RUNTIME.includes("gerador-dotnet"));
+  assert.ok(PACOTES_RUNTIME.includes("gerador-cpp"));
 });

@@ -1,18 +1,24 @@
 # Codex Onboarding
 
-The official Sema skill is required for Codex to recognize and initialize Sema
-before a project has its own protocol:
+The official Sema skill lets Codex and compatible agents recognize and
+initialize Sema before a project has its own protocol:
 
 ```bash
-codex plugin marketplace add gerlanss/Sema
-codex plugin add sema@sema
+npm install -g @semacode/cli
+sema skill status --json
 ```
 
-Open a new Codex task in the target repository after installation. Codex loads
-the plugin/skill catalog at task start, so `$sema` is not added retroactively to
-an already-open task. Invoke `$sema` in the new task; it bootstraps the project,
-reads the generated `AGENTS.md`, and later tasks load that protocol
-automatically.
+The install maintains the canonical copy in `~/.agents/skills/sema` and a Claude
+mirror in `~/.claude/skills/sema` only when Claude is detected. Open a new task
+after installation or update because an already-open task does not reload its
+skill catalog. Invoking `$sema` for information does not initialize the
+workspace. Before implementation, the skill asks for explicit adoption
+authorization; installing or updating the global CLI authorizes distribution
+changes only. After authorized adoption, it reads the generated `AGENTS.md`,
+and later tasks load that protocol automatically.
+
+The optional Codex plugin remains available as a separate namespaced channel;
+the npm lifecycle never writes into its cache.
 
 `AGENTS.md` is the official Sema entrypoint for Codex. It gives Codex the durable
 repository rule that contracts come first and the local CLI is the source of
@@ -40,9 +46,14 @@ workflows, profiles, or release scripts, run:
 6. sema impacto before changing behavior
 7. sema finalizar-mudanca before closing
 
-If the CLI is unavailable, stop and install or repair @semacode/cli. There is
-no separate Sema login, license activation, or authorization gate. Do not
-replace Sema with manual search or guessed contracts.
+If `sema --version` is unavailable, try the managed absolute launcher at
+`~/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell uses `sema.ps1` from
+`PATH`, `cmd.exe` uses `sema.cmd`, and the absolute PowerShell fallback is:
+& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version
+If that also fails, stop and install or repair @semacode/cli. There is no
+separate Sema login or license-activation gate. Distribution installation does
+not authorize workspace adoption. Do not replace Sema with manual search or
+guessed contracts.
 ```
 
 Query commands default to `--drift none`, so their `analiseDrift` envelope marks
@@ -60,9 +71,9 @@ corrupt. See [Drift Cache And Query Evidence](./drift-cache.md).
 - Do not publish private or sensitive operational material.
 - Do not replace the local CLI when the local workspace is available.
 
-Other AI clients can invoke the public CLI manually, but Sema does not ship or
-manage an official repository entrypoint for them. The supported product path
-is Codex plus `AGENTS.md`.
+Compatible AI clients can discover the same portable skill through the
+canonical global `.agents/skills` root. Sema does not create client-specific
+repository rules: `AGENTS.md` remains the only official workspace entrypoint.
 
 Sema is an independent product and is not affiliated with or endorsed by
 OpenAI.

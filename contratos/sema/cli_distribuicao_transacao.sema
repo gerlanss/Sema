@@ -1,0 +1,298 @@
+module sema.produto.distribuicao_global.transacao {
+  docs {
+    resumo: "Serializa mutacoes globais por HOME canonica e coordena launcher e skills como uma unica transacao compensavel. O lock funciona entre processos, tem lease recuperavel e so pode ser liberado pela mesma identidade fisica, nonce, PID e thread que o adquiriram."
+    arquivo: "contratos/sema/cli_distribuicao_launcher.sema"
+    arquivo: "contratos/sema/cli_distribuicao_skill.sema"
+    arquivo: "docs/security.md"
+    arquivo: "docs/testing.md"
+  }
+
+  enum EstadoDistribuicaoGlobal {
+    READY,
+    MISSING,
+    STALE,
+    BROKEN_TARGET,
+    PERMISSION_DENIED
+  }
+
+  task serializar_mutacao_global_por_home {
+    input {
+      diretorio_usuario: Texto required
+      operacao_id: Texto required
+    }
+    output {
+      lock_adquirido: Booleano
+      lock_reentrante: Booleano
+      lock_liberado: Booleano
+      lock_unico_home: Booleano
+      serializacao_cross_process: Booleano
+      processo_vivo_preservado: Booleano
+      crash_recuperado: Booleano
+      identidade_liberacao_validada: Booleano
+      fencing_validado: Booleano
+      timeout_respeitado: Booleano
+      codigo: Texto
+    }
+    rules {
+      diretorio_usuario deve_ser absoluto
+      diretorio_usuario deve_ser canonicalizavel_para_home_real
+      operacao_id existe
+    }
+    effects {
+      fs.write lock_distribuicao_global criticidade = alta
+      auditoria lock_distribuicao_global_operado criticidade = alta
+    }
+    authz {
+      escopo: sema.cli.distribuicao.lock.write
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        diretorio_usuario: interno
+        operacao_id: interno
+      }
+      output {
+        lock_adquirido: interno
+        lock_reentrante: interno
+        lock_liberado: interno
+        lock_unico_home: interno
+        serializacao_cross_process: interno
+        processo_vivo_preservado: interno
+        crash_recuperado: interno
+        identidade_liberacao_validada: interno
+        fencing_validado: interno
+        timeout_respeitado: interno
+        codigo: publico
+      }
+    }
+    audit {
+      evento: sema.cli.distribuicao_global.lock_operado
+      ator: sistema.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      usar_lock_somente_em_memoria_para_concorrencia_cross_process
+      criar_mais_de_um_lock_para_a_mesma_home_canonica
+      criar_lock_fora_da_home_canonica
+      seguir_symlink_junction_ou_reparse_point_no_lock_ou_home
+      aceitar_recibo_de_lock_malformado_ou_maior_que_o_limite
+      roubar_lock_com_lease_nao_expirada
+      remover_lock_final_com_recibo_invalido_ou_sem_ownership
+      remover_lock_por_nome_sem_validar_identidade
+      remover_lock_com_dev_ino_nlink_nonce_pid_ou_thread_id_divergente
+      ocultar_timeout_ou_perda_de_lock_como_sucesso
+      escrever_no_destino_global_sem_confirmar_fencing_token_ativo
+      continuar_mutacao_depois_que_o_fencing_detectar_lock_perdido
+      manter_lock_proprio_apos_conclusao_ou_falha_da_operacao
+      reutilizar_contexto_reentrante_depois_da_liberacao_do_lock_externo
+    }
+    impl {
+      ts: cli.src.distribuicao.lock_global.comLockDistribuicaoGlobal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/distribuicao/lockGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/lockContextGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/filesystemGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/tipos.ts"
+      arquivo: "testes/unidade/distribuicao-global.test.ts"
+      simbolo: cli.src.distribuicao.lock_global.comLockDistribuicaoGlobal
+      simbolo: cli.src.distribuicao.lock_global.nomeLockDistribuicaoGlobal
+      simbolo: cli.src.distribuicao.lock_context_global.confirmarFencingLockDistribuicaoGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "poll_com_jitter_ate_timeout"
+      compensacao: "liberar_lock_somente_se_dev_ino_nlink_nonce_pid_e_thread_id_continuam_iguais"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      lock_adquirido == verdadeiro antes_de_mutacao_global
+      lock_unico_home == verdadeiro
+      serializacao_cross_process == verdadeiro
+      lock_reentrante deve_ser verdadeiro quando mutacao_aninhada_usar_mesma_home_e_contexto
+      lock_reentrante deve_ser falso quando contexto_anterior_ja_estiver_inativo
+      processo_vivo_preservado deve_ser verdadeiro quando lease_nao_expirou
+      crash_recuperado deve_ser verdadeiro quando recibo_valido_apontar_pid_morto_ou_lease_stale
+      crash_recuperado deve_ser falso quando lock_final_tiver_recibo_invalido_ou_sem_ownership
+      fencing_validado == verdadeiro antes_de_cada_mutacao_de_filesystem_sob_lock
+      codigo deve_ser LOCK_TIMEOUT quando (lock_adquirido == falso e timeout_respeitado == verdadeiro)
+      codigo deve_ser LOCK_PERDIDO quando identidade_liberacao_validada == falso
+      lock_liberado deve_ser verdadeiro quando operacao_termina_e_identidade_liberacao_validada == verdadeiro
+      identidade_liberacao_validada == verdadeiro somente_quando_dev_ino_nlink_nonce_pid_e_thread_id_forem_iguais
+    }
+    tests {
+      caso "serializa processos concorrentes na mesma HOME" {
+        given {
+          diretorio_usuario: "sandbox-home-compartilhada"
+          operacao_id: "sync-concorrente"
+        }
+
+        expect {
+          lock_adquirido: verdadeiro
+          lock_liberado: verdadeiro
+        }
+      }
+      caso "recupera crash somente quando o processo morreu" {
+        given {
+          diretorio_usuario: "sandbox-home-lock-pid-morto"
+          operacao_id: "sync-pos-crash"
+        }
+
+        expect {
+          lock_adquirido: verdadeiro
+          lock_liberado: verdadeiro
+        }
+      }
+      caso "nao remove lock trocado por outro processo" {
+        given {
+          diretorio_usuario: "sandbox-home-lock-identidade-trocada"
+          operacao_id: "sync-com-swap-concorrente"
+        }
+
+        expect {
+          codigo: "LOCK_PERDIDO"
+          lock_liberado: falso
+        }
+      }
+    }
+  }
+
+  task sincronizar_conjunto_distribuicao_global {
+    input {
+      diretorio_usuario: Texto required
+      raiz_pacote: Texto required
+      executavel_node: Texto required
+      plataforma: Texto required
+    }
+    output {
+      estado: EstadoDistribuicaoGlobal
+      alterado: Booleano
+      launcher: Objeto
+      skill: Objeto
+    }
+    rules {
+      diretorio_usuario deve_ser absoluto
+      raiz_pacote deve_ser absoluta
+      executavel_node deve_ser absoluto
+      plataforma deve_ser em [win32, darwin, linux]
+    }
+    effects {
+      fs.write distribuicao_global criticidade = alta
+      auditoria distribuicao_global_transacionada criticidade = alta
+    }
+    authz {
+      escopo: sema.cli.distribuicao.global.write
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        diretorio_usuario: interno
+        raiz_pacote: interno
+        executavel_node: interno
+        plataforma: publico
+      }
+      output {
+        estado: publico
+        alterado: publico
+        launcher: interno
+        skill: interno
+      }
+    }
+    audit {
+      evento: sema.cli.distribuicao_global.transacionada
+      ator: sistema.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      diagnosticar_um_destino_depois_de_iniciar_mutacao_em_outro
+      capturar_snapshot_parcial_e_continuar_mutacao
+      liberar_lock_entre_prechecagem_snapshot_mutacao_validacao_e_commit
+      confirmar_launcher_ou_skill_antes_do_conjunto_final_ready
+      interromper_rollback_restante_apos_falha_de_um_componente
+      reportar_estado_logico_sem_reler_bytes_fisicos_apos_compensacao
+      declarar_alterado_falso_quando_rollback_falhou
+      deixar_stage_backup_wrapper_ou_companion_orfao_apos_compensacao
+      expor_home_ou_caminho_absoluto_em_diagnostico_publico
+    }
+    impl {
+      ts: cli.src.distribuicao.index.sincronizarDistribuicaoGlobal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/distribuicao/index.ts"
+      arquivo: "pacotes/cli/src/distribuicao/lockGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/filesystemGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/tipos.ts"
+      arquivo: "testes/unidade/distribuicao-global.test.ts"
+      arquivo: "testes/unidade/distribuicao-launcher-global.test.ts"
+      arquivo: "testes/unidade/distribuicao-skill-global.test.ts"
+      simbolo: cli.src.distribuicao.index.sincronizarDistribuicaoGlobal
+      simbolo: cli.src.distribuicao.lock_global.comLockDistribuicaoGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "60s"
+      retry: "nenhum"
+      compensacao: "rollback_all_settled_de_launcher_e_cada_destino_skill"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      launcher deve_ser mutado_somente_apos_prechecagem_e_snapshot_do_conjunto
+      skill deve_ser mutada_somente_apos_prechecagem_e_snapshot_do_conjunto
+      launcher deve_ser operado_sob_o_mesmo_lock_da_skill_ate_commit_ou_fim_do_rollback
+      skill deve_ser operada_sob_o_mesmo_lock_do_launcher_ate_commit_ou_fim_do_rollback
+      estado == READY somente_quando launcher_e_todos_destinos_skill_estao_READY
+      launcher deve_ser compensado_quando_houver_falha_antes_do_commit
+      skill deve_ser compensada_quando_houver_falha_antes_do_commit
+      launcher deve_ser ter_rollback_tentado_independentemente_da_skill
+      skill deve_ser ter_rollback_de_cada_destino_tentado_independentemente
+      launcher deve_ser restaurado_ou_marcado_ROLLBACK_FALHOU
+      skill deve_ser restaurada_ou_marcada_ROLLBACK_FALHOU
+      alterado deve_ser verdadeiro quando launcher_ou_skill_reportar_ROLLBACK_FALHOU
+      alterado deve_ser falso quando compensacao_restaurar_todos_os_bytes_anteriores
+      launcher deve_ser refletir_bytes_fisicos_apos_compensacao
+      skill deve_ser refletir_bytes_fisicos_apos_compensacao
+      launcher deve_ser sem_stage_wrapper_ou_companion_orfao_apos_sucesso_ou_compensacao_bem_sucedida
+      skill deve_ser sem_stage_ou_backup_orfao_apos_sucesso_ou_compensacao_bem_sucedida
+      launcher deve_ser confirmado_com_skill_como_um_unico_conjunto
+      skill deve_ser confirmada_com_launcher_como_um_unico_conjunto
+    }
+    tests {
+      caso "falha do launcher restaura todas as skills" {
+        given {
+          diretorio_usuario: "sandbox-home-falha-launcher"
+          raiz_pacote: "sandbox-pacote-valido"
+          executavel_node: "sandbox-node-absoluto"
+          plataforma: "win32"
+        }
+
+        expect {
+          alterado: falso
+        }
+      }
+      caso "falha de um rollback nao interrompe os demais" {
+        given {
+          diretorio_usuario: "sandbox-home-rollback-parcial"
+          raiz_pacote: "sandbox-pacote-valido"
+          executavel_node: "sandbox-node-absoluto"
+          plataforma: "win32"
+        }
+
+        expect {
+          estado: "BROKEN_TARGET"
+          alterado: verdadeiro
+        }
+      }
+    }
+  }
+}

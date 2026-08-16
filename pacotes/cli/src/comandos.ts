@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.distribuicao_global
 // Descricao: dispatcher de comandos publicos da CLI local; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
 
 import { comandoDev } from "./dev/index.js";
@@ -7,6 +7,7 @@ import { comandoSyncPrisma } from "./sync/index.js";
 import { comandoPipelineConteudo } from "./pipelineConteudo/command.js";
 import { REGISTRO_HANDLERS_DESCOBERTA } from "./discovery/index.js";
 import { comandoSistemasInterativos } from "./sistemasInterativos/command.js";
+import { comandoSkill } from "./skillCommand.js";
 
 export type HandlerComando = (
   posicionais: string[],
@@ -91,5 +92,6 @@ export const REGISTRO_COMANDOS: Record<string, HandlerComando> = {
   sync: comandoSyncPrismaHandler,
   conteudo: comandoPipelineConteudo,
   interativo: comandoSistemasInterativos,
+  skill: comandoSkill,
   ...REGISTRO_HANDLERS_DESCOBERTA,
 };

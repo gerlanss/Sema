@@ -1,0 +1,298 @@
+module sema.produto.distribuicao_global {
+  docs {
+    resumo: "Diagnostica e sincroniza um launcher global estavel da CLI Sema sem depender de PATH. O launcher usa caminhos absolutos para o executavel Node e para dist/index.js, fica confinado a ~/.sema/bin e preserva destinos nao gerenciados."
+    arquivo: "contratos/sema/cli_distribuicao_transacao.sema"
+    arquivo: "docs/security.md"
+    arquivo: "docs/testing.md"
+  }
+
+  use sema.produto.distribuicao_global.transacao
+
+  task consultar_launcher_global {
+    input {
+      diretorio_usuario: Texto required
+      raiz_pacote: Texto required
+      executavel_node: Texto required
+      plataforma: Texto required
+    }
+    output {
+      estado: EstadoDistribuicaoGlobal
+      alterado: Booleano
+      destino_simbolico: Texto
+      codigo: Texto
+      node_absoluto: Booleano
+      entrypoint_absoluto: Booleano
+      recibo_valido: Booleano
+      independente_path: Booleano
+      fallback_simbolico: Texto
+    }
+    rules {
+      diretorio_usuario deve_ser absoluto
+      raiz_pacote deve_ser absoluta_e_canonicalizavel_por_realpath
+      executavel_node deve_ser absoluto_e_canonicalizavel_por_realpath
+      plataforma deve_ser em [win32, darwin, linux]
+    }
+    effects {
+      consulta launcher_global criticidade = alta
+      auditoria launcher_global_consultado criticidade = media
+    }
+    authz {
+      escopo: sema.cli.distribuicao.launcher.read
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        diretorio_usuario: interno
+        raiz_pacote: interno
+        executavel_node: interno
+        plataforma: publico
+      }
+      output {
+        estado: publico
+        alterado: publico
+        destino_simbolico: publico
+        codigo: publico
+        node_absoluto: publico
+        entrypoint_absoluto: publico
+        recibo_valido: publico
+        independente_path: publico
+        fallback_simbolico: publico
+      }
+    }
+    audit {
+      evento: sema.cli.launcher_global.consultado
+      ator: sistema.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      consultar_PATH_para_localizar_sema_ou_node
+      executar_launcher_durante_status
+      seguir_symlink_junction_ou_reparse_point_em_HOME_ou_destino
+      usar_caminho_logico_de_node_ou_pacote_apos_canonicalizacao
+      ler_fora_da_home_e_da_raiz_do_pacote
+      expor_caminho_absoluto_do_usuario_em_saida_publica
+      alterar_launcher_workspace_ou_cache
+      marcar_ready_com_wrapper_ou_companion_adulterado
+      marcar_launcher_posix_ready_sem_X_OK
+    }
+    impl {
+      ts: cli.src.distribuicao.launcher_global.statusLauncherGlobal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/launcherWindows.ts"
+      arquivo: "testes/unidade/distribuicao-launcher-global.test.ts"
+      simbolo: cli.src.distribuicao.launcher_global.statusLauncherGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "5s"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_realizada"
+      criticidade_operacional: media
+    }
+    guarantees {
+      estado deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED]
+      alterado == falso
+      destino_simbolico existe
+      codigo existe
+      destino_simbolico deve_ser simbolico_sem_home_absoluta
+      node_absoluto deve_ser verdadeiro quando estado em [READY, MISSING, STALE]
+      entrypoint_absoluto deve_ser verdadeiro quando estado em [READY, MISSING, STALE]
+      estado deve_ser BROKEN_TARGET quando wrapper_ou_companion_adulterado == verdadeiro
+      estado deve_ser STALE quando codigo == PERMISSAO_EXECUCAO_INVALIDA
+      independente_path deve_ser falso quando codigo == PERMISSAO_EXECUCAO_INVALIDA
+      independente_path deve_ser verdadeiro quando estado == READY
+      fallback_simbolico deve_ser simbolico_sem_home_absoluta quando plataforma == win32
+      fallback_simbolico deve_ser nulo quando plataforma != win32
+    }
+  }
+
+  task sincronizar_launcher_global {
+    input {
+      diretorio_usuario: Texto required
+      raiz_pacote: Texto required
+      executavel_node: Texto required
+      plataforma: Texto required
+    }
+    output {
+      estado: EstadoDistribuicaoGlobal
+      alterado: Booleano
+      destino_simbolico: Texto
+      codigo: Texto
+      node_absoluto: Booleano
+      entrypoint_absoluto: Booleano
+      recibo_valido: Booleano
+      independente_path: Booleano
+      fallback_simbolico: Texto
+    }
+    rules {
+      diretorio_usuario deve_ser absoluto
+      raiz_pacote deve_ser absoluta_e_canonicalizavel_por_realpath
+      executavel_node deve_ser absoluto_e_canonicalizavel_por_realpath
+      plataforma deve_ser em [win32, darwin, linux]
+    }
+    effects {
+      fs.write launcher_global criticidade = alta
+      auditoria launcher_global_sincronizado criticidade = alta
+    }
+    authz {
+      escopo: sema.cli.distribuicao.launcher.write
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        diretorio_usuario: interno
+        raiz_pacote: interno
+        executavel_node: interno
+        plataforma: publico
+      }
+      output {
+        estado: publico
+        alterado: publico
+        destino_simbolico: publico
+        codigo: publico
+        node_absoluto: publico
+        entrypoint_absoluto: publico
+        recibo_valido: publico
+        independente_path: publico
+        fallback_simbolico: publico
+      }
+    }
+    audit {
+      evento: sema.cli.launcher_global.sincronizado
+      ator: sistema.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      depender_de_PATH_para_sema_ou_node
+      embutir_caminho_relativo_do_node_ou_entrypoint
+      usar_shim_npm_como_target_canonico
+      escrever_fora_da_raiz_global_sema
+      seguir_symlink_junction_ou_reparse_point_em_HOME_ou_destino
+      usar_caminho_logico_de_node_ou_pacote_apos_canonicalizacao
+      sobrescrever_launcher_nao_gerenciado
+      trocar_destino_entre_verificacao_e_commit
+      varrer_diretorio_de_companions_recursivamente
+      remover_companion_sem_validar_recibo_digest_e_identidade
+      fazer_downgrade_fora_de_instalacao_ou_sync_explicitos
+      escrever_no_workspace
+      escrever_em_cache_de_plugin
+      registrar_segredo_ou_home_absoluta_em_log_publico
+      confirmar_ready_com_wrapper_ou_companion_adulterado
+      confirmar_launcher_posix_sem_X_OK
+    }
+    impl {
+      ts: cli.src.distribuicao.launcher_global.sincronizarLauncherGlobal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/launcherWindows.ts"
+      arquivo: "pacotes/cli/scripts/postinstall.mjs"
+      arquivo: "testes/unidade/distribuicao-launcher-global.test.ts"
+      simbolo: cli.src.distribuicao.launcher_global.sincronizarLauncherGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      compensacao: "preservar_destino_anterior_e_remover_temporario_gerenciado"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      estado deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED]
+      destino_simbolico existe
+      codigo existe
+      destino_simbolico deve_ser simbolico_sem_home_absoluta
+      codigo deve_ser em [DESTINO_PRONTO, LIMPEZA_PENDENTE] quando estado == READY
+      alterado deve_ser falso quando estado em [MISSING, STALE, PERMISSION_DENIED]
+      alterado deve_ser verdadeiro quando codigo == ROLLBACK_FALHOU
+      node_absoluto deve_ser verdadeiro quando estado == READY
+      entrypoint_absoluto deve_ser verdadeiro quando estado == READY
+      recibo_valido deve_ser verdadeiro quando estado == READY
+      estado deve_ser BROKEN_TARGET quando wrapper_ou_companion_adulterado == verdadeiro
+      estado deve_ser STALE quando codigo == PERMISSAO_EXECUCAO_INVALIDA
+      independente_path deve_ser falso quando codigo == PERMISSAO_EXECUCAO_INVALIDA
+      independente_path deve_ser verdadeiro quando estado == READY
+      fallback_simbolico deve_ser simbolico_sem_home_absoluta quando plataforma == win32
+      fallback_simbolico deve_ser nulo quando plataforma != win32
+    }
+  }
+
+  task operar_distribuicao_global_por_skill_cli {
+    input {
+      posicionais: Lista required
+      args: Lista required
+      em_json: Booleano required
+    }
+    output {
+      exit_code: Inteiro
+    }
+    effects {
+      consulta distribuicao_global criticidade = media
+      fs.write distribuicao_global_quando_sync criticidade = alta
+      auditoria skill_cli_executada criticidade = media
+    }
+    authz {
+      escopo: sema.cli.skill.execute
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        posicionais: publico
+        args: interno
+        em_json: publico
+      }
+      output {
+        exit_code: publico
+      }
+    }
+    audit {
+      evento: sema.cli.skill.executada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      status_alterar_launcher_skill_ou_home
+      subcomando_invalido_realizar_mutacao
+      sync_escrever_em_cache_de_plugin
+      ocultar_estado_broken_target_ou_permission_denied
+    }
+    impl {
+      ts: cli.src.skill_command.comandoSkill
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/skillCommand.ts"
+      arquivo: "pacotes/cli/src/comandos.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "pacotes/cli/src/distribuicao/index.ts"
+      arquivo: "testes/unidade/distribuicao-global.test.ts"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      simbolo: cli.src.skill_command.comandoSkill
+      simbolo: cli.src.distribuicao.index.statusDistribuicaoGlobal
+      simbolo: cli.src.distribuicao.index.sincronizarDistribuicaoGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "nenhum"
+      compensacao: "preservar_estado_anterior_e_reportar_diagnostico"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      exit_code deve_ser em [0, 1]
+    }
+  }
+}

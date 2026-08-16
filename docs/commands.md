@@ -11,7 +11,14 @@ sema resumo --drift none
 sema docs-impacto --intencao "<acao>" --json
 ```
 
+If `sema` is absent from `PATH`, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH, cmd.exe resolves `sema.cmd`, and the absolute fallback is `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version`. `sema skill sync --json` repairs launcher and skill without touching the workspace or plugin caches.
+
 Then read every required doc returned by `docs-impacto`.
+
+## Global Distribution
+
+- `sema skill status --json`: diagnoses the managed launcher and bundled skill without writing.
+- `sema skill sync --json`: repairs only Sema-managed launcher and skill destinations; it never writes into the workspace or plugin caches.
 
 ## Contract and Discovery
 
@@ -132,7 +139,7 @@ Spatial model and render mode are orthogonal: `THREE_D + HEADLESS` is valid, whi
 
 ## Forbidden
 
-- Do not use an external workspace source to inspect a local workspace when `sema --version` works.
+- Do not use an external workspace source to inspect a local workspace when `sema --version` or the managed launcher works.
 - Do not search the entire disk for `.sema` syntax; use `exemplos/`, `docs/syntax.md`, and this catalog.
 - Do not stop after `sema compilar` if the contract target files still do not exist.
 - Do not replace `sema compilar` with `sema testar` when the contract requires generated code.

@@ -94,15 +94,33 @@ See [Capability Discovery](./docs/descoberta-capacidades.md) and
 
 ```bash
 npm install -g @semacode/cli
+sema skill status --json
+```
+
+A global install creates a managed launcher under `~/.sema/bin`, bundles the
+official skill into `~/.agents/skills/sema`, and mirrors it to
+`~/.claude/skills/sema` only when Claude is already configured. The launcher
+embeds absolute paths to Node.js and the installed CLI, so the skill can recover
+even when the npm shim or `node` is missing from `PATH`. Open a new task after
+installing or updating because already-open agents do not reload their skill
+catalog retroactively.
+
+On Windows, PowerShell resolves the managed `sema.ps1` entrypoint from `PATH`,
+while `cmd.exe` resolves `sema.cmd`. If PowerShell cannot resolve `sema`, use
+the managed fallback through the absolute system executable:
+
+```powershell
+& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version
+```
+
+On macOS or Linux, use `"$HOME/.sema/bin/sema" --version`.
+
+The Codex plugin remains an optional namespaced distribution channel:
+
+```bash
 codex plugin marketplace add gerlanss/Sema
 codex plugin add sema@sema
 ```
-
-After `codex plugin add`, open a new Codex task in the target repository. Plugin
-and skill catalogs are loaded when a task starts, so an already-open task will
-not gain `$sema` retroactively. In the new task, invoke `$sema` or ask Codex to
-initialize Sema. The skill creates the handshake, reads the generated
-`AGENTS.md`, and subsequent tasks load that protocol automatically.
 
 Requirements:
 
@@ -120,12 +138,16 @@ is not a runtime activation gate.
 The CLI is the local engine and source of truth. `AGENTS.md` is the automatic
 workspace protocol with Codex. The Sema skill is the required bootstrap for a
 project that does not have that protocol yet: it teaches Codex to locate the
-CLI, run initialization, generate `AGENTS.md`, and then delegate to it.
+CLI, request adoption authorization before implementation, generate
+`AGENTS.md`, and then delegate to it. Installing or updating the global CLI
+does not authorize adoption of the current workspace.
 
-For a new project:
+After explicit project-adoption authorization:
 
 ```bash
+sema descobrir explicar flow.project-adoption --json
 sema iniciar --template base
+sema sync-codex --json
 ```
 
 Initialization preserves existing project files. `--force` is available only
@@ -138,8 +160,11 @@ For an existing Sema project:
 sema sync-codex --json
 ```
 
-Skill installation is explicit and separate: the npm package does not write
-into `CODEX_HOME` or silently modify Codex.
+The npm lifecycle owns only the managed launcher and skill directories. It does
+not write into plugin caches, credentials, the workspace, or `CODEX_HOME`.
+`sema skill status --json` is read-only; `sema skill sync --json` repairs both
+the launcher and the bundled skill after an install made with
+`--ignore-scripts`.
 
 ## Codex-Native Architecture
 
@@ -147,9 +172,12 @@ into `CODEX_HOME` or silently modify Codex.
 - Agent Context Pack schema version 7 exposes the deterministic capability
   discovery summary alongside `entrypointCodex`, `codexNativo`, and
   `cliLocalSemAutorizacao`.
-- Install the Sema Codex skill for first contact in projects that do not yet
+- The globally bundled Sema skill handles first contact in projects that do not
   have Sema. Once initialized, the generated `AGENTS.md` owns the governed
   workflow and the skill does not duplicate it.
+- `~/.agents/skills/sema` is the canonical cross-agent copy. Claude receives a
+  managed mirror only when `~/.claude` already exists; Sema never writes into a
+  plugin cache or creates per-client workspace entrypoints.
 
 ## Local Workflow
 

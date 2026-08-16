@@ -1,7 +1,7 @@
 # Rollback Boundary
 
-Public rollback covers both the npm CLI and the separately installed Codex
-bootstrap skill.
+Public rollback covers the npm CLI, managed launcher, bundled global skill, and
+the optional Codex plugin channel.
 
 For a failed pre-publication candidate:
 
@@ -11,16 +11,23 @@ For a failed pre-publication candidate:
 3. Re-run `npm run release:preparar-publica`.
 
 If a bad commit was already pushed, revert it with a normal Git revert and push
-the corrective commit. Refresh the marketplace and reinstall the skill:
+the corrective commit. Install the corrected npm version and resynchronize its
+managed distribution:
 
 ```bash
-codex plugin marketplace upgrade sema
-codex plugin remove sema@sema
-codex plugin add sema@sema
+npm install -g @semacode/cli@<corrected-version>
+sema skill sync --json
 ```
 
-Open a new Codex task before validating the reinstalled skill. Already-open
-tasks keep the plugin/skill catalog they started with.
+The same sequence may install an explicitly selected previous version. The
+installed npm version is authoritative: `sema skill sync --json` aligns the
+runtime, managed launcher, and bundled skill to the version that is actually
+installed. This is synchronization, not a promise to block an intentional
+downgrade.
+
+If the optional plugin channel was also affected, upgrade or reinstall it after
+the corrected commit is public. Open a new task before validating the repaired
+skill; already-open tasks keep the catalog they started with.
 
 If a bad npm version was published, do not overwrite it. Publish a corrected
 version and direct users to that version. Verify the final registry/GitHub state

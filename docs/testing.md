@@ -21,6 +21,22 @@ npm run release:preparar-publica
 npm run release:verificar-drift
 ```
 
+`npm run cli:empacotar-publica` is the only supported package factory. It
+builds a private, per-run stage outside `pacotes/cli`, invokes npm there with
+lifecycle scripts disabled, validates the complete tarball, and publishes the
+final `.tgz` without replacing a different concurrent winner. Running `npm
+pack` directly in the source workspace must fail closed and leave the source
+tree byte-for-byte unchanged.
+
+Packaging regressions must prove rejection of pre-existing source or output
+junctions, zero external writes in those cases, cross-volume publication,
+cleanup after injected faults, concurrent no-replace publication, and a full
+stage sweep for source maps, credentials, environment files, and billing
+artifacts. Post-operation identity checks detect ordinary path swaps, but tests
+must not claim containment against a hostile same-user process racing path
+operations; that stronger guarantee requires native directory-handle-relative
+filesystem primitives that Node.js does not provide cross-platform.
+
 Do not require private or sensitive operational material for public test
 evidence. The public-package smoke must also reject the removed authorization
 command, legacy gate markers, any stale billing artifact, secrets, and broken
@@ -35,8 +51,24 @@ The local public-package smoke installs the generated tarball in an isolated
 sandbox. It must import the root API without executing the CLI, materialize
 nested interactive examples, and execute discovery, interactive schema,
 definition validation, planning, and adapter-protocol validation through the
-installed binary. Passing this smoke proves the local tarball only; it does not
-mean that npm or a GitHub release was published.
+installed binary. Its global-install phase uses an isolated home, prefix, npm
+cache, and user cache; it verifies the absolute launcher with Node.js/npm absent
+from `PATH`, exact skill digests, read-only status, idempotent repair, and zero
+changes to the real home or workspace. On Windows it must resolve `sema.ps1`
+from a restricted `PATH`, invoke `sema-managed.ps1` with the absolute system
+`powershell.exe`, and exercise `sema.cmd` with conventional `cmd.exe` arguments.
+Byte-exact arbitrary argv is proved through the PowerShell entrypoints. Passing this smoke proves
+the local tarball only; it does not mean that npm or a GitHub release was
+published.
+
+Focused distribution tests live in
+`testes/unidade/distribuicao-launcher-global.test.ts`,
+`testes/unidade/distribuicao-skill-global.test.ts`, and
+`testes/unidade/distribuicao-global.test.ts`. They must cover spaces, Unicode,
+argument forwarding, stale targets, ownership conflicts, symlink/junction
+escapes, atomic replacement, idempotent upgrades, the PowerShell fallback with
+an absolute system executable, a detected Claude mirror, and a local lifecycle
+no-op. No test may write to the real user home or a plugin cache.
 
 The public-package smoke has one orchestrator and named helpers under
 `scripts/cli-publico/`. All helpers share the same temporary sandbox and the

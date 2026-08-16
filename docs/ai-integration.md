@@ -11,18 +11,22 @@ https://learn.chatgpt.com/docs/agent-configuration/agents-md.
 
 ## Before AGENTS.md Exists
 
-The official Sema skill is the required first-contact bootstrap for Codex in a
-project that does not have Sema yet. Install it explicitly:
+The official Sema skill is the first-contact bootstrap for a project that does
+not have Sema yet. A global CLI install bundles and synchronizes it:
 
 ```bash
-codex plugin marketplace add gerlanss/Sema
-codex plugin add sema@sema
+npm install -g @semacode/cli
+sema skill status --json
 ```
 
-The skill locates the local CLI, runs `sema iniciar`, generates `AGENTS.md`, and
-then delegates all ongoing workspace governance to that file. It contains no
+The package creates an absolute launcher under `~/.sema/bin`, synchronizes the
+canonical skill under `~/.agents/skills/sema`, and mirrors Claude only when
+detected. Informational requests stay read-only; before implementation the skill asks
+for explicit project-adoption authorization, then generates `AGENTS.md` and delegates
+ongoing governance. Installing or updating the global CLI authorizes distribution only.
+Already-open tasks may need a reload. The distribution contains no
 MCP server, remote workspace bridge, login, license, billing, token, credit,
-panel, or authorization gate.
+panel, or runtime authorization gate.
 
 Supported capacity labels: fraca, pequena, media, forte, grande.
 
@@ -35,7 +39,8 @@ sema --version
 sema resumo --drift none
 ```
 
-A successful `sema --version` is enough to use the local CLI directly. Local
+If the shell cannot resolve `sema`, use `~/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell uses `sema.ps1` from PATH and cmd.exe uses `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` as the absolute fallback
+before declaring the CLI unavailable. A successful version check is enough. Local
 commands require no login, activation key, license check, token, credits, billing
 service, control panel, or external authorization request.
 

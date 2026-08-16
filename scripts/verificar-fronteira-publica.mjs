@@ -155,11 +155,26 @@ const nomesBloqueados = [
 
 const padroesConteudoBloqueados = [
   { regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/, motivo: "chave privada PEM" },
-  { regex: /\b(?:api[_-]?key|secret|token|password|senha|credential)\s*[:=]\s*["']?[A-Za-z0-9_./+=-]{16,}/i, motivo: "segredo aparente" },
-  { regex: /\b(?:AUTH_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|PRIVATE_KEY)\b\s*[:=]\s*["'][A-Za-z0-9_./+=-]{16,}["']/i, motivo: "segredo aparente" },
   { regex: /\bDB_PASSWORD\b|\bDATABASE_URL\b/i, motivo: "credencial de banco" },
   { regex: /\b(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:\d{1,3})){3}\b/, motivo: "IP publico fixo" },
 ];
+
+const chaveSegredoAparente =
+  "(?:api[_-]?key|secret|token|password|senha|credential|auth[_-]?token|access[_-]?token|client[_-]?secret|private[_-]?key)";
+const atribuicaoSegredoComAspasDuplas = new RegExp(
+  String.raw`(?:^|[^\w])["']?${chaveSegredoAparente}["']?\s*[:=]\s*"([^"\r\n]{16,})"`,
+  "gimu",
+);
+const atribuicaoSegredoComAspasSimples = new RegExp(
+  String.raw`(?:^|[^\w])["']?${chaveSegredoAparente}["']?\s*[:=]\s*'([^'\r\n]{16,})'`,
+  "gimu",
+);
+const atribuicaoSegredoEnv = new RegExp(
+  String.raw`^\s*(?:export\s+)?${chaveSegredoAparente}\s*=\s*([^\s#;]{16,})\s*(?:#.*)?$`,
+  "gimu",
+);
+const uuidFixtureSintetico = /^([0-9a-f])\1{7}-\1{4}-[1-8]\1{3}-[89ab]\1{3}-\1{12}$/iu;
+const marcadorFixtureSintetico = /^(?=[A-Z0-9_-]{16,}$)(?=.*(?:NAO|TEST|FIXTURE|FAKE|DUMMY))[A-Z0-9_-]+$/u;
 
 function paraRelativo(caminho) {
   return path.relative(raiz, caminho).replaceAll(path.sep, "/");
@@ -221,6 +236,33 @@ function removerFixturesDoScannerDeSegredos(arquivo, conteudo) {
   return conteudo
     .replace(/const MARCADORES_CONTEUDO_PRIVADO = \[[\s\S]*?\n\];/u, "")
     .replace(/  const padroesPrivados = \[[\s\S]*?\n  \]\.join\("\|"\);/u, "");
+}
+
+function fixtureSinteticaPermitida(arquivo, valor) {
+  const relativo = arquivo.replaceAll("\\", "/");
+  return relativo.startsWith("testes/") &&
+    (uuidFixtureSintetico.test(valor) || marcadorFixtureSintetico.test(valor));
+}
+
+export function detectarSegredoAparente(arquivo, conteudo) {
+  for (const regex of [atribuicaoSegredoComAspasDuplas, atribuicaoSegredoComAspasSimples]) {
+    regex.lastIndex = 0;
+    for (const correspondencia of conteudo.matchAll(regex)) {
+      const valor = correspondencia[1];
+      if (!fixtureSinteticaPermitida(arquivo, valor)) {
+        return true;
+      }
+    }
+  }
+
+  atribuicaoSegredoEnv.lastIndex = 0;
+  for (const correspondencia of conteudo.matchAll(atribuicaoSegredoEnv)) {
+    const valor = correspondencia[1];
+    if (!fixtureSinteticaPermitida(arquivo, valor)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 async function verificarArtefatosBootstrapAtuais(bloqueios) {
@@ -321,6 +363,9 @@ async function verificarFronteiraPublica({ json = false } = {}) {
       arquivo,
       await readFile(path.join(raiz, arquivo), "utf8"),
     );
+    if (detectarSegredoAparente(arquivo, conteudo)) {
+      registrar(bloqueios, arquivo, "segredo aparente");
+    }
     for (const padrao of padroesConteudoBloqueados) {
       if (padrao.regex.test(conteudo)) {
         registrar(bloqueios, arquivo, padrao.motivo);
@@ -366,6 +411,8 @@ async function verificarFronteiraPublica({ json = false } = {}) {
   const manifestPlugin = JSON.parse(await readFile(path.join(raiz, "plugins", "sema", ".codex-plugin", "plugin.json"), "utf8").catch(() => "{}"));
   const skillSema = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "SKILL.md"), "utf8").catch(() => "");
   const openaiYaml = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "agents", "openai.yaml"), "utf8").catch(() => "");
+  const skillGlobalFonte = await readFile(path.join(raiz, "pacotes", "cli", "src", "distribuicao", "skillGlobal.ts"), "utf8").catch(() => "");
+  const postinstallFonte = await readFile(path.join(raiz, "pacotes", "cli", "scripts", "postinstall.mjs"), "utf8").catch(() => "");
   const logoOficial = await readFile(path.join(raiz, "logo.png")).catch(() => Buffer.alloc(0));
   const logoPlugin = await readFile(path.join(raiz, "plugins", "sema", "assets", "sema.png")).catch(() => Buffer.alloc(0));
   const entradaMarketplace = (marketplace.plugins ?? []).find((item) => item?.name === "sema");
@@ -383,13 +430,12 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     manifestPlugin.skills === "./skills/" &&
     pluginMarcaOficial &&
     String(manifestPlugin.description ?? "").includes("bootstrap") &&
-    !/\boptional\b/i.test(JSON.stringify(manifestPlugin)) &&
     skillSema.includes("sema iniciar --template base") &&
     skillSema.includes("sema sync-codex --json") &&
     /^---\r?\nname: sema\r?\ndescription: .+\r?\n---/u.test(skillSema) &&
     /^interface:\r?\n  display_name: "Sema"\r?\n  short_description: ".+"\r?\n  default_prompt: ".*\$sema.*"\r?\n?$/u.test(openaiYaml);
   if (!skillBootstrapCodexOficial) {
-    registrar(bloqueios, "plugins/sema", "skill oficial precisa cobrir o bootstrap Codex, compartilhar a versao da CLI e nao se declarar opcional");
+    registrar(bloqueios, "plugins/sema", "skill oficial precisa cobrir o bootstrap, compartilhar a versao da CLI e delegar ao AGENTS.md");
   }
   if (!pluginMarcaOficial) {
     registrar(bloqueios, "plugins/sema/assets/sema.png", "plugin precisa usar uma copia byte a byte da logo oficial do Sema");
@@ -401,6 +447,32 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     comandosGovernancaDuplicadosNaSkill.every((comando) => !skillSema.includes(`sema ${comando}`));
   if (!skillDelegaAoAgentsMd) {
     registrar(bloqueios, "plugins/sema/skills/sema/SKILL.md", "skill deve encerrar no bootstrap e delegar a governanca ao AGENTS.md sem duplicar comandos");
+  }
+
+  const skillPortatilGlobalOficial =
+    (manifestCli.files ?? []).includes("skills") &&
+    (manifestCli.files ?? []).includes("scripts/postinstall.mjs") &&
+    manifestCli.scripts?.postinstall === "node scripts/postinstall.mjs" &&
+    skillSema.includes("npm install --global @semacode/cli") &&
+    skillSema.includes("sema skill sync --json");
+  const skillAgentsCanonica =
+    skillSema.includes("~/.agents/skills/sema") &&
+    skillGlobalFonte.includes('".agents", "skills", "sema"');
+  const skillClaudeEspelhoGerenciado =
+    /`~\/\.claude\/skills\/sema`[\s\S]{0,100}\bdetected\b/iu.test(skillSema) &&
+    skillGlobalFonte.includes('".claude", "skills", "sema"') &&
+    skillGlobalFonte.includes("NOT_DETECTED");
+  const workspaceEntrypointUnicoAgentsMd =
+    skillDelegaAoAgentsMd &&
+    skillSema.includes("`AGENTS.md` is the automatic, continuous workspace protocol for Codex");
+  const cachePluginIntocado =
+    skillSema.includes("Never write into a host-managed plugin cache") &&
+    !/\.codex[\\/]plugins[\\/]cache/iu.test(`${skillGlobalFonte}\n${postinstallFonte}`);
+  if (!skillPortatilGlobalOficial || !skillAgentsCanonica || !skillClaudeEspelhoGerenciado) {
+    registrar(bloqueios, "pacotes/cli", "pacote publico precisa conter e sincronizar a skill portatil nas raizes globais gerenciadas");
+  }
+  if (!workspaceEntrypointUnicoAgentsMd || !cachePluginIntocado) {
+    registrar(bloqueios, "plugins/sema/skills/sema/SKILL.md", "skill global deve delegar ao AGENTS.md e manter caches de plugin intocados");
   }
 
   const pluginSemMcpAuth =
@@ -450,6 +522,11 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     protocolo_sem_nomes_mcp: protocoloSemNomesMcp,
     artefatos_bootstrap_existentes: artefatosBootstrapExistentes,
     texto_publico_sem_mojibake: textoPublicoSemMojibake,
+    skill_portatil_global_oficial: skillPortatilGlobalOficial,
+    skill_agents_canonica: skillAgentsCanonica,
+    skill_claude_espelho_gerenciado: skillClaudeEspelhoGerenciado,
+    workspace_entrypoint_unico_agents_md: workspaceEntrypointUnicoAgentsMd,
+    cache_plugin_intocado: cachePluginIntocado,
     produto_independente_openai: disclaimerIndependente,
   };
 

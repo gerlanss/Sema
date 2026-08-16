@@ -94,7 +94,7 @@ Este projeto foi inicializado com Sema.
 Antes de alterar codigo, contrato ou documentacao:
 
 1. leia \`AGENTS.md\`;
-2. rode \`sema --version\`;
+2. rode \`sema --version\`; se o shell não localizar o comando, use \`$HOME/.sema/bin/sema\` no macOS/Linux; no Windows, PowerShell usa \`sema.ps1\` no PATH, cmd.exe usa \`sema.cmd\`, e o fallback absoluto é \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`;
 3. rode \`sema resumo --drift none\` para contexto contratual; score, confiança e implementação ficam não avaliados;
 4. rode \`sema docs-impacto --intencao "<acao>" --json\`;
 5. leia \`docs/commands.md\` antes de escolher comando ou interpretar \`--saida\`;

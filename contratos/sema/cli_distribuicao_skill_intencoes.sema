@@ -1,0 +1,223 @@
+module sema.produto.distribuicao_global.skill.intencoes {
+  docs {
+    resumo: "Separa instalacao ou atualizacao global, reparo da distribuicao, uso informativo e adocao explicita do workspace. Latest e resolvida e validada como SemVer exata antes do install; PATH e launcher gerenciado sao provados antes de escolher a CLI ou declarar indisponibilidade."
+    arquivo: "contratos/sema/cli_distribuicao_skill.sema"
+    arquivo: "docs/security.md"
+    arquivo: "docs/testing.md"
+  }
+
+  enum IntencaoSkillSema {
+    INFORMAR,
+    INSTALAR_GLOBAL,
+    ATUALIZAR_GLOBAL,
+    REPARAR_GLOBAL,
+    ADOTAR_WORKSPACE
+  }
+
+  task planejar_intencao_skill_sema {
+    input {
+      intencao: IntencaoSkillSema required
+      versao_solicitada: Texto
+      cli_disponivel: Booleano required
+      adocao_autorizada: Booleano required
+    }
+    output {
+      instalar_pacote_global: Booleano
+      sincronizar_distribuicao_se_necessario: Booleano
+      mutar_workspace: Booleano
+      bloqueado_por_autorizacao_adocao: Booleano
+      resolver_latest_para_semver_exata: Booleano
+      provar_path_e_launcher_gerenciado: Booleano
+      exigir_prova_versao: Booleano
+      exigir_status_final_ready: Booleano
+      acoes_ordenadas: Lista
+    }
+    rules {
+      versao_solicitada deve_ser ausente_ou_semver_exata_ou_latest quando intencao em [INSTALAR_GLOBAL, ATUALIZAR_GLOBAL]
+      adocao_autorizada deve_ser verdadeiro para mutar_workspace
+      cli_disponivel deve_ser resultado_agregado_das_provas_de_PATH_e_launcher_gerenciado
+    }
+    effects {
+      consulta politica_intencao_skill criticidade = alta
+      auditoria intencao_skill_planejada criticidade = media
+    }
+    authz {
+      escopo: sema.cli.skill.intent.read
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        intencao: publico
+        versao_solicitada: publico
+        cli_disponivel: publico
+        adocao_autorizada: publico
+      }
+      output {
+        instalar_pacote_global: publico
+        sincronizar_distribuicao_se_necessario: publico
+        mutar_workspace: publico
+        bloqueado_por_autorizacao_adocao: publico
+        resolver_latest_para_semver_exata: publico
+        provar_path_e_launcher_gerenciado: publico
+        exigir_prova_versao: publico
+        exigir_status_final_ready: publico
+        acoes_ordenadas: publico
+      }
+    }
+    audit {
+      evento: sema.cli.skill_intencao.planejada
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      substituir_install_ou_update_por_skill_sync
+      pular_install_global_quando_cli_antiga_funciona
+      instalar_tag_latest_sem_resolver_e_validar_semver_exata
+      declarar_cli_indisponivel_antes_de_provar_PATH_e_launcher_gerenciado
+      continuar_com_PATH_stale_ou_sem_subcomando_skill_quando_launcher_gerenciado_valido
+      preferir_PATH_stale_sobre_launcher_gerenciado_valido
+      escolher_nova_versao_em_reparo
+      inferir_adocao_de_install_update_ou_repair
+      inicializar_workspace_em_pedido_informativo
+      executar_adocao_sem_autorizacao_explicita
+      omitir_descobrir_explicar_antes_de_iniciar
+      declarar_sucesso_de_install_sem_provar_versao_e_status
+      confundir_autorizacao_humana_de_adocao_com_gate_de_login_licenca_ou_runtime
+    }
+    impl {
+      ts: cli.src.distribuicao.skill_intent_policy.planejarIntencaoSkillSema
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/distribuicao/skillIntentPolicy.ts"
+      arquivo: "plugins/sema/skills/sema/SKILL.md"
+      arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
+      arquivo: "testes/unidade/skill-intencoes.test.ts"
+      simbolo: cli.src.distribuicao.skill_intent_policy.planejarIntencaoSkillSema
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "1s"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_realizada_pelo_planejador"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      instalar_pacote_global deve_ser verdadeiro quando intencao em [INSTALAR_GLOBAL, ATUALIZAR_GLOBAL]
+      resolver_latest_para_semver_exata deve_ser verdadeiro quando versao_solicitada == latest
+      provar_path_e_launcher_gerenciado deve_ser verdadeiro quando intencao em [INSTALAR_GLOBAL, ATUALIZAR_GLOBAL, REPARAR_GLOBAL]
+      exigir_prova_versao deve_ser verdadeiro quando instalar_pacote_global == verdadeiro
+      exigir_status_final_ready deve_ser verdadeiro quando intencao em [INSTALAR_GLOBAL, ATUALIZAR_GLOBAL]
+      sincronizar_distribuicao_se_necessario deve_ser verdadeiro quando intencao em [INSTALAR_GLOBAL, ATUALIZAR_GLOBAL]
+      instalar_pacote_global deve_ser falso quando intencao == REPARAR_GLOBAL
+      mutar_workspace deve_ser falso quando intencao em [INFORMAR, INSTALAR_GLOBAL, ATUALIZAR_GLOBAL, REPARAR_GLOBAL]
+      instalar_pacote_global deve_ser falso quando intencao == INFORMAR
+      sincronizar_distribuicao_se_necessario deve_ser falso quando intencao == INFORMAR
+      mutar_workspace deve_ser falso quando bloqueado_por_autorizacao_adocao == verdadeiro
+      acoes_ordenadas deve_ser descobrir_explicar_depois_iniciar_depois_sync quando mutar_workspace == verdadeiro
+    }
+    tests {
+      caso "instala versao exata mesmo com CLI antiga disponivel" {
+        given {
+          intencao: "INSTALAR_GLOBAL"
+          versao_solicitada: "3.0.0"
+          cli_disponivel: verdadeiro
+          adocao_autorizada: falso
+        }
+
+        expect {
+          instalar_pacote_global: verdadeiro
+          resolver_latest_para_semver_exata: falso
+          provar_path_e_launcher_gerenciado: verdadeiro
+          exigir_prova_versao: verdadeiro
+          exigir_status_final_ready: verdadeiro
+          mutar_workspace: falso
+        }
+      }
+      caso "atualiza latest sem adotar workspace" {
+        given {
+          intencao: "ATUALIZAR_GLOBAL"
+          versao_solicitada: "latest"
+          cli_disponivel: verdadeiro
+          adocao_autorizada: falso
+        }
+
+        expect {
+          instalar_pacote_global: verdadeiro
+          resolver_latest_para_semver_exata: verdadeiro
+          provar_path_e_launcher_gerenciado: verdadeiro
+          sincronizar_distribuicao_se_necessario: verdadeiro
+          mutar_workspace: falso
+        }
+      }
+      caso "repara por sync sem instalar outra versao" {
+        given {
+          intencao: "REPARAR_GLOBAL"
+          cli_disponivel: verdadeiro
+          adocao_autorizada: falso
+        }
+
+        expect {
+          instalar_pacote_global: falso
+          provar_path_e_launcher_gerenciado: verdadeiro
+          sincronizar_distribuicao_se_necessario: verdadeiro
+          exigir_status_final_ready: verdadeiro
+          mutar_workspace: falso
+        }
+      }
+      caso "reparo prova PATH e launcher antes de declarar indisponivel" {
+        given {
+          intencao: "REPARAR_GLOBAL"
+          cli_disponivel: falso
+          adocao_autorizada: falso
+        }
+
+        expect {
+          instalar_pacote_global: falso
+          provar_path_e_launcher_gerenciado: verdadeiro
+          sincronizar_distribuicao_se_necessario: falso
+        }
+      }
+      caso "pedido informativo nao inicializa" {
+        given {
+          intencao: "INFORMAR"
+          cli_disponivel: verdadeiro
+          adocao_autorizada: falso
+        }
+
+        expect {
+          instalar_pacote_global: falso
+          sincronizar_distribuicao_se_necessario: falso
+          mutar_workspace: falso
+        }
+      }
+      caso "adocao sem autorizacao fica bloqueada" {
+        given {
+          intencao: "ADOTAR_WORKSPACE"
+          cli_disponivel: verdadeiro
+          adocao_autorizada: falso
+        }
+
+        expect {
+          bloqueado_por_autorizacao_adocao: verdadeiro
+          mutar_workspace: falso
+        }
+      }
+      caso "adocao explicita executa fluxo oficial ordenado" {
+        given {
+          intencao: "ADOTAR_WORKSPACE"
+          cli_disponivel: verdadeiro
+          adocao_autorizada: verdadeiro
+        }
+
+        expect {
+          bloqueado_por_autorizacao_adocao: falso
+          mutar_workspace: verdadeiro
+        }
+      }
+    }
+  }
+}

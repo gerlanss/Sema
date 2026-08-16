@@ -1,7 +1,7 @@
 module sema.produto.fronteira_repositorios {
   docs {
     arquivo: "contratos/sema/fronteira_repositorios_empacotamento.sema"
-    resumo: "Contrato de fronteira publica Codex-native e local-only do Sema. O repositorio publico contem CLI local sem autorizacao, licenca, credito, token ou painel, alem da skill oficial de bootstrap do Codex, contratos, exemplos, testes locais e documentacao em ingles. A skill apresenta o Sema em projetos ainda nao inicializados; depois de sema iniciar, AGENTS.md e o protocolo automatico e fonte de governanca do Codex. Matrizes de outros clientes ficam fora da distribuicao. Materiais privados ou sensiveis ficam fora da distribuicao publica. A fonte e publica, mas nao pode ser replicada para venda comercial sem permissao escrita da OtimiTare."
+    resumo: "Contrato de fronteira publica Codex-native e local-only do Sema. O pacote contem a CLI sem autorizacao, licenca, credito, token ou painel e uma skill Sema portatil instalada na raiz compartilhada ~/.agents, com espelho Claude gerenciado quando suportado. Essa portabilidade nao cria entrypoints de workspace para outros clientes: AGENTS.md continua sendo o unico protocolo automatico do projeto e a skill apenas faz bootstrap ou reparo. Caches de plugin, materiais privados e artefatos sensiveis ficam fora da distribuicao. A fonte e publica, mas nao pode ser replicada para venda comercial sem permissao escrita da OtimiTare."
   }
 
   use sema.produto.fronteira_repositorios.empacotamento
@@ -28,6 +28,10 @@ module sema.produto.fronteira_repositorios {
     arquivo: "plugins/sema/assets/sema.png"
     arquivo: "plugins/sema/skills/sema/SKILL.md"
     arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
+    arquivo: "pacotes/cli/scripts/postinstall.mjs"
+    arquivo: "pacotes/cli/src/distribuicao/index.ts"
+    arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
+    arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
     simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
   }
 
@@ -67,6 +71,11 @@ module sema.produto.fronteira_repositorios {
       protocolo_sem_nomes_mcp: Booleano
       artefatos_bootstrap_existentes: Booleano
       texto_publico_sem_mojibake: Booleano
+      skill_portatil_global_oficial: Booleano
+      skill_agents_canonica: Booleano
+      skill_claude_espelho_gerenciado: Booleano
+      workspace_entrypoint_unico_agents_md: Booleano
+      cache_plugin_intocado: Booleano
       decisao_agente: Texto
     }
     rules {
@@ -108,6 +117,11 @@ module sema.produto.fronteira_repositorios {
         protocolo_sem_nomes_mcp: publico
         artefatos_bootstrap_existentes: publico
         texto_publico_sem_mojibake: publico
+        skill_portatil_global_oficial: publico
+        skill_agents_canonica: publico
+        skill_claude_espelho_gerenciado: publico
+        workspace_entrypoint_unico_agents_md: publico
+        cache_plugin_intocado: publico
         decisao_agente: publico
       }
     }
@@ -139,6 +153,10 @@ module sema.produto.fronteira_repositorios {
       publicar_protocolo_com_nome_de_tool_mcp
       publicar_handshake_com_artefato_inexistente
       publicar_texto_visivel_com_mojibake
+      publicar_skill_sema_portatil_como_opcional
+      tratar_skill_portatil_como_entrypoint_de_workspace
+      gerar_matriz_de_entrypoints_por_cliente
+      sincronizar_skill_em_cache_de_plugin_ou_marketplace
     }
     impl {
       ts: scripts.verificar_fronteira_publica.verificarFronteiraPublica
@@ -164,6 +182,11 @@ module sema.produto.fronteira_repositorios {
       arquivo: "plugins/sema/assets/sema.png"
       arquivo: "plugins/sema/skills/sema/SKILL.md"
       arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
+      arquivo: "pacotes/cli/scripts/postinstall.mjs"
+      arquivo: "pacotes/cli/src/distribuicao/index.ts"
+      arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
+      arquivo: "testes/unidade/fronteira-publica-segredos.test.ts"
       simbolo: scripts.verificar_fronteira_publica.verificarFronteiraPublica
     }
     execucao {
@@ -191,6 +214,11 @@ module sema.produto.fronteira_repositorios {
       protocolo_sem_nomes_mcp == verdadeiro
       artefatos_bootstrap_existentes == verdadeiro
       texto_publico_sem_mojibake == verdadeiro
+      skill_portatil_global_oficial == verdadeiro
+      skill_agents_canonica == verdadeiro
+      skill_claude_espelho_gerenciado == verdadeiro
+      workspace_entrypoint_unico_agents_md == verdadeiro
+      cache_plugin_intocado == verdadeiro
       decisao_agente em [continuar, parar]
     }
     tests {
@@ -217,6 +245,11 @@ module sema.produto.fronteira_repositorios {
           protocolo_sem_nomes_mcp: verdadeiro
           artefatos_bootstrap_existentes: verdadeiro
           texto_publico_sem_mojibake: verdadeiro
+          skill_portatil_global_oficial: verdadeiro
+          skill_agents_canonica: verdadeiro
+          skill_claude_espelho_gerenciado: verdadeiro
+          workspace_entrypoint_unico_agents_md: verdadeiro
+          cache_plugin_intocado: verdadeiro
         }
       }
     }

@@ -13,7 +13,21 @@ Support: suporte@otimitare.online
 ```bash
 npm install -g @semacode/cli
 sema --version
+sema skill status --json
 ```
+
+The global install bundles the portable Sema skill and creates a launcher under
+`~/.sema/bin` with absolute Node.js and CLI paths. If the npm shim is absent
+from `PATH`, run `~/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell
+resolves `sema.ps1` from `PATH`, while `cmd.exe` resolves `sema.cmd`; invoke the
+managed fallback through the absolute system executable:
+
+```powershell
+& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version
+```
+
+Use `sema skill sync --json` to repair an installation performed with lifecycle
+scripts disabled.
 
 For development inside this repository:
 
@@ -50,7 +64,9 @@ sema impacto contratos/example.sema --alvo sema.example.target --mudanca "descri
 ```
 
 Commands run directly against the local workspace. If `sema --version` fails,
-install or repair the npm package; there is no separate authorization gate.
+try the managed absolute launcher before declaring the CLI unavailable. If both
+fail, install or repair the npm package; there is no separate authorization
+gate.
 
 ## Core Commands
 
@@ -66,6 +82,8 @@ install or repair the npm package; there is no separate authorization gate.
 - `sema verificar`: run the final local verification bundle.
 - `sema contexto-ia`: build local AI context from a contract.
 - `sema sync-codex`: create or refresh the official `AGENTS.md` entrypoint.
+- `sema skill status|sync`: inspect or repair the managed launcher and bundled
+  global skill without touching plugin caches or workspace files.
 
 `resumo` and `inspecionar` default to `--drift none`, so they do not fabricate
 scores or implementation evidence. In this mode those fields are `null` or

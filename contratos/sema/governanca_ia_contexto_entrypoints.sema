@@ -1,7 +1,9 @@
 module sema.produto.governanca_ia.contexto.entrypoints {
   docs {
-    resumo: "Sincronizacao do entrypoint oficial do Codex para governanca Sema local, com a skill oficial limitada ao bootstrap antes de AGENTS.md existir, sem matriz de clientes e sem gate de autorizacao, licenca, credito, token ou painel."
+    resumo: "Sincronizacao do entrypoint oficial do Codex para governanca Sema local. O protocolo tenta a CLI no PATH por conveniencia e usa o launcher global absoluto como fallback antes de declarar indisponibilidade; a skill permanece limitada ao bootstrap e reparo, sem duplicar AGENTS.md nem gerar matriz de clientes."
   }
+
+  use sema.produto.distribuicao_global
 
   task sincronizar_entrypoint_codex {
     input {
@@ -29,6 +31,9 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       contexto_local_sem_espelho: Booleano
       destinos_entrypoint_prevalidados: Booleano
       politica_modos_drift_explicita: Booleano
+      launcher_global_fallback_documentado: Booleano
+      cli_indisponivel_somente_apos_fallback: Booleano
+      skill_global_delega_agents_md: Booleano
     }
     rules {
       base_projeto deve_ser preenchido
@@ -70,6 +75,9 @@ module sema.produto.governanca_ia.contexto.entrypoints {
         contexto_local_sem_espelho: publico
         destinos_entrypoint_prevalidados: publico
         politica_modos_drift_explicita: publico
+        launcher_global_fallback_documentado: publico
+        cli_indisponivel_somente_apos_fallback: publico
+        skill_global_delega_agents_md: publico
       }
     }
     audit {
@@ -102,6 +110,10 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       citar_artefato_nao_materializado_no_bootstrap
       ensinar_nome_de_tool_mcp_em_protocolo_cli_local
       escrever_entrypoint_antes_de_prevalidar_todos_os_destinos
+      declarar_cli_indisponivel_apos_apenas_falha_de_PATH
+      ensinar_dependencia_exclusiva_de_PATH
+      apontar_fallback_para_shim_npm_ou_cache_de_plugin
+      duplicar_governanca_do_agents_md_na_skill_global
     }
     impl {
       ts: cli.src.index_part06.comandoSyncCodex
@@ -109,7 +121,10 @@ module sema.produto.governanca_ia.contexto.entrypoints {
     vinculos {
       arquivo: "pacotes/cli/src/agentEntryPoints.ts"
       arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/index.ts"
       arquivo: "testes/integracao/codex_runtime.test.ts"
+      arquivo: "testes/unidade/distribuicao-launcher-global.test.ts"
       simbolo: cli.src.index_part06.comandoSyncCodex
     }
     execucao {
@@ -141,6 +156,9 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       divisao_por_responsabilidade_explicita == verdadeiro
       contexto_local_sem_espelho == verdadeiro
       politica_modos_drift_explicita == verdadeiro
+      launcher_global_fallback_documentado == verdadeiro
+      cli_indisponivel_somente_apos_fallback == verdadeiro
+      skill_global_delega_agents_md == verdadeiro
       agents_md deve_ser referenciar_somente_artefatos_materializados
       destinos_entrypoint_prevalidados == verdadeiro
       agents_md deve_ser usar_comandos_cli_locais
@@ -171,6 +189,9 @@ module sema.produto.governanca_ia.contexto.entrypoints {
           docs_sintaxe: verdadeiro
           docs_comandos: verdadeiro
           politica_modos_drift_explicita: verdadeiro
+          launcher_global_fallback_documentado: verdadeiro
+          cli_indisponivel_somente_apos_fallback: verdadeiro
+          skill_global_delega_agents_md: verdadeiro
         }
       }
     }

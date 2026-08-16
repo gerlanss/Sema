@@ -4,7 +4,7 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 
 ## Primeira ação
 
-1. Confirme `AGENTS.md` na raiz e rode `sema --version`; se o comando não existir, pare e peça a instalação da CLI.
+1. Confirme `AGENTS.md` na raiz e rode `sema --version`. Se o shell não localizar o comando, use `$HOME/.sema/bin/sema` no macOS/Linux; no Windows, PowerShell usa `sema.ps1` no PATH, cmd.exe usa `sema.cmd`, e o fallback absoluto é `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version`. Só então declare a CLI indisponível.
 2. Use a CLI local diretamente para ler o workspace: `sema resumo --drift none`, `sema docs-impacto`, `sema inspecionar --drift none`, `sema drift --cache fresh` e `sema impacto`.
 3. Se não estiver claro qual profile, workflow, pipeline, gerador ou adapter usar, rode `sema descobrir recomendar --intencao "<objetivo>" --json`; não execute automaticamente uma recomendação ambígua.
 4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
@@ -96,7 +96,7 @@ A linguagem humana da resposta deve seguir o idioma do usuário e preservar acen
 
 - Se não conseguir chamar Sema, pare e declare bloqueio em vez de editar código ou contrato.
 - Se não houver contrato aplicável ou vínculo semântico do arquivo, inspecione o arquivo, descubra ou crie o .sema aplicável e vincule antes do código.
-- Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não substitua essa fonte por espelho externo ou inferência.
+- Em workspace local, rode sema --version; se o shell não localizar o comando, use $HOME/.sema/bin/sema no macOS/Linux. No Windows, PowerShell usa sema.ps1 no PATH e cmd.exe usa sema.cmd; use & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version como fallback. Só então declare a CLI indisponível.
 - Se não houver workspace local em disco, pare bloqueado e peça o fluxo apropriado; não invente caminho nem substitua a CLI local por ferramenta paralela.
 - Se arquivos_codigo.conteudo ou conteudo inline passar de 262144 caracteres, não aumente timeout para forçar: divida por responsabilidade ou use anexo/caminho de servidor autorizado.
 - Se for criar ou corrigir .sema, leia `exemplos/`; se a pasta estiver ausente, rode `sema instalar-exemplos --json` antes de escrever sintaxe.

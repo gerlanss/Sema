@@ -1,0 +1,133 @@
+module sema.produto.fronteira_repositorios.empacotamento.postinstall {
+  docs {
+    resumo: "Coordena o postinstall da distribuicao global somente em instalacao npm global e devolve um envelope publico estavel."
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento.sema"
+    arquivo: "contratos/sema/cli_distribuicao_launcher.sema"
+    arquivo: "contratos/sema/cli_distribuicao_skill.sema"
+    arquivo: "docs/testing.md"
+  }
+
+  use sema.produto.distribuicao_global
+
+  use sema.produto.distribuicao_global.skill
+
+  task coordenar_postinstall_distribuicao_global {
+    input {
+      instalacao_global: Booleano required
+      raiz_pacote: Texto required
+      diretorio_usuario: Texto required
+    }
+    output {
+      estado: Texto
+      motivo: Texto
+      instalacao_local_no_op: Booleano
+      distribuicao_pronta: Booleano
+      alterado: Booleano
+    }
+    rules {
+      raiz_pacote deve_ser absoluta
+      diretorio_usuario deve_ser absoluto
+    }
+    effects {
+      fs.write distribuicao_global_quando_instalacao_global criticidade = alta
+      auditoria postinstall_distribuicao_global criticidade = alta
+    }
+    authz {
+      escopo: sema.publico.cli.postinstall
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        instalacao_global: publico
+        raiz_pacote: interno
+        diretorio_usuario: interno
+      }
+      output {
+        estado: publico
+        motivo: publico
+        instalacao_local_no_op: publico
+        distribuicao_pronta: publico
+        alterado: publico
+      }
+    }
+    audit {
+      evento: sema.publico.cli.postinstall_coordenado
+      ator: sistema.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      chamar_sync_quando_instalacao_global_for_falso
+      escrever_home_em_instalacao_local
+      tratar_npm_config_global_ausente_como_global
+      continuar_quando_launcher_ou_skill_nao_estiver_READY
+      importar_codigo_da_arvore_fonte_em_vez_do_dist_instalado
+      escrever_em_cache_de_plugin
+      escrever_no_workspace
+      expor_home_absoluta_em_log_publico
+    }
+    impl {
+      ts: cli.scripts.postinstall.executarPostinstall
+    }
+    vinculos {
+      arquivo: "pacotes/cli/scripts/postinstall.mjs"
+      arquivo: "pacotes/cli/src/distribuicao/index.ts"
+      arquivo: "pacotes/cli/package.json"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "testes/unidade/postinstall-distribuicao-global.test.ts"
+      simbolo: cli.scripts.postinstall.executarPostinstall
+      simbolo: cli.src.distribuicao.index.sincronizarDistribuicaoGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "30s"
+      retry: "nenhum"
+      compensacao: "preservar_destinos_anteriores_e_bloquear_instalacao_global_incompleta"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      estado deve_ser em [no_op, READY]
+      instalacao_local_no_op deve_ser verdadeiro quando estado == no_op
+      distribuicao_pronta deve_ser falso quando estado == no_op
+      alterado deve_ser falso quando estado == no_op
+      distribuicao_pronta deve_ser verdadeiro quando estado == READY
+      instalacao_local_no_op deve_ser falso quando estado == READY
+      motivo deve_ser install_scope_local quando estado == no_op
+      motivo deve_ser distribution_ready quando estado == READY
+    }
+    tests {
+      caso "instalacao local permanece no-op sem importar distribuicao" {
+        given {
+          instalacao_global: falso
+          raiz_pacote: "C:/pacote/sema"
+          diretorio_usuario: "C:/usuario"
+        }
+
+        expect {
+          estado: "no_op"
+          motivo: "install_scope_local"
+          instalacao_local_no_op: verdadeiro
+          distribuicao_pronta: falso
+          alterado: falso
+        }
+      }
+      caso "instalacao global retorna envelope publico READY" {
+        given {
+          instalacao_global: verdadeiro
+          raiz_pacote: "C:/pacote/sema"
+          diretorio_usuario: "C:/usuario"
+        }
+
+        expect {
+          estado: "READY"
+          motivo: "distribution_ready"
+          instalacao_local_no_op: falso
+          distribuicao_pronta: verdadeiro
+        }
+      }
+    }
+  }
+}

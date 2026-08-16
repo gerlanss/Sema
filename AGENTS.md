@@ -4,7 +4,7 @@
 Este workspace é governado por Sema. Antes de qualquer ação em código, contrato, documentação operacional, workflow, profile ou deploy:
 
 1. Leia `SEMA_BOOT.md`.
-2. Rode `sema --version`; se falhar, pare e peça a instalação da CLI.
+2. Rode `sema --version`; se o shell falhar, use `$HOME/.sema/bin/sema` no macOS/Linux. No Windows, PowerShell usa `sema.ps1` no PATH e cmd.exe usa `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` como fallback absoluto. Só então pare e peça instalação ou reparo.
 3. Use diretamente a CLI local: `sema resumo --drift none`, `sema docs-impacto`, `sema inspecionar --drift none`, `sema drift --cache fresh` e `sema impacto`.
 4. Quando a capacidade correta não estiver clara, use `sema descobrir recomendar --intencao "<objetivo>" --json`; não autoexecute resultado ambíguo.
 5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
@@ -29,7 +29,7 @@ Políticas da plataforma:
 Falha fechada:
 - Se não conseguir chamar Sema, pare e declare bloqueio em vez de editar código ou contrato.
 - Se não houver contrato aplicável ou vínculo semântico do arquivo, inspecione o arquivo, descubra ou crie o .sema aplicável e vincule antes do código.
-- Em workspace local, rode sema --version; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não substitua essa fonte por espelho externo ou inferência.
+- Em workspace local, rode sema --version; se o shell não localizar o comando, use $HOME/.sema/bin/sema no macOS/Linux. No Windows, PowerShell usa sema.ps1 no PATH e cmd.exe usa sema.cmd; use & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version como fallback. Só então declare a CLI indisponível.
 - Se não houver workspace local em disco, pare bloqueado e peça o fluxo apropriado; não invente caminho nem substitua a CLI local por ferramenta paralela.
 - Se arquivos_codigo.conteudo ou conteudo inline passar de 262144 caracteres, não aumente timeout para forçar: divida por responsabilidade ou use anexo/caminho de servidor autorizado.
 - Se for criar ou corrigir .sema, leia `exemplos/`; se a pasta estiver ausente, rode `sema instalar-exemplos --json` antes de escrever sintaxe.

@@ -199,7 +199,7 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 
 ## Primeira ação
 
-1. Confirme \`AGENTS.md\` na raiz e rode \`sema --version\`; se o comando não existir, pare e peça a instalação da CLI.
+1. Confirme \`AGENTS.md\` na raiz e rode \`sema --version\`. Se o shell não localizar o comando, use \`$HOME/.sema/bin/sema\` no macOS/Linux; no Windows, PowerShell usa \`sema.ps1\` no PATH, cmd.exe usa \`sema.cmd\`, e o fallback absoluto é \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`. Só então declare a CLI indisponível.
 2. Use a CLI local diretamente para ler o workspace: \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`.
 3. Se não estiver claro qual profile, workflow, pipeline, gerador ou adapter usar, rode \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não execute automaticamente uma recomendação ambígua.
 4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
@@ -302,7 +302,7 @@ export function renderizarSemaSmallModel(agentContextPack: AgentContextPack): st
 Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use ou tendência a ignorar instruções longas.
 
 1. Não edite nada antes de chamar Sema.
-2. Em workspace local, rode \`sema --version\`; se falhar, pare e peça a instalação da CLI. Com a CLI disponível, opere diretamente sobre a pasta local e não use espelho externo.
+2. Em workspace local, rode \`sema --version\`; se o shell falhar, use \`$HOME/.sema/bin/sema\` no macOS/Linux. No Windows, PowerShell usa \`sema.ps1\` no PATH e cmd.exe usa \`sema.cmd\`; o fallback absoluto é \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`. Só então pare e peça instalação ou reparo.
 3. Sema não contorna políticas da plataforma: ele governa contrato, escopo, drift, evidência e qualidade.
 4. Se aparecer alerta de política: pare, explique de forma neutra e não tente burlar filtro.
 5. Se não houver workspace local em disco: pare bloqueado e peça o fluxo apropriado; não invente leitura por caminho.
@@ -373,18 +373,22 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "",
     "## Before AGENTS.md Exists",
     "",
-    "The official Sema skill is the required first-contact bootstrap for Codex in a",
-    "project that does not have Sema yet. Install it explicitly:",
+    "The official Sema skill is the first-contact bootstrap for a project that does",
+    "not have Sema yet. A global CLI install bundles and synchronizes it:",
     "",
     "```bash",
-    "codex plugin marketplace add gerlanss/Sema",
-    "codex plugin add sema@sema",
+    "npm install -g @semacode/cli",
+    "sema skill status --json",
     "```",
     "",
-    "The skill locates the local CLI, runs `sema iniciar`, generates `AGENTS.md`, and",
-    "then delegates all ongoing workspace governance to that file. It contains no",
+    "The package creates an absolute launcher under `~/.sema/bin`, synchronizes the",
+    "canonical skill under `~/.agents/skills/sema`, and mirrors Claude only when",
+    "detected. Informational requests stay read-only; before implementation the skill asks",
+    "for explicit project-adoption authorization, then generates `AGENTS.md` and delegates",
+    "ongoing governance. Installing or updating the global CLI authorizes distribution only.",
+    "Already-open tasks may need a reload. The distribution contains no",
     "MCP server, remote workspace bridge, login, license, billing, token, credit,",
-    "panel, or authorization gate.",
+    "panel, or runtime authorization gate.",
     "",
     `Supported capacity labels: ${supportedCapacities}.`,
     "",
@@ -397,7 +401,8 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "sema resumo --drift none",
     "```",
     "",
-    "A successful `sema --version` is enough to use the local CLI directly. Local",
+    "If the shell cannot resolve `sema`, use `~/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell uses `sema.ps1` from PATH and cmd.exe uses `sema.cmd`; use `& \"$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$HOME\\.sema\\bin\\sema-managed.ps1\" --version` as the absolute fallback",
+    "before declaring the CLI unavailable. A successful version check is enough. Local",
     "commands require no login, activation key, license check, token, credits, billing",
     "service, control panel, or external authorization request.",
     "",
@@ -491,7 +496,7 @@ function renderizarInstrucaoCodexSema(agentContextPack: AgentContextPack): strin
 Este workspace é governado por Sema. Antes de qualquer ação em código, contrato, documentação operacional, workflow, profile ou deploy:
 
 1. Leia \`${ARQUIVO_SEMA_BOOT}\`.
-2. Rode \`sema --version\`; se falhar, pare e peça a instalação da CLI.
+2. Rode \`sema --version\`; se o shell falhar, use \`$HOME/.sema/bin/sema\` no macOS/Linux. No Windows, PowerShell usa \`sema.ps1\` no PATH e cmd.exe usa \`sema.cmd\`; use \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\` como fallback absoluto. Só então pare e peça instalação ou reparo.
 3. Use diretamente a CLI local: \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`.
 4. Quando a capacidade correta não estiver clara, use \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não autoexecute resultado ambíguo.
 5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
@@ -688,7 +693,7 @@ function renderizarDocFluxoPraticoSemaLocal(_agentContextPack: AgentContextPack)
 This is the minimum workflow for Codex in a local workspace.
 
 1. Read \`${ARQUIVO_SEMA_BOOT}\`.
-2. Run \`sema --version\`. Success enables direct local execution; there is no login, license, token, billing, panel, or authorization gate.
+2. Run \`sema --version\`. If the shell cannot find it, use \`$HOME/.sema/bin/sema\` on macOS/Linux. On Windows, PowerShell resolves \`sema.ps1\` from PATH and cmd.exe resolves \`sema.cmd\`; use \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\` as the absolute fallback. Only then declare the CLI unavailable.
 3. Run \`sema resumo --drift none\` for contract-only orientation; request \`--drift cache\` or \`--drift fresh\` only when code evidence is needed.
 4. Run \`sema docs-impacto --intencao "<change>" --json\`.
 5. Read every required document returned by the command.
@@ -749,7 +754,14 @@ sema resumo --drift none
 sema docs-impacto --intencao "<acao>" --json
 \`\`\`
 
+If \`sema\` is absent from \`PATH\`, use \`$HOME/.sema/bin/sema\` on macOS/Linux. On Windows, PowerShell resolves \`sema.ps1\` from PATH, cmd.exe resolves \`sema.cmd\`, and the absolute fallback is \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`. \`sema skill sync --json\` repairs launcher and skill without touching the workspace or plugin caches.
+
 Then read every required doc returned by \`docs-impacto\`.
+
+## Global Distribution
+
+- \`sema skill status --json\`: diagnoses the managed launcher and bundled skill without writing.
+- \`sema skill sync --json\`: repairs only Sema-managed launcher and skill destinations; it never writes into the workspace or plugin caches.
 
 ## Contract and Discovery
 
@@ -870,7 +882,7 @@ Spatial model and render mode are orthogonal: \`THREE_D + HEADLESS\` is valid, w
 
 ## Forbidden
 
-- Do not use an external workspace source to inspect a local workspace when \`sema --version\` works.
+- Do not use an external workspace source to inspect a local workspace when \`sema --version\` or the managed launcher works.
 - Do not search the entire disk for \`.sema\` syntax; use \`exemplos/\`, \`docs/syntax.md\`, and this catalog.
 - Do not stop after \`sema compilar\` if the contract target files still do not exist.
 - Do not replace \`sema compilar\` with \`sema testar\` when the contract requires generated code.
@@ -894,6 +906,9 @@ export async function sincronizarEntrypointCodex(
   codexNativo: true;
   cliLocalSemAutorizacao: true;
   skillBootstrapCodexDocumentada: true;
+  launcherGlobalFallbackDocumentado: true;
+  cliIndisponivelSomenteAposFallback: true;
+  skillGlobalDelegaAgentsMd: true;
   idiomaHumanoPreservado: true;
   retryTimeoutProgressivo: true;
   politicaPlataformaExplicita: true;
@@ -960,6 +975,9 @@ export async function sincronizarEntrypointCodex(
     codexNativo: true,
     cliLocalSemAutorizacao: true,
     skillBootstrapCodexDocumentada: true,
+    launcherGlobalFallbackDocumentado: true,
+    cliIndisponivelSomenteAposFallback: true,
+    skillGlobalDelegaAgentsMd: true,
     idiomaHumanoPreservado: true,
     retryTimeoutProgressivo: true,
     politicaPlataformaExplicita: true,

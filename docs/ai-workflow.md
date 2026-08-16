@@ -4,7 +4,7 @@
 This is the minimum workflow for Codex in a local workspace.
 
 1. Read `SEMA_BOOT.md`.
-2. Run `sema --version`. Success enables direct local execution; there is no login, license, token, billing, panel, or authorization gate.
+2. Run `sema --version`. If the shell cannot find it, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH and cmd.exe resolves `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` as the absolute fallback. Only then declare the CLI unavailable.
 3. Run `sema resumo --drift none` for contract-only orientation; request `--drift cache` or `--drift fresh` only when code evidence is needed.
 4. Run `sema docs-impacto --intencao "<change>" --json`.
 5. Read every required document returned by the command.

@@ -1,0 +1,290 @@
+module sema.produto.distribuicao_global.skill {
+  docs {
+    resumo: "Diagnostica e sincroniza a skill Sema gerenciada a partir da raiz fisica canonica PACKAGE_ROOT/skills/sema. A copia canonica vive em ~/.agents/skills/sema para clientes compativeis e o espelho Claude vive em ~/.claude/skills/sema quando a raiz Claude suportada e detectada, sem tocar caches de plugin."
+    arquivo: "contratos/sema/cli_distribuicao_transacao.sema"
+    arquivo: "contratos/sema/cli_distribuicao_skill_intencoes.sema"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento.sema"
+    arquivo: "docs/security.md"
+    arquivo: "docs/testing.md"
+  }
+
+  use sema.produto.distribuicao_global.skill.intencoes
+
+  use sema.produto.distribuicao_global.transacao
+
+  enum EstadoDistribuicaoGlobal {
+    READY,
+    MISSING,
+    STALE,
+    BROKEN_TARGET,
+    PERMISSION_DENIED
+  }
+
+  enum EstadoDestinoSkillGlobal {
+    READY,
+    MISSING,
+    STALE,
+    BROKEN_TARGET,
+    PERMISSION_DENIED,
+    NOT_DETECTED
+  }
+
+  task consultar_skill_global {
+    input {
+      diretorio_usuario: Texto required
+      raiz_pacote: Texto required
+      plataforma: Texto required
+    }
+    output {
+      estado: EstadoDistribuicaoGlobal
+      alterado: Booleano
+      origem_simbolica: Texto
+      destino_agents: EstadoDistribuicaoGlobal
+      destino_claude: EstadoDestinoSkillGlobal
+      espelho_claude_detectado: Booleano
+      ownership_valido: Booleano
+      digest_alinhado: Booleano
+      cache_plugin_intocado: Booleano
+      destinos: Lista
+    }
+    rules {
+      diretorio_usuario deve_ser absoluto
+      raiz_pacote deve_ser absoluta
+      raiz_pacote deve_ser canonicalizavel_por_realpath
+      raiz_pacote deve_ser conter_skill_em_skills_sema
+      plataforma deve_ser em [win32, darwin, linux]
+    }
+    effects {
+      consulta skill_empacotada criticidade = alta
+      consulta skills_globais_permitidas criticidade = alta
+      auditoria skill_global_consultada criticidade = media
+    }
+    authz {
+      escopo: sema.cli.distribuicao.skill.read
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        diretorio_usuario: interno
+        raiz_pacote: interno
+        plataforma: publico
+      }
+      output {
+        estado: publico
+        alterado: publico
+        origem_simbolica: publico
+        destino_agents: publico
+        destino_claude: publico
+        espelho_claude_detectado: publico
+        ownership_valido: publico
+        digest_alinhado: publico
+        cache_plugin_intocado: publico
+        destinos: interno
+      }
+    }
+    audit {
+      evento: sema.cli.skill_global.consultada
+      ator: sistema.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      varrer_home_recursivamente
+      descobrir_destino_por_busca_global
+      seguir_symlink_junction_ou_reparse_point_em_HOME_ou_destino
+      usar_raiz_pacote_logica_apos_canonicalizacao
+      ler_skill_fora_da_raiz_do_pacote
+      ler_destino_fora_das_raizes_permitidas
+      consultar_ou_escrever_cache_de_plugin
+      alterar_skill_durante_status
+      expor_home_absoluta_em_saida_publica
+    }
+    impl {
+      ts: cli.src.distribuicao.skill_global.statusSkillGlobal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/versaoSemantica.ts"
+      arquivo: "pacotes/cli/src/distribuicao/tipos.ts"
+      arquivo: "pacotes/cli/src/distribuicao/filesystemGlobal.ts"
+      arquivo: "plugins/sema/skills/sema/SKILL.md"
+      arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
+      arquivo: "testes/unidade/distribuicao-skill-global.test.ts"
+      simbolo: cli.src.distribuicao.skill_global.statusSkillGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_realizada"
+      criticidade_operacional: media
+    }
+    guarantees {
+      estado deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED]
+      alterado == falso
+      origem_simbolica existe
+      origem_simbolica deve_ser simbolica_sem_raiz_absoluta
+      destino_agents deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED]
+      destino_claude deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED, NOT_DETECTED]
+      destino_claude deve_ser NOT_DETECTED quando espelho_claude_detectado == falso
+      cache_plugin_intocado == verdadeiro
+      destinos deve_ser conter_destino_agents
+      destinos deve_ser conter_apenas_agents_e_claude
+    }
+  }
+
+  task sincronizar_skill_global {
+    input {
+      diretorio_usuario: Texto required
+      raiz_pacote: Texto required
+      plataforma: Texto required
+    }
+    output {
+      estado: EstadoDistribuicaoGlobal
+      alterado: Booleano
+      origem_simbolica: Texto
+      destino_agents: EstadoDistribuicaoGlobal
+      destino_claude: EstadoDestinoSkillGlobal
+      espelho_claude_detectado: Booleano
+      ownership_valido: Booleano
+      digest_alinhado: Booleano
+      cache_plugin_intocado: Booleano
+      destinos: Lista
+    }
+    rules {
+      diretorio_usuario deve_ser absoluto
+      raiz_pacote deve_ser absoluta
+      raiz_pacote deve_ser canonicalizavel_por_realpath
+      raiz_pacote deve_ser conter_skill_em_skills_sema
+      plataforma deve_ser em [win32, darwin, linux]
+    }
+    effects {
+      fs.write skill_agents_global criticidade = alta
+      fs.write skill_claude_global criticidade = alta
+      auditoria skill_global_sincronizada criticidade = alta
+    }
+    authz {
+      escopo: sema.cli.distribuicao.skill.write
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: obrigatoria
+      input {
+        diretorio_usuario: interno
+        raiz_pacote: interno
+        plataforma: publico
+      }
+      output {
+        estado: publico
+        alterado: publico
+        origem_simbolica: publico
+        destino_agents: publico
+        destino_claude: publico
+        espelho_claude_detectado: publico
+        ownership_valido: publico
+        digest_alinhado: publico
+        cache_plugin_intocado: publico
+        destinos: interno
+      }
+    }
+    audit {
+      evento: sema.cli.skill_global.sincronizada
+      ator: sistema.sema
+      correlacao: request_id
+      retencao: "90d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      copiar_skill_de_origem_fora_do_pacote
+      varrer_home_recursivamente
+      criar_copias_em_toda_pasta_de_cliente
+      escrever_fora_da_skill_agents_global
+      escrever_fora_da_skill_claude_global
+      escrever_no_cache_codex_de_plugins
+      escrever_em_cache_de_plugin_ou_marketplace
+      seguir_symlink_junction_ou_reparse_point_em_HOME_ou_destino
+      usar_raiz_pacote_logica_apos_canonicalizacao
+      sobrescrever_skill_sem_ownership_sema
+      sobrescrever_skill_gerenciada_modificada_sem_conflito
+      fazer_downgrade_fora_de_instalacao_ou_sync_explicitos
+      trocar_destino_entre_verificacao_e_commit
+      deixar_stage_ou_backup_na_falha
+      interromper_rollback_dos_demais_destinos_apos_primeira_falha
+      escrever_no_workspace
+      duplicar_governanca_do_AGENTS.md_na_skill
+    }
+    impl {
+      ts: cli.src.distribuicao.skill_global.sincronizarSkillGlobal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/versaoSemantica.ts"
+      arquivo: "pacotes/cli/src/distribuicao/index.ts"
+      arquivo: "pacotes/cli/src/distribuicao/tipos.ts"
+      arquivo: "pacotes/cli/src/distribuicao/filesystemGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/lockGlobal.ts"
+      arquivo: "pacotes/cli/scripts/postinstall.mjs"
+      arquivo: "plugins/sema/skills/sema/SKILL.md"
+      arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
+      arquivo: "testes/unidade/distribuicao-skill-global.test.ts"
+      arquivo: "testes/unidade/distribuicao-global.test.ts"
+      simbolo: cli.src.distribuicao.skill_global.sincronizarSkillGlobal
+      simbolo: cli.src.distribuicao.index.sincronizarDistribuicaoGlobal
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "20s"
+      retry: "nenhum"
+      compensacao: "restaurar_cada_destino_independentemente_e_remover_todos_os_stages"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      estado deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED]
+      origem_simbolica existe
+      origem_simbolica deve_ser simbolica_sem_raiz_absoluta
+      destino_agents deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED]
+      destino_claude deve_ser em [READY, MISSING, STALE, BROKEN_TARGET, PERMISSION_DENIED, NOT_DETECTED]
+      destino_claude deve_ser NOT_DETECTED quando espelho_claude_detectado == falso
+      cache_plugin_intocado == verdadeiro
+      destinos deve_ser conter_destino_agents
+      destinos deve_ser conter_apenas_agents_e_claude
+      estado deve_ser refletir_estado_fisico_apos_compensacao
+      destinos deve_ser refletir_bytes_fisicos_apos_compensacao
+      destinos deve_ser refletir_rollback_independente_de_agents_e_claude
+      destinos deve_ser conter_resultado_de_todos_os_rollbacks_mesmo_quando_um_falha
+      destinos deve_ser sem_stage_ou_backup_orfao_apos_compensacao_bem_sucedida
+      alterado deve_ser falso quando estado em [MISSING, STALE, PERMISSION_DENIED]
+    }
+    tests {
+      caso "sincroniza skill canonica e espelho Claude detectado" {
+        given {
+          diretorio_usuario: "sandbox-home-com-raiz-claude"
+          raiz_pacote: "sandbox-pacote-com-skill"
+          plataforma: "linux"
+        }
+
+        expect {
+          estado: "READY"
+          alterado: verdadeiro
+          espelho_claude_detectado: verdadeiro
+        }
+      }
+      caso "preserva skill nao gerenciada" {
+        given {
+          diretorio_usuario: "sandbox-home-com-skill-nao-gerenciada"
+          raiz_pacote: "sandbox-pacote-com-skill"
+          plataforma: "win32"
+        }
+
+        expect {
+          estado: "BROKEN_TARGET"
+          alterado: falso
+        }
+      }
+    }
+  }
+}

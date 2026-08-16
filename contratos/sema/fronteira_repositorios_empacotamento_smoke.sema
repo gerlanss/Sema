@@ -1,0 +1,184 @@
+module sema.produto.fronteira_repositorios.empacotamento.smoke {
+  docs {
+    resumo: "Prova em instalacao isolada o tarball da fabrica publica unica: destino canonico revalidado, publicacao cross-volume por temporario local e hardlink no-replace, sweep integral sem maps, segredos ou billing, zero temporarios e stages, 12 runtimes, docs, exemplos, skill e postinstall identicos a fonte."
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento.sema"
+    arquivo: "contratos/sema/cli_distribuicao_launcher.sema"
+    arquivo: "contratos/sema/cli_distribuicao_skill.sema"
+    arquivo: "docs/drift-cache.md"
+    arquivo: "docs/testing.md"
+  }
+
+  use sema.produto.distribuicao_global
+
+  use sema.produto.distribuicao_global.skill
+
+  task provar_pacote_cli_publico_isolado {
+    input {
+      versao: Texto required
+      incluir_docs_ingles: Booleano required
+    }
+    output {
+      sucesso: Booleano
+      npm_execucao_windows_isolada: Booleano
+      consulta_none_honesta: Booleano
+      drift_fresh_comprovado: Booleano
+      launcher_independente_path: Booleano
+      postinstall_global_seguro: Booleano
+      instalacao_local_no_op: Booleano
+      skill_global_atualizavel: Booleano
+      cache_plugin_intocado: Booleano
+      fabrica_publica_unica_comprovada: Booleano
+      runtimes_12_comprovados: Booleano
+      docs_exemplos_skill_postinstall_comprovados: Booleano
+      lifecycle_cas_ausente: Booleano
+      destino_canonico_revalidado: Booleano
+      publicacao_cross_volume_no_replace: Booleano
+      sweep_global_comprovado: Booleano
+      residuos_temporarios_ausentes: Booleano
+    }
+    rules {
+      versao deve_ser preenchido
+      incluir_docs_ingles == verdadeiro
+    }
+    effects {
+      shell.exec pacote_cli_publico_isolado criticidade = alta
+      auditoria smoke_pacote_cli_publico criticidade = alta
+    }
+    authz {
+      escopo: sema.publico.cli.smoke
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: publico
+      redacao_log: obrigatoria
+      input {
+        versao: publico
+        incluir_docs_ingles: publico
+      }
+      output {
+        sucesso: publico
+        npm_execucao_windows_isolada: publico
+        consulta_none_honesta: publico
+        drift_fresh_comprovado: publico
+        launcher_independente_path: publico
+        postinstall_global_seguro: publico
+        instalacao_local_no_op: publico
+        skill_global_atualizavel: publico
+        cache_plugin_intocado: publico
+        fabrica_publica_unica_comprovada: publico
+        runtimes_12_comprovados: publico
+        docs_exemplos_skill_postinstall_comprovados: publico
+        lifecycle_cas_ausente: publico
+        destino_canonico_revalidado: publico
+        publicacao_cross_volume_no_replace: publico
+        sweep_global_comprovado: publico
+        residuos_temporarios_ausentes: publico
+      }
+    }
+    audit {
+      evento: sema.publico.cli.smoke_comprovado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "365d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      usar_wrapper_ou_cache_npm_global_quando_execucao_local_isolada_existe
+      aceitar_resumo_default_com_score_ou_implementacao_fabricados
+      tratar_cache_persistente_como_prova_final_no_pacote_instalado
+      depender_de_PATH_para_executar_smoke_instalado
+      executar_postinstall_global_em_instalacao_local
+      escrever_skill_em_cache_de_plugin
+      testar_instalacao_global_no_HOME_real
+      aceitar_tarball_criado_por_pack_direto_do_workspace
+      aceitar_tarball_com_prepack_postpack_guard_ou_codigo_cas
+      aceitar_tarball_sem_qualquer_um_dos_12_runtimes
+      aceitar_tarball_sem_docs_exemplos_skill_ou_postinstall
+      aceitar_saida_por_junction_ou_sem_raiz_canonica_e_identidade_estavel
+      aceitar_publicacao_cross_volume_sem_temporario_wx_fsync_no_volume_de_saida
+      aceitar_publicacao_que_substitui_destino_existente
+      aceitar_tarball_com_source_map_pem_key_p12_pfx_env_ou_billing
+      aceitar_smoke_com_temporario_ou_stage_residual
+    }
+    impl {
+      ts: scripts.testar_pacote_cli_publico.main
+    }
+    vinculos {
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "scripts/empacotar-cli-publica.mjs"
+      arquivo: "scripts/cli-publico/fronteira-publica.mjs"
+      arquivo: "scripts/instalar-cli-local.mjs"
+      arquivo: "scripts/cli-publico/bootstrap-codex.mjs"
+      arquivo: "scripts/cli-publico/fronteira-publica.mjs"
+      arquivo: "scripts/cli-publico/pipeline-conteudo.mjs"
+      arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
+      arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
+      arquivo: "pacotes/cli/scripts/bloquear-pack-workspace.mjs"
+      arquivo: "pacotes/cli/package.json"
+      arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
+      arquivo: "pacotes/cli/src/distribuicao/index.ts"
+      arquivo: "pacotes/cli/src/distribuicao/tipos.ts"
+      arquivo: "pacotes/cli/src/distribuicao/filesystemGlobal.ts"
+      arquivo: "testes/unidade/distribuicao-launcher-global.test.ts"
+      arquivo: "testes/unidade/distribuicao-skill-global.test.ts"
+      arquivo: "testes/unidade/distribuicao-global.test.ts"
+      arquivo: "testes/unidade/empacotamento-publico.test.ts"
+      simbolo: scripts.testar_pacote_cli_publico.main
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "nenhum"
+      compensacao: "apagar_sandbox_e_bloquear_publicacao"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      sucesso == verdadeiro
+      npm_execucao_windows_isolada == verdadeiro
+      consulta_none_honesta == verdadeiro
+      drift_fresh_comprovado == verdadeiro
+      launcher_independente_path == verdadeiro
+      postinstall_global_seguro == verdadeiro
+      instalacao_local_no_op == verdadeiro
+      skill_global_atualizavel == verdadeiro
+      cache_plugin_intocado == verdadeiro
+      fabrica_publica_unica_comprovada == verdadeiro
+      runtimes_12_comprovados == verdadeiro
+      docs_exemplos_skill_postinstall_comprovados == verdadeiro
+      lifecycle_cas_ausente == verdadeiro
+      destino_canonico_revalidado == verdadeiro
+      publicacao_cross_volume_no_replace == verdadeiro
+      sweep_global_comprovado == verdadeiro
+      residuos_temporarios_ausentes == verdadeiro
+    }
+    tests {
+      caso "tarball instala distribuicao global sem PATH em sandbox" {
+        given {
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          npm_execucao_windows_isolada: verdadeiro
+          consulta_none_honesta: verdadeiro
+          drift_fresh_comprovado: verdadeiro
+          launcher_independente_path: verdadeiro
+          postinstall_global_seguro: verdadeiro
+          instalacao_local_no_op: verdadeiro
+          skill_global_atualizavel: verdadeiro
+          cache_plugin_intocado: verdadeiro
+          fabrica_publica_unica_comprovada: verdadeiro
+          runtimes_12_comprovados: verdadeiro
+          docs_exemplos_skill_postinstall_comprovados: verdadeiro
+          lifecycle_cas_ausente: verdadeiro
+          destino_canonico_revalidado: verdadeiro
+          publicacao_cross_volume_no_replace: verdadeiro
+          sweep_global_comprovado: verdadeiro
+          residuos_temporarios_ausentes: verdadeiro
+        }
+      }
+    }
+  }
+}

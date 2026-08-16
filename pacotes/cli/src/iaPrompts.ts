@@ -55,6 +55,7 @@ Comandos essenciais:
 - exemplos oficiais no projeto: \`sema instalar-exemplos\`
 - geracao de codigo: \`sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>\`
 - verificacao final: \`sema verificar <arquivo-ou-pasta> [--json]\`
+- distribuição global: \`sema skill status --json\` diagnostica sem alterar; \`sema skill sync --json\` repara launcher e skill; no Windows, PowerShell usa \`sema.ps1\` no PATH, cmd.exe usa \`sema.cmd\`, e \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\` é o fallback absoluto
 
 Antes de editar:
 1. leia README, docs de IA e um exemplo oficial parecido

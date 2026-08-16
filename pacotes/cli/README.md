@@ -17,14 +17,13 @@ Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
 
 ```bash
 npm install -g @semacode/cli
-codex plugin marketplace add gerlanss/Sema
-codex plugin add sema@sema
+sema skill status --json
 ```
 
-Open a new Codex task in the target repository after installing the plugin.
-Existing tasks do not reload their plugin/skill catalog. Invoke `$sema` in the
-new task; after it creates and reads `AGENTS.md`, later tasks load that workspace
-protocol automatically.
+The global package installs a stable launcher under `~/.sema/bin` and
+synchronizes the bundled skill to `~/.agents/skills/sema`. If Claude is already
+configured, it also maintains `~/.claude/skills/sema`. Open a new task after an
+install or update because existing tasks do not reload their skill catalog.
 
 ## First Run
 
@@ -50,10 +49,25 @@ Codex automatically loads `AGENTS.md` as durable repository guidance. See the
 [Codex `AGENTS.md` documentation](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
 
 The CLI is the engine and source of truth; `AGENTS.md` is the automatic
-workspace protocol. The Sema skill is required for Codex to bootstrap a project
-that does not have Sema yet. After initialization, the skill delegates to the
-generated `AGENTS.md`. Installing this npm package never writes into
-`CODEX_HOME`; skill installation remains an explicit Codex command.
+workspace protocol. The Sema skill bootstraps a project that does not have Sema
+yet and then delegates to the generated `AGENTS.md`. The npm lifecycle updates
+only Sema-managed launcher and skill roots; it never writes into plugin caches,
+credentials, the workspace, or `CODEX_HOME`.
+
+Use `sema skill status --json` for a read-only diagnosis and `sema skill sync
+--json` to repair the launcher and skill after `npm install --ignore-scripts`.
+If a shell still cannot resolve `sema`, invoke the managed launcher directly:
+
+```powershell
+& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version
+```
+
+```bash
+"$HOME/.sema/bin/sema" --version
+```
+
+On Windows, PowerShell resolves `sema.ps1` from `PATH`, `cmd.exe` resolves
+`sema.cmd`, and `sema-managed.ps1` is the PATH-independent fallback.
 
 ## Codex-Native Architecture
 
@@ -62,9 +76,11 @@ generated `AGENTS.md`. Installing this npm package never writes into
 - Agent Context Pack consumers use schema version 7, including the deterministic
   discovery summary and the fields `entrypointCodex`, `codexNativo`, and
   `cliLocalSemAutorizacao`.
-- The Sema Codex skill is required for first contact. It initializes the
-  workspace and generates `AGENTS.md`; it does not duplicate the governed
-  workflow after that handoff.
+- The bundled Sema skill handles first contact. Its canonical shared copy is
+  `~/.agents/skills/sema`; Claude gets a managed mirror only when detected. It
+  asks for adoption authorization before implementation and does not duplicate
+  governance after handing off to `AGENTS.md`. Installing or updating the
+  global CLI authorizes distribution changes only, not workspace adoption.
 
 ## Local Workflow
 
@@ -83,10 +99,14 @@ none|cache|fresh` and defaults to `fresh`. Persistent objects are stored in the
 operating system's user-cache directory outside the workspace. They reuse only
 validated extraction data; the final drift decision is always recalculated.
 
-If the project has no `.sema` contract, create one before implementing behavior:
+If the project has no `.sema` contract, an informational request must remain
+read-only. Before implementing behavior, obtain explicit adoption authorization,
+then inspect the official flow and initialize:
 
 ```bash
+sema descobrir explicar flow.project-adoption --json
 sema iniciar --template base
+sema sync-codex --json
 ```
 
 Initialization preserves existing files and rejects symlink or junction
@@ -223,6 +243,12 @@ non-authoritative boundary as their CLI equivalents.
 The npm package is local-only: its CLI and programmatic API do not depend on a
 hosted Sema service. It must not contain private or sensitive operational
 material.
+
+Contributors must create the tarball through `npm run cli:empacotar-publica`
+from the repository root. Direct `npm pack` in this source package is blocked:
+the official factory uses an isolated per-run stage and is the only supported
+path that bundles runtime packages, examples, documentation, the launcher, and
+the Sema skill.
 
 ## Commercial Use
 

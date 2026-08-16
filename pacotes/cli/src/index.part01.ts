@@ -123,6 +123,7 @@ export type Comando =
   | "ajuda-ia"
   | "starter-ia"
   | "sync-codex"
+  | "skill"
   | "instalar-exemplos"
   | "rule-packs"
   | "docs-impacto"
@@ -361,6 +362,7 @@ export function ajuda(): string {
       "catálogo: sema descobrir <catalogo|recomendar|explicar> [id] [--intencao <objetivo>] [--json]",
       "pipelines: sema pipeline <listar|descrever> [id] [--json]",
       "todas as capacidades: sema capabilities [--json]",
+      "distribuição global: sema skill <status|sync> [--json] (status é somente leitura; sync repara launcher e skill)",
       "auditoria: sema drift <arquivo-ou-pasta> [--escopo <arquivo|modulo|projeto>] [--cache <none|cache|fresh>] [--incluir-worktrees] [--incluir-consumidores-laterais] [--json]",
       "modos: drift direto usa fresh por padrão; --cache none ainda executa sem cache persistente; resumo/inspecionar usam --drift none por padrão e não fabricam evidência",
       "impacto: sema impacto <arquivo-ou-pasta> --alvo <token> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--json]",

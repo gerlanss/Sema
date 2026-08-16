@@ -19,6 +19,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+pacotes/cli/skills/
+pacotes/cli/.sema-prepack-skill
 
 # Artefatos do sistema operacional/editor
 .DS_Store
@@ -35,6 +37,7 @@ SEMA_BRIEF.md
 SEMA_INDEX.json
 
 # Artefatos soltos de smoke/debug
+.codex-remote-attachments/
 image_*.png
 navigate.json
 sema_*_test.json

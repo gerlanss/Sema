@@ -8,12 +8,13 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.3.5`
+- Version: `2.3.6`
 - Package: `@semacode/cli`
-- Last updated: 2026-08-15
-- Reference commit: `c057e7e`
+- Last updated: 2026-08-16
+- Reference commit: `8c44eaf`
 - Support: `suporte@otimitare.online`
-- Public boundary: local CLI, thin Codex bootstrap skill, repo marketplace,
+- Public boundary: local CLI, absolute managed launcher, bundled global skill,
+  optional repo marketplace,
   `AGENTS.md` protocol, contracts, examples, tests, release scripts, and English
   documentation, without competition-specific workflows or submission assets.
 - License: public source with non-commercial terms; resale and commercial
@@ -36,6 +37,8 @@ Every public publication must pass:
 - Keep the repository local-only and source-first.
 - Keep the skill limited to first-contact bootstrap and delegate ongoing
   governance to `AGENTS.md`.
+- Keep the launcher independent from the npm and Node.js `PATH`, and atomically
+  update only Sema-managed skill destinations outside plugin caches.
 - Keep public documentation in English.
 - Keep governance contracts split by named capability before they cross the
   semantic line budget; never use numbered part files.

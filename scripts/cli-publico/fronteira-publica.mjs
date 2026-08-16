@@ -2,6 +2,8 @@
 // Consulte contratos/sema/fronteira_repositorios.sema antes de editar.
 // Descricao: valida manifesto, runtime e documentacao do tarball publico sem publicar a release.
 import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 const MARCADORES_PORTEIRO_LEGADO = [
   { regex: /\bpreflight\b/i, motivo: "legacy preflight terminology" },
@@ -22,7 +24,14 @@ const MARCADORES_CONTEUDO_PRIVADO = [
 
 const MARCADOR_NOME_TOOL_MCP_LEGADO = /\bsema_(?:docs_impacto|finalizar_mudanca|inspecionar|drift|impacto|exemplos)\b/i;
 const MARCADOR_MOJIBAKE_VISIVEL = /\uFFFD|\u00C3[\u0080-\u00BF]|\u00C2[\u0080-\u00BF]|âš|ï¸/u;
+const ARTEFATO_NAO_PUBLICAVEL = /(?:^|\/)(?:[^/]+\.(?:map|pem|key|p12|pfx)|\.env(?:\.|$)|billing(?:\/|\.|$))/iu;
 const ARQUIVO_RUNTIME_VISIVEL = /^package\/dist\/(?:(?:discovery|sistemasInterativos)\/[^/]+|(?:agentContext|agentContextPack|agentContextTipos|agentEntryPoints|doctorCommand|docs\.part01|exemplosOficiais|fsGovernado|index\.part0[1-8]|initCommand|initTemplatesBase|workspaceWrite))\.(?:js|d\.ts|json)$/i;
+const PACOTES_RUNTIME_PUBLICOS = [
+  "@sema/nucleo", "@sema/padroes", "@sema/gerador-lua", "@sema/gerador-typescript",
+  "@sema/gerador-python", "@sema/gerador-dart", "@sema/gerador-javascript",
+  "@sema/gerador-html", "@sema/gerador-css", "@sema/gerador-php",
+  "@sema/gerador-dotnet", "@sema/gerador-cpp",
+];
 
 function removerDetectorMigracaoLegada(arquivo, conteudo) {
   if (!/^package\/dist\/agentEntryPoints\.js$/i.test(arquivo)) {
@@ -48,6 +57,34 @@ function lerArquivoTarball(caminhoTarball, arquivo, raiz) {
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
   });
+}
+
+function lerArquivoTarballBytes(caminhoTarball, arquivo, raiz) {
+  return execFileSync("tar", ["-xOf", caminhoTarball, arquivo], {
+    cwd: raiz,
+    maxBuffer: 16 * 1024 * 1024,
+  });
+}
+
+export function validarBytesArtefatoDistribuicao(empacotado, fonte, referencia) {
+  if (!Buffer.isBuffer(empacotado) || !Buffer.isBuffer(fonte) || !empacotado.equals(fonte)) {
+    throw new Error(`The packaged distribution artifact differs byte-for-byte from source: ${referencia}.`);
+  }
+}
+
+export async function validarArtefatosDistribuicaoContraFonte(caminhoTarball, raiz) {
+  const artefatos = [
+    ["package/scripts/postinstall.mjs", "pacotes/cli/scripts/postinstall.mjs"],
+    ["package/skills/sema/SKILL.md", "plugins/sema/skills/sema/SKILL.md"],
+    ["package/skills/sema/agents/openai.yaml", "plugins/sema/skills/sema/agents/openai.yaml"],
+  ];
+  for (const [arquivoEmpacotado, arquivoFonte] of artefatos) {
+    validarBytesArtefatoDistribuicao(
+      lerArquivoTarballBytes(caminhoTarball, arquivoEmpacotado, raiz),
+      await readFile(path.join(raiz, arquivoFonte)),
+      arquivoEmpacotado,
+    );
+  }
 }
 
 export function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperada, raiz) {
@@ -83,6 +120,24 @@ export function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperad
   }
 
   const arquivos = listarTarball(caminhoTarball, raiz);
+  const artefatoNaoPublicavel = arquivos.find((arquivo) => ARTEFATO_NAO_PUBLICAVEL.test(arquivo));
+  if (artefatoNaoPublicavel) {
+    throw new Error(`The public package contains forbidden artifact ${artefatoNaoPublicavel}.`);
+  }
+  if (JSON.stringify(json.scripts ?? {}) !== JSON.stringify({ postinstall: "node scripts/postinstall.mjs" })) {
+    throw new Error("The public package must expose only the postinstall lifecycle.");
+  }
+  const lifecycleCas = arquivos.find((arquivo) => /package\/scripts\/(?:prepack|postpack|bloquear-pack-workspace)/iu.test(arquivo));
+  if (lifecycleCas) throw new Error(`The public package contains workspace lifecycle code: ${lifecycleCas}.`);
+  if (!arquivos.includes("package/skills/sema/SKILL.md")
+    || !arquivos.includes("package/skills/sema/agents/openai.yaml")
+    || !arquivos.some((arquivo) => /^package\/exemplos\/.+\.sema$/iu.test(arquivo))) {
+    throw new Error("The public package is missing the bundled skill or official examples.");
+  }
+  const nomesRuntime = Object.keys(json.dependencies ?? {}).filter((nome) => nome.startsWith("@sema/")).sort();
+  if (JSON.stringify(nomesRuntime) !== JSON.stringify([...PACOTES_RUNTIME_PUBLICOS].sort())) {
+    throw new Error("The public package runtime inventory is incomplete or divergent.");
+  }
   for (const [nome, versao] of Object.entries(json.dependencies ?? {}).filter(([nome]) => nome.startsWith("@sema/"))) {
     const manifestoBundled = `package/node_modules/${nome}/package.json`;
     if (!arquivos.includes(manifestoBundled)) {
@@ -120,6 +175,9 @@ export function validarRuntimeLocalDireto(caminhoTarball, raiz) {
   const arquivosPublicosTexto = arquivos.filter((arquivo) =>
     arquivo === "package/README.md" ||
     arquivo === "package/LICENSE" ||
+    arquivo === "package/package.json" ||
+    arquivo === "package/scripts/postinstall.mjs" ||
+    /^package\/skills\/sema\/.+\.(?:md|txt|json|ya?ml)$/i.test(arquivo) ||
     /^package\/docs\/.+\.(?:md|txt|json|ya?ml)$/i.test(arquivo),
   );
   for (const arquivo of arquivosPublicosTexto) {
@@ -153,11 +211,11 @@ export function validarReadmePublico(conteudo) {
   if (!conteudo.includes("Codex-native")) {
     throw new Error("The published README must position Sema as Codex-native.");
   }
-  if (!conteudo.includes("codex plugin marketplace add gerlanss/Sema") || !conteudo.includes("codex plugin add sema@sema")) {
-    throw new Error("The published README must include the explicit Sema Codex skill installation commands.");
+  if (!conteudo.includes("npm install -g @semacode/cli") || !conteudo.includes("sema skill status --json")) {
+    throw new Error("The published README must document the npm-bundled global Sema skill.");
   }
-  if (!/Sema skill is required for Codex to bootstrap/iu.test(conteudo)) {
-    throw new Error("The published README must declare the Sema skill as the required first-contact bootstrap.");
+  if (!conteudo.includes("~/.agents/skills/sema") || !conteudo.includes("~/.sema/bin")) {
+    throw new Error("The published README must document the canonical skill root and managed launcher.");
   }
   if (!/not affiliated with or endorsed by\s+OpenAI/iu.test(conteudo)) {
     throw new Error("The published README must include the independent-product disclaimer.");

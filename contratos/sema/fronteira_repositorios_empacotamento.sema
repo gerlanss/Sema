@@ -1,10 +1,22 @@
 module sema.produto.fronteira_repositorios.empacotamento {
   docs {
-    resumo: "Empacota e testa a CLI publica local-only sem publicar release ou depender de artefato privado."
+    resumo: "Fabrica a CLI publica local-only por uma unica rota, em stage privado por execucao. Toda escrita fica sob raiz de destino canonica e revalidada por identidade, rejeita reparse antes de criar e publica por temporario exclusivo com fsync no volume de saida seguido de hardlink local no-replace. O tarball leva os 12 runtimes, docs, exemplos, skill e postinstall, mas nenhum lifecycle CAS, source map, segredo ou billing. A protecao contra swap ativo e fail-closed best-effort porque Node nao oferece openat/linkat por dirfd."
     arquivo: "contratos/sema/fronteira_repositorios.sema"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento_postinstall.sema"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento_smoke.sema"
+    arquivo: "contratos/sema/cli_distribuicao_launcher.sema"
+    arquivo: "contratos/sema/cli_distribuicao_skill.sema"
     arquivo: "docs/drift-cache.md"
     arquivo: "docs/testing.md"
   }
+
+  use sema.produto.distribuicao_global
+
+  use sema.produto.distribuicao_global.skill
+
+  use sema.produto.fronteira_repositorios.empacotamento.postinstall
+
+  use sema.produto.fronteira_repositorios.empacotamento.smoke
 
   task empacotar_cli_publica_local_only {
     input {
@@ -18,9 +30,8 @@ module sema.produto.fronteira_repositorios.empacotamento {
       licenca_nao_comercial_incluida: Booleano
       produto_codex_native: Booleano
       cli_sem_autorizacao_local: Booleano
-      npm_execucao_windows_isolada: Booleano
-      consulta_none_honesta: Booleano
-      drift_fresh_comprovado: Booleano
+      launcher_absoluto_empacotado: Booleano
+      skill_sema_empacotada: Booleano
     }
     rules {
       versao deve_ser preenchido
@@ -48,9 +59,8 @@ module sema.produto.fronteira_repositorios.empacotamento {
         licenca_nao_comercial_incluida: publico
         produto_codex_native: publico
         cli_sem_autorizacao_local: publico
-        npm_execucao_windows_isolada: publico
-        consulta_none_honesta: publico
-        drift_fresh_comprovado: publico
+        launcher_absoluto_empacotado: publico
+        skill_sema_empacotada: publico
       }
     }
     audit {
@@ -71,9 +81,32 @@ module sema.produto.fronteira_repositorios.empacotamento {
       empacotar_tarball_sem_preservar_exports_map
       permitir_deep_import_dist_pipelineConteudo
       publicar_avaliador_interno_pipeline_conteudo_em_subpath_publico
-      usar_wrapper_ou_cache_npm_global_quando_execucao_local_isolada_existe
-      aceitar_resumo_default_com_score_ou_implementacao_fabricados
-      tratar_cache_persistente_como_prova_final_no_pacote_instalado
+      omitir_launcher_global_absoluto_do_tarball
+      empacotar_skill_diferente_da_fonte_oficial
+      executar_npm_pack_direto_do_workspace
+      mutar_workspace_ao_bloquear_raw_pack
+      reutilizar_stage_entre_execucoes
+      copiar_fonte_por_reparse_point_ou_sem_revalidar_identidade
+      executar_lifecycle_durante_npm_pack_privado
+      sobrescrever_tarball_final_existente
+      deixar_tarball_parcial_apos_fault
+      deixar_stage_privado_residual
+      deixar_temporario_de_publicacao_residual
+      omitir_qualquer_um_dos_12_runtimes
+      omitir_docs_exemplos_skill_ou_postinstall
+      empacotar_prepack_postpack_guard_ou_codigo_cas_no_tarball
+      escrever_destino_sem_raiz_canonica_dev_ino_e_cadeia_fisica_revalidada
+      criar_componente_abaixo_de_junction_symlink_ou_reparse_point
+      criar_arquivo_externo_quando_parent_de_saida_for_junction
+      copiar_sem_validar_handle_snapshot_e_destino_antes_e_depois
+      publicar_por_hardlink_direto_do_candidato_cross_volume
+      materializar_temporario_fora_do_volume_de_saida_sem_wx_ou_sem_fsync
+      substituir_tarball_final_existente
+      remover_temporario_ou_destino_sem_recibo_de_identidade_proprio
+      omitir_sweep_integral_do_stage
+      empacotar_source_map_pem_key_p12_pfx_env_ou_billing
+      declarar_protecao_absoluta_contra_swap_ativo_sem_openat_ou_linkat
+      exigir_ctime_path_para_primeiro_handle_no_windows
     }
     impl {
       ts: scripts.empacotar_cli_publica.main
@@ -82,12 +115,13 @@ module sema.produto.fronteira_repositorios.empacotamento {
       arquivo: "scripts/empacotar-cli-publica.mjs"
       arquivo: "scripts/publicar-cli-npm.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
-      arquivo: "scripts/cli-publico/bootstrap-codex.mjs"
       arquivo: "scripts/cli-publico/fronteira-publica.mjs"
-      arquivo: "scripts/cli-publico/pipeline-conteudo.mjs"
-      arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
-      arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
-      arquivo: "pacotes/cli/scripts/prepack-exemplos.mjs"
+      arquivo: "pacotes/cli/scripts/bloquear-pack-workspace.mjs"
+      arquivo: "testes/unidade/empacotamento-publico.test.ts"
+      arquivo: "package.json"
+      arquivo: "pacotes/cli/package.json"
+      arquivo: "plugins/sema/skills/sema/SKILL.md"
+      arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
       arquivo: "pacotes/cli/README.md"
       arquivo: "docs/README.md"
       arquivo: "docs/drift-cache.md"
@@ -106,9 +140,129 @@ module sema.produto.fronteira_repositorios.empacotamento {
       licenca_nao_comercial_incluida == verdadeiro
       produto_codex_native == verdadeiro
       cli_sem_autorizacao_local == verdadeiro
-      npm_execucao_windows_isolada == verdadeiro
-      consulta_none_honesta == verdadeiro
-      drift_fresh_comprovado == verdadeiro
+      launcher_absoluto_empacotado == verdadeiro
+      skill_sema_empacotada == verdadeiro
+      pacote_gerado deve_ser derivado_de_stage_privado_unico
+      pacote_gerado deve_ser fabricado_com_npm_pack_ignore_scripts
+      pacote_gerado deve_ser publicado_sem_overwrite
+      pacote_gerado deve_ser completo_com_12_runtimes
+      pacote_gerado deve_ser conter_docs_exemplos_skill_e_postinstall
+      pacote_gerado deve_ser livre_de_lifecycle_cas
+      pacote_gerado deve_ser copiado_sem_reparse_e_com_identidade_revalidada
+      pacote_gerado deve_ser seguro_sob_concorrencia_e_fault
+      pacote_gerado deve_ser escrito_sob_raiz_canonica_dev_ino_revalidada_antes_e_depois
+      pacote_gerado deve_ser criado_com_componentes_fisicos_sem_reparse
+      pacote_gerado deve_ser publicado_por_temp_wx_fsync_no_volume_de_saida_e_hardlink_local_no_replace
+      pacote_gerado deve_ser publicavel_entre_volumes
+      pacote_gerado deve_ser verificado_por_bytes_hash_e_identidade_antes_e_depois_de_copy_e_link
+      pacote_gerado deve_ser limpo_por_sweep_integral_sem_map_segredo_env_ou_billing
+      pacote_gerado deve_ser sem_temporario_ou_stage_residual
+      pacote_gerado deve_ser fail_closed_best_effort_em_swap_ativo_sem_dirfd
+      pacote_gerado deve_ser estrito_em_ctime_handle_a_handle
+    }
+    tests {
+      caso "tarball preserva a fabricacao publica completa" {
+        given {
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pacote_gerado: verdadeiro
+          dependencias_file_removidas: verdadeiro
+          metadados_suporte_email: verdadeiro
+          licenca_nao_comercial_incluida: verdadeiro
+          produto_codex_native: verdadeiro
+          cli_sem_autorizacao_local: verdadeiro
+          launcher_absoluto_empacotado: verdadeiro
+          skill_sema_empacotada: verdadeiro
+          runtimes_empacotados: 12
+          source_maps_empacotados: 0
+          segredos_empacotados: 0
+          billing_empacotado: falso
+        }
+      }
+      caso "raw pack do workspace falha sem mutacao" {
+        given {
+          operacao: "npm pack --workspace @semacode/cli"
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: falso
+          workspace_intacto: verdadeiro
+          tarball_parcial: falso
+        }
+      }
+      caso "packs concorrentes isolam stage e publicam sem substituir" {
+        given {
+          execucoes_concorrentes: 2
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          pacote_final_unico: verdadeiro
+          stage_residual: falso
+        }
+      }
+      caso "fault antes da publicacao nao deixa artefato parcial" {
+        given {
+          fault: "before-publish"
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: falso
+          tarball_parcial: falso
+          stage_residual: falso
+        }
+      }
+      caso "junction em origem ou destino falha antes de escrita externa" {
+        given {
+          origem_ou_parent_destino: "junction"
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: falso
+          escrita_externa: falso
+          stage_residual: falso
+        }
+      }
+      caso "publicacao cross volume usa temporario local no replace" {
+        given {
+          candidato_e_saida_em_volumes_distintos: verdadeiro
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+          temporario_no_volume_de_saida: verdadeiro
+          destino_substituido: falso
+          temporario_residual: falso
+        }
+      }
+      caso "fault apos temporario local limpa somente recibo proprio" {
+        given {
+          fault: "publish-temp-before-link"
+          versao: "versao-candidata"
+          incluir_docs_ingles: verdadeiro
+        }
+
+        expect {
+          sucesso: falso
+          tarball_parcial: falso
+          temporario_residual: falso
+          arquivo_alheio_removido: falso
+        }
+      }
     }
   }
 }

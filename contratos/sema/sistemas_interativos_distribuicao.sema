@@ -1,6 +1,6 @@
 module sema.produto.sistemas_interativos.distribuicao {
   docs {
-    resumo: "Fronteira do pacote npm local para descoberta e sistemas interativos. Prova por instalacao isolada que API, exemplos aninhados, schema, pipelines, adapters, validacao, planejamento e protocolo sobrevivem ao tarball sem publicar uma release."
+    resumo: "Fronteira do pacote npm local para descoberta e sistemas interativos. Prova por instalacao isolada que a fabrica publica unica preserva API, exemplos aninhados, os 12 runtimes, schema, pipelines, adapters, validacao, planejamento e protocolo, com sweep integral sem maps, segredos, billing ou lifecycle CAS e sem residuos temporarios."
     arquivo: "docs/sistemas-interativos.md"
     arquivo: "docs/descoberta-capacidades.md"
     arquivo: "docs/testing.md"
@@ -33,6 +33,11 @@ module sema.produto.sistemas_interativos.distribuicao {
       comandos_smoke deve_ser executados_pelo_bin_do_pacote_instalado
       comandos_smoke deve_ser executar_payload_valido_nos_20_subcomandos_com_fixtures_advanced_do_pacote
       comandos_smoke deve_ser validar_control_run_com_definicao_plano_contrato_entradas_evidencia_e_resultado_do_pacote_instalado
+      tarball deve_ser produzido_pela_fabrica_publica_unica_com_ignore_scripts
+      tarball deve_ser conter_exatamente_12_runtimes_docs_exemplos_skill_e_postinstall
+      tarball deve_ser conter_apenas_postinstall_como_lifecycle
+      tarball deve_ser revalidado_sem_source_map_pem_key_p12_pfx_env_ou_billing
+      tarball deve_ser publicado_no_replace_sem_temporario_ou_stage_residual
     }
     effects {
       fs.write sandbox_temporario criticidade = baixa
@@ -57,11 +62,15 @@ module sema.produto.sistemas_interativos.distribuicao {
       importar_api_raiz_e_executar_cli_implicitamente
       testar_apenas_help_ou_presenca_de_arquivo
       validar_exemplo_da_arvore_fonte_no_lugar_do_pacote
-      omitir_dotnet_ou_cpp_do_prepack_tradicional
+      omitir_qualquer_um_dos_12_runtimes
       tratar_tarball_local_como_publicacao_npm
       publicar_npm_ou_github_release_durante_smoke
       declarar_adapter_externo_instalado_por_existir_descriptor
       aceitar_smoke_que_exercita_apenas_Experience_IR_e_ignora_comandos_avancados
+      fabricar_tarball_por_npm_pack_direto_do_workspace
+      empacotar_prepack_postpack_guard_ou_codigo_cas
+      aceitar_tarball_com_source_map_pem_key_p12_pfx_env_ou_billing
+      aceitar_tarball_publicado_por_overwrite_ou_com_residuo_temporario
     }
     impl {
       ts: scripts.testar_pacote_cli_publico.main
@@ -69,12 +78,14 @@ module sema.produto.sistemas_interativos.distribuicao {
     vinculos {
       arquivo: "scripts/empacotar-cli-publica.mjs"
       arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "scripts/cli-publico/fronteira-publica.mjs"
       arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
-      arquivo: "pacotes/cli/scripts/prepack-exemplos.mjs"
+      arquivo: "pacotes/cli/scripts/bloquear-pack-workspace.mjs"
       arquivo: "pacotes/cli/package.json"
       arquivo: "pacotes/cli/src/exemplosOficiais.ts"
       arquivo: "pacotes/cli/src/index.ts"
       arquivo: "testes/integracao/bootstrap-seguro.test.ts"
+      arquivo: "testes/unidade/empacotamento-publico.test.ts"
       simbolo: scripts.testar_pacote_cli_publico.main
     }
     execucao {
@@ -114,6 +125,7 @@ module sema.produto.sistemas_interativos.distribuicao {
           schema_interativo_exposto: verdadeiro
           plano_oficial_validado: verdadeiro
           control_run_instalado_validado: verdadeiro
+          geradores_runtime_completos: verdadeiro
           publicado: falso
         }
       }

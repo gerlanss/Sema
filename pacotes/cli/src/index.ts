@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// SEMA-GOVERNED: sema.governanca_ia_contexto
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.distribuicao_global
 // Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
 import { realpathSync } from "node:fs";
 import path from "node:path";
@@ -14,6 +14,7 @@ export { expandirIntencaoSemanticaProfile, sugerirStarterPresetProfile, validarP
 export * from "./pipelineConteudo/index.js";
 export * from "./sistemasInterativos/index.js";
 export * from "./discovery/index.js";
+export * from "./distribuicao/index.js";
 
 function moduloExecutadoDiretamente(): boolean {
   if (!process.argv[1]) {

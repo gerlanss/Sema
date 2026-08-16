@@ -1,13 +1,14 @@
-// SEMA-GOVERNED: sema.produto.fronteira_repositorios
-// Consulte contratos/sema/fronteira_repositorios.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.fronteira_repositorios, sema.produto.fronteira_repositorios.empacotamento, sema.produto.fronteira_repositorios.empacotamento.smoke
+// Consulte contratos/sema/fronteira_repositorios_empacotamento_smoke.sema antes de editar.
 // Descricao: orquestra uma unica instalacao isolada do pacote publico e delega as validacoes por responsabilidade.
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync, spawnSync } from "node:child_process";
 import { validarBootstrapCodexInstalado } from "./cli-publico/bootstrap-codex.mjs";
 import {
+  validarArtefatosDistribuicaoContraFonte,
   validarManifestSemDependenciasFile,
   validarReadmePublico,
   validarRuntimeLocalDireto,
@@ -18,27 +19,39 @@ import {
   validarSistemasInterativosInstalados,
 } from "./cli-publico/sistemas-interativos.mjs";
 import { validarGeradoresInstalados } from "./cli-publico/toolchains-geradas.mjs";
+import {
+  ambienteInstalacaoIsolada,
+  caminhosCachePluginIsolado,
+  caminhosEstadoSemaReal,
+  executarFallbackPowerShellAbsoluto,
+  executarLauncherAbsoluto,
+  fingerprintCaminhos,
+  payloadContemCaminhoSensivel,
+  validarInstalacaoGlobalIsolada,
+} from "./cli-publico/distribuicao-global.mjs";
+
+export {
+  executarFallbackPowerShellAbsoluto,
+  executarLauncherAbsoluto,
+  payloadContemCaminhoSensivel,
+};
 
 const raiz = process.cwd();
 const pastaPacotes = path.join(raiz, ".tmp", "pacotes-instalador-npm");
 const cacheNpm = path.join(raiz, ".tmp", "npm-cache");
 
-function executar(comando, argumentos, cwd) {
-  if (process.platform === "win32" && (comando === "npm" || comando === "npx")) {
-    const argumentosIsolados = [...argumentos, "--cache", cacheNpm];
-    const cliLocal = path.join(
-      path.dirname(process.execPath),
-      "node_modules",
-      "npm",
-      "bin",
-      `${comando}-cli.js`,
-    );
-    if (existsSync(cliLocal)) {
-      execFileSync(process.execPath, [cliLocal, ...argumentosIsolados], { cwd, stdio: "inherit" });
-      return;
+function executar(comando, argumentos, cwd, opcoes = {}) {
+  const cacheExecucao = opcoes.cacheNpm ?? cacheNpm;
+  const ambiente = opcoes.env ?? process.env;
+  if (comando === "npm") {
+    const npmExecpath = ambiente.npm_execpath?.trim();
+    if (!npmExecpath || !path.isAbsolute(npmExecpath)) {
+      throw new Error("npm_execpath absoluto é obrigatório para o smoke público isolado.");
     }
-    execFileSync("powershell", ["-NoProfile", "-Command", [comando, ...argumentosIsolados].join(" ")], {
+    const argumentosIsolados = [...argumentos, "--cache", cacheExecucao];
+    execFileSync(process.execPath, [npmExecpath, ...argumentosIsolados], {
       cwd,
+      env: ambiente,
       stdio: "inherit",
     });
     return;
@@ -46,6 +59,7 @@ function executar(comando, argumentos, cwd) {
 
   execFileSync(comando, argumentos, {
     cwd,
+    env: ambiente,
     stdio: "inherit",
   });
 }
@@ -211,11 +225,20 @@ async function main() {
 
   const caminhoTarball = path.join(pastaPacotes, tarball);
   await validarManifestSemDependenciasFile(caminhoTarball, versaoEsperada, raiz);
+  await validarArtefatosDistribuicaoContraFonte(caminhoTarball, raiz);
   validarRuntimeLocalDireto(caminhoTarball, raiz);
 
   const sandbox = await mkdtemp(path.join(os.tmpdir(), "sema-cli-npm-"));
 
   try {
+    const diretorioUsuarioLocalIsolado = path.join(sandbox, "home-local-isolada");
+    const cacheNpmLocalIsolado = path.join(sandbox, "npm-cache-local-isolado");
+    await mkdir(diretorioUsuarioLocalIsolado, { recursive: true });
+    const ambienteLocal = {
+      ...ambienteInstalacaoIsolada(diretorioUsuarioLocalIsolado, cacheNpmLocalIsolado),
+      npm_config_global: "false",
+      NPM_CONFIG_GLOBAL: "false",
+    };
     await writeFile(
       path.join(sandbox, "package.json"),
       `${JSON.stringify({
@@ -226,7 +249,28 @@ async function main() {
       "utf8",
     );
 
-    executar("npm", ["install", caminhoTarball], sandbox);
+    const caminhosReaisAntesInstallLocal = caminhosEstadoSemaReal();
+    const estadoRealAntesInstallLocal = await fingerprintCaminhos(caminhosReaisAntesInstallLocal);
+    const caminhosPluginsLocal = caminhosCachePluginIsolado(
+      diretorioUsuarioLocalIsolado,
+      ambienteLocal,
+    );
+    const estadoPluginsAntesInstallLocal = await fingerprintCaminhos(caminhosPluginsLocal);
+    executar("npm", ["install", caminhoTarball, "--no-audit", "--no-fund"], sandbox, {
+      env: ambienteLocal,
+      cacheNpm: cacheNpmLocalIsolado,
+    });
+    if (await existe(path.join(diretorioUsuarioLocalIsolado, ".agents"))
+      || await existe(path.join(diretorioUsuarioLocalIsolado, ".sema"))) {
+      throw new Error("A workspace-local npm install executed the global Sema distribution lifecycle.");
+    }
+    if (await fingerprintCaminhos(caminhosReaisAntesInstallLocal) !== estadoRealAntesInstallLocal) {
+      throw new Error("The workspace-local npm install mutated a real HOME, workspace, or Sema cache target.");
+    }
+    if (await fingerprintCaminhos(caminhosPluginsLocal) !== estadoPluginsAntesInstallLocal ||
+        (await Promise.all(caminhosPluginsLocal.map(existe))).some(Boolean)) {
+      throw new Error("The workspace-local npm install created or mutated an AI plugin cache.");
+    }
     const basePacote = path.join(sandbox, "node_modules", "@semacode", "cli");
     const semaBin = path.join(basePacote, "dist", "index.js");
     const deepImport = spawnSync(
@@ -326,6 +370,14 @@ async function main() {
     if (versao !== versaoEsperada) {
       throw new Error(`The installed public CLI returned ${versao}; expected ${versaoEsperada}.`);
     }
+    await validarInstalacaoGlobalIsolada({
+      caminhoTarball,
+      sandbox,
+      versaoEsperada,
+      executar,
+      existe,
+      raizWorkspace: raiz,
+    });
 
     const preflightRemovido = spawnSync(process.execPath, [semaBin, "preflight", "resumo", "--json"], {
       cwd: sandbox,
@@ -494,6 +546,14 @@ async function main() {
     }
 
     const manifestInstalado = JSON.parse(await readFile(path.join(basePacote, "package.json"), "utf8"));
+    if (
+      manifestInstalado.scripts?.postinstall !== "node scripts/postinstall.mjs" ||
+      !(await existe(path.join(basePacote, "scripts", "postinstall.mjs"))) ||
+      !(await existe(path.join(basePacote, "skills", "sema", "SKILL.md"))) ||
+      !(await existe(path.join(basePacote, "skills", "sema", "agents", "openai.yaml")))
+    ) {
+      throw new Error("The installed public package omitted the global distribution lifecycle or bundled Sema skill.");
+    }
     for (const [nome, versaoDeclarada] of Object.entries(manifestInstalado.dependencies ?? {}).filter(([nome]) => nome.startsWith("@sema/"))) {
       const relativo = nome.slice("@sema/".length);
       const aninhado = path.join(pacotesInternosAninhados, relativo, "package.json");
@@ -509,8 +569,14 @@ async function main() {
   }
 }
 
-main().catch((erro) => {
-  console.error("Failed to validate the public local-only Sema CLI package.");
-  console.error(erro instanceof Error ? erro.stack ?? erro.message : erro);
-  process.exit(1);
-});
+function executadoDiretamente() {
+  return Boolean(process.argv[1]) && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+}
+
+if (executadoDiretamente()) {
+  main().catch((erro) => {
+    console.error("Failed to validate the public local-only Sema CLI package.");
+    console.error(erro instanceof Error ? erro.stack ?? erro.message : erro);
+    process.exit(1);
+  });
+}

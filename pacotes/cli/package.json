@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "2.3.5",
+  "version": "2.3.6",
   "type": "module",
   "description": "Codex-native local semantic governance CLI for contracts, drift, impact, documentation gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",
@@ -48,14 +48,16 @@
   "files": [
     "dist",
     "exemplos",
+    "skills",
+    "scripts/postinstall.mjs",
     "README.md",
     "package.json",
     "logo.png"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepack": "node scripts/prepack-exemplos.mjs",
-    "postpack": "node scripts/postpack-exemplos.mjs"
+    "prepack": "node scripts/bloquear-pack-workspace.mjs",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "dependencies": {
     "@sema/nucleo": "file:../nucleo",
