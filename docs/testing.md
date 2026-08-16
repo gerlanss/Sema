@@ -43,6 +43,25 @@ The public-package smoke has one orchestrator and named helpers under
 same installed tarball; splitting the checks must never multiply installations
 or weaken the single `try/finally` cleanup boundary.
 
+Focused drift regressions live in
+`testes/unidade/drift-escopo-dependencias.test.ts`,
+`testes/unidade/drift-escopo-referencias.test.ts`,
+`testes/unidade/drift-catalogo.test.ts`,
+`testes/unidade/drift-leitura-compartilhada.test.ts`, and
+`testes/integracao/drift-escopo-io.test.ts`, plus the external-path attack
+regressions in `testes/integracao/drift-caminhos-externos.test.ts`. They must prove planning before
+cataloging, path confinement, dependency closure, one physical read and one AST
+per canonical file, no homonymous last-write-wins resolution, and no
+project-wide walk for `arquivo` or `modulo` scope. Project-loading regressions
+also prove deferred code discovery and rejection of external configured roots
+or contract origins before enumeration. In project scope, physical file
+bindings outside code roots must enter the safe catalog individually, including
+non-indexable assets, without causing a walk of their parent directories.
+Drift, impact, and semantic rename must not expose an external path or read its
+contents.
+These checks exercise only the ephemeral in-memory catalog; persistent drift
+cache behavior is outside this release and must not be inferred from them.
+
 Native generator evidence is mandatory when changing C#/.NET or C++ support.
 The `dotnet` smoke must compile and execute through the local .NET SDK. The
 `cpp` smoke must compile and execute through GCC, Clang, or MSVC; checking only

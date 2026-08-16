@@ -1,6 +1,7 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift
+// Descricao: compartilha primitivas de indexacao e leitura do drift entre linguagens.
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
@@ -32,8 +33,96 @@ import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 
 import { ResultadoDrift, SimboloResolvido, diretoriosIgnoradosAtivos } from "./drift.part01.js";
+import type { OrigemCodigoDrift } from "./drift.part01.js";
 import { escolherArquivoPorVinculo, escolherSimboloPorVinculo } from "./drift.part03.js";
 import { avaliarPontuacaoSemantica, resolverPoliticaPontuacaoSemantica, type PoliticaPontuacaoSemantica } from "./driftScore.js";
+
+export type EventoLeituraCompartilhadaDrift = "extractor.run" | "ast.create";
+
+export interface AdaptadorLeituraCompartilhadaDrift {
+  listarPorRaiz(
+    raiz: string,
+    extensoes: readonly string[],
+  ): readonly string[] | Promise<readonly string[]>;
+  lerTexto(arquivo: string): Promise<string>;
+  emitir?(tipo: EventoLeituraCompartilhadaDrift, arquivo?: string): void;
+}
+
+export function chaveCaminhoCanonicoDrift(caminho: string): string {
+  const resolvido = path.resolve(caminho);
+  return process.platform === "win32" ? resolvido.toLowerCase() : resolvido;
+}
+
+function caminhoEstaDentroDaRaizDrift(raiz: string, candidato: string): boolean {
+  const relativo = path.relative(path.resolve(raiz), path.resolve(candidato));
+  return relativo === "" || (!relativo.startsWith("..") && !path.isAbsolute(relativo));
+}
+
+const contextoRaizesSobrepostasDrift = new AsyncLocalStorage<ReadonlyMap<string, readonly string[]>>();
+
+export function deduplicarRaizesSobrepostasDrift(diretorios: readonly string[]): string[] {
+  const unicas = new Map<string, string>();
+  for (const diretorio of diretorios) {
+    const chave = chaveCaminhoCanonicoDrift(diretorio);
+    if (!unicas.has(chave)) {
+      unicas.set(chave, diretorio);
+    }
+  }
+  const candidatas = [...unicas.values()];
+  const raizesFisicas = candidatas.filter((candidata, indice) => !candidatas.some((outra, outroIndice) =>
+    indice !== outroIndice
+    && chaveCaminhoCanonicoDrift(candidata) !== chaveCaminhoCanonicoDrift(outra)
+    && caminhoEstaDentroDaRaizDrift(outra, candidata)));
+  const aliasesPorRaiz = new Map<string, readonly string[]>();
+  for (const raizFisica of raizesFisicas) {
+    aliasesPorRaiz.set(
+      chaveCaminhoCanonicoDrift(raizFisica),
+      candidatas.filter((candidata) =>
+        chaveCaminhoCanonicoDrift(candidata) !== chaveCaminhoCanonicoDrift(raizFisica)
+        && caminhoEstaDentroDaRaizDrift(raizFisica, candidata)),
+    );
+  }
+  contextoRaizesSobrepostasDrift.enterWith(aliasesPorRaiz);
+  return raizesFisicas;
+}
+
+export function encontrarCandidatosFisicosImplementacaoDrift(
+  simbolos: readonly SimboloResolvido[],
+  origem: OrigemCodigoDrift,
+  caminhoDeclarado: string,
+): SimboloResolvido[] {
+  const caminhoNormalizado = caminhoDeclarado.trim().toLowerCase();
+  if (!caminhoNormalizado) {
+    return [];
+  }
+  const mesmaFamilia = (candidato: SimboloResolvido): boolean => candidato.origem === origem
+    || ((origem === "ts" || origem === "js") && (candidato.origem === "ts" || candidato.origem === "js"));
+  const porArquivo = new Map<string, SimboloResolvido>();
+
+  for (const candidato of simbolos) {
+    const caminhoCandidato = candidato.caminho.toLowerCase();
+    if (!mesmaFamilia(candidato)
+      || (caminhoCandidato !== caminhoNormalizado && !caminhoCandidato.endsWith(`.${caminhoNormalizado}`))) {
+      continue;
+    }
+    const chaveArquivo = chaveCaminhoCanonicoDrift(candidato.arquivo);
+    const anterior = porArquivo.get(chaveArquivo);
+    const candidatoExato = caminhoCandidato === caminhoNormalizado;
+    const anteriorExato = anterior?.caminho.toLowerCase() === caminhoNormalizado;
+    if (!anterior
+      || (candidatoExato && !anteriorExato)
+      || (candidatoExato === anteriorExato
+        && (candidato.caminho.length < anterior.caminho.length
+          || (candidato.caminho.length === anterior.caminho.length
+            && candidato.caminho.localeCompare(anterior.caminho, "pt-BR") < 0)))) {
+      porArquivo.set(chaveArquivo, candidato);
+    }
+  }
+
+  return [...porArquivo.values()].sort((a, b) =>
+    a.arquivo.localeCompare(b.arquivo, "pt-BR")
+    || a.caminho.localeCompare(b.caminho, "pt-BR"));
+}
 
 export function resolverArquivoOuSimboloAncora(
   vinculos: IrVinculo[],
@@ -361,7 +450,16 @@ export function juntarCaminhoHttp(base: string | undefined, sufixo: string | und
   return caminho === "//" ? "/" : caminho;
 }
 
-export async function listarArquivosRecursivos(diretorio: string, extensoes: string[]): Promise<string[]> {
+export async function listarArquivosRecursivos(
+  diretorio: string,
+  extensoes: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<string[]> {
+  if (adaptadorLeitura) {
+    const arquivos = await adaptadorLeitura.listarPorRaiz(diretorio, extensoes);
+    return [...new Map(arquivos.map((arquivo) => [chaveCaminhoCanonicoDrift(arquivo), arquivo] as const)).values()]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
   let entradas;
   try {
     entradas = await readdir(diretorio, { withFileTypes: true, encoding: "utf8" });
@@ -397,17 +495,27 @@ export const EXTENSOES_ARQUIVOS_RASTREAVEIS_DRIFT = [
   ".Caddyfile", ".caddyfile",
 ];
 
-export async function indexarArquivosRastreaveis(diretorios: string[]): Promise<string[]> {
-  const arquivos = new Set<string>();
-  for (const diretorio of diretorios) {
-    for (const arquivo of await listarArquivosRecursivos(diretorio, EXTENSOES_ARQUIVOS_RASTREAVEIS_DRIFT)) {
-      arquivos.add(arquivo);
+export async function indexarArquivosRastreaveis(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<string[]> {
+  const arquivos = new Map<string, string>();
+  for (const diretorio of deduplicarRaizesSobrepostasDrift(diretorios)) {
+    for (const arquivo of await listarArquivosRecursivos(
+      diretorio,
+      EXTENSOES_ARQUIVOS_RASTREAVEIS_DRIFT,
+      adaptadorLeitura,
+    )) {
+      const chave = chaveCaminhoCanonicoDrift(arquivo);
+      if (!arquivos.has(chave)) {
+        arquivos.set(chave, arquivo);
+      }
     }
   }
-  return [...arquivos].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return [...arquivos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
-export function caminhosSimbolicos(baseDiretorio: string, arquivo: string): string[] {
+function caminhosSimbolicosParaBaseDrift(baseDiretorio: string, arquivo: string): string[] {
   const relativo = path.relative(baseDiretorio, arquivo).replace(/\.[^.]+$/, "");
   const semPrefixo = relativo
     .split(path.sep)
@@ -416,13 +524,22 @@ export function caminhosSimbolicos(baseDiretorio: string, arquivo: string): stri
     .join(".");
   const prefixo = paraIdentificadorModulo(path.basename(baseDiretorio));
   const comPrefixo = prefixo ? [prefixo, semPrefixo].filter(Boolean).join(".") : semPrefixo;
+  const aliasesBase = [semPrefixo, comPrefixo].filter(Boolean);
   const aliasesIndex = path.basename(relativo) === "index"
-    ? [
-        semPrefixo.replace(/(?:^|\.)index$/, ""),
-        comPrefixo.replace(/(?:^|\.)index$/, ""),
-      ]
+    ? aliasesBase.map((alias) => alias.replace(/(?:^|\.)index$/, ""))
     : [];
-  return [...new Set([semPrefixo, comPrefixo, ...aliasesIndex].filter(Boolean))];
+  return [...new Set([...aliasesBase, ...aliasesIndex].filter(Boolean))];
+}
+
+export function caminhosSimbolicos(baseDiretorio: string, arquivo: string): string[] {
+  const aliasesConfigurados = contextoRaizesSobrepostasDrift.getStore()
+    ?.get(chaveCaminhoCanonicoDrift(baseDiretorio))
+    ?.filter((raiz) => caminhoEstaDentroDaRaizDrift(raiz, arquivo))
+    ?? [];
+  return [...new Set(
+    [baseDiretorio, ...aliasesConfigurados]
+      .flatMap((base) => caminhosSimbolicosParaBaseDrift(base, arquivo)),
+  )];
 }
 
 export function registrarSimboloTypeScript(

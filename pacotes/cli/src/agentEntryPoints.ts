@@ -697,6 +697,8 @@ Contract edit rule: \`.sema\` has its own size budget. Above ${LIMITE_AVISO_LINH
 
 Closing rule: \`sema drift --json\` must return \`sucesso:true\`. If it reports \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\`, or broken impls, the task is still blocked. Passing unit tests do not replace green drift.
 
+Focused drift rule: file and module scopes plan their physical file set before cataloging. They never fall back to a whole-project walk when no safe anchor exists. All indexers and semantic-budget checks reuse the same in-memory source read; a global walk is reserved for explicit \`--escopo projeto\`. Code discovery is deferred until that plan exists, homonymous candidates fail as ambiguous, and configured contract origins or code roots resolving outside the workspace are rejected before enumeration. \`inspecionar\`, \`impacto\`, and \`renomear-semantico\` preserve the same directed boundary. Missing local dependencies make coverage partial and block success.
+
 UI rule: if the task involves an interface, minimum evidence includes desktop and mobile. On a narrow viewport such as 390px, \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\` must pass; horizontal scroll blocks closure.
 
 ## Codex Context Capacity
@@ -756,12 +758,14 @@ Then read every required doc returned by \`docs-impacto\`.
 ## Change and Closure
 
 - \`sema docs-impacto --intencao "<acao>" --json\`: discovers required docs and documentary blockers.
-- \`sema drift <arquivo-ou-pasta> --escopo modulo --json\`: compares contract and implementation.
+- \`sema drift <arquivo-ou-pasta> --escopo modulo --json\`: plans a safe physical scope, then compares contract and implementation without a global fallback.
 - \`sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca "<descricao>" --json\`: maps impact before changing behavior.
 - \`sema verificar <arquivo-ou-pasta> --json\`: runs aggregated final verification.
 - \`sema finalizar-mudanca --intencao "<acao>" --doc-lida <arquivo> --json\`: proves documentation reading before closure.
 
 Honest closure: treat drift JSON as the source of truth. \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\`, or broken impls mean the change is not complete yet. Do not report "clean drift" without green JSON.
+
+Focused drift exposes its planned, declared, inferred, and missing files plus catalog visit/read metrics in \`escopo_aplicado\`. File and module scopes fail closed without a safe anchor, with homonymous implementation candidates, or with missing local dependencies; only \`--escopo projeto\` may walk every configured code root. Logical roots such as \`src\` are probed deterministically without a discovery walk. Configured contract origins and code roots are confined before enumeration, and \`inspecionar\`, \`impacto\`, and \`renomear-semantico\` reuse the same directed boundary without reopening arbitrary external paths.
 
 ## Sema Code
 

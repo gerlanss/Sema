@@ -1,7 +1,7 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.contexto
 // Descrição: resolve base, origens de contratos e diret?rios de c?digo do projeto.
 
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { listarArquivosSema } from '@sema/nucleo';
 import type { ConfiguracaoProjetoCarregada } from './projetoTipos.js';
@@ -19,7 +19,12 @@ const DIRETORIOS_CODIGO_FIXOS = [
   "app",
   "apps",
   "backend",
+  "frontend",
+  "client",
+  "web",
   "lib",
+  "packages",
+  "pacotes",
   "api",
   "server",
   "services",
@@ -30,6 +35,83 @@ const DIRETORIOS_CODIGO_FIXOS = [
   "functions",
   "scripts",
 ];
+
+export function resolverRaizesLogicasCodigoSemCaminhada(baseProjeto: string): string[] {
+  return [path.resolve(baseProjeto), ...DIRETORIOS_CODIGO_FIXOS
+    .map((segmento) => path.resolve(baseProjeto, segmento))];
+}
+
+function caminhoEstaDentro(raiz: string, alvo: string): boolean {
+  const relativo = path.relative(path.resolve(raiz), path.resolve(alvo));
+  return relativo === "" || (
+    relativo !== ".."
+    && !relativo.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relativo)
+  );
+}
+
+function erroEhAusencia(erro: unknown): boolean {
+  return ["ENOENT", "ENOTDIR"].includes((erro as NodeJS.ErrnoException).code ?? "");
+}
+
+async function resolverDiretoriosConfiguradosConfinados(
+  baseProjeto: string,
+  baseConfiguracao: string,
+  declarados: string[],
+  campo: "diretoriosCodigo" | "origens",
+): Promise<string[]> {
+  const baseLogica = path.resolve(baseProjeto);
+  const baseReal = await realpath(baseLogica);
+  const resolvidos = new Map<string, string>();
+
+  for (const [indice, declarado] of declarados.entries()) {
+    const identificadorSeguro = `${campo}[${indice}]`;
+    const absoluto = path.resolve(baseConfiguracao, declarado);
+    if (!caminhoEstaDentro(baseLogica, absoluto)) {
+      throw new Error(`${identificadorSeguro} aponta para fora da base do projeto`);
+    }
+
+    let canonico = absoluto;
+    try {
+      const [real, informacao] = await Promise.all([realpath(absoluto), stat(absoluto)]);
+      if (!informacao.isDirectory()) {
+        throw new Error(`${identificadorSeguro} nao e diretorio`);
+      }
+      if (!caminhoEstaDentro(baseReal, real)) {
+        throw new Error(`${identificadorSeguro} resolve fora da base do projeto`);
+      }
+      canonico = real;
+    } catch (erro) {
+      if (!erroEhAusencia(erro)) {
+        throw erro;
+      }
+    }
+
+    const chave = process.platform === "win32" ? canonico.toLowerCase() : canonico;
+    if (!resolvidos.has(chave)) {
+      resolvidos.set(chave, canonico);
+    }
+  }
+
+  return [...resolvidos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+export async function resolverDiretoriosCodigoConfigurados(
+  baseProjeto: string,
+  configCarregada?: ConfiguracaoProjetoCarregada,
+): Promise<string[]> {
+  const declarados = configCarregada?.config.diretoriosCodigo ?? [];
+  if (declarados.length === 0) {
+    return [];
+  }
+
+  return resolverDiretoriosConfiguradosConfinados(
+    baseProjeto,
+    configCarregada!.baseDiretorio,
+    declarados,
+    "diretoriosCodigo",
+  );
+}
 
 export async function resolverEntradaPadrao(
   cwd: string,
@@ -133,20 +215,27 @@ export async function resolverOrigensProjeto(
   configCarregada?: ConfiguracaoProjetoCarregada,
 ): Promise<string[]> {
   if (configCarregada) {
+    const confinar = (origens: string[]): Promise<string[]> =>
+      resolverDiretoriosConfiguradosConfinados(
+        baseProjeto,
+        configCarregada.baseDiretorio,
+        origens,
+        "origens",
+      );
     const infoEntrada = await stat(entradaResolvida);
     if (infoEntrada.isFile()) {
-      return [path.resolve(path.dirname(entradaResolvida))];
+      return confinar([path.dirname(entradaResolvida)]);
     }
 
     if (path.resolve(entradaResolvida) !== path.resolve(configCarregada.baseDiretorio)) {
-      return [path.resolve(entradaResolvida)];
+      return confinar([entradaResolvida]);
     }
 
     const declaradas = configCarregada.config.origens ?? (configCarregada.config.origem ? [configCarregada.config.origem] : []);
     if (declaradas.length > 0) {
-      return declaradas.map((origem) => path.resolve(configCarregada.baseDiretorio, origem));
+      return confinar(declaradas);
     }
-    return [configCarregada.baseDiretorio];
+    return confinar([configCarregada.baseDiretorio]);
   }
 
   const infoEntrada = await stat(entradaResolvida);
@@ -195,10 +284,7 @@ export async function inferirDiretoriosCodigo(
 ): Promise<string[]> {
 
   if (configCarregada?.config.diretoriosCodigo?.length) {
-    return [...new Set(configCarregada.config.diretoriosCodigo
-      .map((diretorio) => path.resolve(configCarregada.baseDiretorio, diretorio))
-      .filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return resolverDiretoriosCodigoConfigurados(baseProjeto, configCarregada);
   }
 
   const candidatosFixos = DIRETORIOS_CODIGO_FIXOS

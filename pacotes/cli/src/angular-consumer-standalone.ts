@@ -1,3 +1,6 @@
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift
+// Descricao: extrai superficies Angular com leitura compartilhada opcional, sem manter cache proprio.
+
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
@@ -15,6 +18,8 @@ interface ComponenteAngularStandaloneIndexado {
   template: string;
   raiz: boolean;
 }
+
+export type LeitorTextoAngularConsumer = (arquivo: string) => Promise<string>;
 
 function normalizarCaminhoConsumer(caminhoArquivo: string): string {
   return caminhoArquivo.replace(/\\/g, "/");
@@ -165,6 +170,7 @@ async function extrairTemplateAngularStandalone(
   baseProjeto: string,
   relacaoArquivo: string,
   metadata: ts.ObjectLiteralExpression,
+  leitorTexto?: LeitorTextoAngularConsumer,
 ): Promise<string> {
   const templateInline = extrairTextoLiteral(obterExpressaoPropriedade(metadata, "template"));
   if (templateInline) {
@@ -179,7 +185,8 @@ async function extrairTemplateAngularStandalone(
     return "";
   }
   try {
-    return await readFile(path.join(baseProjeto, templateRelativo), "utf8");
+    const arquivo = path.join(baseProjeto, templateRelativo);
+    return leitorTexto ? await leitorTexto(arquivo) : await readFile(arquivo, "utf8");
   } catch {
     return "";
   }
@@ -188,13 +195,16 @@ async function extrairTemplateAngularStandalone(
 async function indexarComponenteAngularStandalone(
   baseProjeto: string,
   arquivo: string,
+  leitorTexto?: LeitorTextoAngularConsumer,
+  sourceFiles?: ReadonlyMap<string, ts.SourceFile>,
 ): Promise<ComponenteAngularStandaloneIndexado | undefined> {
   const relacaoArquivo = normalizarCaminhoConsumer(path.relative(baseProjeto, arquivo));
   if (!arquivoEhComponenteAngularStandalone(relacaoArquivo)) {
     return undefined;
   }
-  const codigo = await readFile(arquivo, "utf8");
-  const sourceFile = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const codigo = leitorTexto ? await leitorTexto(arquivo) : await readFile(arquivo, "utf8");
+  const sourceFile = sourceFiles?.get(path.resolve(arquivo))
+    ?? ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const imports = extrairImportsTypeScriptAngular(relacaoArquivo, codigo);
 
   for (const statement of sourceFile.statements) {
@@ -228,7 +238,7 @@ async function indexarComponenteAngularStandalone(
       arquivo: relacaoArquivo,
       selector: extrairTextoLiteral(obterExpressaoPropriedade(metadata, "selector")),
       imports: [...importsArquivos],
-      template: await extrairTemplateAngularStandalone(baseProjeto, relacaoArquivo, metadata),
+      template: await extrairTemplateAngularStandalone(baseProjeto, relacaoArquivo, metadata, leitorTexto),
       raiz: arquivoEhRaizAngularStandalone(relacaoArquivo),
     };
   }
@@ -247,10 +257,12 @@ function templateReferenciaSelector(template: string, selector: string): boolean
 export async function coletarSuperficiesAngularStandaloneConsumer(
   baseProjeto: string,
   arquivos: string[],
+  leitorTexto?: LeitorTextoAngularConsumer,
+  sourceFiles?: ReadonlyMap<string, ts.SourceFile>,
 ): Promise<SuperficieAngularStandaloneConsumer[]> {
   const componentes = new Map<string, ComponenteAngularStandaloneIndexado>();
   for (const arquivo of arquivos) {
-    const componente = await indexarComponenteAngularStandalone(baseProjeto, arquivo);
+    const componente = await indexarComponenteAngularStandalone(baseProjeto, arquivo, leitorTexto, sourceFiles);
     if (componente) {
       componentes.set(componente.arquivo, componente);
     }

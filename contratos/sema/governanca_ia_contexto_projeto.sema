@@ -8,6 +8,7 @@ module sema.produto.governanca_ia.contexto.projeto {
       entrada: Texto required
       explicito: Booleano required
       escopo_real: Texto required
+      adiar_descoberta_codigo: Booleano required
     }
     output {
       base_resolvida: Booleano
@@ -20,12 +21,20 @@ module sema.produto.governanca_ia.contexto.projeto {
       contratos_descobertos_separados: Booleano
       contratos_carregados_minimos: Booleano
       fechamento_uses_aplicado: Booleano
+      descoberta_codigo_adiada: Booleano
+      diretorios_codigo_confinados: Booleano
+      origens_contratos_confinadas: Booleano
     }
     forbidden {
       fallback_para_projeto_padrao_sem_workspace
       validar_repositorio_errado_por_omissao_de_contexto
       exigir_runtime_remoto_para_operacao_de_contrato
       compilar_contrato_lateral_apenas_por_ter_sido_descoberto
+      varrer_codigo_antes_do_plano_em_escopo_estreito
+      aceitar_diretorio_codigo_fora_workspace
+      enumerar_origem_contratos_antes_de_confinar
+      aceitar_origem_contratos_fora_workspace
+      revelar_caminho_externo_em_diagnostico
     }
     impl {
       ts: cli.src.projeto.carregarProjeto
@@ -33,6 +42,7 @@ module sema.produto.governanca_ia.contexto.projeto {
     vinculos {
       arquivo: "pacotes/cli/src/projetoCarregar.ts"
       arquivo: "pacotes/cli/src/projetoCatalogo.ts"
+      arquivo: "pacotes/cli/src/projetoOrigens.ts"
       arquivo: "pacotes/cli/src/projetoTipos.ts"
       arquivo: "pacotes/nucleo/src/semantico/analisador.ts"
       arquivo: "testes/unidade/projeto-carregamento-escopo.test.ts"
@@ -57,6 +67,9 @@ module sema.produto.governanca_ia.contexto.projeto {
       contratos_descobertos_separados existe
       contratos_carregados_minimos existe
       fechamento_uses_aplicado existe
+      descoberta_codigo_adiada existe
+      diretorios_codigo_confinados existe
+      origens_contratos_confinadas existe
     }
     tests {
       caso "entrada explicita vence chute" {
@@ -64,6 +77,7 @@ module sema.produto.governanca_ia.contexto.projeto {
           entrada: "exemplos/calculadora.sema"
           explicito: verdadeiro
           escopo_real: "modulo"
+          adiar_descoberta_codigo: verdadeiro
         }
 
         expect {
@@ -75,6 +89,9 @@ module sema.produto.governanca_ia.contexto.projeto {
           contratos_descobertos_separados: verdadeiro
           contratos_carregados_minimos: verdadeiro
           fechamento_uses_aplicado: verdadeiro
+          descoberta_codigo_adiada: verdadeiro
+          diretorios_codigo_confinados: verdadeiro
+          origens_contratos_confinadas: verdadeiro
         }
       }
     }

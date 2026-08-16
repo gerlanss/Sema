@@ -197,6 +197,13 @@ test("cli impacto e renomeacao semantica apontam contrato, repositorio, UI e tes
     await writeFile(
       path.join(base, "contratos", "campanhas.sema"),
       `module app.campanhas {
+  vinculos {
+    arquivo: "src/workers/preview_worker.ts"
+    arquivo: "src/repositories/campanhas.repository.ts"
+    arquivo: "src/pages/preview.tsx"
+    arquivo: "src/__tests__/preview.spec.ts"
+  }
+
   task gerar_preview {
     input {
       classificacao_atual: Texto required

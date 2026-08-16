@@ -193,6 +193,9 @@ test("sincronização mantém somente o entrypoint oficial do Codex", async () =
     assert.match(commands, /jobOrchestrationPlan/);
     assert.match(commands, /ordered `queue` is the assignment list/);
     assert.match(commands, /local evidence bundle is never presented as authoritative trust/);
+    assert.match(commands, /plans a safe physical scope/);
+    assert.match(commands, /only `--escopo projeto` may walk every configured code root/);
+    assert.match(commands, /Configured contract origins and code roots are confined before enumeration/);
 
     const copilotManual = await readFile(path.join(base, ".github/copilot-instructions.md"), "utf8");
     assert.equal(copilotManual, "# Configuração manual preservada\n");

@@ -1,7 +1,5 @@
-// SEMA-GOVERNED
-// M?dulo: sema.produto.orcamento_semantico
-// Contrato: contratos/sema/orcamento_semantico.sema
-// Descri??o: normaliza??o de gera??o, escrita estruturada e execu??o de testes gerados por alvo.
+// SEMA-GOVERNED: sema.produto.geradores_nativos
+// Descricao: normaliza geracao, escrita estruturada e execucao de testes gerados por alvo.
 
 import path from "node:path";
 import { spawnSync } from "node:child_process";

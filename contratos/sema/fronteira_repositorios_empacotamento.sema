@@ -80,6 +80,7 @@ module sema.produto.fronteira_repositorios.empacotamento {
       arquivo: "scripts/cli-publico/pipeline-conteudo.mjs"
       arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
       arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
+      arquivo: "pacotes/cli/scripts/prepack-exemplos.mjs"
       arquivo: "pacotes/cli/README.md"
       arquivo: "docs/README.md"
     }

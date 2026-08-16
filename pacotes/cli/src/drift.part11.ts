@@ -29,14 +29,18 @@ import { extrairSimbolosLua } from "./lua-symbols.js";
 import { contarIndentacaoPython, extrairRotasFlaskDecoradas, normalizarCaminhoFlask } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
-import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
+import {
+  emitirDiagnosticosArquivosOrcamento,
+  type LeitorArquivosOrcamento,
+  workspaceExigeCabecalhoCodigoGovernado,
+} from "./driftOrcamento.js";
 
 import { ConfiguracaoEscopoDriftAplicada, DiagnosticoDrift, OpcoesDriftLegado, RegistroImplDrift, RegistroRecursoDrift, RegistroRotaDivergente, RegistroVinculoDrift, ResultadoDrift, SimboloCandidatoDrift, SimboloResolvido, definirDiretoriosIgnoradosAtivos, obterDiretoriosIgnoradosAtivos, extrairTermosEscopoDrift, resolverDiretoriosIgnoradosAtivos, resolverOpcoesDrift } from "./drift.part01.js";
 import { construirContextoRelevanciaConsumer, filtrarConsumerSurfacesPorEscopo, resolverDiretoriosCodigoEscopoReal } from "./drift.part02.js";
 import { indexarTypeScript, inferirConsumerFrameworkPrincipal } from "./drift.part06.js";
 import { indexarCpp, indexarDart, indexarDotnet, indexarGo, indexarJava, indexarLua, indexarPersistenciaDeclarativa, indexarPython, indexarRust } from "./drift.part07.js";
 import { indexarPersistenciaDetalhada, resolverPersistenciaLocalPorTask } from "./drift.part08.js";
-import { calcularConfiancaTask, calcularRiscoOperacional, calcularScoreTask, encontrarAncoraSuperficie, indexarArquivosRastreaveis, resumirLacunasTask, resumirOperacional } from "./drift.part04.js";
+import { calcularConfiancaTask, calcularRiscoOperacional, calcularScoreTask, chaveCaminhoCanonicoDrift, encontrarAncoraSuperficie, encontrarCandidatosFisicosImplementacaoDrift, indexarArquivosRastreaveis, resumirLacunasTask, resumirOperacional } from "./drift.part04.js";
 import { coletarVinculosIr, construirMapaRecursos, extrairRecursosEsperados, resolverRecursoEsperado } from "./drift.part10.js";
 import { analisarPersistenciaReal, escolherRotasEsperadas, normalizarCaminhoRota, ordenarCandidatos, sugerirCandidatosParaImpl, sugerirCandidatosParaTaskSemImpl } from "./drift.part09.js";
 import { escolherArquivoPorVinculo, escolherSimboloPorVinculo } from "./drift.part03.js";
@@ -44,6 +48,161 @@ import { simboloEhBridgeConsumer } from "./drift.part05.js";
 import { prepararIndicesDrift } from "./drift.part13.js";
 import { analisarModulosSelecionadosDrift } from "./drift.part14.js";
 import { resolverPoliticaPontuacaoSemantica } from "./driftScore.js";
+
+interface UsoImplementacaoDrift {
+  modulo: string;
+  task: string;
+  origem: RegistroImplDrift["origem"];
+  caminho: string;
+  implementacao: IrTask["implementacoesExternas"][number];
+  candidatos: SimboloResolvido[];
+  resolvido?: SimboloResolvido;
+  ambiguo: boolean;
+}
+
+interface SubstituicaoCaminhoImplementacaoDrift {
+  implementacao: IrTask["implementacoesExternas"][number];
+  original: string;
+  temporario: string;
+}
+
+function arquivosVinculadosFisicamenteDrift(
+  contexto: ContextoProjetoCarregado,
+  modulo: IrModulo,
+  task: IrTask,
+): Set<string> {
+  const arquivos = new Set<string>();
+  for (const vinculo of [...modulo.vinculos, ...task.vinculos]) {
+    const arquivo = vinculo.arquivo
+      ?? (vinculo.tipo === "arquivo" ? vinculo.valor : undefined);
+    if (arquivo) {
+      arquivos.add(chaveCaminhoCanonicoDrift(path.resolve(contexto.baseProjeto, arquivo)));
+    }
+  }
+  return arquivos;
+}
+
+function prepararMapaImplementacoesHonestoDrift(
+  contexto: ContextoProjetoCarregado,
+  mapaImpl: Map<string, SimboloResolvido>,
+  todosSimbolos: SimboloResolvido[],
+): {
+  mapaImplHonesto: Map<string, SimboloResolvido>;
+  ambiguidades: UsoImplementacaoDrift[];
+  substituicoesCaminho: SubstituicaoCaminhoImplementacaoDrift[];
+} {
+  const mapaImplHonesto = new Map(mapaImpl);
+  const usosPorOrigemECaminho = new Map<string, UsoImplementacaoDrift[]>();
+
+  for (const item of contexto.modulosSelecionados) {
+    const ir = item.resultado.ir;
+    if (!ir) {
+      continue;
+    }
+    for (const task of ir.tasks) {
+      const arquivosVinculados = arquivosVinculadosFisicamenteDrift(contexto, ir, task);
+      for (const impl of task.implementacoesExternas) {
+        const candidatos = encontrarCandidatosFisicosImplementacaoDrift(
+          todosSimbolos,
+          impl.origem,
+          impl.caminho,
+        );
+        const candidatosVinculados = candidatos.filter((candidato) =>
+          arquivosVinculados.has(chaveCaminhoCanonicoDrift(candidato.arquivo)));
+        const resolvido = candidatos.length === 1
+          ? candidatos[0]
+          : candidatosVinculados.length === 1
+            ? candidatosVinculados[0]
+            : undefined;
+        const uso: UsoImplementacaoDrift = {
+          modulo: ir.nome,
+          task: task.nome,
+          origem: impl.origem,
+          caminho: impl.caminho,
+          implementacao: impl,
+          candidatos,
+          resolvido,
+          ambiguo: candidatos.length > 1 && candidatosVinculados.length !== 1,
+        };
+        const chaveGrupo = `${impl.origem}\u0000${impl.caminho}`;
+        const usos = usosPorOrigemECaminho.get(chaveGrupo) ?? [];
+        usos.push(uso);
+        usosPorOrigemECaminho.set(chaveGrupo, usos);
+      }
+    }
+  }
+
+  const ambiguidades: UsoImplementacaoDrift[] = [];
+  const gruposPorCaminho = new Map<string, Array<{
+    usos: UsoImplementacaoDrift[];
+    resolvido?: SimboloResolvido;
+  }>>();
+  for (const usos of usosPorOrigemECaminho.values()) {
+    const caminho = usos[0]!.caminho;
+    const resolvidos = new Map<string, SimboloResolvido>();
+    for (const uso of usos) {
+      if (uso.resolvido) {
+        resolvidos.set(chaveCaminhoCanonicoDrift(uso.resolvido.arquivo), uso.resolvido);
+      }
+    }
+    const conflitoEntreUsos = resolvidos.size > 1;
+    const deveFalharFechado = usos.some((uso) => uso.ambiguo || !uso.resolvido)
+      || conflitoEntreUsos;
+    if (deveFalharFechado && (usos.some((uso) => uso.ambiguo) || conflitoEntreUsos)) {
+      const candidatosDoGrupo = [...new Map(
+        usos.flatMap((uso) => uso.candidatos).map((candidato) => [
+          chaveCaminhoCanonicoDrift(candidato.arquivo),
+          candidato,
+        ] as const),
+      ).values()];
+      for (const uso of usos) {
+        ambiguidades.push({
+          ...uso,
+          candidatos: uso.candidatos.length > 1 ? uso.candidatos : candidatosDoGrupo,
+          ambiguo: true,
+        });
+      }
+    }
+    const grupos = gruposPorCaminho.get(caminho) ?? [];
+    grupos.push({
+      usos,
+      resolvido: deveFalharFechado ? undefined : resolvidos.values().next().value,
+    });
+    gruposPorCaminho.set(caminho, grupos);
+  }
+
+  const substituicoesCaminho: SubstituicaoCaminhoImplementacaoDrift[] = [];
+  let sequenciaCaminhoTemporario = 0;
+  for (const [caminho, grupos] of gruposPorCaminho) {
+    mapaImplHonesto.delete(caminho);
+    const gruposResolvidos = grupos.filter((grupo) => grupo.resolvido);
+    const resolucoesDistintas = new Map<string, SimboloResolvido>();
+    for (const grupo of gruposResolvidos) {
+      const resolvido = grupo.resolvido!;
+      resolucoesDistintas.set(
+        `${resolvido.origem}:${chaveCaminhoCanonicoDrift(resolvido.arquivo)}:${resolvido.caminho}`,
+        resolvido,
+      );
+    }
+    if (gruposResolvidos.length === grupos.length && resolucoesDistintas.size === 1) {
+      mapaImplHonesto.set(caminho, resolucoesDistintas.values().next().value!);
+      continue;
+    }
+    for (const grupo of gruposResolvidos) {
+      for (const uso of grupo.usos) {
+        const temporario = `__sema_impl_${sequenciaCaminhoTemporario++}`;
+        mapaImplHonesto.set(temporario, uso.resolvido!);
+        substituicoesCaminho.push({
+          implementacao: uso.implementacao,
+          original: uso.caminho,
+          temporario,
+        });
+      }
+    }
+  }
+
+  return { mapaImplHonesto, ambiguidades, substituicoesCaminho };
+}
 
 export async function analisarDriftLegado(
   contexto: ContextoProjetoCarregado,
@@ -60,6 +219,9 @@ export async function analisarDriftLegado(
   definirDiretoriosIgnoradosAtivos(resolverDiretoriosIgnoradosAtivos(opcoesResolvidas));
 
   try {
+  const indicesPreparados = await prepararIndicesDrift(contexto, configuracaoEscopo, {
+    observador: opcoesResolvidas.observador,
+  });
   const {
     detalhesPersistencia,
     indexDart,
@@ -70,7 +232,31 @@ export async function analisarDriftLegado(
     todosArquivosConhecidos,
     todosRecursos,
     todosSimbolos,
-  } = await prepararIndicesDrift(contexto, configuracaoEscopo);
+    planoEscopo,
+    catalogo: metricasCatalogo,
+    leitorArquivosPlanejados,
+  } = indicesPreparados;
+  const relativoEscopo = (arquivo: string): string => {
+    const relativo = path.relative(contexto.baseProjeto, arquivo).replace(/\\/g, "/");
+    return relativo && !relativo.startsWith("../")
+      ? relativo
+      : arquivo.replace(/\\/g, "/");
+  };
+  configuracaoEscopo.estrategia = planoEscopo.estrategia;
+  configuracaoEscopo.cobertura = planoEscopo.cobertura;
+  configuracaoEscopo.arquivosPlanejados = planoEscopo.arquivos.map(relativoEscopo);
+  configuracaoEscopo.arquivosDeclarados = planoEscopo.arquivosDeclarados.map(relativoEscopo);
+  configuracaoEscopo.arquivosInferidos = planoEscopo.arquivosInferidos.map(relativoEscopo);
+  configuracaoEscopo.arquivosAusentes = planoEscopo.arquivosAusentes.map(relativoEscopo);
+  const bloqueiosAnalise = new Set(planoEscopo.bloqueios);
+  configuracaoEscopo.bloqueios = [...bloqueiosAnalise];
+  configuracaoEscopo.catalogo = metricasCatalogo;
+
+  const { mapaImplHonesto, ambiguidades, substituicoesCaminho } = prepararMapaImplementacoesHonestoDrift(
+    contexto,
+    mapaImpl,
+    todosSimbolos,
+  );
 
 
   const implsValidos: RegistroImplDrift[] = [];
@@ -81,6 +267,43 @@ export async function analisarDriftLegado(
   const recursosValidos: RegistroRecursoDrift[] = [];
   const recursosDivergentes: RegistroRecursoDrift[] = [];
   const diagnosticos: DiagnosticoDrift[] = [];
+  const moduloDiagnostico = contexto.modulosSelecionados[0]?.resultado.ir?.nome
+    ?? contexto.modulosSelecionados[0]?.resultado.modulo?.nome
+    ?? "projeto";
+  for (const arquivoAusente of planoEscopo.arquivosAusentes) {
+    const arquivo = relativoEscopo(arquivoAusente);
+    diagnosticos.push({
+      tipo: "vinculo_quebrado",
+      modulo: moduloDiagnostico,
+      arquivo,
+      severidade: "erro",
+      mensagem: `O arquivo planejado "${arquivo}" não existe no workspace; a cobertura do drift ficou parcial.`,
+    });
+  }
+  if (planoEscopo.cobertura === "parcial" && planoEscopo.arquivosAusentes.length === 0) {
+    diagnosticos.push({
+      tipo: "vinculo_quebrado",
+      modulo: moduloDiagnostico,
+      severidade: "erro",
+      mensagem: "A cobertura do drift ficou parcial e não permite declarar a análise como bem-sucedida.",
+    });
+  }
+  if (planoEscopo.bloqueios.includes("escopo_estreito_sem_vinculos")) {
+    diagnosticos.push({
+      tipo: "escopo_estreito_sem_vinculos",
+      modulo: moduloDiagnostico,
+      severidade: "erro",
+      mensagem: "Escopo de arquivo ou módulo sem arquivo vinculado nem implementação resolvível. Declare `vinculos { arquivo: ... }` ou execute explicitamente com `--escopo projeto`.",
+    });
+  }
+  if (planoEscopo.bloqueios.includes("escopo_estreito_ambiguo")) {
+    diagnosticos.push({
+      tipo: "escopo_estreito_ambiguo",
+      modulo: moduloDiagnostico,
+      severidade: "erro",
+      mensagem: "Mais de um arquivo pode implementar o mesmo símbolo. Declare um vínculo de arquivo inequívoco antes do drift.",
+    });
+  }
   const tasksResumo: ResultadoDrift["tasks"] = [];
   const taskPorChave = new Map<string, IrTask>();
   const guardrailsPorTask = new Map<string, {
@@ -98,28 +321,85 @@ export async function analisarDriftLegado(
   }>();
   const resumoVinculosPorTask = new Map<string, { validos: number; quebrados: number; arquivos: Set<string> }>();
   const arquivosAncoraHerdadosPorTask = new Map<string, Set<string>>();
-  analisarModulosSelecionadosDrift({
-    contexto,
-    mapaImpl,
-    todosSimbolos,
-    mapaRecursos,
-    todosRecursos,
-    todasRotasIndexadas,
-    todosArquivosConhecidos,
-    implsValidos,
-    implsQuebrados,
-    vinculosValidos,
-    vinculosQuebrados,
-    rotasDivergentes,
-    recursosValidos,
-    recursosDivergentes,
-    diagnosticos,
-    tasksResumo,
-    taskPorChave,
-    guardrailsPorTask,
-    resumoVinculosPorTask,
-    arquivosAncoraHerdadosPorTask,
-  });
+  // O analisador legado consulta implementações apenas pelo caminho. Chaves efêmeras
+  // mantêm resoluções de origens distintas isoladas durante essa chamada e são restauradas logo depois.
+  for (const substituicao of substituicoesCaminho) {
+    substituicao.implementacao.caminho = substituicao.temporario;
+  }
+  try {
+    analisarModulosSelecionadosDrift({
+      contexto,
+      mapaImpl: mapaImplHonesto,
+      todosSimbolos,
+      mapaRecursos,
+      todosRecursos,
+      todasRotasIndexadas,
+      todosArquivosConhecidos,
+      implsValidos,
+      implsQuebrados,
+      vinculosValidos,
+      vinculosQuebrados,
+      rotasDivergentes,
+      recursosValidos,
+      recursosDivergentes,
+      diagnosticos,
+      tasksResumo,
+      taskPorChave,
+      guardrailsPorTask,
+      resumoVinculosPorTask,
+      arquivosAncoraHerdadosPorTask,
+    });
+  } finally {
+    for (const substituicao of substituicoesCaminho) {
+      substituicao.implementacao.caminho = substituicao.original;
+    }
+  }
+  const caminhoOriginalPorTemporario = new Map(
+    substituicoesCaminho.map((substituicao) => [substituicao.temporario, substituicao.original] as const),
+  );
+  for (const registro of [...implsValidos, ...implsQuebrados]) {
+    registro.caminho = caminhoOriginalPorTemporario.get(registro.caminho) ?? registro.caminho;
+  }
+
+  for (const ambiguidade of ambiguidades) {
+    const candidatos: SimboloCandidatoDrift[] = ambiguidade.candidatos.map((candidato) => ({
+      origem: candidato.origem as RegistroImplDrift["origem"],
+      caminho: candidato.caminho,
+      arquivo: candidato.arquivo,
+      simbolo: candidato.simbolo,
+      confianca: "alta",
+      motivo: `Arquivo físico candidato à implementação ambígua "${ambiguidade.origem}:${ambiguidade.caminho}".`,
+    }));
+    const registro = implsQuebrados.find((impl) =>
+      impl.modulo === ambiguidade.modulo
+      && impl.task === ambiguidade.task
+      && impl.origem === ambiguidade.origem
+      && impl.caminho === ambiguidade.caminho);
+    if (registro) {
+      registro.candidatos = candidatos;
+    }
+    const resumo = tasksResumo.find((task) =>
+      task.modulo === ambiguidade.modulo && task.task === ambiguidade.task);
+    if (resumo) {
+      const arquivosCandidatos = new Set(candidatos.map((candidato) =>
+        chaveCaminhoCanonicoDrift(candidato.arquivo)));
+      const candidatosRestantes = resumo.candidatosImpl.filter((candidato) =>
+        !arquivosCandidatos.has(chaveCaminhoCanonicoDrift(candidato.arquivo)));
+      resumo.candidatosImpl = [
+        ...candidatos,
+        ...ordenarCandidatos(candidatosRestantes),
+      ].slice(0, 5);
+    }
+    diagnosticos.push({
+      tipo: "escopo_estreito_ambiguo",
+      modulo: ambiguidade.modulo,
+      task: ambiguidade.task,
+      severidade: "erro",
+      mensagem: `A implementação "${ambiguidade.origem}:${ambiguidade.caminho}" é ambígua: ${candidatos.length} arquivos físicos correspondem ao mesmo caminho semântico. Declare um vínculo de arquivo inequívoco.`,
+    });
+    bloqueiosAnalise.add("escopo_estreito_ambiguo");
+  }
+  configuracaoEscopo.bloqueios = [...bloqueiosAnalise];
 
 
   for (const resumo of tasksResumo) {
@@ -281,7 +561,7 @@ export async function analisarDriftLegado(
   const appRoutes = [...new Set(consumerSurfaces.map((surface) => surface.rota))]
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
   const consumerFramework = inferirConsumerFrameworkPrincipal(contexto.fontesLegado, consumerSurfaces, consumerBridges);
-  const persistenciaReal = await analisarPersistenciaReal(contexto, mapaRecursos, detalhesPersistencia, opcoesResolvidas, mapaImpl);
+  const persistenciaReal = await analisarPersistenciaReal(contexto, mapaRecursos, detalhesPersistencia, opcoesResolvidas, mapaImplHonesto);
   for (const item of persistenciaReal) {
     if (item.status === "divergente") {
       diagnosticos.push({
@@ -327,12 +607,44 @@ export async function analisarDriftLegado(
   const moduloOrcamento = contexto.modulosSelecionados[0]?.resultado.ir?.nome
     ?? contexto.modulosSelecionados[0]?.resultado.modulo?.nome
     ?? "projeto";
-  const exigeCabecalhoCodigoGovernado = contexto.configCarregada?.config.modoEstrito === true
-    && contexto.arquivosProjeto.some((arquivo) => path.basename(arquivo).toLowerCase() === "agents.md");
+  const exigeCabecalhoCodigoGovernado = await workspaceExigeCabecalhoCodigoGovernado(
+    contexto.baseProjeto,
+    contexto.configCarregada?.config.modoEstrito === true,
+  );
+  const chaveArquivoOrcamento = (arquivo: string): string => {
+    const absoluto = path.resolve(contexto.baseProjeto, arquivo);
+    return process.platform === "win32" ? absoluto.toLowerCase() : absoluto;
+  };
+  const contratosJaCarregados = new Map(
+    contexto.modulosCarregados.map((modulo) => [
+      chaveArquivoOrcamento(modulo.caminho),
+      modulo.codigo,
+    ] as const),
+  );
+  const leitorArquivosOrcamento: LeitorArquivosOrcamento = {
+    contem: (arquivo) => {
+      const chave = chaveArquivoOrcamento(arquivo);
+      return contratosJaCarregados.has(chave)
+        || leitorArquivosPlanejados.contem(arquivo);
+    },
+    lerTexto: async (arquivo) => {
+      const contrato = contratosJaCarregados.get(chaveArquivoOrcamento(arquivo));
+      if (contrato !== undefined) {
+        return contrato;
+      }
+      if (!leitorArquivosPlanejados.contem(arquivo)) {
+        throw new Error(`Arquivo fora do catálogo planejado do drift: ${arquivo}`);
+      }
+      return leitorArquivosPlanejados.lerTexto(arquivo);
+    },
+  };
+  const arquivosOrcamentoPlanejados = [...arquivosOrcamento]
+    .filter((arquivo) => leitorArquivosOrcamento.contem(arquivo));
   const diagnosticosOrcamento = await emitirDiagnosticosArquivosOrcamento({
     baseProjeto: contexto.baseProjeto,
-    arquivos: [...arquivosOrcamento],
+    arquivos: arquivosOrcamentoPlanejados,
     exigirCabecalhoCodigoGovernado: exigeCabecalhoCodigoGovernado,
+    leitorArquivos: leitorArquivosOrcamento,
   });
   for (const diagnostico of diagnosticosOrcamento) {
     diagnosticos.push({
@@ -354,6 +666,9 @@ export async function analisarDriftLegado(
     && recursosDivergentes.length === 0
     && vinculosQuebrados.length === 0
     && persistenciaReal.every((item) => item.status !== "divergente" && item.compatibilidade !== "invalido")
+    && planoEscopo.cobertura === "completa"
+    && planoEscopo.arquivosAusentes.length === 0
+    && bloqueiosAnalise.size === 0
     && !possuiBloqueioOrcamento;
 
   const payloadBase: ResultadoDrift = {

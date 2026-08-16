@@ -3,16 +3,18 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
   avaliarOrcamentoArquivo,
   conteudoTemDescricaoHumanaGovernada,
+  emitirDiagnosticosArquivosOrcamento,
   exemploCabecalhoCodigoGovernado,
   tipoArquivoOrcamento,
   validarCabecalhoCodigoGovernado,
   validarArquivoTocado,
+  workspaceExigeCabecalhoCodigoGovernado,
 } from "../../pacotes/cli/src/driftOrcamento.ts";
 import {
   escreverArquivos,
@@ -30,6 +32,23 @@ const cabecalhoHtml = [
   "<!doctype html>",
   "<html></html>",
 ].join("\n");
+
+test("modo estrito exige cabecalho somente quando AGENTS.md e arquivo fisico da raiz", async () => {
+  const pasta = await mkdtemp(path.join(os.tmpdir(), "sema-agents-cabecalho-"));
+  try {
+    assert.equal(await workspaceExigeCabecalhoCodigoGovernado(pasta, false), false);
+    assert.equal(await workspaceExigeCabecalhoCodigoGovernado(pasta, true), false);
+
+    await mkdir(path.join(pasta, "AGENTS.md"));
+    assert.equal(await workspaceExigeCabecalhoCodigoGovernado(pasta, true), false);
+    await rm(path.join(pasta, "AGENTS.md"), { recursive: true });
+
+    await writeFile(path.join(pasta, "AGENTS.md"), "# Protocolo\n", "utf8");
+    assert.equal(await workspaceExigeCabecalhoCodigoGovernado(pasta, true), true);
+  } finally {
+    await rm(pasta, { recursive: true, force: true });
+  }
+});
 
 test("cabecalho SEMA-GOVERNED em HTML usa comentario HTML com descricao", () => {
   const resultado = validarCabecalhoCodigoGovernado({
@@ -203,4 +222,38 @@ test("escrita governada bloqueia codigo normal acima de 2000 linhas", async () =
 
 test("exemplo de TypeScript usa comentario de linha", () => {
   assert.match(exemploCabecalhoCodigoGovernado("src/app.ts"), /^\/\/ SEMA-GOVERNED:/);
+});
+
+test("orcamento reutiliza leitor planejado uma vez e nao abre arquivo lateral", async () => {
+  const baseProjeto = path.resolve(os.tmpdir(), "sema-orcamento-leitor-planejado");
+  const arquivoPlanejado = path.join(baseProjeto, "src", "planejado.ts");
+  const arquivoLateral = path.join(baseProjeto, "dumps", "lateral.sql");
+  const leituras: string[] = [];
+  const consultas: string[] = [];
+  const conteudoPlanejado = Array.from(
+    { length: 2101 },
+    (_, indice) => `export const valor${indice} = ${indice};`,
+  ).join("\n");
+
+  const diagnosticos = await emitirDiagnosticosArquivosOrcamento({
+    baseProjeto,
+    arquivos: [arquivoPlanejado, arquivoPlanejado, arquivoLateral],
+    leitorArquivos: {
+      contem: (arquivo) => {
+        consultas.push(arquivo);
+        return path.resolve(arquivo) === arquivoPlanejado;
+      },
+      lerTexto: async (arquivo) => {
+        leituras.push(arquivo);
+        assert.equal(arquivo, arquivoPlanejado, "arquivo lateral nao pode chegar ao leitor");
+        return conteudoPlanejado;
+      },
+    },
+  });
+
+  assert.deepEqual(leituras, [arquivoPlanejado]);
+  assert.deepEqual(consultas, [arquivoPlanejado, arquivoLateral]);
+  assert.equal(diagnosticos.length, 1);
+  assert.equal(diagnosticos[0]?.arquivo, "src/planejado.ts");
+  assert.equal(diagnosticos[0]?.tipo, "codigo_monolitico");
 });

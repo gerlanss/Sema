@@ -83,6 +83,21 @@ test("arquivo .sema carrega alvo e fechamento use relativo sem compilar contrato
   }
 });
 
+test("carregamento fisico adiado usa raizes logicas sem detectar fontes legadas", async () => {
+  const base = await criarWorkspaceCarregamento();
+  try {
+    const contexto = await carregarProjeto("contratos/alvo.sema", base, {
+      escopo: "modulo",
+      adiarDescobertaCodigo: true,
+    });
+
+    assert.equal(contexto.diretoriosCodigo.includes(path.resolve(base, "src")), true);
+    assert.deepEqual(contexto.fontesLegado, []);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
 test("escopo projeto forca carregamento de todos os contratos descobertos", async () => {
   const base = await criarWorkspaceCarregamento();
   try {
@@ -92,6 +107,8 @@ test("escopo projeto forca carregamento de todos os contratos descobertos", asyn
     assert.deepEqual(carregados, ["alvo.sema", "base.sema", "compartilhado.sema", "lateral.sema"]);
     assert.equal(contexto.modulosCarregados.length, 4);
     assert.equal(contexto.modulosSelecionados.length, 4);
+    assert.equal(contexto.diretoriosCodigo.some((diretorio) => path.basename(diretorio) === "src"), true);
+    assert.equal(contexto.fontesLegado.includes("typescript"), true);
   } finally {
     await rm(base, { recursive: true, force: true });
   }
@@ -159,6 +176,67 @@ test("arquivo de codigo nao e compilado acidentalmente como contrato Sema", asyn
   }
 });
 
+test("diretorio de codigo externo na configuracao falha antes da inferencia legada", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-codigo-confinado-"));
+  const externa = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-codigo-externo-"));
+  try {
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await writeFile(path.join(base, "contratos", "alvo.sema"), "module app.alvo {}\n", "utf8");
+    await writeFile(path.join(externa, "app.py"), "from fastapi import FastAPI\napp = FastAPI()\n", "utf8");
+    await writeFile(path.join(base, "sema.config.json"), JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: [externa],
+    }), "utf8");
+
+    for (const escopo of ["modulo", "projeto"] as const) {
+      await assert.rejects(
+        carregarProjeto("contratos/alvo.sema", base, { escopo }),
+        (erro: unknown) => {
+          const mensagem = String((erro as Error).message);
+          return /fora da base do projeto/u.test(mensagem) && !mensagem.includes(externa);
+        },
+      );
+    }
+  } finally {
+    await rm(base, { recursive: true, force: true });
+    await rm(externa, { recursive: true, force: true });
+  }
+});
+
+test("junction de codigo para fora da base falha antes da inferencia legada", async (t) => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-codigo-link-"));
+  const externa = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-codigo-link-externo-"));
+  try {
+    await mkdir(path.join(base, "contratos"), { recursive: true });
+    await writeFile(path.join(base, "contratos", "alvo.sema"), "module app.alvo {}\n", "utf8");
+    await writeFile(path.join(externa, "app.py"), "from fastapi import FastAPI\n", "utf8");
+    try {
+      await symlink(externa, path.join(base, "codigo-link"), process.platform === "win32" ? "junction" : "dir");
+    } catch (erro) {
+      if (["EPERM", "EACCES", "ENOTSUP", "UNKNOWN"].includes((erro as NodeJS.ErrnoException).code ?? "")) {
+        t.skip("Ambiente nao permite criar junction/symlink para testar diretorio de codigo.");
+        return;
+      }
+      throw erro;
+    }
+    await writeFile(path.join(base, "sema.config.json"), JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./codigo-link"],
+    }), "utf8");
+
+    await assert.rejects(
+      carregarProjeto("contratos/alvo.sema", base, {
+        escopo: "modulo",
+        adiarDescobertaCodigo: true,
+      }),
+      /resolve fora da base do projeto/u,
+    );
+  } finally {
+    await rm(base, { recursive: true, force: true });
+    await rm(externa, { recursive: true, force: true });
+  }
+});
+
 test("origem junction fora da base do projeto e rejeitada", async (t) => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-confinado-"));
   const externa = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-externo-"));
@@ -168,7 +246,8 @@ test("origem junction fora da base do projeto e rejeitada", async (t) => {
       JSON.stringify({ origens: ["./contratos-link"] }, null, 2),
       "utf8",
     );
-    await writeFile(path.join(externa, "externo.sema"), "module externo.contrato {}\n", "utf8");
+    const nomeArmadilha = "segredo-que-nao-pode-ser-enumerado.sema";
+    await writeFile(path.join(externa, nomeArmadilha), "module externo.contrato {}\n", "utf8");
     try {
       await symlink(externa, path.join(base, "contratos-link"), process.platform === "win32" ? "junction" : "dir");
     } catch (erro) {
@@ -179,10 +258,65 @@ test("origem junction fora da base do projeto e rejeitada", async (t) => {
       throw erro;
     }
 
-    await assert.rejects(
-      carregarProjeto(undefined, base),
-      /resolve fora da base do projeto/u,
+    await assert.rejects(carregarProjeto(undefined, base), (erro: unknown) => {
+      const mensagem = String((erro as Error).message);
+      return /origens\[0\] resolve fora da base do projeto/u.test(mensagem)
+        && !mensagem.includes(externa)
+        && !mensagem.includes(nomeArmadilha);
+    });
+  } finally {
+    await rm(base, { recursive: true, force: true });
+    await rm(externa, { recursive: true, force: true });
+  }
+});
+
+test("origem absoluta externa falha antes de enumerar e sem revelar caminho", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-origem-base-"));
+  const externa = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-origem-externa-"));
+  const nomeArmadilha = "contrato-secreto-nao-enumerado.sema";
+  try {
+    await writeFile(path.join(externa, nomeArmadilha), "module externo.segredo {}\n", "utf8");
+    await writeFile(
+      path.join(base, "sema.config.json"),
+      JSON.stringify({ origens: [externa] }, null, 2),
+      "utf8",
     );
+
+    await assert.rejects(carregarProjeto(undefined, base), (erro: unknown) => {
+      const mensagem = String((erro as Error).message);
+      return /origens\[0\] aponta para fora da base do projeto/u.test(mensagem)
+        && !mensagem.includes(externa)
+        && !mensagem.includes(nomeArmadilha);
+    });
+  } finally {
+    await rm(base, { recursive: true, force: true });
+    await rm(externa, { recursive: true, force: true });
+  }
+});
+
+test("entrada em junction externa nao contorna o confinamento das origens", async (t) => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-entrada-base-"));
+  const externa = await mkdtemp(path.join(os.tmpdir(), "sema-projeto-entrada-externa-"));
+  const nomeArmadilha = "entrada-secreta-nao-enumerada.sema";
+  try {
+    await writeFile(path.join(base, "sema.config.json"), "{}\n", "utf8");
+    await writeFile(path.join(externa, nomeArmadilha), "module externo.entrada {}\n", "utf8");
+    try {
+      await symlink(externa, path.join(base, "entrada-link"), process.platform === "win32" ? "junction" : "dir");
+    } catch (erro) {
+      if (["EPERM", "EACCES", "ENOTSUP", "UNKNOWN"].includes((erro as NodeJS.ErrnoException).code ?? "")) {
+        t.skip("Ambiente nao permite criar junction/symlink para testar entrada externa.");
+        return;
+      }
+      throw erro;
+    }
+
+    await assert.rejects(carregarProjeto("entrada-link", base), (erro: unknown) => {
+      const mensagem = String((erro as Error).message);
+      return /origens\[0\] resolve fora da base do projeto/u.test(mensagem)
+        && !mensagem.includes(externa)
+        && !mensagem.includes(nomeArmadilha);
+    });
   } finally {
     await rm(base, { recursive: true, force: true });
     await rm(externa, { recursive: true, force: true });

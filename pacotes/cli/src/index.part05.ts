@@ -109,7 +109,9 @@ import {
 import { resumirDriftPorModulo } from "./index.part03.js";
 import { resolverOpcoesDriftCli } from "./index.part01.js";
 export async function comandoInspecionar(entrada: string | undefined, emJson: boolean, cwd = process.cwd()): Promise<number> {
-  const contextoProjeto = await carregarProjeto(entrada, cwd);
+  const contextoProjeto = await carregarProjeto(entrada, cwd, {
+    adiarDescobertaCodigo: true,
+  });
   const resultadoDrift = await analisarDriftLegado(contextoProjeto);
   const framework = resolverFrameworkPadrao(undefined, contextoProjeto.configCarregada);
   const estruturaSaida = resolverEstruturaSaidaPadrao(undefined, framework, contextoProjeto.configCarregada);
@@ -187,7 +189,10 @@ export async function comandoInspecionar(entrada: string | undefined, emJson: bo
 }
 export async function comandoDrift(entrada: string | undefined, args: string[], emJson: boolean, cwd = process.cwd()): Promise<number> {
   const opcoes = resolverOpcoesDriftCli(args);
-  const contextoProjeto = await carregarProjeto(entrada, cwd, { escopo: opcoes.escopo });
+  const contextoProjeto = await carregarProjeto(entrada, cwd, {
+    escopo: opcoes.escopo,
+    adiarDescobertaCodigo: opcoes.escopo !== "projeto",
+  });
   const resultado = await analisarDriftLegado(contextoProjeto, opcoes);
   if (emJson) {
     console.log(JSON.stringify(resultado, null, 2));
@@ -195,6 +200,23 @@ export async function comandoDrift(entrada: string | undefined, args: string[], 
   }
   console.log("Drift entre Sema e codigo legado");
   console.log(`- Escopo aplicado: ${resultado.escopo_aplicado.escopo}`);
+  console.log(`- Estratégia física: ${resultado.escopo_aplicado.estrategia ?? "não informada"}`);
+  console.log(`- Cobertura: ${resultado.escopo_aplicado.cobertura ?? "não informada"}`);
+  console.log(`- Arquivos planejados: ${resultado.escopo_aplicado.arquivosPlanejados?.length ?? 0}`);
+  console.log(`- Arquivos declarados: ${resultado.escopo_aplicado.arquivosDeclarados?.length ?? 0}`);
+  console.log(`- Arquivos inferidos: ${resultado.escopo_aplicado.arquivosInferidos?.length ?? 0}`);
+  console.log(`- Arquivos ausentes: ${resultado.escopo_aplicado.arquivosAusentes?.length ?? 0}`);
+  console.log(`- Bloqueios do plano: ${resultado.escopo_aplicado.bloqueios?.length ?? 0}`);
+  for (const bloqueio of resultado.escopo_aplicado.bloqueios ?? []) {
+    console.log(`  - ${bloqueio}`);
+  }
+  const metricasCatalogo = resultado.escopo_aplicado.catalogo;
+  if (metricasCatalogo) {
+    const origemCatalogo = metricasCatalogo.origem === "plano_explicito"
+      ? "plano explícito"
+      : "caminhada";
+    console.log(`- Catálogo: ${metricasCatalogo.arquivosCatalogados} arquivos, ${metricasCatalogo.diretoriosVisitados} diretórios visitados, ${metricasCatalogo.leiturasConteudo} leituras, ${metricasCatalogo.bytesLidos} bytes, ${metricasCatalogo.acertosMemoriaConteudo} reaproveitamentos em memória, origem ${origemCatalogo}`);
+  }
   console.log(`- Ignorar worktrees: ${resultado.escopo_aplicado.ignorarWorktrees ? "sim" : "nao"}`);
   console.log(`- Ignorar consumidores laterais: ${resultado.escopo_aplicado.ignorarConsumidoresLaterais ? "sim" : "nao"}`);
   console.log(`- Modulos analisados: ${resultado.modulos.length}`);
@@ -288,7 +310,10 @@ export async function comandoImpacto(
     return 1;
   }
   const opcoes = resolverOpcoesDriftCli(args);
-  const contextoProjeto = await carregarProjeto(entrada, cwd, { escopo: opcoes.escopo });
+  const contextoProjeto = await carregarProjeto(entrada, cwd, {
+    escopo: opcoes.escopo,
+    adiarDescobertaCodigo: opcoes.escopo !== "projeto",
+  });
   const resultado = await gerarMapaImpactoSemantico(
     contextoProjeto,
     alvoSemantico,
@@ -333,7 +358,10 @@ export async function comandoRenomearSemantico(
     return 1;
   }
   const opcoes = resolverOpcoesDriftCli(args);
-  const contextoProjeto = await carregarProjeto(entrada, cwd, { escopo: opcoes.escopo });
+  const contextoProjeto = await carregarProjeto(entrada, cwd, {
+    escopo: opcoes.escopo,
+    adiarDescobertaCodigo: opcoes.escopo !== "projeto",
+  });
   const resultado = await assistirRenomeacaoSemantica(
     contextoProjeto,
     nomeAtual,

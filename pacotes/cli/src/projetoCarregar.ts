@@ -10,19 +10,42 @@ import {
   carregarFontesContratos,
 } from './projetoCatalogo.js';
 import type {
+  ConfiguracaoProjetoCarregada,
   ContextoProjetoCarregado,
   ModuloProjetoCarregado,
   OpcoesCarregarProjeto,
 } from './projetoTipos.js';
-import { carregarConfiguracaoProjeto, normalizarModoAdocao } from './projetoConfig.js';
+import { carregarConfiguracaoProjeto, normalizarFonteLegado, normalizarModoAdocao } from './projetoConfig.js';
 import { inferirFontesLegado } from './projetoLegado.js';
+import type { FonteLegado } from './tipos.js';
 import {
   inferirDiretoriosCodigo,
   listarArquivosDeOrigens,
   resolverBaseProjeto,
+  resolverDiretoriosCodigoConfigurados,
   resolverEntradaPadrao,
   resolverOrigensProjeto,
+  resolverRaizesLogicasCodigoSemCaminhada,
 } from './projetoOrigens.js';
+
+async function resolverDiretoriosCodigoSemCaminhada(
+  baseProjeto: string,
+  configCarregada?: ConfiguracaoProjetoCarregada,
+): Promise<string[]> {
+  const declarados = await resolverDiretoriosCodigoConfigurados(baseProjeto, configCarregada);
+  return declarados.length > 0
+    ? declarados
+    : resolverRaizesLogicasCodigoSemCaminhada(baseProjeto);
+}
+
+function resolverFontesLegadoDeclaradas(
+  configCarregada?: ConfiguracaoProjetoCarregada,
+): FonteLegado[] {
+  return [...new Set((configCarregada?.config.fontesLegado ?? [])
+    .map((fonte) => normalizarFonteLegado(fonte))
+    .filter((fonte): fonte is FonteLegado => Boolean(fonte)))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
 
 export async function carregarProjeto(
   entrada: string | undefined,
@@ -58,10 +81,15 @@ export async function carregarProjeto(
   const entradaContrato = infoEntrada.isFile()
     ? (await canonicalizarContratosNoProjeto(baseProjeto, [entradaResolvida]))[0]
     : undefined;
-  // O escopo estreito limita contratos compilados, não a evidência de código vivo.
-  // Drift/impacto ainda precisam detectar frameworks e fontes mesmo com um único contrato alvo.
-  const diretoriosCodigo = await inferirDiretoriosCodigo(baseProjeto, configCarregada);
-  const fontesLegado = await inferirFontesLegado(diretoriosCodigo, baseProjeto, configCarregada);
+  // Escopos estreitos recebem apenas raizes logicas declaradas (ou a raiz local)
+  // para que o planner decida o que pode ser tocado antes de qualquer caminhada.
+  const adiarDescobertaCodigo = opcoes.adiarDescobertaCodigo === true && escopo !== "projeto";
+  const diretoriosCodigo = adiarDescobertaCodigo
+    ? await resolverDiretoriosCodigoSemCaminhada(baseProjeto, configCarregada)
+    : await inferirDiretoriosCodigo(baseProjeto, configCarregada);
+  const fontesLegado = adiarDescobertaCodigo
+    ? resolverFontesLegadoDeclaradas(configCarregada)
+    : await inferirFontesLegado(diretoriosCodigo, baseProjeto, configCarregada);
   const modoAdocao = normalizarModoAdocao(configCarregada?.config.modoAdocao);
 
   const arquivosSelecionados = carregarProjetoCompleto && escopo === "projeto"

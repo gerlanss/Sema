@@ -15,6 +15,8 @@ module sema.produto.governanca_ia.drift.mudancas {
       arquivos_afetados: Booleano
       superfices_afetadas: Booleano
       ordem_operacional_emitida: Booleano
+      escopo_fisico_reutilizado: Booleano
+      caminhos_confinados: Booleano
     }
     authz {
       escopo: sema.impacto.mapear
@@ -32,7 +34,14 @@ module sema.produto.governanca_ia.drift.mudancas {
         arquivos_afetados: interno
         superfices_afetadas: interno
         ordem_operacional_emitida: interno
+        escopo_fisico_reutilizado: interno
+        caminhos_confinados: interno
       }
+    }
+    forbidden {
+      varrer_raiz_inteira_em_escopo_arquivo_ou_modulo
+      aceitar_arquivo_fora_workspace_por_fallback
+      expor_caminho_externo_no_mapa
     }
     audit {
       evento: sema.impacto.mapeado
@@ -49,6 +58,7 @@ module sema.produto.governanca_ia.drift.mudancas {
       arquivo: "pacotes/cli/src/drift.part12.ts"
       arquivo: "pacotes/cli/src/index.ts"
       arquivo: "pacotes/cli/src/index.part05.ts"
+      arquivo: "testes/integracao/drift-caminhos-externos.test.ts"
       simbolo: cli.src.drift.gerarMapaImpactoSemantico
     }
     execucao {
@@ -60,6 +70,8 @@ module sema.produto.governanca_ia.drift.mudancas {
       arquivos_afetados existe
       superfices_afetadas existe
       ordem_operacional_emitida existe
+      escopo_fisico_reutilizado existe
+      caminhos_confinados existe
     }
     tests {
       caso "mudanca semantica vira plano acionavel" {
@@ -73,6 +85,8 @@ module sema.produto.governanca_ia.drift.mudancas {
           sucesso: verdadeiro
           arquivos_afetados: "contratos/colaboradores_whatsapp.sema"
           ordem_operacional_emitida: verdadeiro
+          escopo_fisico_reutilizado: verdadeiro
+          caminhos_confinados: verdadeiro
         }
       }
     }
@@ -88,6 +102,8 @@ module sema.produto.governanca_ia.drift.mudancas {
       contrato_reescrito: Booleano
       codigo_relacionado_mapeado: Booleano
       testes_afetados_sugeridos: Booleano
+      escopo_fisico_reutilizado: Booleano
+      caminhos_confinados: Booleano
     }
     authz {
       escopo: sema.renomeacao.executar
@@ -105,7 +121,14 @@ module sema.produto.governanca_ia.drift.mudancas {
         contrato_reescrito: interno
         codigo_relacionado_mapeado: interno
         testes_afetados_sugeridos: interno
+        escopo_fisico_reutilizado: interno
+        caminhos_confinados: interno
       }
+    }
+    forbidden {
+      ler_arquivo_fora_workspace
+      expor_conteudo_ou_caminho_externo_em_sugestao
+      varrer_raiz_inteira_em_escopo_arquivo_ou_modulo
     }
     audit {
       evento: sema.renomeacao.assistida
@@ -122,6 +145,7 @@ module sema.produto.governanca_ia.drift.mudancas {
       arquivo: "pacotes/cli/src/drift.part12.ts"
       arquivo: "pacotes/cli/src/index.ts"
       arquivo: "pacotes/cli/src/index.part05.ts"
+      arquivo: "testes/integracao/drift-caminhos-externos.test.ts"
       simbolo: cli.src.drift.assistirRenomeacaoSemantica
     }
     execucao {
@@ -133,6 +157,8 @@ module sema.produto.governanca_ia.drift.mudancas {
       contrato_reescrito existe
       codigo_relacionado_mapeado existe
       testes_afetados_sugeridos existe
+      escopo_fisico_reutilizado existe
+      caminhos_confinados existe
     }
     tests {
       caso "renomeacao guiada evita quebra lateral" {
@@ -146,6 +172,8 @@ module sema.produto.governanca_ia.drift.mudancas {
           sucesso: verdadeiro
           contrato_reescrito: verdadeiro
           codigo_relacionado_mapeado: verdadeiro
+          escopo_fisico_reutilizado: verdadeiro
+          caminhos_confinados: verdadeiro
         }
       }
     }

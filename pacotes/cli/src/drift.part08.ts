@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift
+// Descricao: indexa persistencia detalhada reutilizando o catalogo fisico do drift.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -35,7 +35,12 @@ import { OrigemRecursoDrift, RecursoEsperadoDrift, RecursoResolvido, RegistroCol
 import { fecharPrefixoRecurso, limparLiteralRecurso, normalizarNomeRecursoDrift } from "./drift.part02.js";
 import { extrairRecursosArquivoLocal, extrairRecursosMongoDb, extrairRecursosPersistenciaCodigoVivo, extrairRecursosPrisma, inferirMotoresRelacionais, variantesNomeRecursoDrift } from "./drift.part03.js";
 import { normalizarOrigemParaEngine, registrarColunaPersistenciaDrift } from "./drift.part07.js";
-import { listarArquivosRecursivos } from "./drift.part04.js";
+import {
+  chaveCaminhoCanonicoDrift,
+  deduplicarRaizesSobrepostasDrift,
+  listarArquivosRecursivos,
+  type AdaptadorLeituraCompartilhadaDrift,
+} from "./drift.part04.js";
 import { recursoResolvidoCombinaEsperado } from "./drift.part10.js";
 import { ordenarCandidatos, recursoPersistenciaCombinaAlvo } from "./drift.part09.js";
 
@@ -241,22 +246,34 @@ export function registrarRepositoriosPorRecursos(
 
 export async function indexarPersistenciaDetalhada(
   diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
 ): Promise<{
   colunas: RegistroColunaPersistenciaDrift[];
   repositorios: RegistroRepositorioPersistenciaDrift[];
 }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const colunas = new Map<string, RegistroColunaPersistenciaDrift>();
   const repositorios = new Map<string, RegistroRepositorioPersistenciaDrift>();
+  const arquivosUnicos = new Map<string, string>();
 
-  for (const diretorio of diretorios) {
+  for (const diretorio of deduplicarRaizesSobrepostasDrift(diretorios)) {
     const arquivos = await listarArquivosRecursivos(diretorio, [
       ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
       ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h", ".php",
       ".sql", ".psql", ".ddl", ".prisma",
-    ]);
-
+    ], adaptadorLeitura);
     for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+      const chave = chaveCaminhoCanonicoDrift(arquivo);
+      if (!arquivosUnicos.has(chave)) {
+        arquivosUnicos.set(chave, arquivo);
+      }
+    }
+  }
+
+  for (const arquivo of arquivosUnicos.values()) {
+      const codigo = adaptadorLeitura
+        ? await adaptadorLeitura.lerTexto(arquivo)
+        : await readFile(arquivo, "utf8");
       const recursos = arquivo.endsWith(".prisma")
         ? extrairRecursosPrisma(arquivo, codigo)
         : extrairRecursosPersistenciaCodigoVivo(arquivo, codigo);
@@ -278,7 +295,6 @@ export async function indexarPersistenciaDetalhada(
       }
 
       registrarRepositoriosPorRecursos(repositorios, arquivo, codigo, recursos);
-    }
   }
 
   return {

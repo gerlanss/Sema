@@ -19,6 +19,8 @@ Contract edit rule: `.sema` has its own size budget. Above 300 lines, plan a spl
 
 Closing rule: `sema drift --json` must return `sucesso:true`. If it reports `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes`, or broken impls, the task is still blocked. Passing unit tests do not replace green drift.
 
+Focused drift rule: file and module scopes plan their physical file set before cataloging. They never fall back to a whole-project walk when no safe anchor exists. All indexers and semantic-budget checks reuse the same in-memory source read; a global walk is reserved for explicit `--escopo projeto`. Code discovery is deferred until that plan exists, homonymous candidates fail as ambiguous, and configured contract origins or code roots resolving outside the workspace are rejected before enumeration. `inspecionar`, `impacto`, and `renomear-semantico` preserve the same directed boundary. Missing local dependencies make coverage partial and block success.
+
 UI rule: if the task involves an interface, minimum evidence includes desktop and mobile. On a narrow viewport such as 390px, `document.documentElement.scrollWidth <= document.documentElement.clientWidth` must pass; horizontal scroll blocks closure.
 
 ## Codex Context Capacity

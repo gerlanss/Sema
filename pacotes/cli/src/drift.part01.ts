@@ -30,6 +30,8 @@ import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 import { paraIdentificadorModulo } from "./drift.part04.js";
+import type { MetricasCatalogoDrift, ObservadorOperacaoDrift } from "./driftCatalogo.js";
+import type { CoberturaEscopoDrift, EstrategiaEscopoDrift } from "./driftEscopo.js";
 export type OrigemCodigoDrift = "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
 export type OrigemSimboloDrift = OrigemCodigoDrift | "sql";
 export interface SimboloResolvido {
@@ -61,6 +63,7 @@ export interface OpcoesDriftLegado {
   escopo?: EscopoDriftReal;
   ignorarWorktrees?: boolean;
   ignorarConsumidoresLaterais?: boolean;
+  observador?: ObservadorOperacaoDrift | undefined;
 }
 export interface DiagnosticoDrift {
   tipo:
@@ -73,7 +76,9 @@ export interface DiagnosticoDrift {
     | "pontuacao_semantica_insuficiente"
     | "contrato_monolitico"
     | "codigo_monolitico"
-    | "codigo_governado_sem_cabecalho";
+    | "codigo_governado_sem_cabecalho"
+    | "escopo_estreito_sem_vinculos"
+    | "escopo_estreito_ambiguo";
   modulo: string;
   task?: string;
   route?: string;
@@ -199,6 +204,14 @@ export interface ConfiguracaoEscopoDriftAplicada {
   ignorarWorktrees: boolean;
   ignorarConsumidoresLaterais: boolean;
   termosEscopo: string[];
+  estrategia?: EstrategiaEscopoDrift;
+  cobertura?: CoberturaEscopoDrift;
+  arquivosPlanejados?: string[];
+  arquivosDeclarados?: string[];
+  arquivosInferidos?: string[];
+  arquivosAusentes?: string[];
+  bloqueios?: string[];
+  catalogo?: MetricasCatalogoDrift;
 }
 export interface RegistroImpactoSemanticoArquivo {
   arquivo: string;
@@ -368,11 +381,13 @@ export function normalizarEscopoDrift(valor?: string): EscopoDriftReal {
   }
   return "modulo";
 }
-export function resolverOpcoesDrift(opcoes?: OpcoesDriftLegado): Required<OpcoesDriftLegado> {
+export function resolverOpcoesDrift(opcoes?: OpcoesDriftLegado):
+  Omit<Required<OpcoesDriftLegado>, "observador"> & { observador: ObservadorOperacaoDrift | undefined } {
   return {
     escopo: normalizarEscopoDrift(opcoes?.escopo),
     ignorarWorktrees: opcoes?.ignorarWorktrees !== false,
     ignorarConsumidoresLaterais: opcoes?.ignorarConsumidoresLaterais !== false,
+    observador: opcoes?.observador,
   };
 }
 export function resolverDiretoriosIgnoradosAtivos(opcoes?: OpcoesDriftLegado): Set<string> {

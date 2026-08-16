@@ -30,12 +30,14 @@ Then read every required doc returned by `docs-impacto`.
 ## Change and Closure
 
 - `sema docs-impacto --intencao "<acao>" --json`: discovers required docs and documentary blockers.
-- `sema drift <arquivo-ou-pasta> --escopo modulo --json`: compares contract and implementation.
+- `sema drift <arquivo-ou-pasta> --escopo modulo --json`: plans a safe physical scope, then compares contract and implementation without a global fallback.
 - `sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca "<descricao>" --json`: maps impact before changing behavior.
 - `sema verificar <arquivo-ou-pasta> --json`: runs aggregated final verification.
 - `sema finalizar-mudanca --intencao "<acao>" --doc-lida <arquivo> --json`: proves documentation reading before closure.
 
 Honest closure: treat drift JSON as the source of truth. `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes`, or broken impls mean the change is not complete yet. Do not report "clean drift" without green JSON.
+
+Focused drift exposes its planned, declared, inferred, and missing files plus catalog visit/read metrics in `escopo_aplicado`. File and module scopes fail closed without a safe anchor, with homonymous implementation candidates, or with missing local dependencies; only `--escopo projeto` may walk every configured code root. Logical roots such as `src` are probed deterministically without a discovery walk. Configured contract origins and code roots are confined before enumeration, and `inspecionar`, `impacto`, and `renomear-semantico` reuse the same directed boundary without reopening arbitrary external paths.
 
 ## Sema Code
 

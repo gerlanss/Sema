@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift
+// Descricao: extrai rotas e superficies consumidoras dentro do escopo fisico planejado.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -32,7 +32,12 @@ import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 
 import { RegistroConsumerSurfaceDrift, SimboloResolvido } from "./drift.part01.js";
-import { desembrulharExpressaoTypeScript, extrairNomePropriedadeTypeScript, registrarSimboloTypeScript } from "./drift.part04.js";
+import {
+  desembrulharExpressaoTypeScript,
+  extrairNomePropriedadeTypeScript,
+  registrarSimboloTypeScript,
+  type AdaptadorLeituraCompartilhadaDrift,
+} from "./drift.part04.js";
 
 export function registrarMetodoTypeScriptProtoOuObjeto(
   simbolos: Map<string, SimboloResolvido>,
@@ -443,6 +448,7 @@ export async function extrairRotasAngularConsumer(
   relacaoArquivo: string,
   prefixo = "/",
   visitados = new Set<string>(),
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
 ): Promise<RotaAngularConsumerDrift[]> {
   const relacaoNormalizada = normalizarRelacaoConsumer(relacaoArquivo);
   if (visitados.has(relacaoNormalizada)) {
@@ -452,7 +458,10 @@ export async function extrairRotasAngularConsumer(
 
   let codigo = "";
   try {
-    codigo = await readFile(path.join(diretorioBase, relacaoNormalizada), "utf8");
+    const arquivo = path.join(diretorioBase, relacaoNormalizada);
+    codigo = adaptadorLeitura
+      ? await adaptadorLeitura.lerTexto(arquivo)
+      : await readFile(arquivo, "utf8");
   } catch {
     return [];
   }
@@ -463,7 +472,13 @@ export async function extrairRotasAngularConsumer(
     if (!rota.arquivoRotasFilhas) {
       continue;
     }
-    filhas.push(...await extrairRotasAngularConsumer(diretorioBase, rota.arquivoRotasFilhas, rota.rota, visitados));
+    filhas.push(...await extrairRotasAngularConsumer(
+      diretorioBase,
+      rota.arquivoRotasFilhas,
+      rota.rota,
+      visitados,
+      adaptadorLeitura,
+    ));
   }
   return [...rotas, ...filhas];
 }

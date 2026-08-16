@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift
+// Descricao: indexa TypeScript com catalogo e AST compartilhados pelo drift.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -33,7 +33,19 @@ import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 
 import { ConsumerFramework, RecursoResolvido, RegistroConsumerBridgeDrift, RegistroConsumerSurfaceDrift, RotaResolvida, SimboloResolvido } from "./drift.part01.js";
 import { arquivoEhRotasAngularConsumer, arquivoEhRotasAngularConsumerRaiz, arquivoEhRotasReactViteConsumer, arquivoEhSuperficieNextJsConsumer, arquivoEhSuperficieReactViteConsumer, extrairRotasAngularConsumer, extrairRotasReactViteConsumer, inferirRotaNextJsConsumer, inferirRotaReactViteConsumer, normalizarRelacaoConsumer, registrarAtribuicaoPrototypeTypeScript, registrarMetodosObjectAssignTypeScript } from "./drift.part05.js";
-import { caminhosSimbolicos, desembrulharExpressaoTypeScript, extrairNomeClassePrototypeTypeScript, extrairTextoLiteral, juntarCaminhoHttp, lerDecorator, listarArquivosRecursivos, registrarSimboloTypeScript } from "./drift.part04.js";
+import {
+  caminhosSimbolicos,
+  chaveCaminhoCanonicoDrift,
+  deduplicarRaizesSobrepostasDrift,
+  desembrulharExpressaoTypeScript,
+  extrairNomeClassePrototypeTypeScript,
+  extrairTextoLiteral,
+  juntarCaminhoHttp,
+  lerDecorator,
+  listarArquivosRecursivos,
+  registrarSimboloTypeScript,
+  type AdaptadorLeituraCompartilhadaDrift,
+} from "./drift.part04.js";
 import { extrairRecursosPersistenciaCodigoVivo, registrarRecursoDrift } from "./drift.part03.js";
 
 export function inferirConsumerFrameworkPrincipal(
@@ -177,24 +189,42 @@ function aplicarReexportacoesTypeScript(simbolos: Map<string, SimboloResolvido>,
   }
 }
 
-export async function indexarTypeScript(diretorios: string[]): Promise<{
+export async function indexarTypeScript(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{
   simbolos: SimboloResolvido[];
   rotas: RotaResolvida[];
   recursos: RecursoResolvido[];
   consumerSurfaces: RegistroConsumerSurfaceDrift[];
 }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
   const consumerSurfaces = new Map<string, RegistroConsumerSurfaceDrift>();
+  const sourceFiles = new Map<string, ts.SourceFile>();
+  const arquivosProcessados = new Set<string>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]))
+  for (const diretorio of deduplicarRaizesSobrepostasDrift(diretorios)) {
+    const arquivos = (await listarArquivosRecursivos(
+      diretorio,
+      [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
+      adaptadorLeitura,
+    ))
       .filter((arquivo) =>
         !arquivo.endsWith(".d.ts")
         && !arquivo.endsWith(".spec.ts")
         && !arquivo.endsWith(".test.ts"),
-      );
+      )
+      .filter((arquivo) => {
+        const chave = chaveCaminhoCanonicoDrift(arquivo);
+        if (arquivosProcessados.has(chave)) {
+          return false;
+        }
+        arquivosProcessados.add(chave);
+        return true;
+      });
     const arquivosRotasAngular = arquivos.filter((arquivo) => arquivoEhRotasAngularConsumer(path.relative(diretorio, arquivo)));
     const arquivosRotasAngularRaiz = new Set(
       arquivosRotasAngular
@@ -206,7 +236,9 @@ export async function indexarTypeScript(diretorios: string[]): Promise<{
     const reexportacoes: ReexportacaoTypeScript[] = [];
 
     for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+      const codigo = adaptadorLeitura
+        ? await adaptadorLeitura.lerTexto(arquivo)
+        : await readFile(arquivo, "utf8");
       const origemArquivo = /\.(?:js|jsx|mjs|cjs)$/i.test(arquivo) ? "js" : "ts";
       const scriptKind = arquivo.endsWith(".tsx")
         ? ts.ScriptKind.TSX
@@ -215,7 +247,9 @@ export async function indexarTypeScript(diretorios: string[]): Promise<{
           : origemArquivo === "js"
             ? ts.ScriptKind.JS
             : ts.ScriptKind.TS;
+      adaptadorLeitura?.emitir?.("ast.create", arquivo);
       const sourceFile = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKind);
+      sourceFiles.set(path.resolve(arquivo), sourceFile);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       const relacao = path.relative(diretorio, arquivo);
 
@@ -296,7 +330,13 @@ export async function indexarTypeScript(diretorios: string[]): Promise<{
 
       if (arquivoEhRotasAngularConsumer(relacao) && (!usarApenasRotasAngularRaiz || arquivosRotasAngularRaiz.has(path.resolve(arquivo)))) {
         encontrouSuperficieAngularPorRotas = true;
-        for (const rotaAngular of await extrairRotasAngularConsumer(diretorio, relacao)) {
+        for (const rotaAngular of await extrairRotasAngularConsumer(
+          diretorio,
+          relacao,
+          "/",
+          new Set<string>(),
+          adaptadorLeitura,
+        )) {
           const arquivoRotasAngular = path.join(diretorio, rotaAngular.arquivoRotas);
           consumerSurfaces.set(`${rotaAngular.rota}:${arquivoRotasAngular}:routes`, {
             rota: rotaAngular.rota,
@@ -405,7 +445,12 @@ export async function indexarTypeScript(diretorios: string[]): Promise<{
     }
 
     if (!encontrouSuperficieAngularPorRotas) {
-      for (const superficie of await coletarSuperficiesAngularStandaloneConsumer(diretorio, arquivos)) {
+      for (const superficie of await coletarSuperficiesAngularStandaloneConsumer(
+        diretorio,
+        arquivos,
+        adaptadorLeitura ? (arquivo) => adaptadorLeitura.lerTexto(arquivo) : undefined,
+        sourceFiles,
+      )) {
         const arquivoSuperficie = path.join(diretorio, superficie.arquivo);
         consumerSurfaces.set(`${superficie.rota}:${arquivoSuperficie}:${superficie.tipoArquivo}`, {
           rota: superficie.rota,

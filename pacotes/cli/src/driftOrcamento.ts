@@ -3,7 +3,7 @@
 // Contrato: contratos/sema/orcamento_semantico.sema
 // Descrição: centraliza os gates de linhas e cabeçalho Sema para drift, finalização e snapshots.
 
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 export const LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO = 1000;
@@ -12,6 +12,20 @@ export const LIMITE_AVISO_LINHAS_CONTRATO_SEMA = 300;
 export const LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA = 500;
 export const LIMITE_AVISO_LINHAS_ORCAMENTO_SEMANTICO = LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO;
 export const LIMITE_BLOQUEIO_LINHAS_ORCAMENTO_SEMANTICO = LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO;
+
+export async function workspaceExigeCabecalhoCodigoGovernado(
+  baseProjeto: string,
+  modoEstrito: boolean,
+): Promise<boolean> {
+  if (!modoEstrito) {
+    return false;
+  }
+  try {
+    return (await lstat(path.resolve(baseProjeto, "AGENTS.md"))).isFile();
+  } catch {
+    return false;
+  }
+}
 
 export type TipoArquivoOrcamento = "contrato" | "codigo" | "documentacao" | "gerado" | "migracao_historica";
 export type SeveridadeOrcamentoSemantico = "ok" | "aviso" | "erro";
@@ -50,6 +64,11 @@ export interface DiagnosticoOrcamentoArquivo {
   mensagem: string;
   limite_aviso_linhas: number;
   limite_bloqueio_linhas: number;
+}
+
+export interface LeitorArquivosOrcamento {
+  contem(caminho: string): boolean;
+  lerTexto(caminho: string): Promise<string>;
 }
 
 export interface LimitesOrcamentoSemantico {
@@ -378,6 +397,7 @@ export async function emitirDiagnosticosArquivosOrcamento(opcoes: {
   arquivos: string[];
   baseProjeto?: string;
   exigirCabecalhoCodigoGovernado?: boolean;
+  leitorArquivos?: LeitorArquivosOrcamento;
 }): Promise<DiagnosticoOrcamentoArquivo[]> {
   const baseProjeto = path.resolve(opcoes.baseProjeto ?? process.cwd());
   const diagnosticos: DiagnosticoOrcamentoArquivo[] = [];
@@ -387,14 +407,21 @@ export async function emitirDiagnosticosArquivosOrcamento(opcoes: {
     const absoluto = path.isAbsolute(arquivoInformado)
       ? arquivoInformado
       : path.resolve(baseProjeto, arquivoInformado);
-    const chave = path.resolve(absoluto);
+    const resolvido = path.resolve(absoluto);
+    const chave = process.platform === "win32" ? resolvido.toLowerCase() : resolvido;
     if (vistos.has(chave)) {
       continue;
     }
     vistos.add(chave);
 
+    if (opcoes.leitorArquivos && !opcoes.leitorArquivos.contem(absoluto)) {
+      continue;
+    }
+
     try {
-      const conteudo = await readFile(absoluto, "utf8");
+      const conteudo = opcoes.leitorArquivos
+        ? await opcoes.leitorArquivos.lerTexto(absoluto)
+        : await readFile(absoluto, "utf8");
       const relativo = path.relative(baseProjeto, absoluto).replace(/\\/g, "/") || arquivoInformado.replace(/\\/g, "/");
       diagnosticos.push(...avaliarOrcamentoArquivo({
         arquivo: relativo,

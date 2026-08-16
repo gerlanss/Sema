@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
-// Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.governanca_ia.drift
+// Descricao: indexa linguagens legadas sem reabrir fontes fora do catalogo do drift.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -33,23 +33,62 @@ import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 
 import { OrigemRecursoDrift, RecursoResolvido, RegistroColunaPersistenciaDrift, RegistroConsumerSurfaceDrift, RotaResolvida, SimboloResolvido, categorizarPersistenciaPorOrigem } from "./drift.part01.js";
-import { caminhosSimbolicos, listarArquivosRecursivos } from "./drift.part04.js";
+import {
+  caminhosSimbolicos,
+  chaveCaminhoCanonicoDrift,
+  deduplicarRaizesSobrepostasDrift,
+  listarArquivosRecursivos,
+  type AdaptadorLeituraCompartilhadaDrift,
+} from "./drift.part04.js";
 import { extrairRecursosPersistenciaCodigoVivo, extrairRecursosPrisma, extrairSimbolosSqlDeclarativos, recursoEhIgnorado, registrarRecursoDrift } from "./drift.part03.js";
 import { BlocoPython, registrarRotasPython, registrarSimboloPython } from "./drift.part06.js";
 import { arquivoEhRotasFlutterConsumer, extrairRotasFlutterConsumer, inferirRotaFlutterConsumer } from "./drift.part05.js";
 import { fecharPrefixoRecurso, limparLiteralRecurso, normalizarNomeRecursoDrift } from "./drift.part02.js";
 
-export async function indexarPython(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+interface ArquivoIndexacaoCompartilhadaDrift {
+  diretorio: string;
+  arquivo: string;
+}
+
+async function listarArquivosIndexacaoCompartilhada(
+  diretorios: string[],
+  extensoes: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<ArquivoIndexacaoCompartilhadaDrift[]> {
+  const arquivos = new Map<string, ArquivoIndexacaoCompartilhadaDrift>();
+  for (const diretorio of deduplicarRaizesSobrepostasDrift(diretorios)) {
+    for (const arquivo of await listarArquivosRecursivos(diretorio, extensoes, adaptadorLeitura)) {
+      const chave = chaveCaminhoCanonicoDrift(arquivo);
+      if (!arquivos.has(chave)) {
+        arquivos.set(chave, { diretorio, arquivo });
+      }
+    }
+  }
+  return [...arquivos.values()];
+}
+
+async function lerTextoIndexacaoCompartilhada(
+  arquivo: string,
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<string> {
+  return adaptadorLeitura
+    ? adaptadorLeitura.lerTexto(arquivo)
+    : readFile(arquivo, "utf8");
+}
+
+export async function indexarPython(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".py"]))
-      .filter((arquivo) => !arquivo.endsWith("__init__.py") && !/tests?[\\/]/i.test(arquivo));
-
-    for (const arquivo of arquivos) {
-      const texto = await readFile(arquivo, "utf8");
+  const arquivos = (await listarArquivosIndexacaoCompartilhada(diretorios, [".py"], adaptadorLeitura))
+    .filter(({ arquivo }) => !arquivo.endsWith("__init__.py") && !/tests?[\\/]/i.test(arquivo));
+  for (const { diretorio, arquivo } of arquivos) {
+      const texto = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       const prefixo = texto.match(/APIRouter\s*\(\s*prefix\s*=\s*["']([^"']+)["']/)?.[1];
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, texto)) {
@@ -111,29 +150,30 @@ export async function indexarPython(diretorios: string[]): Promise<{ simbolos: S
 
         decoratorsPendentes = [];
       }
-    }
   }
 
   return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-export async function indexarDart(diretorios: string[]): Promise<{
+export async function indexarDart(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{
   simbolos: SimboloResolvido[];
   rotas: RotaResolvida[];
   recursos: RecursoResolvido[];
   consumerSurfaces: RegistroConsumerSurfaceDrift[];
 }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
   const consumerSurfaces = new Map<string, RegistroConsumerSurfaceDrift>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".dart"]))
-      .filter((arquivo) => !arquivo.endsWith(".g.dart") && !arquivo.endsWith(".freezed.dart"));
-
-    for (const arquivo of arquivos) {
-      const texto = await readFile(arquivo, "utf8");
+  const arquivos = (await listarArquivosIndexacaoCompartilhada(diretorios, [".dart"], adaptadorLeitura))
+    .filter(({ arquivo }) => !arquivo.endsWith(".g.dart") && !arquivo.endsWith(".freezed.dart"));
+  for (const { diretorio, arquivo } of arquivos) {
+      const texto = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       const relacao = path.relative(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, texto)) {
@@ -183,7 +223,6 @@ export async function indexarDart(diretorios: string[]): Promise<{
           });
         }
       }
-    }
   }
 
   return {
@@ -228,17 +267,19 @@ export function registrarSimboloGenerico(
   }
 }
 
-export async function indexarDotnet(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+export async function indexarDotnet(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".cs"]))
-      .filter((arquivo) => !/(^|[\\/])(bin|obj|Test[s]?)([\\/]|$)/i.test(arquivo));
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+  const arquivos = (await listarArquivosIndexacaoCompartilhada(diretorios, [".cs"], adaptadorLeitura))
+    .filter(({ arquivo }) => !/(^|[\\/])(bin|obj|Test[s]?)([\\/]|$)/i.test(arquivo));
+  for (const { diretorio, arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
         registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
@@ -255,23 +296,24 @@ export async function indexarDotnet(diretorios: string[]): Promise<{ simbolos: S
           simbolo: rota.simbolo,
         });
       }
-    }
   }
 
   return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-export async function indexarJava(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+export async function indexarJava(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".java"]))
-      .filter((arquivo) => !/(^|[\\/])(target|build|out|Test[s]?)([\\/]|$)/i.test(arquivo));
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+  const arquivos = (await listarArquivosIndexacaoCompartilhada(diretorios, [".java"], adaptadorLeitura))
+    .filter(({ arquivo }) => !/(^|[\\/])(target|build|out|Test[s]?)([\\/]|$)/i.test(arquivo));
+  for (const { diretorio, arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
         registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
@@ -288,22 +330,23 @@ export async function indexarJava(diretorios: string[]): Promise<{ simbolos: Sim
           simbolo: rota.simbolo,
         });
       }
-    }
   }
 
   return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-export async function indexarGo(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+export async function indexarGo(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = await listarArquivosRecursivos(diretorio, [".go"]);
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+  const arquivos = await listarArquivosIndexacaoCompartilhada(diretorios, [".go"], adaptadorLeitura);
+  for (const { diretorio, arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
         registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
@@ -320,22 +363,23 @@ export async function indexarGo(diretorios: string[]): Promise<{ simbolos: Simbo
           simbolo: rota.simbolo,
         });
       }
-    }
   }
 
   return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-export async function indexarRust(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+export async function indexarRust(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = await listarArquivosRecursivos(diretorio, [".rs"]);
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+  const arquivos = await listarArquivosIndexacaoCompartilhada(diretorios, [".rs"], adaptadorLeitura);
+  for (const { diretorio, arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
         registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
@@ -352,22 +396,26 @@ export async function indexarRust(diretorios: string[]): Promise<{ simbolos: Sim
           simbolo: rota.simbolo,
         });
       }
-    }
   }
 
   return { simbolos: [...simbolos.values()], rotas, recursos: [...recursos.values()] };
 }
 
-export async function indexarCpp(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; recursos: RecursoResolvido[] }> {
+export async function indexarCpp(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".cpp", ".cc", ".cxx", ".hpp", ".h"]))
-      .filter((arquivo) => !/(^|[\\/])(windows|linux|macos|runner|flutter|ephemeral|build|vendor)([\\/]|$)/i.test(arquivo));
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+  const arquivos = (await listarArquivosIndexacaoCompartilhada(
+    diretorios,
+    [".cpp", ".cc", ".cxx", ".hpp", ".h"],
+    adaptadorLeitura,
+  )).filter(({ arquivo }) => !/(^|[\\/])(windows|linux|macos|runner|flutter|ephemeral|build|vendor)([\\/]|$)/i.test(arquivo));
+  for (const { diretorio, arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
         registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
@@ -375,8 +423,6 @@ export async function indexarCpp(diretorios: string[]): Promise<{ simbolos: Simb
       for (const simbolo of extrairSimbolosCpp(codigo)) {
         registrarSimboloGenerico(simbolos, "cpp", basesSimbolicas, arquivo, simbolo.simbolo);
       }
-    }
-
   }
 
   return {
@@ -385,17 +431,19 @@ export async function indexarCpp(diretorios: string[]): Promise<{ simbolos: Simb
   };
 }
 
-export async function indexarPhp(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+export async function indexarPhp(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; rotas: RotaResolvida[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const rotas: RotaResolvida[] = [];
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".php"]))
-      .filter((arquivo) => !/(^|[\\/])(vendor|storage|bootstrap[\\/]cache|cache|tests?)([\\/]|$)/i.test(arquivo));
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+  const arquivos = (await listarArquivosIndexacaoCompartilhada(diretorios, [".php"], adaptadorLeitura))
+    .filter(({ arquivo }) => !/(^|[\\/])(vendor|storage|bootstrap[\\/]cache|cache|tests?)([\\/]|$)/i.test(arquivo));
+  for (const { diretorio, arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
         registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
@@ -420,7 +468,6 @@ export async function indexarPhp(diretorios: string[]): Promise<{ simbolos: Simb
           simbolo: rota.simbolo,
         });
       }
-    }
   }
 
   return {
@@ -430,16 +477,18 @@ export async function indexarPhp(diretorios: string[]): Promise<{ simbolos: Simb
   };
 }
 
-export async function indexarLua(diretorios: string[]): Promise<{ simbolos: SimboloResolvido[]; recursos: RecursoResolvido[] }> {
+export async function indexarLua(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ simbolos: SimboloResolvido[]; recursos: RecursoResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const simbolos = new Map<string, SimboloResolvido>();
   const recursos = new Map<string, RecursoResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = (await listarArquivosRecursivos(diretorio, [".lua"]))
-      .filter((arquivo) => !/(^|[\\/])(vendor|build|dist|generated|tests?)([\\/]|$)/i.test(arquivo));
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+  const arquivos = (await listarArquivosIndexacaoCompartilhada(diretorios, [".lua"], adaptadorLeitura))
+    .filter(({ arquivo }) => !/(^|[\\/])(vendor|build|dist|generated|tests?)([\\/]|$)/i.test(arquivo));
+  for (const { diretorio, arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {
         registrarRecursoDrift(recursos, recurso.origem, recurso.tipo, recurso.nome, recurso.arquivo, recurso.simbolo);
@@ -447,7 +496,6 @@ export async function indexarLua(diretorios: string[]): Promise<{ simbolos: Simb
       for (const simbolo of extrairSimbolosLua(codigo)) {
         registrarSimboloGenerico(simbolos, "lua", basesSimbolicas, arquivo, simbolo.simbolo);
       }
-    }
   }
 
   return {
@@ -456,19 +504,21 @@ export async function indexarLua(diretorios: string[]): Promise<{ simbolos: Simb
   };
 }
 
-export async function indexarPersistenciaDeclarativa(diretorios: string[]): Promise<{ recursos: RecursoResolvido[]; simbolos: SimboloResolvido[] }> {
+export async function indexarPersistenciaDeclarativa(
+  diretorios: string[],
+  adaptadorLeitura?: AdaptadorLeituraCompartilhadaDrift,
+): Promise<{ recursos: RecursoResolvido[]; simbolos: SimboloResolvido[] }> {
+  adaptadorLeitura?.emitir?.("extractor.run");
   const recursos = new Map<string, RecursoResolvido>();
   const simbolos = new Map<string, SimboloResolvido>();
 
-  for (const diretorio of diretorios) {
-    const arquivos = await listarArquivosRecursivos(diretorio, [
+  const arquivos = await listarArquivosIndexacaoCompartilhada(diretorios, [
       ".sql", ".psql", ".ddl", ".prisma",
       ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
       ".py", ".dart", ".lua", ".cs", ".java", ".go", ".rs", ".cpp", ".cc", ".cxx", ".hpp", ".h", ".php",
-    ]);
-
-    for (const arquivo of arquivos) {
-      const codigo = await readFile(arquivo, "utf8");
+    ], adaptadorLeitura);
+  for (const { arquivo } of arquivos) {
+      const codigo = await lerTextoIndexacaoCompartilhada(arquivo, adaptadorLeitura);
       const extracoes = arquivo.endsWith(".prisma")
         ? extrairRecursosPrisma(arquivo, codigo)
         : extrairRecursosPersistenciaCodigoVivo(arquivo, codigo);
@@ -478,7 +528,6 @@ export async function indexarPersistenciaDeclarativa(diretorios: string[]): Prom
       for (const simbolo of extrairSimbolosSqlDeclarativos(arquivo, codigo)) {
         simbolos.set(`${simbolo.caminho}:${simbolo.arquivo}`, simbolo);
       }
-    }
   }
 
   return { recursos: [...recursos.values()], simbolos: [...simbolos.values()] };

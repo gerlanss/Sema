@@ -1,3 +1,6 @@
+// SEMA-GOVERNED: sema.produto.sistemas_interativos.distribuicao, sema.produto.fronteira_repositorios.empacotamento
+// Descricao: materializa exemplos oficiais no pacote publico antes do empacotamento.
+
 import { cp, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

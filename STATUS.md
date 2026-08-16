@@ -8,10 +8,10 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.3.3`
+- Version: `2.3.4`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-15
-- Reference commit: `48f14ea`
+- Reference commit: `e025ab5`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, thin Codex bootstrap skill, repo marketplace,
   `AGENTS.md` protocol, contracts, examples, tests, release scripts, and English
@@ -39,6 +39,8 @@ Every public publication must pass:
 - Keep public documentation in English.
 - Keep governance contracts split by named capability before they cross the
   semantic line budget; never use numbered part files.
+- Plan focused drift before cataloging, share one in-memory source read across
+  indexers, and reserve whole-project walks for explicit project scope.
 - Keep product capabilities independent from competitions, event workflows,
   submission platforms, and one-off showcase harnesses.
 - Keep support metadata pointed to `suporte@otimitare.online`.

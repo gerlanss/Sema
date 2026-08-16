@@ -9,6 +9,7 @@ export type EscopoCarregamentoProjeto = "arquivo" | "modulo" | "projeto";
 
 export interface OpcoesCarregarProjeto {
   escopo?: EscopoCarregamentoProjeto;
+  adiarDescobertaCodigo?: boolean;
 }
 
 export interface ConfiguracaoPersistenciaProjeto {

@@ -381,6 +381,10 @@ def list_whatsapp_contacts():
     await writeFile(
       path.join(base, "contratos", "colaboradores_whatsapp.sema"),
       `module gestech.colaboradores.whatsapp {
+  vinculos {
+    arquivo: "Ferramentas/src/app/whatsapp/page.tsx"
+  }
+
   task listar_contatos_whatsapp {
     output {
       ok: Booleano

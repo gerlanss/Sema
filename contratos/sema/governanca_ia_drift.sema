@@ -28,6 +28,10 @@ module sema.produto.governanca_ia.drift {
       simbolos_sql_resolvidos: Booleano
       arquivos_documentais_resolvidos: Booleano
       superficies_publicas_resolvidas: Booleano
+      planejamento_antes_catalogo: Booleano
+      catalogo_compartilhado: Booleano
+      metricas_operacionais_expostas: Booleano
+      cobertura_dependencias_completa: Booleano
     }
     rules {
       contrato_alvo deve_ser informado
@@ -61,6 +65,10 @@ module sema.produto.governanca_ia.drift {
         simbolos_sql_resolvidos: interno
         arquivos_documentais_resolvidos: interno
         superficies_publicas_resolvidas: interno
+        planejamento_antes_catalogo: interno
+        catalogo_compartilhado: interno
+        metricas_operacionais_expostas: interno
+        cobertura_dependencias_completa: interno
       }
     }
     audit {
@@ -78,14 +86,43 @@ module sema.produto.governanca_ia.drift {
       tratar_funcao_sql_declarada_como_vinculo_quebrado
       tratar_documentacao_existente_como_arquivo_inexistente
       tratar_superficie_publica_sincronizada_como_vinculo_quebrado
+      catalogar_codigo_antes_de_planejar_escopo_fisico
+      reabrir_mesma_fonte_em_indexadores_ou_orcamento
+      varrer_codigo_antes_do_plano_em_escopo_estreito
+      resolver_impl_homonima_por_ordem_de_arquivos
+      inferir_ancora_em_raiz_lateral_sem_vinculo
+      expor_caminho_absoluto_fora_do_workspace
+      concluir_sucesso_com_dependencia_local_ausente
+      tratar_vinculo_fisico_explicito_fora_da_raiz_codigo_como_inexistente
     }
     impl {
       ts: cli.src.drift.analisarDriftLegado
     }
     vinculos {
       arquivo: "pacotes/cli/src/drift.ts"
+      arquivo: "pacotes/cli/src/angular-consumer-standalone.ts"
+      arquivo: "pacotes/cli/src/drift.part04.ts"
+      arquivo: "pacotes/cli/src/drift.part05.ts"
+      arquivo: "pacotes/cli/src/drift.part06.ts"
+      arquivo: "pacotes/cli/src/drift.part07.ts"
+      arquivo: "pacotes/cli/src/drift.part08.ts"
       arquivo: "pacotes/cli/src/drift.part11.ts"
+      arquivo: "pacotes/cli/src/drift.part13.ts"
+      arquivo: "pacotes/cli/src/drift.part14.ts"
+      arquivo: "pacotes/cli/src/driftEscopo.ts"
+      arquivo: "pacotes/cli/src/driftEscopoReferencias.ts"
+      arquivo: "pacotes/cli/src/driftCatalogo.ts"
+      arquivo: "pacotes/cli/src/projetoCarregar.ts"
+      arquivo: "pacotes/cli/src/projetoOrigens.ts"
+      arquivo: "pacotes/cli/src/projetoTipos.ts"
       arquivo: "pacotes/cli/src/index.part05.ts"
+      arquivo: "testes/integracao/drift-escopo-io.test.ts"
+      arquivo: "testes/integracao/drift-caminhos-externos.test.ts"
+      arquivo: "testes/unidade/drift-catalogo.test.ts"
+      arquivo: "testes/unidade/drift-escopo-dependencias.test.ts"
+      arquivo: "testes/unidade/drift-escopo-referencias.test.ts"
+      arquivo: "testes/unidade/drift-leitura-compartilhada.test.ts"
+      arquivo: "testes/unidade/projeto-carregamento-escopo.test.ts"
       simbolo: cli.src.drift.analisarDriftLegado
     }
     execucao {
@@ -107,6 +144,10 @@ module sema.produto.governanca_ia.drift {
       simbolos_sql_resolvidos existe
       arquivos_documentais_resolvidos existe
       superficies_publicas_resolvidas existe
+      planejamento_antes_catalogo existe
+      catalogo_compartilhado existe
+      metricas_operacionais_expostas existe
+      cobertura_dependencias_completa existe
     }
     error {
       simbolo_ambiguo {
@@ -145,6 +186,10 @@ module sema.produto.governanca_ia.drift {
           simbolos_sql_resolvidos: verdadeiro
           arquivos_documentais_resolvidos: verdadeiro
           superficies_publicas_resolvidas: verdadeiro
+          planejamento_antes_catalogo: verdadeiro
+          catalogo_compartilhado: verdadeiro
+          metricas_operacionais_expostas: verdadeiro
+          cobertura_dependencias_completa: verdadeiro
         }
       }
       caso "vinculo documental em modulo publico resolve" {

@@ -1,9 +1,10 @@
 // SEMA-GOVERNED: sema.governanca_ia_contexto
 // Descricao: CLI particionada; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
 
-import { readdir, readFile } from "node:fs/promises";
+import { lstat, open, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
+import type { BigIntStats } from "node:fs";
 import type {
   EngineBanco,
   IrBancoDados,
@@ -31,7 +32,7 @@ import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 
-import { listarArquivosRecursivos, paraIdentificadorModulo } from "./drift.part04.js";
+import { paraIdentificadorModulo } from "./drift.part04.js";
 import { OpcoesDriftLegado, RegistroImpactoSemanticoArquivo, ResultadoImpactoSemantico, ResultadoRenomeacaoSemantica, SugestaoRenomeacaoSemantica, definirDiretoriosIgnoradosAtivos, obterDiretoriosIgnoradosAtivos, normalizarFragmentoArquivo, quebrarTermosEscopo, resolverDiretoriosIgnoradosAtivos, resolverOpcoesDrift } from "./drift.part01.js";
 import { filtrarCaminhosEscopoReal, resolverDiretoriosCodigoEscopoReal, textoCombinaEscopo } from "./drift.part02.js";
 import { analisarDriftLegado } from "./drift.part11.js";
@@ -138,14 +139,202 @@ export function registrarArquivoImpactado(
   });
 }
 
+function chaveCaminhoImpacto(caminho: string): string {
+  const absoluto = path.normalize(path.resolve(caminho));
+  return process.platform === "win32" ? absoluto.toLowerCase() : absoluto;
+}
+
+function caminhoImpactoEstaDentro(raiz: string, alvo: string): boolean {
+  const relativo = path.relative(path.resolve(raiz), path.resolve(alvo));
+  return relativo === "" || (
+    relativo !== ".."
+    && !relativo.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relativo)
+  );
+}
+
+function identidadeArquivoImpactoEstavel(a: BigIntStats, b: BigIntStats): boolean {
+  return a.isFile()
+    && b.isFile()
+    && !a.isSymbolicLink()
+    && !b.isSymbolicLink()
+    && a.dev === b.dev
+    && a.ino === b.ino
+    && a.size === b.size
+    && a.mtimeNs === b.mtimeNs
+    && a.ctimeNs === b.ctimeNs;
+}
+
+function identidadeDiretorioImpactoEstavel(a: BigIntStats, b: BigIntStats): boolean {
+  return a.isDirectory()
+    && b.isDirectory()
+    && !a.isSymbolicLink()
+    && !b.isSymbolicLink()
+    && a.dev === b.dev
+    && a.ino === b.ino
+    && a.mtimeNs === b.mtimeNs
+    && a.ctimeNs === b.ctimeNs;
+}
+
+function erroImpactoConfinamento(codigo: string): Error {
+  return new Error(`impacto_confinamento:${codigo}`);
+}
+
+async function lerArquivoImpactoConfinado(
+  baseProjeto: string,
+  baseProjetoReal: string,
+  arquivo: string,
+): Promise<string> {
+  const absoluto = path.resolve(arquivo);
+  if (!caminhoImpactoEstaDentro(baseProjeto, absoluto)) {
+    throw erroImpactoConfinamento("fora_workspace");
+  }
+
+  const informacaoAntes = await lstat(absoluto, { bigint: true });
+  if (!informacaoAntes.isFile() || informacaoAntes.isSymbolicLink()) {
+    throw erroImpactoConfinamento("arquivo_irregular");
+  }
+  const caminhoRealAntes = await realpath(absoluto);
+  if (!caminhoImpactoEstaDentro(baseProjetoReal, caminhoRealAntes)) {
+    throw erroImpactoConfinamento("fora_workspace_real");
+  }
+
+  const handle = await open(absoluto, "r");
+  try {
+    const informacaoHandleAntes = await handle.stat({ bigint: true });
+    const [informacaoCaminhoAberto, caminhoRealAberto] = await Promise.all([
+      lstat(absoluto, { bigint: true }),
+      realpath(absoluto),
+    ]);
+    if (!caminhoImpactoEstaDentro(baseProjetoReal, caminhoRealAberto)
+      || !identidadeArquivoImpactoEstavel(informacaoAntes, informacaoHandleAntes)
+      || !identidadeArquivoImpactoEstavel(informacaoHandleAntes, informacaoCaminhoAberto)) {
+      throw erroImpactoConfinamento("arquivo_alterado_antes_leitura");
+    }
+
+    const conteudo = await handle.readFile();
+    const [informacaoHandleDepois, informacaoCaminhoDepois, caminhoRealDepois] = await Promise.all([
+      handle.stat({ bigint: true }),
+      lstat(absoluto, { bigint: true }),
+      realpath(absoluto),
+    ]);
+    if (!caminhoImpactoEstaDentro(baseProjetoReal, caminhoRealDepois)
+      || !identidadeArquivoImpactoEstavel(informacaoHandleAntes, informacaoHandleDepois)
+      || !identidadeArquivoImpactoEstavel(informacaoHandleDepois, informacaoCaminhoDepois)) {
+      throw erroImpactoConfinamento("arquivo_alterado_durante_leitura");
+    }
+    return conteudo.toString("utf8");
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
+
+async function listarDiretorioImpactoConfinado(
+  diretorio: string,
+  baseProjeto: string,
+  baseProjetoReal: string,
+  visitados: Set<string>,
+): Promise<string[]> {
+  const absoluto = path.resolve(diretorio);
+  if (!caminhoImpactoEstaDentro(baseProjeto, absoluto)) {
+    return [];
+  }
+
+  let informacaoAntes: BigIntStats;
+  try {
+    informacaoAntes = await lstat(absoluto, { bigint: true });
+  } catch (erro) {
+    if (["ENOENT", "ENOTDIR"].includes((erro as NodeJS.ErrnoException).code ?? "")) {
+      return [];
+    }
+    throw erro;
+  }
+  if (!informacaoAntes.isDirectory() || informacaoAntes.isSymbolicLink()) {
+    return [];
+  }
+  const caminhoRealAntes = await realpath(absoluto);
+  if (!caminhoImpactoEstaDentro(baseProjetoReal, caminhoRealAntes)) {
+    return [];
+  }
+  const chaveReal = chaveCaminhoImpacto(caminhoRealAntes);
+  if (visitados.has(chaveReal)) {
+    return [];
+  }
+  visitados.add(chaveReal);
+
+  const entradas = await readdir(absoluto, { withFileTypes: true, encoding: "utf8" });
+  const [informacaoDepois, caminhoRealDepois] = await Promise.all([
+    lstat(absoluto, { bigint: true }),
+    realpath(absoluto),
+  ]);
+  if (!caminhoImpactoEstaDentro(baseProjetoReal, caminhoRealDepois)
+    || !identidadeDiretorioImpactoEstavel(informacaoAntes, informacaoDepois)) {
+    throw erroImpactoConfinamento("diretorio_alterado_durante_listagem");
+  }
+
+  const ignorados = obterDiretoriosIgnoradosAtivos();
+  const encontrados: string[] = [];
+  for (const entrada of entradas) {
+    if (ignorados.has(entrada.name.toLowerCase()) || entrada.isSymbolicLink()) {
+      continue;
+    }
+    const caminhoAtual = path.join(absoluto, entrada.name);
+    if (entrada.isDirectory()) {
+      encontrados.push(...await listarDiretorioImpactoConfinado(
+        caminhoAtual,
+        baseProjeto,
+        baseProjetoReal,
+        visitados,
+      ));
+      continue;
+    }
+    if (entrada.isFile() && EXTENSOES_BUSCA_IMPACTO.some((extensao) => entrada.name.toLowerCase().endsWith(extensao))) {
+      encontrados.push(caminhoAtual);
+    }
+  }
+  return encontrados;
+}
+
 export async function listarArquivosImpacto(
   contexto: ContextoProjetoCarregado,
   opcoes?: OpcoesDriftLegado,
+  arquivosPlanejados: readonly string[] = [],
 ): Promise<string[]> {
   const opcoesResolvidas = resolverOpcoesDrift(opcoes);
-  const arquivos = new Set<string>(filtrarCaminhosEscopoReal(contexto.arquivosProjeto, contexto, opcoesResolvidas));
+  const baseProjeto = path.resolve(contexto.baseProjeto);
+  const contratos = opcoesResolvidas.escopo === "projeto"
+    ? contexto.arquivosProjeto
+    : contexto.modulosSelecionados.map((modulo) => modulo.caminho);
+  const arquivos = new Set<string>();
+  for (const arquivo of filtrarCaminhosEscopoReal(contratos, contexto, opcoesResolvidas)) {
+    const absoluto = path.resolve(arquivo);
+    if (caminhoImpactoEstaDentro(baseProjeto, absoluto)) {
+      arquivos.add(absoluto);
+    }
+  }
+
+  if (opcoesResolvidas.escopo !== "projeto") {
+    for (const arquivo of arquivosPlanejados) {
+      if (arquivo.startsWith("[fora_do_workspace]/")) {
+        continue;
+      }
+      const absoluto = path.resolve(baseProjeto, arquivo);
+      if (caminhoImpactoEstaDentro(baseProjeto, absoluto)) {
+        arquivos.add(absoluto);
+      }
+    }
+    return [...arquivos].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
+
+  const baseProjetoReal = await realpath(baseProjeto);
+  const visitados = new Set<string>();
   for (const diretorio of resolverDiretoriosCodigoEscopoReal(contexto, opcoesResolvidas)) {
-    for (const arquivo of await listarArquivosRecursivos(diretorio, EXTENSOES_BUSCA_IMPACTO)) {
+    for (const arquivo of await listarDiretorioImpactoConfinado(
+      diretorio,
+      baseProjeto,
+      baseProjetoReal,
+      visitados,
+    )) {
       arquivos.add(arquivo);
     }
   }
@@ -219,10 +408,16 @@ export async function gerarMapaImpactoSemantico(
     const variantes = construirVariantesSemanticas(alvoSemantico);
     const termos = [...new Set([...quebrarTermosEscopo(alvoSemantico), ...drift.escopo_aplicado.termosEscopo])];
     const arquivosImpactados = new Map<string, RegistroImpactoSemanticoArquivo>();
-    const arquivosBusca = await listarArquivosImpacto(contexto, opcoesResolvidas);
+    const arquivosBusca = await listarArquivosImpacto(
+      contexto,
+      opcoesResolvidas,
+      drift.escopo_aplicado.arquivosPlanejados,
+    );
+    const arquivosBuscaPorChave = new Set(arquivosBusca.map(chaveCaminhoImpacto));
+    const baseProjetoReal = await realpath(path.resolve(contexto.baseProjeto));
 
     for (const arquivo of arquivosBusca) {
-      const codigo = await readFile(arquivo, "utf8");
+      const codigo = await lerArquivoImpactoConfinado(contexto.baseProjeto, baseProjetoReal, arquivo);
       const linhas = extrairLinhasComVariantes(codigo, variantes);
       if (linhas.length > 0) {
         registrarArquivoImpactado(arquivosImpactados, arquivo, linhas, ["token_semantico_encontrado"]);
@@ -258,7 +453,9 @@ export async function gerarMapaImpactoSemantico(
 
     for (const task of drift.tasks.filter((item) => tasksAfetadas.has(`${item.modulo}.${item.task}`))) {
       for (const arquivo of task.arquivosProvaveisEditar) {
-        registrarArquivoImpactado(arquivosImpactados, arquivo, [], ["arquivo_relacionado_por_drift"]);
+        if (arquivosBuscaPorChave.has(chaveCaminhoImpacto(arquivo))) {
+          registrarArquivoImpactado(arquivosImpactados, arquivo, [], ["arquivo_relacionado_por_drift"]);
+        }
       }
     }
 
@@ -266,7 +463,9 @@ export async function gerarMapaImpactoSemantico(
       if (textoIrCombinaTermos(`${item.alvo} ${item.task} ${item.colunas.join(" ")}`, termos)) {
         persistenciaAfetada.add(`${item.task}:${item.alvo}`);
         for (const arquivo of [...item.arquivos, ...item.repositorios]) {
-          registrarArquivoImpactado(arquivosImpactados, arquivo, [], ["persistencia_relacionada"]);
+          if (arquivosBuscaPorChave.has(chaveCaminhoImpacto(arquivo))) {
+            registrarArquivoImpactado(arquivosImpactados, arquivo, [], ["persistencia_relacionada"]);
+          }
         }
       }
     }
@@ -274,10 +473,14 @@ export async function gerarMapaImpactoSemantico(
     const contratosAfetados = ordenarArquivosImpacto(
       [...arquivosImpactados.values()].filter((arquivo) => arquivo.tipo === "contrato"),
     ).map((arquivo) => arquivo.arquivo);
+    const driftPermiteImpacto = (drift.escopo_aplicado.bloqueios?.length ?? 0) === 0
+      && drift.escopo_aplicado.cobertura !== "parcial"
+      && drift.vinculos_quebrados.length === 0;
 
     return {
       comando: "impacto",
-      sucesso: arquivosImpactados.size > 0 || tasksAfetadas.size > 0 || persistenciaAfetada.size > 0,
+      sucesso: driftPermiteImpacto
+        && (arquivosImpactados.size > 0 || tasksAfetadas.size > 0 || persistenciaAfetada.size > 0),
       escopo: drift.escopo_aplicado.escopo,
       alvoSemantico,
       mudancaProposta,
@@ -316,6 +519,27 @@ export async function assistirRenomeacaoSemantica(
     `renomear ${nomeAtual} para ${nomeNovo}`,
     opcoes,
   );
+  if (!impacto.sucesso) {
+    return {
+      comando: "renomear-semantico",
+      sucesso: false,
+      escopo: impacto.escopo,
+      de: nomeAtual,
+      para: nomeNovo,
+      arquivos: impacto.arquivos,
+      sugestoes: [],
+      ordemOperacional: [
+        "Renomear primeiro no contrato .sema e nos campos publicos derivados.",
+        "Ajustar repositorios, payloads e bridges que materializam o nome antigo.",
+        "Rodar sema drift e revisar sugestoes restantes antes de fechar a troca.",
+      ],
+      validacoes: [
+        "Rodar sema validar no contrato renomeado.",
+        "Rodar sema drift para confirmar que payload e superficie nao ficaram misturados.",
+        "Reexecutar testes e checar snapshots ou fixtures afetados.",
+      ],
+    };
+  }
   const variantesAntigas = construirVariantesSemanticas(nomeAtual);
   const variantesNovas = construirVariantesSemanticas(nomeNovo);
   const mapaSubstituicao = new Map<string, string>();
@@ -324,8 +548,13 @@ export async function assistirRenomeacaoSemantica(
   });
 
   const sugestoes: SugestaoRenomeacaoSemantica[] = [];
+  const baseProjetoReal = await realpath(path.resolve(contexto.baseProjeto));
   for (const arquivo of impacto.arquivos) {
-    const codigo = await readFile(arquivo.arquivo, "utf8");
+    const codigo = await lerArquivoImpactoConfinado(
+      contexto.baseProjeto,
+      baseProjetoReal,
+      arquivo.arquivo,
+    );
     const linhas = codigo.split(/\r?\n/);
     for (let indice = 0; indice < linhas.length; indice += 1) {
       const linha = linhas[indice]!;

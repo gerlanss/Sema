@@ -1,6 +1,5 @@
 // SEMA-GOVERNED: sema.governanca_ia_contexto
 // Descricao: analisa modulos selecionados no drift; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
-import { existsSync } from "node:fs";
 import path from "node:path";
 import type { IrFlow, IrRoute, IrSuperficie, IrTask } from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
@@ -40,17 +39,33 @@ function escolherArquivoDeclarado(
   arquivosConhecidos: string[],
   valor: string,
 ): { arquivo?: string; confianca: RegistroVinculoDrift["confianca"]; status: RegistroVinculoDrift["status"] } {
+  if (!caminhoEstaDentroDoWorkspace(contexto.baseProjeto, valor)) {
+    return { confianca: "baixa", status: "nao_encontrado" };
+  }
+
   const resolucaoIndexada = escolherArquivoPorVinculo(arquivosConhecidos, valor);
-  if (resolucaoIndexada.status !== "nao_encontrado") {
-    return resolucaoIndexada;
+  if (resolucaoIndexada.arquivo
+    && !caminhoEstaDentroDoWorkspace(contexto.baseProjeto, resolucaoIndexada.arquivo)) {
+    return { confianca: "baixa", status: "nao_encontrado" };
   }
-
-  const caminhoExplicito = path.resolve(contexto.baseProjeto, valor);
-  if (existsSync(caminhoExplicito)) {
-    return { arquivo: caminhoExplicito, confianca: "alta", status: "resolvido" };
-  }
-
   return resolucaoIndexada;
+}
+
+function caminhoEstaDentroDoWorkspace(baseProjeto: string, valor: string): boolean {
+  const relativo = path.relative(path.resolve(baseProjeto), path.resolve(baseProjeto, valor));
+  return relativo === "" || (
+    relativo !== ".."
+    && !relativo.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relativo)
+  );
+}
+
+function redigirCaminhoDeclaradoExterno(baseProjeto: string, valor: string): string {
+  if (caminhoEstaDentroDoWorkspace(baseProjeto, valor)) {
+    return valor;
+  }
+  const nome = path.basename(path.normalize(valor)) || "arquivo";
+  return `[fora_do_workspace]/${nome}`;
 }
 export interface ResumoVinculosTaskDrift {
   validos: number;
@@ -408,6 +423,7 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
         registro.arquivo = resolucaoSimbolo.simbolo?.arquivo;
         registro.simbolo = resolucaoSimbolo.simbolo?.simbolo;
       } else if (arquivoDeclarado) {
+        registro.valor = redigirCaminhoDeclaradoExterno(contexto.baseProjeto, registro.valor);
         const resolucaoArquivo = escolherArquivoDeclarado(contexto, todosArquivosConhecidos, arquivoDeclarado);
         registro.status = resolucaoArquivo.status;
         registro.confianca = resolucaoArquivo.confianca;
@@ -439,6 +455,7 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
           registro.arquivo = resolucaoArquivo.arquivo;
         }
       } else {
+        registro.valor = redigirCaminhoDeclaradoExterno(contexto.baseProjeto, registro.valor);
         const resolucaoArquivo = escolherArquivoDeclarado(contexto, todosArquivosConhecidos, itemVinculo.vinculo.valor);
         registro.status = resolucaoArquivo.status;
         registro.confianca = resolucaoArquivo.confianca;
