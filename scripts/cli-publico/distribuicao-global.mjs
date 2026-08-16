@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
+import { extrairPayloadResultadoCliV1 } from "./resultado-cli.mjs";
 
 export function ambienteInstalacaoIsolada(diretorioUsuario, cacheIsolado) {
   return {
@@ -427,12 +428,17 @@ export async function validarInstalacaoGlobalIsolada({
     if (!ajuda.includes("sema resumo") || !ajuda.includes("sema sync-codex")) {
       throw new Error("The absolute global launcher returned incomplete help without Node/npm on PATH.");
     }
-    const statusSkill = JSON.parse(executarLauncherAbsoluto(
+    const statusSkill = extrairPayloadResultadoCliV1(executarLauncherAbsoluto(
       launcher,
       ["skill", "status", "--json"],
       workspaceGlobalIsolado,
       ambienteSemNodeNpm,
-    ));
+    ), {
+      contexto: "skill status no launcher global isolado",
+      command: "skill",
+      exitCode: 0,
+      kind: "SUCCESS",
+    });
     if (
       !validarStatusDistribuicaoPronta(statusSkill) ||
       statusSkill.resultado?.launcher?.fallback_simbolico !== (process.platform === "win32"
@@ -447,12 +453,17 @@ export async function validarInstalacaoGlobalIsolada({
     ) {
       throw new Error("The installed `sema skill status` command was not read-only, ready, and redacted.");
     }
-    const syncSkill = JSON.parse(executarLauncherAbsoluto(
+    const syncSkill = extrairPayloadResultadoCliV1(executarLauncherAbsoluto(
       launcher,
       ["skill", "sync", "--json"],
       workspaceGlobalIsolado,
       ambienteSemNodeNpm,
-    ));
+    ), {
+      contexto: "skill sync no launcher global isolado",
+      command: "skill",
+      exitCode: 0,
+      kind: "SUCCESS",
+    });
     if (
       syncSkill.sucesso !== true ||
       syncSkill.operacao !== "sync" ||
@@ -461,7 +472,7 @@ export async function validarInstalacaoGlobalIsolada({
     ) {
       throw new Error("The installed `sema skill sync` command was not idempotent after postinstall.");
     }
-    const resumo = JSON.parse(executarLauncherAbsoluto(
+    const resumo = extrairPayloadResultadoCliV1(executarLauncherAbsoluto(
       launcher,
       [
         "resumo",
@@ -473,7 +484,12 @@ export async function validarInstalacaoGlobalIsolada({
       ],
       basePacoteGlobal,
       ambienteSemNodeNpm,
-    ));
+    ), {
+      contexto: "resumo no launcher global isolado",
+      command: "resumo",
+      exitCode: 0,
+      kind: "SUCCESS",
+    });
     if (
       resumo.comando !== "resumo" ||
       resumo.analiseDrift?.modo !== "none" ||

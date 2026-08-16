@@ -1,0 +1,223 @@
+module sema.produto.cli_invocacao_publica.handlers {
+  docs {
+    resumo: "Isola handlers no modo JSON para que console, escritas diretas e subprocessos sejam capturados antes da emissao central. A fronteira converte a captura integral em JSON estrutural ou texto escalar dentro de result/v1 e rejeita dev watch --json antes de iniciar o watcher."
+    status: "MODELADA"
+    arquivo: "contratos/sema/cli_invocacao_publica.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_argumentos.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_resultados.sema"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento_smoke.sema"
+    arquivo: "docs/cli.md"
+    arquivo: "docs/testing.md"
+  }
+
+  use sema.produto.cli_invocacao_publica.argumentos
+
+  use sema.produto.cli_invocacao_publica.resultados
+
+  type CapturaRuntimeHandlerCli {
+    fields {
+      payload_estruturado: Json
+      stdout_bruto: Texto
+      stderr_bruto: Texto
+      codigo_saida_handler: Inteiro
+      subprocessos_capturados: Booleano
+      streams_publicos_intocados: Booleano
+    }
+    invariants {
+      payload_estruturado existe
+      stdout_bruto deve_ser publicavel_somente_como_payload_json_validado
+      stderr_bruto deve_ser interno_e_nao_publicavel
+      subprocessos_capturados deve_ser verdadeiro
+      streams_publicos_intocados deve_ser verdadeiro
+    }
+  }
+
+  task capturar_execucao_handler_json {
+    input {
+      command: Texto required
+      argv_validado: Lista<Texto> required
+    }
+    output {
+      captura: CapturaRuntimeHandlerCli
+      console_legado_compativel: Booleano
+      escritas_diretas_capturadas: Booleano
+      subprocessos_capturados: Booleano
+      streams_restaurados: Booleano
+      emissao_publica_adiada: Booleano
+    }
+    rules {
+      command deve_ser forma_canonica_retornada_pela_gramatica_publica
+      argv_validado deve_ser sintaxe_publica_previamente_validada
+    }
+    effects {
+      shell.exec handler_cli_isolado criticidade = alta
+    }
+    forbidden {
+      encaminhar_console_log_error_warn_ou_debug_do_handler_ao_terminal_publico
+      encaminhar_process_stdout_write_ou_process_stderr_write_do_handler_ao_terminal_publico
+      iniciar_subprocesso_com_stdio_inherit_no_modo_json
+      encaminhar_stdout_ou_stderr_de_subprocesso_ao_terminal_publico
+      misturar_log_bruto_com_documento_json_publico
+      publicar_stderr_bruto_no_payload
+      exigir_refatoracao_individual_das_console_calls_existentes
+      deixar_stream_interceptado_apos_sucesso_timeout_ou_excecao
+      executar_duas_capturas_globais_concorrentes_no_mesmo_processo
+    }
+    impl {
+      ts: cli.src.bin.executarCliPublica
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/cliRuntime.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "pacotes/cli/src/bin.ts"
+      arquivo: "testes/unidade/cli-resultado-v3.test.ts"
+      arquivo: "testes/integracao/cli-resultado-v3.test.ts"
+      simbolo: cli.src.bin.executarCliPublica
+      simbolo: cli.src.cli_runtime.executarCliRuntimeInterno
+    }
+    execucao {
+      idempotencia: falso
+      timeout: "herdado_do_comando"
+      retry: "nenhum"
+      compensacao: "restaurar_streams_e_descartar_captura_bruta"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      captura existe
+      captura deve_ser preservar_payload_json_objeto_lista_escalar_ou_nulo
+      captura deve_ser concluida_antes_da_primeira_escrita_publica
+      captura deve_ser restaurar_streams_em_finally
+      console_legado_compativel == verdadeiro
+      escritas_diretas_capturadas == verdadeiro
+      subprocessos_capturados == verdadeiro
+      streams_restaurados == verdadeiro
+      emissao_publica_adiada == verdadeiro
+    }
+    tests {
+      caso "handler e subprocesso ruidosos nao vazam streams" {
+        given {
+          command: "drift"
+          argv_validado: "drift --cache fresh --json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          console_legado_compativel: verdadeiro
+          escritas_diretas_capturadas: verdadeiro
+          subprocessos_capturados: verdadeiro
+          streams_restaurados: verdadeiro
+          emissao_publica_adiada: verdadeiro
+        }
+      }
+    }
+  }
+
+  task adaptar_captura_para_resultado_publico {
+    input {
+      command: Texto required
+      captura: CapturaRuntimeHandlerCli required
+    }
+    output {
+      envelope: EnvelopeResultadoJsonV1
+      stdout_convertido_deterministicamente: Booleano
+      stderr_descartado: Booleano
+      payload_json_preservado: Booleano
+    }
+    rules {
+      command deve_ser forma_canonica_retornada_pela_gramatica_publica
+      captura deve_ser parseada_como_documento_json_exato_ou_preservada_como_texto_json_escalar
+      captura deve_ser classificada_como_success_ou_domain_error
+    }
+    forbidden {
+      usar_log_nao_json_como_message_publica
+      extrair_substring_json_de_stdout_ruidoso
+      copiar_stderr_bruto_para_message_ou_payload
+      copiar_stdout_bruto_para_message
+      transformar_excecao_fatal_em_domain_error
+      emitir_envelope_antes_de_descartar_captura_bruta
+    }
+    impl {
+      ts: cli.src.saida_cli.emitirResultadoCliJsonV1
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/cliRuntime.ts"
+      arquivo: "pacotes/cli/src/resultadoCli.ts"
+      arquivo: "pacotes/cli/src/saidaCli.ts"
+      arquivo: "testes/unidade/cli-resultado-v3.test.ts"
+      arquivo: "testes/integracao/cli-resultado-v3.test.ts"
+      simbolo: cli.src.saida_cli.emitirResultadoCliJsonV1
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "descartar_captura_e_emitir_fatal_control_v1"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      envelope existe
+      envelope deve_ser schema_sema_cli_result_v1
+      stdout_convertido_deterministicamente == verdadeiro
+      stderr_descartado == verdadeiro
+      payload_json_preservado == verdadeiro
+    }
+  }
+
+  task rejeitar_dev_watch_json {
+    input {
+      argv: Lista<Texto> required
+    }
+    output {
+      categoria_controle: Texto
+      codigo_publico: Texto
+      watcher_iniciado: Booleano
+      subprocesso_iniciado: Booleano
+    }
+    rules {
+      argv deve_ser conter_dev_watch_e_json
+    }
+    forbidden {
+      iniciar_watch_em_modo_json
+      iniciar_subprocesso_antes_da_rejeicao
+      emitir_result_v1_para_erro_de_argumento
+      manter_processo_vivo_apos_rejeicao
+    }
+    impl {
+      ts: cli.src.cli_grammar.validarSintaxeInvocacaoPublica
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/cliGrammar.ts"
+      arquivo: "pacotes/cli/src/dev/index.ts"
+      arquivo: "testes/unidade/cli-resultado-v3.test.ts"
+      simbolo: cli.src.cli_grammar.validarSintaxeInvocacaoPublica
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "nenhum_efeito_iniciado"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      categoria_controle == ARGUMENT_ERROR
+      codigo_publico existe
+      watcher_iniciado == falso
+      subprocesso_iniciado == falso
+    }
+    tests {
+      caso "dev watch json falha antes do watcher" {
+        given {
+          argv: "dev watch --json"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          categoria_controle: "ARGUMENT_ERROR"
+          watcher_iniciado: falso
+          subprocesso_iniciado: falso
+        }
+      }
+    }
+  }
+}

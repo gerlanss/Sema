@@ -78,22 +78,125 @@ function Invoke-ManagedSema {
   }
 }
 
+function Invoke-NpmCaptured {
+  param(
+    [string]$NpmPath,
+    [string[]]$ArgumentList
+  )
+
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    # Windows PowerShell promotes native stderr to ErrorRecord under Stop.
+    # Capture stdout and discard stderr before restoring fail-closed behavior.
+    $ErrorActionPreference = "Continue"
+    $output = @(& $NpmPath @ArgumentList 2>$null)
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+  return [pscustomobject]@{
+    ExitCode = $exitCode
+    Output = $output
+  }
+}
+
+function Test-ObjectShapeExact {
+  param(
+    [object]$Value,
+    [string[]]$Keys
+  )
+
+  if ($null -eq $Value -or
+      $Value -isnot [System.Management.Automation.PSCustomObject]) {
+    return $false
+  }
+  $actualKeys = @($Value.PSObject.Properties.Name)
+  if ($actualKeys.Count -ne $Keys.Count) {
+    return $false
+  }
+  foreach ($key in $Keys) {
+    if ($null -eq $Value.PSObject.Properties[$key]) {
+      return $false
+    }
+  }
+  return $true
+}
+
+function Test-LegacyDistributionReady {
+  param([object]$Payload)
+
+  if ($null -eq $Payload -or
+      $Payload -isnot [System.Management.Automation.PSCustomObject] -or
+      $null -ne $Payload.PSObject.Properties["schemaVersion"]) {
+    return $false
+  }
+  if ($null -ne $Payload.PSObject.Properties["comando"] -and
+      $Payload.comando -cne "skill") {
+    return $false
+  }
+  if ($null -ne $Payload.PSObject.Properties["schema"] -and
+      $Payload.schema -cne "sema.skill-distribution/v1") {
+    return $false
+  }
+  return $Payload.sucesso -eq $true -and
+    $Payload.operacao -ceq "status" -and
+    $Payload.resultado.estado -ceq "READY" -and
+    $Payload.resultado.launcher.estado -ceq "READY" -and
+    $Payload.resultado.skill.estado -ceq "READY" -and
+    $Payload.resultado.alterado -eq $false
+}
+
 function Test-DistributionReady {
-  param([string]$Json)
+  param(
+    [string]$Json,
+    [string]$InstalledVersion
+  )
 
   try {
-    $payload = $Json | ConvertFrom-Json -ErrorAction Stop
+    $document = $Json | ConvertFrom-Json -ErrorAction Stop
   } catch {
     return $false
   }
-  return $payload.sucesso -eq $true -and
-    $payload.operacao -eq "status" -and
-    $payload.resultado.estado -eq "READY" -and
-    $payload.resultado.launcher.estado -eq "READY" -and
-    $payload.resultado.skill.estado -eq "READY" -and
-    $payload.resultado.alterado -eq $false
+  if (-not (Test-ExactSemVer $InstalledVersion) -or
+      $InstalledVersion -cnotmatch '^([0-9]+)\.') {
+    return $false
+  }
+
+  $major = [int]$Matches[1]
+  if ($major -eq 2) {
+    return Test-LegacyDistributionReady $document
+  }
+  if ($major -ne 3) {
+    return $false
+  }
+
+  $expectedKeys = @(
+    "schemaVersion",
+    "ok",
+    "kind",
+    "command",
+    "code",
+    "message",
+    "exitCode",
+    "payload"
+  )
+  if (-not (Test-ObjectShapeExact $document $expectedKeys) -or
+      $document.schemaVersion -cne "sema.cli.result/v1" -or
+      $document.ok -ne $true -or
+      $document.kind -cne "SUCCESS" -or
+      $document.command -cne "skill" -or
+      $document.code -cne "CLI_SUCCESS" -or
+      $null -ne $document.message -or
+      $document.exitCode -ne 0 -or
+      $null -eq $document.payload -or
+      $null -ne $document.payload.PSObject.Properties["schemaVersion"]) {
+    return $false
+  }
+  return Test-LegacyDistributionReady $document.payload
 }
 
+# Dot-sourcing defines the pure validators without starting a global installation.
+if ($MyInvocation.InvocationName -ne ".") {
 if ($Version -ne "latest" -and -not (Test-ExactSemVer $Version)) {
   throw "Version must be 'latest' or an exact SemVer value."
 }
@@ -131,10 +234,13 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 
 try {
   $npmCacheDir = Join-Path $tempDir "npm-cache"
-  $requestedOutput = & $npmCommand.Source view $packageSpec version --json --cache $npmCacheDir 2>$null
-  if ($LASTEXITCODE -ne 0) {
+  $requestedResult = Invoke-NpmCaptured -NpmPath $npmCommand.Source -ArgumentList @(
+    "view", $packageSpec, "version", "--json", "--cache", $npmCacheDir
+  )
+  if ($requestedResult.ExitCode -ne 0) {
     throw "npm could not resolve the requested Sema CLI version."
   }
+  $requestedOutput = $requestedResult.Output
   try {
     $requestedVersion = (($requestedOutput | Out-String).Trim() | ConvertFrom-Json -ErrorAction Stop)
   } catch {
@@ -153,15 +259,20 @@ try {
   $resolvedPackageSpec = "${packageName}@${requestedVersion}"
 
   Write-Host "Installing the Sema CLI via npm..."
-  & $npmCommand.Source install -g $resolvedPackageSpec --cache $npmCacheDir --no-audit --no-fund | Out-Host
-  if ($LASTEXITCODE -ne 0) {
+  $installResult = Invoke-NpmCaptured -NpmPath $npmCommand.Source -ArgumentList @(
+    "install", "-g", $resolvedPackageSpec, "--cache", $npmCacheDir, "--no-audit", "--no-fund"
+  )
+  if ($installResult.ExitCode -ne 0) {
     throw "npm failed to install the Sema CLI globally."
   }
 
-  $installedOutput = & $npmCommand.Source list --global --depth=0 --json $packageName 2>$null
-  if ($LASTEXITCODE -ne 0) {
+  $installedResult = Invoke-NpmCaptured -NpmPath $npmCommand.Source -ArgumentList @(
+    "list", "--global", "--depth=0", "--json", $packageName
+  )
+  if ($installedResult.ExitCode -ne 0) {
     throw "npm could not verify the installed Sema CLI version."
   }
+  $installedOutput = $installedResult.Output
   try {
     $installedPayload = (($installedOutput | Out-String).Trim() | ConvertFrom-Json -ErrorAction Stop)
     $installedProperty = $installedPayload.dependencies.PSObject.Properties[$packageName]
@@ -222,14 +333,16 @@ try {
   }
 
   $statusResult = Invoke-ManagedSema $windowsPowerShell $launcherPowerShell @("skill", "status", "--json")
-  if ($statusResult.ExitCode -ne 0 -or -not (Test-DistributionReady $statusResult.Text)) {
+  if ($statusResult.ExitCode -ne 0 -or
+      -not (Test-DistributionReady $statusResult.Text $installedVersion)) {
     $syncResult = Invoke-ManagedSema $windowsPowerShell $launcherPowerShell @("skill", "sync", "--json")
     if ($syncResult.ExitCode -ne 0) {
       throw "The bundled Sema skill could not be synchronized."
     }
     $statusResult = Invoke-ManagedSema $windowsPowerShell $launcherPowerShell @("skill", "status", "--json")
   }
-  if ($statusResult.ExitCode -ne 0 -or -not (Test-DistributionReady $statusResult.Text)) {
+  if ($statusResult.ExitCode -ne 0 -or
+      -not (Test-DistributionReady $statusResult.Text $installedVersion)) {
     throw "The managed launcher and bundled skill did not reach READY state."
   }
 
@@ -253,8 +366,7 @@ try {
   }
 
   Write-Host "Sema $installedVersion was installed successfully."
-  Write-Host "Managed launcher: $launcher"
-  Write-Host "The user PATH contains: $launcherDir"
+  Write-Host "Managed launcher and user PATH are ready."
   Write-Host "Quick check:"
   Write-Host "  sema --version"
   Write-Host "  sema skill status --json"
@@ -264,4 +376,5 @@ try {
 }
 finally {
   Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+}
 }

@@ -133,7 +133,7 @@ user authorization, product-license check, activation key, token, credits, or
 control panel. The repository license still governs use and redistribution; it
 is not a runtime activation gate.
 
-## Side-Effect-Free Help And JSON Control
+## Side-Effect-Free Help And JSON Results
 
 `--help` and `-h` take precedence wherever they appear in an invocation. Help
 exits with status `0` before the operational runtime or any handler is imported,
@@ -148,17 +148,26 @@ sema comando-inexistente --opcao valor --help --json
 ```
 
 With `--json`, help and command-control failures emit exactly one
-`sema.cli.control/v1` document on stdout and keep stderr empty. The envelope has
-only `schemaVersion`, `ok`, `kind`, `code`, `message`, and `exitCode`; error
-messages do not expose a stack, absolute path, or raw argv. Successful command
-payloads keep their existing top-level shapes in `2.4.0`. A general envelope
-for successful results is reserved for `3.0.0` after all handlers share one
-result abstraction. See [CLI](./docs/cli.md) for the complete contract.
+`sema.cli.control/v1` document on stdout and keep stderr empty. That envelope
+has only `schemaVersion`, `ok`, `kind`, `code`, `message`, and `exitCode`.
+
+Every syntactically valid command invoked with `--json` emits exactly one
+`sema.cli.result/v1` document with eight fields: `schemaVersion`, `ok`, `kind`,
+`command`, `code`, `message`, `exitCode`, and `payload`. `SUCCESS` uses
+`ok: true`, `code: "CLI_SUCCESS"`, `message: null`, and exit code `0`;
+`DOMAIN_ERROR` uses `ok: false`, `code: "CLI_DOMAIN_ERROR"`, a safe public
+message, and a non-zero exit code. The command-specific result is always nested
+under `payload`, which may be any JSON value. Envelope `ok` classifies the CLI
+result path; consumers must still read command-specific domain fields such as
+`payload.sucesso`, `payload.aprovado`, or `payload.bloqueado` when present.
+
+`sema --version` remains plain exact SemVer text rather than a JSON envelope.
+See [CLI](./docs/cli.md) for the complete contract.
 
 The npm executable is `dist/bin.js`; the package API remains `dist/index.js`.
 Control failures cover unknown commands/subcommands, missing or invalid CLI
-syntax, and uncaught runtime exceptions. A valid command's structured domain
-result keeps its legacy payload in `2.4.0`.
+syntax, and uncaught runtime exceptions. Structured failures returned after a
+valid command dispatch use `sema.cli.result/v1` with `kind: "DOMAIN_ERROR"`.
 
 ## Codex Setup
 
@@ -220,7 +229,8 @@ sema impacto contratos/sema/software.sema --alvo app.software --mudanca "describ
 ```
 
 `resumo` and `inspecionar` skip drift by default and leave unobserved code
-evidence as `null`. Request `--drift cache` or `--drift fresh` when needed.
+evidence inside the result `payload` as `null`. Request `--drift cache` or
+`--drift fresh` when needed.
 Direct `sema drift` defaults to `--cache fresh`; `--cache none` executes without
 persistent-cache I/O, while `cache` reuses only validated extraction data. The
 cache lives in the operating system's user-cache directory outside the

@@ -1,5 +1,5 @@
 // SEMA-GOVERNED: sema.produto.cli_invocacao_publica
-// Descrição: prova ajuda pura e contrato JSON estável sem alterar payloads válidos da CLI 2.4.
+// Descrição: prova ajuda pura, controle v1 e resultado v1 sem alterar os payloads dos handlers.
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -27,6 +27,7 @@ import {
   criarEnvelopeControleJsonV1,
   executarInvocacaoPublica,
 } from "../../pacotes/cli/src/saidaCli.js";
+import { extrairPayloadResultadoCliV1 } from "../helpers/resultado-cli-v1.ts";
 
 export const cli_invocacao_publica = "sema.cli.public-invocation/v1";
 
@@ -403,6 +404,13 @@ function exigirExecucao(
   assert.equal(resultado.sinal, null, descreverFalha(args, resultado));
 }
 
+function extrairPayloadExecucao(args: readonly string[], resultado: ResultadoCli): unknown {
+  return extrairPayloadResultadoCliV1(resultado.stdout, {
+    command: args[0] ?? "",
+    exitCode: resultado.codigo,
+  });
+}
+
 function parseJsonUnico(stdout: string): unknown {
   const texto = stdout.trim();
   assert.notEqual(texto, "", "stdout JSON não pode ficar vazio");
@@ -504,74 +512,6 @@ test("resolver puro detecta help antes de validar comando, opções ou terminado
   );
   assert.equal(detectarHelpAntesDispatch(["--help=nao"]).ajudaSolicitada, false);
   assert.equal(detectarHelpAntesDispatch(["--HELP"]).ajudaSolicitada, false);
-});
-
-test("construtor e emissor preservam o envelope de controle exato e o payload de sucesso", async () => {
-  const casos = [
-    ["HELP", "CLI_HELP", 0, true],
-    ["UNKNOWN_COMMAND", "CLI_UNKNOWN_COMMAND", 1, false],
-    ["ARGUMENT_ERROR", "CLI_ARGUMENT_ERROR", 1, false],
-    ["FATAL_ERROR", "CLI_FATAL_ERROR", 1, false],
-  ] as const;
-  for (const [categoria, codigoPublico, codigoSaida, ok] of casos) {
-    const mensagemEsperada = categoria === "HELP"
-      ? `mensagem ${categoria}`
-      : {
-          UNKNOWN_COMMAND: "Comando Sema desconhecido.",
-          ARGUMENT_ERROR: "Argumentos inválidos. Consulte a ajuda do comando.",
-          FATAL_ERROR: "Falha ao executar a CLI da Sema.",
-        }[categoria];
-    assert.deepEqual(
-      criarEnvelopeControleJsonV1({
-        categoria,
-        codigoPublico,
-        mensagemPublica: `mensagem ${categoria}`,
-        codigoSaida,
-      }),
-      {
-        schemaVersion: "sema.cli.control/v1",
-        ok,
-        kind: categoria,
-        code: codigoPublico,
-        message: mensagemEsperada,
-        exitCode: codigoSaida,
-      },
-    );
-  }
-
-  const payloadLegado = { sucesso: true, forma: "legada", nested: { valor: 7 } };
-  const sucesso = await capturarConsole(() => executarInvocacaoPublica({
-    resultado: "SUCCESS",
-    modoJson: true,
-    payloadSucesso: payloadLegado,
-  }));
-  assert.equal(sucesso.resultado.payloadSucessoPreservado, true);
-  assert.equal(sucesso.resultado.codigoSaida, 0);
-  assert.equal(sucesso.resultado.envelopeControleEmitido, false);
-  assert.equal(sucesso.resultado.handlerExecutado, true);
-  assert.equal(sucesso.resultado.politicaSucesso24Respeitada, true);
-  assert.deepEqual(parseJsonUnico(sucesso.stdout.join("\n")), payloadLegado);
-  assert.deepEqual(sucesso.stderr, []);
-
-  const envelopeHelp = criarEnvelopeControleJsonV1({
-    categoria: "HELP",
-    codigoPublico: "CLI_HELP",
-    mensagemPublica: "ajuda pública",
-    codigoSaida: 0,
-  });
-  const help = await capturarConsole(() => executarInvocacaoPublica({
-    resultado: "HELP",
-    modoJson: true,
-    envelopeControle: envelopeHelp,
-  }));
-  assert.equal(help.resultado.payloadSucessoPreservado, true);
-  assert.equal(help.resultado.codigoSaida, 0);
-  assert.equal(help.resultado.envelopeControleEmitido, true);
-  assert.equal(help.resultado.handlerExecutado, false);
-  assert.equal(help.resultado.politicaControleJsonV1Respeitada, true);
-  assert.equal(help.resultado.politicaHelpPuroRespeitada, true);
-  assert.deepEqual(parseJsonUnico(help.stdout.join("\n")), envelopeHelp);
-  assert.deepEqual(help.stderr, []);
 });
 
 test("saída de controle fecha caminhos, percent-encoding e stacks inline", async () => {
@@ -725,7 +665,7 @@ test("todos os 43 comandos públicos encerram --help e -h sem dispatch, PATH ou 
   }
 });
 
-test("launcher npm instalado preserva help puro no bin público real", async () => {
+test("launcher npm instalado preserva help e emite result/v1 para handler válido", async () => {
   const ambiente = await criarAmbienteIsolado("sema-cli-help-launcher-");
   try {
     assert.equal(await existe(CLI_LAUNCHER_INSTALADO), true);
@@ -748,6 +688,14 @@ test("launcher npm instalado preserva help puro no bin público real", async () 
       }
       await exigirAmbienteImutavel(ambiente, antes, `launcher instalado ${args.join(" ")}`);
     }
+
+    const validarArgs = ["validar", ambiente.contrato, "--json"] as const;
+    const validar = executarLauncherInstalado(ambiente, validarArgs, 10_000);
+    exigirExecucao(validarArgs, validar, 0);
+    assert.equal(validar.stderr, "", descreverFalha(validarArgs, validar));
+    const payloadValidar = exigirObjeto(extrairPayloadExecucao(validarArgs, validar));
+    assert.equal(payloadValidar.valido, true);
+    await exigirAmbienteImutavel(ambiente, antes, "launcher instalado validar --json");
   } finally {
     await rm(ambiente.base, { recursive: true, force: true });
   }
@@ -892,7 +840,39 @@ test("comando desconhecido, argumento inválido e falha fatal JSON usam controle
   }
 });
 
-test("handlers válidos preservam os formatos JSON legados sem envelope geral", async () => {
+test("bin real rejeita dev watch JSON antes do watcher e conclui promoção JSON finita", async () => {
+  const ambiente = await criarAmbienteIsolado("sema-cli-dev-json-");
+  try {
+    const antes = await fingerprintDiretorio(ambiente.base);
+    ambiente.env.SEMA_TEST_FORCE_HELP = "1";
+
+    const watchArgs = ["dev", "--json"] as const;
+    const watch = executarCli(ambiente, watchArgs, 2_500);
+    exigirExecucao(watchArgs, watch, 1);
+    assert.equal(watch.stderr, "", descreverFalha(watchArgs, watch));
+    exigirEnvelopeControle(watch.stdout, {
+      kind: "ARGUMENT_ERROR",
+      code: "CLI_ARGUMENT_ERROR",
+      exitCode: 1,
+      ok: false,
+    });
+    await exigirAmbienteImutavel(ambiente, antes, "dev --json sem watcher");
+
+    delete ambiente.env.SEMA_TEST_FORCE_HELP;
+    const promoverArgs = ["dev", "--promover", ambiente.contrato, "--json"] as const;
+    const promover = executarCli(ambiente, promoverArgs, 10_000);
+    exigirExecucao(promoverArgs, promover, 0);
+    assert.equal(promover.stderr, "", descreverFalha(promoverArgs, promover));
+    const payloadPromocao = extrairPayloadExecucao(promoverArgs, promover);
+    assert.equal(typeof payloadPromocao, "string");
+    assert.match(payloadPromocao as string, /Promovido com sucesso/u);
+    await exigirAmbienteImutavel(ambiente, antes, "dev --promover --json finito");
+  } finally {
+    await rm(ambiente.base, { recursive: true, force: true });
+  }
+});
+
+test("invocações válidas usam result/v1 e preservam os payloads dos handlers", async () => {
   const ambiente = await criarAmbienteIsolado("sema-cli-json-legado-");
   try {
     const antes = await fingerprintDiretorio(ambiente.base);
@@ -901,7 +881,7 @@ test("handlers válidos preservam os formatos JSON legados sem envelope geral", 
     const validar = executarCli(ambiente, validarArgs, 10_000);
     exigirExecucao(validarArgs, validar, 0);
     assert.equal(validar.stderr, "");
-    const payloadValidar = exigirObjeto(parseJsonUnico(validar.stdout));
+    const payloadValidar = exigirObjeto(extrairPayloadExecucao(validarArgs, validar));
     assert.deepEqual(Object.keys(payloadValidar).sort(), [
       "advertencias",
       "bloqueia_acao",
@@ -916,7 +896,7 @@ test("handlers válidos preservam os formatos JSON legados sem envelope geral", 
     const diagnosticos = executarCli(ambiente, diagnosticosArgs, 10_000);
     exigirExecucao(diagnosticosArgs, diagnosticos, 0);
     assert.equal(diagnosticos.stderr, "");
-    const payloadDiagnosticos = parseJsonUnico(diagnosticos.stdout);
+    const payloadDiagnosticos = extrairPayloadExecucao(diagnosticosArgs, diagnosticos);
     assert.ok(Array.isArray(payloadDiagnosticos));
     exigirSemEnvelopeControle(payloadDiagnosticos);
 
@@ -924,7 +904,7 @@ test("handlers válidos preservam os formatos JSON legados sem envelope geral", 
     const descoberta = executarCli(ambiente, descobertaArgs, 15_000);
     exigirExecucao(descobertaArgs, descoberta, 0);
     assert.equal(descoberta.stderr, "");
-    const payloadDescoberta = exigirObjeto(parseJsonUnico(descoberta.stdout));
+    const payloadDescoberta = exigirObjeto(extrairPayloadExecucao(descobertaArgs, descoberta));
     assert.equal(payloadDescoberta.schemaVersion, "sema.discovery/v1");
     assert.equal(payloadDescoberta.command, "descobrir catalogo");
     assert.equal(payloadDescoberta.success, true);
@@ -935,7 +915,7 @@ test("handlers válidos preservam os formatos JSON legados sem envelope geral", 
     const resumo = executarCli(ambiente, resumoArgs, 15_000);
     exigirExecucao(resumoArgs, resumo, 0);
     assert.equal(resumo.stderr, "");
-    const payloadResumo = exigirObjeto(parseJsonUnico(resumo.stdout));
+    const payloadResumo = exigirObjeto(extrairPayloadExecucao(resumoArgs, resumo));
     assert.equal(payloadResumo.comando, "resumo");
     assert.equal(payloadResumo.tamanho, "micro");
     assert.equal(exigirObjeto(payloadResumo.analiseDrift).modo, "none");
@@ -946,7 +926,7 @@ test("handlers válidos preservam os formatos JSON legados sem envelope geral", 
     const conteudo = executarCli(ambiente, conteudoArgs, 10_000);
     exigirExecucao(conteudoArgs, conteudo, 0);
     assert.equal(conteudo.stderr, "");
-    const payloadConteudo = exigirObjeto(parseJsonUnico(conteudo.stdout));
+    const payloadConteudo = exigirObjeto(extrairPayloadExecucao(conteudoArgs, conteudo));
     assert.equal(payloadConteudo.sucesso, true);
     assert.equal(payloadConteudo.comando, "capabilities");
     assert.equal(payloadConteudo.runner, "external");
@@ -956,7 +936,7 @@ test("handlers válidos preservam os formatos JSON legados sem envelope geral", 
     const skill = executarCli(ambiente, skillArgs, 10_000);
     exigirExecucao(skillArgs, skill, 1);
     assert.equal(skill.stderr, "");
-    const payloadSkill = exigirObjeto(parseJsonUnico(skill.stdout));
+    const payloadSkill = exigirObjeto(extrairPayloadExecucao(skillArgs, skill));
     assert.equal(payloadSkill.schema, "sema.skill-distribution/v1");
     assert.equal(payloadSkill.comando, "skill");
     assert.equal(payloadSkill.operacao, "status");

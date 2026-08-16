@@ -3,6 +3,10 @@
 // Descricao: exercita a superficie declarativa interativa do pacote instalado sem executar runtimes externos.
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  SCHEMA_CONTROLE_CLI_V1,
+  SCHEMA_RESULTADO_CLI_V1,
+} from "./resultado-cli.mjs";
 
 export const EXEMPLOS_INTERATIVOS_PUBLICOS = [
   "exemplos/sistemas-interativos/README.md",
@@ -41,6 +45,17 @@ function validarFronteiraInterativa(payload, comando) {
   ) {
     throw new Error(`The installed public CLI broke the declarative interactive boundary for ${comando}.`);
   }
+}
+
+function exigirPayloadParaFixture(valor, referencia) {
+  if (
+    valor
+    && typeof valor === "object"
+    && (valor.schemaVersion === SCHEMA_RESULTADO_CLI_V1 || valor.schemaVersion === SCHEMA_CONTROLE_CLI_V1)
+  ) {
+    throw new Error(`The installed-package fixture ${referencia} received a CLI envelope instead of its payload.`);
+  }
+  return valor;
 }
 
 export async function validarSistemasInterativosInstalados({
@@ -292,8 +307,8 @@ export async function validarSistemasInterativosInstalados({
   const controlPlanFile = path.join(sandbox, "control-run-plan.json");
   const controlResultFile = path.join(sandbox, "control-run-result.json");
   await Promise.all([
-    writeFile(controlPlanFile, JSON.stringify(controlPlan.plano), "utf8"),
-    writeFile(controlResultFile, JSON.stringify(temporalResult), "utf8"),
+    writeFile(controlPlanFile, JSON.stringify(exigirPayloadParaFixture(controlPlan.plano, "control plan")), "utf8"),
+    writeFile(controlResultFile, JSON.stringify(exigirPayloadParaFixture(temporalResult, "temporal result")), "utf8"),
   ]);
   const controlRun = executarJsonCliInstalada(semaBin, [
     "interativo", "validar-control-run", controlManifest,

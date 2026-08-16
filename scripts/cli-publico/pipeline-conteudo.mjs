@@ -2,6 +2,8 @@
 // Consulte contratos/sema/pipeline_conteudo_cli.sema antes de editar.
 // Descricao: valida ajuda e capabilities AI-native do pipeline de conteudo no pacote instalado.
 
+import { extrairPayloadResultadoCliV1 } from "./resultado-cli.mjs";
+
 export function validarPipelineConteudoInstalado({ semaBin, sandbox, executarComSaida }) {
   const ajudaConteudo = executarComSaida(process.execPath, [semaBin, "conteudo", "--help"], sandbox);
   for (const uso of ["sema conteudo validar", "sema conteudo validar-envelope", "sema conteudo registrar", "sema conteudo projetar"]) {
@@ -13,8 +15,9 @@ export function validarPipelineConteudoInstalado({ semaBin, sandbox, executarCom
     throw new Error("The installed content pipeline help does not state its AI-native runner boundary.");
   }
 
-  const capabilitiesConteudo = JSON.parse(
+  const capabilitiesConteudo = extrairPayloadResultadoCliV1(
     executarComSaida(process.execPath, [semaBin, "conteudo", "capabilities", "--json"], sandbox),
+    { contexto: "conteudo capabilities", command: "conteudo", exitCode: 0, kind: "SUCCESS" },
   );
   if (
     capabilitiesConteudo.sucesso !== true ||

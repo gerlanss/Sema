@@ -5,6 +5,10 @@ import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { validarTextoHandshakePublico } from "./fronteira-publica.mjs";
+import {
+  extrairPayloadResultadoCliV1,
+  validarEnvelopeResultadoCliV1,
+} from "./resultado-cli.mjs";
 
 function validarPoliticaDriftMaterializada(conteudo, referencia) {
   if (!conteudo.includes("--drift none")) {
@@ -97,7 +101,10 @@ export async function validarBootstrapCodexInstalado({
     "<!-- sema:agent-entrypoint:start -->\nsema preflight resumo --json\n<!-- sema:agent-entrypoint:end -->\n",
     "utf8",
   );
-  const syncCodex = JSON.parse(executarCliInstalada(["sync-codex", "--json"], projetoCodex).stdout);
+  const syncCodex = extrairPayloadResultadoCliV1(
+    executarCliInstalada(["sync-codex", "--json"], projetoCodex).stdout,
+    { contexto: "sync-codex instalado", command: "sync-codex", exitCode: 0, kind: "SUCCESS" },
+  );
   if (
     syncCodex.comando !== "sync-codex" ||
     !syncCodex.sucesso ||
@@ -133,7 +140,16 @@ export async function validarBootstrapCodexInstalado({
     projetoCodex,
     { aceitarFalha: true },
   );
-  if (syncMalformado.status === 0 || await readFile(legadoMalformadoPath, "utf8") !== legadoMalformado) {
+  if (syncMalformado.status === 0 || syncMalformado.stderr !== "") {
+    throw new Error("The installed CLI did not emit a clean domain-error result for a malformed managed block.");
+  }
+  validarEnvelopeResultadoCliV1(syncMalformado.stdout, {
+    contexto: "sync-codex com bloco gerenciado malformado",
+    command: "sync-codex",
+    exitCode: syncMalformado.status,
+    kind: "DOMAIN_ERROR",
+  });
+  if (await readFile(legadoMalformadoPath, "utf8") !== legadoMalformado) {
     throw new Error("The installed CLI did not fail closed while preserving a malformed managed block.");
   }
 

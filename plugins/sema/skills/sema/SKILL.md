@@ -60,10 +60,11 @@ When the user explicitly requests a global install or update:
    to report the exact installed version and support `sema skill status --json`.
    A stale command found through `PATH` must not hide a valid managed launcher.
 
-4. Run `sema skill status --json`. If any managed component is not `READY`, run
-   `sema skill sync --json`, then run `sema skill status --json` again. Require a
-   final `READY` state; do not report a successful install or update from npm's
-   exit code alone.
+4. Run `sema skill status --json`, validate its public result envelope, and
+   unwrap `payload`. If any managed component in that command payload is not
+   `READY`, run `sema skill sync --json`, validate and unwrap its result, then
+   run status again. Require a final `READY` state; do not report a successful
+   install or update from npm's exit code alone.
 
 5. Stop without touching the current workspace unless workspace adoption was
    also requested explicitly. Report that an already-open agent may need the
@@ -101,6 +102,19 @@ valid but report different versions, prefer the managed candidate. Also prefer
 the managed candidate when the regular command from `PATH` is stale, fails, or
 does not support `sema skill status --json`. Use the selected invocation for
 every remaining command.
+
+Interpret Sema CLI output as follows:
+
+- Treat `--version` as plain exact SemVer text, never as a JSON envelope.
+- For help or a command-control failure with `--json`, accept only the exact
+  six-field `sema.cli.control/v1` envelope.
+- For every syntactically valid command with `--json`, accept only the exact
+  eight-field `sema.cli.result/v1` envelope containing `schemaVersion`, `ok`,
+  `kind`, `command`, `code`, `message`, `exitCode`, and `payload`.
+- Unwrap `payload` before reading command-specific state. Do not accept `data`
+  as an alias, do not read domain fields from the envelope top level, and do
+  not treat transport `ok` as a replacement for `payload.sucesso` or another
+  command-specific verdict.
 
 Do not declare Sema unavailable until both candidates have failed validation.
 Do not treat a missing npm shim, stale `PATH`, or an old command without the

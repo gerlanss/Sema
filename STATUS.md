@@ -8,10 +8,10 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `2.4.0`
+- Version: `3.0.0`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-16
-- Reference commit: `a29c3e3`
+- Reference commit: `e7b74db`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -37,9 +37,11 @@ Every public publication must pass:
 - Keep `--help` and `-h` side-effect-free in every argv position, before
   operational runtime import, dispatch, handler resolution, workspace access,
   cache access, subprocesses, or network calls.
-- Keep `sema.cli.control/v1` limited to JSON help and command-control failures
-  in `2.4.0`; preserve successful command payloads unchanged and reserve the
-  general result envelope for `3.0.0`.
+- Keep `sema.cli.control/v1` limited to JSON help and command-control failures.
+  Every syntactically valid command invoked with `--json` must emit the exact
+  eight-field `sema.cli.result/v1` envelope and keep its command result nested
+  under `payload`; transport `ok` never replaces a domain verdict in the
+  payload. Keep `--version` as plain exact SemVer text.
 - Keep the repository local-only and source-first.
 - Keep the skill limited to first-contact bootstrap and delegate ongoing
   governance to `AGENTS.md`.

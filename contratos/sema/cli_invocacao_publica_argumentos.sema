@@ -1,7 +1,7 @@
 module sema.produto.cli_invocacao_publica.argumentos {
   docs {
-    resumo: "Governa a validacao fail-closed da sintaxe publica da CLI antes de qualquer handler ou efeito e a classificacao tipada das falhas de controle em 2.4."
-    versao: "2.4.0"
+    resumo: "Governa a validacao fail-closed da sintaxe publica da CLI antes de qualquer handler ou efeito e a classificacao tipada das falhas de controle em 3.0."
+    versao: "3.0.0"
     status: "MODELADA"
     arquivo: "contratos/sema/cli_invocacao_publica.sema"
     arquivo: "docs/cli.md"

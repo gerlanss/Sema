@@ -1,16 +1,22 @@
 module sema.produto.cli_invocacao_publica {
   docs {
-    resumo: "Governa a invocacao publica da CLI 2.4: --help ou -h em qualquer posicao encerra antes do dispatch, e o modo JSON usa um envelope de controle v1 somente para help e falhas de comando, argumento ou runtime. Payloads JSON de sucesso continuam inalterados."
-    versao: "2.4.0"
+    resumo: "Governa o controle da invocacao publica: --help ou -h em qualquer posicao encerra antes do dispatch, e o modo JSON preserva o envelope de controle v1 exato para help e falhas de comando, argumento ou runtime. Resultados de dominio e isolamento de handlers vivem em capacidades separadas."
+    versao: "3.0.0"
     status: "MODELADA"
     arquivo: "docs/cli.md"
     arquivo: "docs/commands.md"
     arquivo: "docs/testing.md"
     arquivo: "contratos/sema/fronteira_repositorios_empacotamento_smoke.sema"
     arquivo: "contratos/sema/cli_invocacao_publica_argumentos.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_resultados.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_handlers.sema"
   }
 
   use sema.produto.cli_invocacao_publica.argumentos
+
+  use sema.produto.cli_invocacao_publica.resultados
+
+  use sema.produto.cli_invocacao_publica.handlers
 
   type EnvelopeControleJsonV1 {
     fields {
@@ -30,14 +36,6 @@ module sema.produto.cli_invocacao_publica {
   }
 
   enum TipoControleCli {
-    HELP,
-    UNKNOWN_COMMAND,
-    ARGUMENT_ERROR,
-    FATAL_ERROR
-  }
-
-  enum TipoResultadoInvocacaoCli {
-    SUCCESS,
     HELP,
     UNKNOWN_COMMAND,
     ARGUMENT_ERROR,
@@ -191,103 +189,6 @@ module sema.produto.cli_invocacao_publica {
           stderr_vazio: verdadeiro
           campos_publicos_mapeados: verdadeiro
           ok_coerente_com_categoria: verdadeiro
-        }
-      }
-    }
-  }
-
-  task emitir_resultado_invocacao_publica {
-    input {
-      resultado: TipoResultadoInvocacaoCli required
-      modo_json: Booleano required
-      payload_sucesso: Mapa optional
-      envelope_controle: EnvelopeControleJsonV1 optional
-    }
-    output {
-      payload_sucesso_preservado: Booleano
-      envelope_controle_emitido: Booleano
-      stderr_vazio: Booleano
-      handler_executado: Booleano
-      politica_sucesso_2_4_respeitada: Booleano
-      politica_controle_json_v1_respeitada: Booleano
-      politica_help_puro_respeitada: Booleano
-      codigo_saida: Inteiro
-    }
-    rules {
-      payload_sucesso deve_ser fornecido quando resultado == SUCCESS
-      envelope_controle deve_ser ausente quando resultado == SUCCESS
-      envelope_controle deve_ser fornecido quando (modo_json == verdadeiro e resultado em [HELP, UNKNOWN_COMMAND, ARGUMENT_ERROR, FATAL_ERROR])
-    }
-    forbidden {
-      envolver_payload_sucesso_em_envelope_controle
-      renomear_chaves_do_payload_sucesso
-      remover_campos_do_payload_sucesso
-      acrescentar_campos_ao_payload_sucesso
-      normalizar_payload_sucesso_em_2_4
-      emitir_envelope_controle_para_sucesso
-      emitir_json_em_stderr
-      executar_handler_durante_help
-    }
-    impl {
-      ts: cli.src.saida_cli.executarInvocacaoPublica
-    }
-    vinculos {
-      arquivo: "pacotes/cli/src/cliHelp.ts"
-      arquivo: "pacotes/cli/src/saidaCli.ts"
-      arquivo: "pacotes/cli/src/bin.ts"
-      arquivo: "pacotes/cli/src/index.part08.ts"
-      arquivo: "pacotes/cli/src/index.ts"
-      arquivo: "testes/integracao/cli-invocacao-publica.test.ts"
-      arquivo: "scripts/testar-pacote-cli-publico.mjs"
-      simbolo: cli.src.saida_cli.executarInvocacaoPublica
-      simbolo: cli.src.bin.executarCliPublica
-      simbolo: scripts.testar_pacote_cli_publico.main
-    }
-    execucao {
-      idempotencia: falso
-      timeout: "herdado_do_comando"
-      retry: "nenhum"
-      compensacao: "delegada_ao_comando"
-      criticidade_operacional: alta
-    }
-    guarantees {
-      payload_sucesso_preservado existe
-      envelope_controle_emitido existe
-      stderr_vazio existe
-      handler_executado existe
-      politica_sucesso_2_4_respeitada == verdadeiro
-      politica_controle_json_v1_respeitada == verdadeiro
-      politica_help_puro_respeitada == verdadeiro
-      codigo_saida existe
-    }
-    tests {
-      caso "sucesso json preserva o payload legado de 2.4" {
-        given {
-          resultado: "SUCCESS"
-          modo_json: verdadeiro
-          payload_sucesso: "payload_original_sem_wrapper"
-        }
-
-        expect {
-          sucesso: verdadeiro
-          payload_sucesso_preservado: verdadeiro
-          envelope_controle_emitido: falso
-          stderr_vazio: verdadeiro
-          politica_sucesso_2_4_respeitada: verdadeiro
-        }
-      }
-      caso "comando desconhecido json usa envelope e nao stderr" {
-        given {
-          resultado: "UNKNOWN_COMMAND"
-          modo_json: verdadeiro
-          envelope_controle: "sema.cli.control/v1"
-        }
-
-        expect {
-          sucesso: verdadeiro
-          envelope_controle_emitido: verdadeiro
-          stderr_vazio: verdadeiro
-          politica_controle_json_v1_respeitada: verdadeiro
         }
       }
     }

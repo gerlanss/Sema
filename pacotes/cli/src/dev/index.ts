@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.governanca_ia_contexto
+// SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.cli_dev_mode, sema.produto.cli_invocacao_publica.handlers
 // Descricao: codigo governado pelo Sema; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
 // Modo dev --watch para paralelizacao
 // Contrato: cli_dev_mode.sema
@@ -6,6 +6,65 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
+import { fileURLToPath } from 'node:url';
+
+export function resolverCaminhoBinCliDev(urlModulo: string = import.meta.url): string {
+  return fileURLToPath(new URL('../bin.js', urlModulo));
+}
+
+const CAMINHO_BIN_CLI = resolverCaminhoBinCliDev();
+
+const CHAVES_RESULTADO_CLI_V1 = [
+  'code',
+  'command',
+  'exitCode',
+  'kind',
+  'message',
+  'ok',
+  'payload',
+  'schemaVersion'
+] as const;
+
+interface PayloadValidacaoCli {
+  readonly bloqueia_acao?: boolean;
+  readonly erros?: Array<{ codigo: string }>;
+}
+
+function extrairPayloadValidacaoCli(saida: string, codigoProcesso: number | null): PayloadValidacaoCli {
+  const envelope = JSON.parse(saida) as Record<string, unknown>;
+  if (
+    typeof envelope !== 'object'
+    || envelope === null
+    || Array.isArray(envelope)
+    || envelope.schemaVersion !== 'sema.cli.result/v1'
+    || envelope.command !== 'validar'
+    || !Number.isSafeInteger(envelope.exitCode)
+    || envelope.exitCode !== codigoProcesso
+    || JSON.stringify(Object.keys(envelope).sort()) !== JSON.stringify(CHAVES_RESULTADO_CLI_V1)
+  ) {
+    throw new TypeError('Resultado público de validação inválido.');
+  }
+
+  const sucesso = envelope.exitCode === 0;
+  if (
+    envelope.ok !== sucesso
+    || envelope.kind !== (sucesso ? 'SUCCESS' : 'DOMAIN_ERROR')
+    || envelope.code !== (sucesso ? 'CLI_SUCCESS' : 'CLI_DOMAIN_ERROR')
+    || (sucesso ? envelope.message !== null : typeof envelope.message !== 'string')
+  ) {
+    throw new TypeError('Resultado público de validação incoerente.');
+  }
+
+  const payload = envelope.payload;
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new TypeError('Payload público de validação inválido.');
+  }
+  const schemaPayload = (payload as Record<string, unknown>).schemaVersion;
+  if (schemaPayload === 'sema.cli.result/v1' || schemaPayload === 'sema.cli.control/v1') {
+    throw new TypeError('Payload público de validação não pode conter envelope CLI aninhado.');
+  }
+  return payload as PayloadValidacaoCli;
+}
 
 export interface SessaoDev {
   id: string;
@@ -82,14 +141,13 @@ function iniciarWatcher(sessao: SessaoDev): void {
 
 async function validarAlteracao(caminhoArquivo: string, modo: 'rigoroso' | 'permissivo'): Promise<void> {
   // Executar validacao via CLI
-  const semaPath = path.resolve('pacotes/cli/dist/bin.js');
   const args = ['validar', caminhoArquivo];
 
   if (modo === 'permissivo') {
     console.log('   🟡 Modo permissivo: mostrando apenas warnings\n');
   }
 
-  const processo = spawn(process.execPath, [semaPath, ...args], {
+  const processo = spawn(process.execPath, [CAMINHO_BIN_CLI, ...args], {
     stdio: 'inherit',
     shell: false
   });
@@ -112,19 +170,17 @@ export async function promoverParaProduction(
   console.log(`\n🚀 Promovendo ${path.basename(caminhoContrato)} para PRODUCTION...`);
 
   // Validar rigorosamente
-  const semaPath = path.resolve('pacotes/cli/dist/bin.js');
-
   return new Promise((resolve) => {
-    const processo = spawn(process.execPath, [semaPath, 'validar', caminhoContrato, '--json'], {
+    const processo = spawn(process.execPath, [CAMINHO_BIN_CLI, 'validar', caminhoContrato, '--json'], {
       shell: false
     });
 
     let saida = '';
     processo.stdout?.on('data', (data) => { saida += data; });
 
-    processo.on('close', () => {
+    processo.on('close', (codigo) => {
       try {
-        const resultado = JSON.parse(saida);
+        const resultado = extrairPayloadValidacaoCli(saida, codigo);
         const temErros = resultado.bloqueia_acao === true;
 
         if (temErros) {

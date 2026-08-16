@@ -3,12 +3,12 @@
 
 import assert from "node:assert/strict";
 import { execFile, type ExecFileException } from "node:child_process";
-import { createRequire } from "node:module";
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { extrairPayloadResultadoCliV1 } from "../helpers/resultado-cli-v1.ts";
 
 type ModoCacheDriftPublico = "none" | "cache" | "fresh";
 
@@ -95,9 +95,7 @@ interface OpcoesSandboxCli {
   declararDescobertaCodigo?: boolean;
 }
 
-const require = createRequire(import.meta.url);
-const TSX_CLI = require.resolve("tsx/cli");
-const CLI_FONTE = fileURLToPath(new URL("../../pacotes/cli/src/bin.ts", import.meta.url));
+const CLI_COMPILADA = fileURLToPath(new URL("../../pacotes/cli/dist/bin.js", import.meta.url));
 
 async function criarSandboxCli(base: string, opcoes: OpcoesSandboxCli = {}): Promise<SandboxCli> {
   const raiz = path.join(base, "workspace");
@@ -152,7 +150,7 @@ async function executarCli(
   return new Promise((resolve) => {
     execFile(
       process.execPath,
-      [TSX_CLI, CLI_FONTE, ...argumentos],
+      [CLI_COMPILADA, ...argumentos],
       {
         cwd: sandbox.raiz,
         encoding: "utf8",
@@ -181,9 +179,12 @@ async function executarJson<T>(
   assert.equal(
     execucao.codigo,
     0,
-    `CLI-fonte falhou.\nSTDOUT:\n${execucao.stdout}\nSTDERR:\n${execucao.stderr}`,
+    `CLI compilada falhou.\nSTDOUT:\n${execucao.stdout}\nSTDERR:\n${execucao.stderr}`,
   );
-  return JSON.parse(execucao.stdout) as T;
+  return extrairPayloadResultadoCliV1<T>(execucao.stdout, {
+    command: argumentos[0] ?? "",
+    exitCode: execucao.codigo,
+  });
 }
 
 async function assertCaminhoAusente(caminho: string): Promise<void> {
@@ -610,7 +611,10 @@ test("resumo e inspecionar propagam drift executado com falha", async () => {
     ]) {
       const execucao = await executarCli(sandbox, argumentos, raizCache);
       assert.equal(execucao.codigo, 1, execucao.stderr);
-      const payload = JSON.parse(execucao.stdout) as PayloadResumoCli | PayloadInspecionarCli;
+      const payload = extrairPayloadResultadoCliV1<PayloadResumoCli | PayloadInspecionarCli>(
+        execucao.stdout,
+        { command: argumentos[0] ?? "", exitCode: execucao.codigo },
+      );
       const analise = payload.comando === "resumo"
         ? payload.analiseDrift
         : payload.configuracao.analiseDrift;

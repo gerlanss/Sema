@@ -200,7 +200,7 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 ## Primeira ação
 
 1. Confirme \`AGENTS.md\` na raiz e rode \`sema --version\`. Se o shell não localizar o comando, use \`$HOME/.sema/bin/sema\` no macOS/Linux; no Windows, PowerShell usa \`sema.ps1\` no PATH, cmd.exe usa \`sema.cmd\`, e o fallback absoluto é \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`. Só então declare a CLI indisponível.
-2. Use a CLI local diretamente para ler o workspace: \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`.
+2. Use a CLI local diretamente para ler o workspace: \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`. Na 3.0.0, \`sema --version\` continua texto SemVer exato; com \`--json\`, help e falhas de controle usam \`sema.cli.control/v1\`, enquanto comandos sintaticamente válidos usam o envelope exato de oito campos \`sema.cli.result/v1\`, com o resultado aninhado em \`payload\` e \`ok\` separado do veredito de domínio desse payload.
 3. Se não estiver claro qual profile, workflow, pipeline, gerador ou adapter usar, rode \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não execute automaticamente uma recomendação ambígua.
 4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
@@ -251,9 +251,9 @@ Score composto, \`achados[]\` e \`decisaoAgente\` são sinais para guiar a próx
 - Média: conecte regra, arquivo, contrato e evidência antes de concluir aderência.
 - Forte: não transforme regex, palavra-chave ou score 100 em ritual vazio; valide substância, risco e comportamento.
 - Consultas honestas: \`resumo\` e \`inspecionar\` usam \`--drift none\` por padrão; score, confiança, implementação, rotas e superfícies não observadas ficam nulos/não avaliados.
-- Se uma consulta executar drift explicitamente, \`analiseDrift.sucesso\` expõe o resultado e uma falha solicitada retorna exit code diferente de zero.
+- Se uma consulta executar drift explicitamente, \`payload.analiseDrift.sucesso\` expõe o resultado e uma falha solicitada retorna exit code diferente de zero.
 - Cache: \`sema drift\` usa \`fresh\` por padrão. \`--cache none\` ainda executa sem persistência; \`cache\` acelera extrações validadas, mas não é prova final.
-- Fechamento governado: se \`sema drift --cache fresh --json\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impls quebradas, não diga que passou limpo. Corrija e rode drift de novo.
+- Fechamento governado: se o \`payload\` de \`sema drift --cache fresh --json\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou \`impls_quebrados\`, não diga que passou limpo. Corrija e rode drift de novo.
 - Experiência governada: se a tarefa cria ou altera site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, prove acabamento moderno, contextual e não genérico. Em UI estreita (ex. 390px), \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\` precisa ser verdadeiro.
 - Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
@@ -318,7 +318,7 @@ Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use o
 15. Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres não é lentidão: divida por responsabilidade; não aumente timeout para tentar passar limite de transporte.
 16. Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.
 17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. Não trate isso como falha do Sema.
-18. Para fechamento, rode \`sema drift --cache fresh --json\`; cache persistente só acelera navegação e não é prova final. Se retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impl quebrada, não conclua.
+18. Para fechamento, rode \`sema drift --cache fresh --json\`; cache persistente só acelera navegação e não é prova final. Se o \`payload\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou \`impls_quebrados\`, não conclua. Na 3.0.0, não procure campos de domínio no topo do envelope \`sema.cli.result/v1\` nem use \`ok\` como substituto do veredito do payload.
 19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonômico, com hierarquia clara, estados e evidência. Em UI, valide mobile/desktop e prove \`scrollWidth <= clientWidth\` em viewport estreito como 390px.
 20. Não substitua o contexto Sema por AGENTS.md, README.md, busca local, inferência por nome ou bom senso.
 
@@ -418,7 +418,7 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "Read every document listed by `docs-impacto` before changing code, contracts,",
     "operational docs, generated artifacts, workflows, profiles, or release material.",
     "A cache hit is acceleration, not evidence: closing requires `--cache fresh`,",
-    "while contract-only queries keep unobserved implementation fields null.",
+    "while contract-only queries keep unobserved implementation fields null inside the command payload.",
     "",
     "## Codex Context Tiers",
     "",
@@ -497,7 +497,7 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 
 1. Leia \`${ARQUIVO_SEMA_BOOT}\`.
 2. Rode \`sema --version\`; se o shell falhar, use \`$HOME/.sema/bin/sema\` no macOS/Linux. No Windows, PowerShell usa \`sema.ps1\` no PATH e cmd.exe usa \`sema.cmd\`; use \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\` como fallback absoluto. Só então pare e peça instalação ou reparo.
-3. Use diretamente a CLI local: \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`.
+3. Use diretamente a CLI local: \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`. Na 3.0.0, \`sema --version\` continua texto SemVer exato; com \`--json\`, help e falhas de controle usam \`sema.cli.control/v1\`, enquanto comandos sintaticamente válidos usam o envelope exato de oito campos \`sema.cli.result/v1\`, com resultado em \`payload\` e \`ok\` distinto do veredito de domínio do payload.
 4. Quando a capacidade correta não estiver clara, use \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não autoexecute resultado ambíguo.
 5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 6. Chame docs-impacto com a intenção declarada antes de agir.
@@ -539,7 +539,7 @@ Sinal e evidência:
 - Score composto, \`achados[]\` e \`decisaoAgente\` orientam a ação; abaixo de 80 bloqueia, alvo evolui 0.5 ponto até 100, e nada substitui evidência concreta.
 - Palavra-chave ou regex passando não prova governança se contrato, código e comportamento não batem.
 - \`resumo\` e \`inspecionar\` usam \`--drift none\` por padrão; campos derivados nulos significam não avaliados, nunca zero.
-- \`sema drift --cache fresh --json\` com \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou impls quebradas bloqueia fechamento. Cache persistente é aceleração, não prova final.
+- \`sema drift --cache fresh --json\` com \`payload.sucesso:false\`, \`payload.vinculos_quebrados\`, \`payload.rotas_divergentes\` ou \`payload.impls_quebrados\` bloqueia fechamento. Cache persistente é aceleração, não prova final.
 - Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
 Acabamento visual e terminal:
@@ -706,13 +706,13 @@ This is the minimum workflow for Codex in a local workspace.
 
 Contract edit rule: \`.sema\` has its own size budget. Above ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} lines, plan a split by domain/capability; above ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}, do not create or edit before splitting. Do not use parte_1/parte_2 and do not force a 1:1 contract-to-file relationship; several contracts can govern the same file through \`vinculos\`.
 
-Closing rule: \`sema drift --cache fresh --json\` must return \`sucesso:true\`. If it reports \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\`, or broken impls, the task is still blocked. Passing unit tests or a cache hit do not replace fresh green drift.
+Closing rule: the \`payload\` of \`sema drift --cache fresh --json\` must return \`sucesso:true\`. If it reports \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\`, or \`impls_quebrados\`, the task is still blocked. Passing unit tests or a cache hit do not replace fresh green drift. In 3.0.0, \`ok\` describes the CLI result path and never replaces a command-specific domain verdict.
 
 Focused drift rule: file and module scopes plan their physical file set before cataloging. They never fall back to a whole-project walk when no safe anchor exists. All indexers and semantic-budget checks reuse the same in-memory source read; a global walk is reserved for explicit \`--escopo projeto\`. Code discovery is deferred until that plan exists, homonymous candidates fail as ambiguous, and configured contract origins or code roots resolving outside the workspace are rejected before enumeration. \`inspecionar\`, \`impacto\`, and \`renomear-semantico\` preserve the same directed boundary. Missing local dependencies make coverage partial and block success.
 
 Cache rule: a closure gate should use \`sema drift <contrato> --escopo modulo --cache fresh --json\`. \`--cache none\` executes the same analysis without persistent-cache I/O, while \`--cache cache\` may reuse only extraction data whose schema, workspace identity, Git HEAD, plan, configuration, contracts, member paths, and strong content digests all match. Cache objects are stored in the operating system's user-cache directory, never below the workspace. A hit is acceleration, not evidence: final links, diagnostics, score, and success are always recalculated. Corruption or an unavailable cache degrades to an in-memory calculation.
 
-Query honesty rule: \`resumo\` and \`inspecionar\` default to \`--drift none\`. When analysis is skipped, score, confidence, implementation, routes, and other unobserved code claims must be \`null\` or explicitly marked not evaluated; zero is not a substitute for absent evidence.
+Query honesty rule: \`resumo\` and \`inspecionar\` default to \`--drift none\`. When analysis is skipped, score, confidence, implementation, routes, and other unobserved code claims inside the command payload must be \`null\` or explicitly marked not evaluated; zero is not a substitute for absent evidence.
 
 UI rule: if the task involves an interface, minimum evidence includes desktop and mobile. On a narrow viewport such as 390px, \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\` must pass; horizontal scroll blocks closure.
 
@@ -758,6 +758,10 @@ If \`sema\` is absent from \`PATH\`, use \`$HOME/.sema/bin/sema\` on macOS/Linux
 
 Then read every required doc returned by \`docs-impacto\`.
 
+## Public JSON output
+
+\`sema --version\` stays plain exact SemVer text. With \`--json\`, help and command-control failures use exactly one six-field \`sema.cli.control/v1\` document on stdout with empty stderr. Every syntactically valid command uses exactly one eight-field \`sema.cli.result/v1\` document containing only \`schemaVersion\`, \`ok\`, \`kind\`, \`command\`, \`code\`, \`message\`, \`exitCode\`, and \`payload\`. The command-specific result is nested under \`payload\`, never \`data\`; envelope \`ok\` does not replace domain fields inside that payload. Valid structured domain failures use \`DOMAIN_ERROR\`, while uncaught runtime exceptions remain redacted \`FATAL_ERROR\` control failures.
+
 ## Global Distribution
 
 - \`sema skill status --json\`: diagnoses the managed launcher and bundled skill without writing.
@@ -785,15 +789,15 @@ Then read every required doc returned by \`docs-impacto\`.
 - \`sema verificar <arquivo-ou-pasta> --json\`: runs aggregated final verification.
 - \`sema finalizar-mudanca --intencao "<acao>" --doc-lida <arquivo> --json\`: proves documentation reading before closure.
 
-Honest closure: treat drift JSON as the source of truth. \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\`, or broken impls mean the change is not complete yet. Do not report "clean drift" without green JSON.
+Honest closure: unwrap drift JSON and treat its command payload as the source of truth. \`payload.sucesso:false\`, non-empty \`payload.vinculos_quebrados\`, non-empty \`payload.rotas_divergentes\`, or non-empty \`payload.impls_quebrados\` mean the change is not complete yet. Do not report "clean drift" without a green payload.
 
 Focused drift exposes its planned, declared, inferred, and missing files plus catalog visit/read metrics in \`escopo_aplicado\`. File and module scopes fail closed without a safe anchor, with homonymous implementation candidates, or with missing local dependencies; only \`--escopo projeto\` may walk every configured code root. Logical roots such as \`src\` are probed deterministically without a discovery walk. Configured contract origins and code roots are confined before enumeration, and \`inspecionar\`, \`impacto\`, and \`renomear-semantico\` reuse the same directed boundary without reopening arbitrary external paths.
 
 Drift analysis and cache modes are explicit:
 
 - \`sema drift\` defaults to \`--cache fresh\`. \`none\` still executes drift but performs zero persistent-cache I/O; \`cache\` reuses a fully validated extraction hit and publishes misses; \`fresh\` ignores hits, recalculates, and publishes the new extraction.
-- \`sema resumo\` and \`sema inspecionar\` default to \`--drift none\`. In that mode they do not execute drift and return \`null\` for score, confidence, implementation, routes, or other code evidence that was not observed. Use \`--drift cache\` or \`--drift fresh\` when that evidence is required. \`--com-drift\` remains a temporary alias for \`--drift fresh\`.
-- When a query explicitly runs drift, \`analiseDrift.sucesso\` exposes the result and a failed requested analysis returns a nonzero exit code.
+- \`sema resumo\` and \`sema inspecionar\` default to \`--drift none\`. In that mode their payload does not execute drift and returns \`null\` for score, confidence, implementation, routes, or other code evidence that was not observed. Use \`--drift cache\` or \`--drift fresh\` when that evidence is required. \`--com-drift\` remains a temporary alias for \`--drift fresh\`.
+- When a query explicitly runs drift, \`payload.analiseDrift.sucesso\` exposes the result and a failed requested analysis returns a nonzero exit code.
 - The value aliases \`off\`, \`auto\`, and \`refresh\` normalize to \`none\`, \`cache\`, and \`fresh\` for one compatibility release and emit a structured deprecation warning. Wrong flags, repeated flags, conflicts, and invalid values fail instead of falling back silently.
 - Persistent cache objects live outside the workspace under the operating system's user-cache directory. Workspace identity is hashed; public JSON and events expose only an opaque key and \`$SEMA_CACHE/...\` paths. Corruption or cache unavailability becomes a miss and never changes the drift result. Only validated extraction data is reused; links, diagnostics, scores, and the final success decision are recalculated.
 
@@ -887,7 +891,7 @@ Spatial model and render mode are orthogonal: \`THREE_D + HEADLESS\` is valid, w
 - Do not stop after \`sema compilar\` if the contract target files still do not exist.
 - Do not replace \`sema compilar\` with \`sema testar\` when the contract requires generated code.
 - Do not create a Markdown report to pretend a gate ran.
-- Do not say drift passed when \`sema drift --cache fresh --json\` returned \`sucesso:false\`, broken link, divergent route, or broken impl.
+- Do not say drift passed when the unwrapped \`sema drift --cache fresh --json\` payload returned \`sucesso:false\`, a non-empty \`vinculos_quebrados\`, \`rotas_divergentes\`, or \`impls_quebrados\` list.
 - Do not declare a UI responsive without mobile/desktop proof; horizontal scroll at 390px blocks closure.
 
 Governed code policy: keep the \`SEMA-GOVERNED\` marker, split large code by real responsibility, preserve contract links, and never treat a generated output directory as the final delivery.

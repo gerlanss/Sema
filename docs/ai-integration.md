@@ -56,7 +56,7 @@ sema impacto contratos/example.sema --alvo app.example --mudanca "describe the c
 Read every document listed by `docs-impacto` before changing code, contracts,
 operational docs, generated artifacts, workflows, profiles, or release material.
 A cache hit is acceleration, not evidence: closing requires `--cache fresh`,
-while contract-only queries keep unobserved implementation fields null.
+while contract-only queries keep unobserved implementation fields null inside the command payload.
 
 ## Codex Context Tiers
 

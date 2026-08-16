@@ -41,7 +41,7 @@ applicable. In this context, `null` means **not evaluated**; it must never be
 interpreted as zero, empty, passing, or absent drift.
 
 Request `--drift cache` or `--drift fresh` when a query needs evaluated drift
-evidence. In that case, `analiseDrift.sucesso` is `true` or `false`, and a
+evidence. In that case, `payload.analiseDrift.sucesso` is `true` or `false`, and a
 failed requested analysis makes the command exit nonzero instead of hiding the
 failure behind a successful query response.
 

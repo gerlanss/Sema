@@ -37,7 +37,7 @@ authorization, product-license check, activation key, token, credits, billing
 service, control panel, or external service credentials. The license governs
 use and redistribution; it is not a runtime activation gate.
 
-## Side-Effect-Free Help And JSON Control
+## Side-Effect-Free Help And JSON Results
 
 `--help` and `-h` short-circuit before the operational runtime or handlers are
 imported wherever they appear. Help exits with status `0` without inspecting or mutating the workspace, home,
@@ -55,16 +55,25 @@ When `--json` is present, help and command-control failures emit exactly one
 `schemaVersion`, `ok`, `kind`, `code`, `message`, and `exitCode`. Failures are
 redacted and never expose a stack, absolute path, or raw argv.
 
-This control envelope does not wrap successful command payloads in `2.4.0`.
-Existing consumers must continue reading each command's current top-level
-fields. A general success envelope is reserved for `3.0.0`, after all handlers
-return one shared result abstraction.
+Every syntactically valid command invoked with `--json` in 3.0.0 emits exactly
+one `sema.cli.result/v1` document. Its only fields are `schemaVersion`, `ok`,
+`kind`, `command`, `code`, `message`, `exitCode`, and `payload`. `SUCCESS` uses
+`ok: true`, `CLI_SUCCESS`, `message: null`, and exit code `0`;
+`DOMAIN_ERROR` uses `ok: false`, `CLI_DOMAIN_ERROR`, a safe public message, and
+a positive exit code. `payload` is always present, may contain any JSON value,
+and is the only location for the command-specific result; `data` is not an
+alias.
+
+Envelope `ok` classifies the CLI result path and does not replace domain fields
+inside `payload`. Consumers must unwrap the payload before reading values such
+as `sucesso`, `aprovado`, or `bloqueado`. `sema --version` remains plain exact
+SemVer text rather than a JSON envelope.
 
 The package separates execution from imports: `bin.sema` points to
 `dist/bin.js`, while `main` and the root export remain `dist/index.js`.
 Unknown commands/subcommands, missing or invalid CLI syntax, and uncaught
 runtime exceptions use the control envelope; structured domain-level failures
-preserve their existing payloads.
+after valid dispatch use `sema.cli.result/v1` with `kind: "DOMAIN_ERROR"`.
 
 ## Codex Setup
 
@@ -122,9 +131,9 @@ sema finalizar-mudanca --intencao "describe the change" --doc-lida README.md --j
 ```
 
 `resumo` and `inspecionar` default to `--drift none`; unobserved score,
-confidence, implementation, and route evidence stays `null`. Use `--drift
-cache|fresh` to request analysis. Direct `sema drift` accepts `--cache
-none|cache|fresh` and defaults to `fresh`. Persistent objects are stored in the
+confidence, implementation, and route evidence inside the result `payload`
+stays `null`. Use `--drift cache|fresh` to request analysis. Direct `sema drift`
+accepts `--cache none|cache|fresh` and defaults to `fresh`. Persistent objects are stored in the
 operating system's user-cache directory outside the workspace. They reuse only
 validated extraction data; the final drift decision is always recalculated.
 

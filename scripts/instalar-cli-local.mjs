@@ -9,6 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { resolverDiretorioUsuario } from "../pacotes/cli/scripts/postinstall.mjs";
+import { extrairPayloadCliCompativelComVersao } from "./cli-publico/resultado-cli.mjs";
 
 const raiz = process.cwd();
 const manifest = JSON.parse(readFileSync(path.join(raiz, "package.json"), "utf8"));
@@ -61,6 +62,14 @@ export function validarAmbienteDiretorioUsuario(ambiente) {
     if (valor && !path.isAbsolute(valor)) {
       throw new Error(`${nome} deve ser um caminho absoluto.`);
     }
+  }
+}
+
+export async function exigirTarballLocalDisponivel(caminhoTarball = tarball) {
+  try {
+    await access(caminhoTarball);
+  } catch {
+    throw new Error("O tarball público local da Sema não está disponível.");
   }
 }
 
@@ -182,7 +191,7 @@ async function main() {
     HOME: home,
     USERPROFILE: home,
   };
-  await access(tarball);
+  await exigirTarballLocalDisponivel();
   const npmCli = process.env.npm_execpath;
   if (!npmCli || !path.isAbsolute(npmCli)) {
     throw new Error("npm_execpath absoluto é obrigatório para instalar sem depender de PATH.");
@@ -239,24 +248,52 @@ async function main() {
 
   let status;
   try {
-    status = JSON.parse(executarFallbackPowerShellAbsoluto(
+    status = extrairPayloadCliCompativelComVersao(executarFallbackPowerShellAbsoluto(
       fallback,
       ["skill", "status", "--json"],
       { env: ambienteInstalacao, stdio: "pipe" },
-    ));
+    ), {
+      contexto: "skill status inicial do instalador local",
+      versaoCli: versaoInstalada,
+      exitCode: 0,
+      kind: "SUCCESS",
+      command: "skill",
+    });
   } catch {
     status = undefined;
   }
   if (!validarStatusDistribuicaoPronta(status)) {
-    executarFallbackPowerShellAbsoluto(fallback, ["skill", "sync", "--json"], {
-      env: ambienteInstalacao,
-      stdio: "pipe",
+    const sincronizacao = extrairPayloadCliCompativelComVersao(executarFallbackPowerShellAbsoluto(
+      fallback,
+      ["skill", "sync", "--json"],
+      { env: ambienteInstalacao, stdio: "pipe" },
+    ), {
+      contexto: "skill sync do instalador local",
+      versaoCli: versaoInstalada,
+      exitCode: 0,
+      kind: "SUCCESS",
+      command: "skill",
     });
-    status = JSON.parse(executarFallbackPowerShellAbsoluto(
+    if (
+      sincronizacao?.sucesso !== true
+      || sincronizacao.operacao !== "sync"
+      || sincronizacao.resultado?.estado !== "READY"
+      || sincronizacao.resultado?.launcher?.estado !== "READY"
+      || sincronizacao.resultado?.skill?.estado !== "READY"
+    ) {
+      throw new Error("A sincronização do launcher ou da skill global não terminou em READY.");
+    }
+    status = extrairPayloadCliCompativelComVersao(executarFallbackPowerShellAbsoluto(
       fallback,
       ["skill", "status", "--json"],
       { env: ambienteInstalacao, stdio: "pipe" },
-    ));
+    ), {
+      contexto: "skill status final do instalador local",
+      versaoCli: versaoInstalada,
+      exitCode: 0,
+      kind: "SUCCESS",
+      command: "skill",
+    });
   }
   if (!validarStatusDistribuicaoPronta(status)) {
     throw new Error("Launcher ou skill global não ficou READY após a instalação local.");

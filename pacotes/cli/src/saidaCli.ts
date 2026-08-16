@@ -1,5 +1,21 @@
-// SEMA-GOVERNED: sema.produto.cli_invocacao_publica
-// Descrição: cria o envelope JSON público e redigido para resultados de controle da CLI.
+// SEMA-GOVERNED: sema.produto.cli_invocacao_publica, sema.produto.cli_invocacao_publica.resultados
+// Descrição: cria e emite os envelopes JSON públicos de controle v1 e resultado v1 da CLI.
+
+import {
+  criarEnvelopeResultadoCliV1,
+  type EntradaEnvelopeResultadoCliV1,
+  type EnvelopeResultadoCliV1,
+} from "./resultadoCli.js";
+
+export {
+  CODIGO_SAIDA_FATAL_RUNTIME_CLI,
+  SCHEMA_RESULTADO_CLI_V1,
+  criarEnvelopeResultadoCliV1,
+  interpretarPayloadRuntimeCli,
+  type EntradaEnvelopeResultadoCliV1,
+  type EnvelopeResultadoCliV1,
+  type TipoResultadoCliV1,
+} from "./resultadoCli.js";
 
 export const SCHEMA_CONTROLE_CLI_V1 = "sema.cli.control/v1" as const;
 
@@ -25,23 +41,18 @@ export interface EntradaEnvelopeControleJsonV1 {
   readonly codigoSaida: number;
 }
 
-export type TipoResultadoInvocacaoCli = "SUCCESS" | TipoControleCli;
-
 export interface OpcoesInvocacaoPublica {
-  readonly resultado: TipoResultadoInvocacaoCli;
+  readonly resultado: TipoControleCli;
   readonly modoJson: boolean;
-  readonly payloadSucesso?: unknown;
   readonly envelopeControle?: EnvelopeControleJsonV1;
   readonly mensagemTexto?: string;
 }
 
 export interface RelatorioInvocacaoPublica {
   readonly codigoSaida: number;
-  readonly payloadSucessoPreservado: boolean;
   readonly envelopeControleEmitido: boolean;
   readonly stderrVazio: boolean;
   readonly handlerExecutado: boolean;
-  readonly politicaSucesso24Respeitada: boolean;
   readonly politicaControleJsonV1Respeitada: boolean;
   readonly politicaHelpPuroRespeitada: boolean;
 }
@@ -134,6 +145,15 @@ export function criarEnvelopeControleJsonV1(
   };
 }
 
+export function emitirResultadoCliJsonV1(
+  entrada: EntradaEnvelopeResultadoCliV1,
+): EnvelopeResultadoCliV1 {
+  const envelope = criarEnvelopeResultadoCliV1(entrada);
+  // Uma única escrita lógica impede documentos JSON parciais no processo público.
+  console.log(JSON.stringify(envelope, null, 2));
+  return envelope;
+}
+
 function envelopeSeguroParaInvocacao(
   resultado: TipoControleCli,
   envelope: EnvelopeControleJsonV1 | undefined,
@@ -153,28 +173,6 @@ function envelopeSeguroParaInvocacao(
 export function executarInvocacaoPublica(
   opcoes: OpcoesInvocacaoPublica,
 ): RelatorioInvocacaoPublica {
-  if (opcoes.resultado === "SUCCESS") {
-    if (opcoes.payloadSucesso === undefined) {
-      throw new Error("Payload de sucesso ausente.");
-    }
-    const saida = typeof opcoes.payloadSucesso === "string"
-      ? opcoes.payloadSucesso
-      : opcoes.modoJson
-        ? JSON.stringify(opcoes.payloadSucesso, null, 2)
-        : String(opcoes.payloadSucesso);
-    console.log(saida);
-    return {
-      codigoSaida: 0,
-      payloadSucessoPreservado: true,
-      envelopeControleEmitido: false,
-      stderrVazio: true,
-      handlerExecutado: true,
-      politicaSucesso24Respeitada: true,
-      politicaControleJsonV1Respeitada: true,
-      politicaHelpPuroRespeitada: true,
-    };
-  }
-
   const envelope = envelopeSeguroParaInvocacao(
     opcoes.resultado,
     opcoes.envelopeControle,
@@ -191,11 +189,9 @@ export function executarInvocacaoPublica(
 
   return {
     codigoSaida: envelope.exitCode,
-    payloadSucessoPreservado: true,
     envelopeControleEmitido: opcoes.modoJson,
     stderrVazio: opcoes.modoJson || opcoes.resultado === "HELP",
     handlerExecutado: false,
-    politicaSucesso24Respeitada: true,
     politicaControleJsonV1Respeitada: true,
     politicaHelpPuroRespeitada: true,
   };

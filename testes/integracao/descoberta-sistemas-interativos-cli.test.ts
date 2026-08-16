@@ -8,6 +8,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { extrairPayloadResultadoCliV1 } from "../helpers/resultado-cli-v1.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/bin.js");
 
@@ -33,10 +34,19 @@ function diagnostico(execucao: ExecucaoCli): string {
   return `status=${execucao.status}\nstdout:\n${execucao.stdout}\nstderr:\n${execucao.stderr}`;
 }
 
-function executarJson(args: readonly string[], statusEsperado = 0): Record<string, any> {
+function executarResultadoJson(args: readonly string[], statusEsperado = 0): Record<string, any> {
   const execucao = executarCli([...args, "--json"]);
   assert.equal(execucao.status, statusEsperado, diagnostico(execucao));
   assert.notEqual(execucao.stdout.trim(), "", diagnostico(execucao));
+  return extrairPayloadResultadoCliV1<Record<string, any>>(execucao.stdout, {
+    command: args[0] ?? "",
+    exitCode: execucao.status,
+  });
+}
+
+function executarControleJson(args: readonly string[], statusEsperado: number): Record<string, any> {
+  const execucao = executarCli([...args, "--json"]);
+  assert.equal(execucao.status, statusEsperado, diagnostico(execucao));
   return JSON.parse(execucao.stdout) as Record<string, any>;
 }
 
@@ -96,7 +106,7 @@ test("help expõe descoberta, aliases e sistemas interativos", () => {
 });
 
 test("descoberta cataloga, recomenda em PT-BR e preserva aliases read-only", () => {
-  const catalogo = executarJson(["descobrir", "catalogo"]);
+  const catalogo = executarResultadoJson(["descobrir", "catalogo"]);
   assert.equal(catalogo.success, true);
   assert.equal(catalogo.mode, "catalog");
   assert.ok(catalogo.entries.length > 0);
@@ -104,7 +114,7 @@ test("descoberta cataloga, recomenda em PT-BR e preserva aliases read-only", () 
   provarFronteiraDescoberta(catalogo);
 
   const intencao = "simulador 3D autônomo calibrado";
-  const recomendacao = executarJson(["descobrir", "recomendar", "--intencao", intencao]);
+  const recomendacao = executarResultadoJson(["descobrir", "recomendar", "--intencao", intencao]);
   assert.equal(recomendacao.success, true);
   assert.equal(recomendacao.mode, "ranking");
   assert.equal(recomendacao.intent, intencao);
@@ -113,14 +123,14 @@ test("descoberta cataloga, recomenda em PT-BR e preserva aliases read-only", () 
   assert.ok(recomendacao.recommendations[0]?.score >= 60);
   provarFronteiraDescoberta(recomendacao);
 
-  const pipelines = executarJson(["pipeline", "listar"]);
+  const pipelines = executarResultadoJson(["pipeline", "listar"]);
   assert.equal(pipelines.success, true);
   assert.ok(pipelines.entries.length > 0);
   assert.ok(pipelines.entries.every((item: { kind: string }) => item.kind === "ORCHESTRATION_PIPELINE"));
   assert.ok(pipelines.entries.some((item: { id: string }) => item.id === "simulation.calibrate"));
   provarFronteiraDescoberta(pipelines);
 
-  const capabilities = executarJson(["capabilities"]);
+  const capabilities = executarResultadoJson(["capabilities"]);
   assert.equal(capabilities.success, true);
   assert.equal(capabilities.mode, "catalog");
   assert.deepEqual(
@@ -131,19 +141,19 @@ test("descoberta cataloga, recomenda em PT-BR e preserva aliases read-only", () 
 });
 
 test("interativo expõe catálogos e filtra adapters sem executar runtimes", () => {
-  const capabilities = executarJson(["interativo", "capabilities"]);
+  const capabilities = executarResultadoJson(["interativo", "capabilities"]);
   assert.equal(capabilities.sucesso, true);
   assert.equal(capabilities.runner, "external");
   assert.ok(capabilities.capabilities.length > 0);
   assert.ok(capabilities.pipelineIds.includes("simulation.calibrate"));
   provarFronteiraInterativa(capabilities);
 
-  const pipelines = executarJson(["interativo", "pipelines"]);
+  const pipelines = executarResultadoJson(["interativo", "pipelines"]);
   assert.equal(pipelines.sucesso, true);
   assert.ok(pipelines.pipelines.some((item: { pipelineId: string }) => item.pipelineId === "simulation.safety"));
   provarFronteiraInterativa(pipelines);
 
-  const adapters = executarJson([
+  const adapters = executarResultadoJson([
     "interativo",
     "adapters",
     "--spatial-model",
@@ -174,13 +184,13 @@ test("interativo valida e planeja definição e protocolo read-only por arquivos
       writeFile(protocoloArquivo, JSON.stringify(protocoloReadOnlyValido()), "utf8"),
     ]);
 
-    const validacao = executarJson(["interativo", "validar", definicaoArquivo]);
+    const validacao = executarResultadoJson(["interativo", "validar", definicaoArquivo]);
     assert.equal(validacao.sucesso, true);
     assert.equal(validacao.valida, true);
     assert.deepEqual(validacao.bloqueios, []);
     provarFronteiraInterativa(validacao);
 
-    const planejamento = executarJson(["interativo", "planejar", definicaoArquivo]);
+    const planejamento = executarResultadoJson(["interativo", "planejar", definicaoArquivo]);
     assert.equal(planejamento.sucesso, true);
     assert.deepEqual(planejamento.bloqueios, []);
     assert.deepEqual(planejamento.plano.capabilitiesAusentes, []);
@@ -193,7 +203,7 @@ test("interativo valida e planeja definição e protocolo read-only por arquivos
     assert.equal(planejamento.plano.adapterCoverageComplete, true);
     provarFronteiraInterativa(planejamento);
 
-    const protocolo = executarJson(["interativo", "validar-protocolo", protocoloArquivo]);
+    const protocolo = executarResultadoJson(["interativo", "validar-protocolo", protocoloArquivo]);
     assert.equal(protocolo.sucesso, true);
     assert.equal(protocolo.valido, true);
     assert.equal(protocolo.faseAtual, "EVIDENCE");
@@ -208,7 +218,7 @@ test("interativo valida e planeja definição e protocolo read-only por arquivos
 test("erros desconhecidos e JSON inválido não ecoam caminho nem segredo controlado", async () => {
   const segredo = `ghp_${"X".repeat(40)}`;
 
-  const desconhecido = executarJson(["interativo", segredo], 1);
+  const desconhecido = executarControleJson(["interativo", segredo], 1);
   assert.equal(desconhecido.schemaVersion, "sema.cli.control/v1");
   assert.equal(desconhecido.ok, false);
   assert.equal(desconhecido.kind, "ARGUMENT_ERROR");
@@ -216,7 +226,7 @@ test("erros desconhecidos e JSON inválido não ecoam caminho nem segredo contro
   assert.equal(desconhecido.exitCode, 1);
   assert.equal(JSON.stringify(desconhecido).includes(segredo), false);
 
-  const descobertaDesconhecida = executarJson(["descobrir", segredo], 1);
+  const descobertaDesconhecida = executarControleJson(["descobrir", segredo], 1);
   assert.equal(descobertaDesconhecida.schemaVersion, "sema.cli.control/v1");
   assert.equal(descobertaDesconhecida.ok, false);
   assert.equal(descobertaDesconhecida.kind, "ARGUMENT_ERROR");
@@ -231,7 +241,10 @@ test("erros desconhecidos e JSON inválido não ecoam caminho nem segredo contro
 
     const execucao = executarCli(["interativo", "validar", arquivoControlado, "--json"]);
     assert.equal(execucao.status, 1, diagnostico(execucao));
-    const payload = JSON.parse(execucao.stdout) as Record<string, any>;
+    const payload = extrairPayloadResultadoCliV1<Record<string, any>>(execucao.stdout, {
+      command: "interativo",
+      exitCode: execucao.status,
+    });
     const saidaCompleta = `${execucao.stdout}\n${execucao.stderr}`;
     assert.equal(payload.sucesso, false);
     assert.equal(payload.errorCode, "INTERATIVO_ENTRADA_INVALIDA");
@@ -255,7 +268,10 @@ test("descoberta redige caminho e segredo também em resposta de sucesso", () =>
   ]);
   assert.equal(execucao.status, 0, diagnostico(execucao));
   assert.doesNotMatch(`${execucao.stdout}\n${execucao.stderr}`, /alice|Bearer|sk_/u);
-  const payload = JSON.parse(execucao.stdout) as Record<string, any>;
+  const payload = extrairPayloadResultadoCliV1<Record<string, any>>(execucao.stdout, {
+    command: "descobrir",
+    exitCode: execucao.status,
+  });
   assert.equal(payload.intent, "[REDACTED]");
   assert.equal(payload.recommendations[0]?.id, "simulation.calibrate");
   provarFronteiraDescoberta(payload);

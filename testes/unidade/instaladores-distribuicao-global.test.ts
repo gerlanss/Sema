@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.produto.fronteira_repositorios.empacotamento.postinstall, sema.produto.fronteira_repositorios.empacotamento.smoke
+// SEMA-GOVERNED: sema.produto.distribuicao_global.instaladores, sema.produto.fronteira_repositorios.empacotamento.postinstall, sema.produto.fronteira_repositorios.empacotamento.smoke
 // Descrição: sentinelas focais dos installers, da home canônica e do pacote público distribuído.
 
 import assert from "node:assert/strict";
@@ -13,6 +13,7 @@ import {
 } from "../../pacotes/cli/scripts/postinstall.mjs";
 import {
   executarLauncherAbsoluto as executarLauncherInstalador,
+  exigirTarballLocalDisponivel,
   validarAmbienteDiretorioUsuario,
   validarStatusDistribuicaoPronta as validarStatusInstalador,
   validarVersaoExata,
@@ -28,6 +29,11 @@ import {
   payloadContemCaminhoSensivel,
   validarStatusDistribuicaoPronta as validarStatusSmoke,
 } from "../../scripts/cli-publico/distribuicao-global.mjs";
+import {
+  extrairPayloadCliCompativelComVersao,
+  validarEnvelopeControleCliV1,
+  validarEnvelopeResultadoCliV1,
+} from "../../scripts/cli-publico/resultado-cli.mjs";
 import { gerarArtefatosLauncherWindows } from "../../pacotes/cli/src/distribuicao/launcherWindows.js";
 
 const raiz = process.cwd();
@@ -42,6 +48,19 @@ function payloadReady() {
       launcher: { estado: "READY" },
       skill: { estado: "READY" },
     },
+  };
+}
+
+function envelopeResultadoReady(payload = payloadReady()) {
+  return {
+    schemaVersion: "sema.cli.result/v1",
+    ok: true,
+    kind: "SUCCESS",
+    command: "skill",
+    code: "CLI_SUCCESS",
+    message: null,
+    exitCode: 0,
+    payload,
   };
 }
 
@@ -143,6 +162,224 @@ test("instalador local aceita apenas SemVer exata e exige READY completo", () =>
   }
 });
 
+test("normalizador de instalador separa legado 2.x de result/v1 3.x", () => {
+  const legado = payloadReady();
+  const resultado = envelopeResultadoReady(legado);
+  assert.deepEqual(
+    extrairPayloadCliCompativelComVersao(legado, { versaoCli: "2.4.0" }),
+    legado,
+  );
+  assert.deepEqual(
+    extrairPayloadCliCompativelComVersao(resultado, {
+      versaoCli: "3.0.0",
+      command: "skill",
+      kind: "SUCCESS",
+      exitCode: 0,
+    }),
+    legado,
+  );
+  assert.throws(
+    () => extrairPayloadCliCompativelComVersao(resultado, { versaoCli: "2.4.0" }),
+    /payload legado/u,
+  );
+  assert.throws(
+    () => extrairPayloadCliCompativelComVersao(legado, { versaoCli: "3.0.0" }),
+    /oito campos/u,
+  );
+  assert.throws(
+    () => extrairPayloadCliCompativelComVersao(
+      { ...resultado, payload: resultado },
+      { versaoCli: "3.0.0" },
+    ),
+    /outro envelope/u,
+  );
+  assert.throws(
+    () => extrairPayloadCliCompativelComVersao(
+      { ...resultado, command: "resumo" },
+      {
+        versaoCli: "3.0.0",
+        command: "skill",
+        kind: "SUCCESS",
+        exitCode: 0,
+      },
+    ),
+    /command diverge de skill/u,
+  );
+});
+
+test("mensagens públicas rejeitam eco de argv e segredo sem bloquear textos estáveis", () => {
+  for (const mensagemHostil of [
+    "Invalid argument --token demo-secret from argv",
+    "Authorization failed: Bearer credencial-super-secreta",
+    "token=demo-secret",
+    "secret=demo-secret",
+  ]) {
+    let erroCapturado: unknown;
+    assert.throws(
+      () => validarEnvelopeResultadoCliV1({
+        schemaVersion: "sema.cli.result/v1",
+        ok: false,
+        kind: "DOMAIN_ERROR",
+        command: "validar",
+        code: "CLI_DOMAIN_ERROR",
+        message: mensagemHostil,
+        exitCode: 1,
+        payload: null,
+      }),
+      (erro) => {
+        erroCapturado = erro;
+        return /mensagem pública segura/u.test(String(erro));
+      },
+    );
+    assert.equal(String(erroCapturado).includes(mensagemHostil), false);
+    assert.doesNotMatch(String(erroCapturado), /credencial-super-secreta|demo-secret|--token/u);
+  }
+
+  assert.doesNotThrow(() => validarEnvelopeResultadoCliV1({
+    schemaVersion: "sema.cli.result/v1",
+    ok: false,
+    kind: "DOMAIN_ERROR",
+    command: "validar",
+    code: "CLI_DOMAIN_ERROR",
+    message: "O comando Sema não foi concluído.",
+    exitCode: 1,
+    payload: null,
+  }));
+  for (const [kind, code, message] of [
+    ["ARGUMENT_ERROR", "CLI_ARGUMENT_ERROR", "Argumentos inválidos. Consulte a ajuda do comando."],
+    ["FATAL_ERROR", "CLI_FATAL_ERROR", "Falha ao executar a CLI da Sema."],
+  ] as const) {
+    assert.doesNotThrow(() => validarEnvelopeControleCliV1({
+      schemaVersion: "sema.cli.control/v1",
+      ok: false,
+      kind,
+      code,
+      message,
+      exitCode: 1,
+    }));
+  }
+  assert.doesNotThrow(() => validarEnvelopeControleCliV1({
+    schemaVersion: "sema.cli.control/v1",
+    ok: true,
+    kind: "HELP",
+    code: "CLI_HELP",
+    message: "Uso: sema validar <arquivo.sema> --json",
+    exitCode: 0,
+  }));
+});
+
+test("falha de tarball local ausente usa mensagem fixa sem caminho nem erro interno", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-tarball-ausente-"));
+  const ausente = path.join(base, "arquivo-privado-nao-existe.tgz");
+  try {
+    await assert.rejects(
+      exigirTarballLocalDisponivel(ausente),
+      (erro: unknown) => {
+        assert.ok(erro instanceof Error);
+        assert.equal(erro.message, "O tarball público local da Sema não está disponível.");
+        assert.doesNotMatch(erro.message, /ENOENT|arquivo-privado|sema-tarball-ausente/u);
+        assert.equal(erro.message.includes(base), false);
+        return true;
+      },
+    );
+    await mkdir(path.join(base, "pacotes", "cli"), { recursive: true });
+    await Promise.all([
+      writeFile(path.join(base, "package.json"), JSON.stringify({ version: "3.0.0" }), "utf8"),
+      writeFile(path.join(base, "pacotes", "cli", "package.json"), JSON.stringify({
+        name: "@semacode/cli",
+        version: "3.0.0",
+      }), "utf8"),
+    ]);
+    const resultado = spawnSync(process.execPath, [
+      path.join(raiz, "scripts", "instalar-cli-local.mjs"),
+    ], {
+      cwd: base,
+      env: { ...process.env, HOME: base, USERPROFILE: base },
+      encoding: "utf8",
+    });
+    const saida = `${resultado.stdout}\n${resultado.stderr}`;
+    assert.equal(resultado.status, 1);
+    assert.match(saida, /O tarball público local da Sema não está disponível\./u);
+    assert.doesNotMatch(saida, /ENOENT|semacode-cli-3\.0\.0\.tgz/u);
+    assert.equal(saida.includes(base), false);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("parsers embarcados dos instaladores exigem a família da versão instalada", async (t) => {
+  const legado = JSON.stringify(payloadReady());
+  const resultado = JSON.stringify(envelopeResultadoReady());
+  const resultadoComCampoExtra = JSON.stringify({ ...envelopeResultadoReady(), extra: true });
+  const resultadoDuplo = JSON.stringify({
+    ...envelopeResultadoReady(),
+    payload: envelopeResultadoReady(),
+  });
+
+  const shell = await readFile(path.join(raiz, "install-sema.sh"), "utf8");
+  const shellNormalizado = shell.replaceAll("\r\n", "\n");
+  const inicioFuncao = shellNormalizado.indexOf("status_pronto() {");
+  const fimFuncao = shellNormalizado.indexOf("\n}\n\nextrair_versao_json()", inicioFuncao);
+  assert.ok(inicioFuncao >= 0 && fimFuncao > inicioFuncao);
+  const funcaoStatus = shellNormalizado.slice(inicioFuncao, fimFuncao + 2);
+  const executarShell = (json: string, versao: string) => spawnSync(
+    "bash",
+    ["-c", `${funcaoStatus}\nstatus_pronto`],
+    {
+      cwd: raiz,
+      env: { ...process.env, SEMA_INSTALLED_VERSION: versao },
+      input: json,
+      encoding: "utf8",
+    },
+  );
+  const bashDisponivel = spawnSync("bash", ["-c", "command -v node >/dev/null 2>&1"], {
+    cwd: raiz,
+    encoding: "utf8",
+  });
+  if ((bashDisponivel.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT"
+      || bashDisponivel.status !== 0) {
+    t.diagnostic("bash com Node.js indisponível; validação PowerShell segue ativa no Windows");
+  } else {
+    const probeBash = executarShell(legado, "2.4.0");
+    assert.equal(probeBash.status, 0, probeBash.stderr);
+    assert.equal(executarShell(resultado, "3.0.0").status, 0);
+    assert.notEqual(executarShell(resultado, "2.4.0").status, 0);
+    assert.notEqual(executarShell(legado, "3.0.0").status, 0);
+    assert.notEqual(executarShell(resultadoComCampoExtra, "3.0.0").status, 0);
+    assert.notEqual(executarShell(resultadoDuplo, "3.0.0").status, 0);
+  }
+
+  if (process.platform !== "win32") return;
+  const powershell = path.join(
+    process.env.SystemRoot ?? "C:\\Windows",
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe",
+  );
+  const caminhoScript = path.join(raiz, "install-sema.ps1").replaceAll("'", "''");
+  const comando = [
+    `. '${caminhoScript}'`,
+    "$pronto = Test-DistributionReady -Json $env:SEMA_TEST_JSON -InstalledVersion $env:SEMA_TEST_VERSION",
+    "if ($pronto) { exit 0 } else { exit 1 }",
+  ].join("\r\n");
+  const executarPowerShell = (json: string, versao: string) => spawnSync(
+    powershell,
+    ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", comando],
+    {
+      cwd: raiz,
+      env: { ...process.env, SEMA_TEST_JSON: json, SEMA_TEST_VERSION: versao },
+      encoding: "utf8",
+    },
+  );
+  assert.equal(executarPowerShell(legado, "2.4.0").status, 0);
+  assert.equal(executarPowerShell(resultado, "3.0.0").status, 0);
+  assert.notEqual(executarPowerShell(resultado, "2.4.0").status, 0);
+  assert.notEqual(executarPowerShell(legado, "3.0.0").status, 0);
+  assert.notEqual(executarPowerShell(resultadoComCampoExtra, "3.0.0").status, 0);
+  assert.notEqual(executarPowerShell(resultadoDuplo, "3.0.0").status, 0);
+});
+
 test("fingerprint detecta qualquer cache de plugin na home isolada", async () => {
   const base = await mkdtemp(path.join(os.tmpdir(), "sema-plugin-cache-"));
   try {
@@ -203,10 +440,11 @@ test("gate do tarball compara postinstall e skill byte a byte com a fonte", asyn
   }
 });
 
-test("installers preservam gates de versão, home, READY e marcador governado", async () => {
-  const [powerShell, shell, smoke, helper, gitignore] = await Promise.all([
+test("installers preservam gates de versão, home, READY, redação e marcador governado", async () => {
+  const [powerShell, shell, instaladorLocal, smoke, helper, gitignore] = await Promise.all([
     readFile(path.join(raiz, "install-sema.ps1"), "utf8"),
     readFile(path.join(raiz, "install-sema.sh"), "utf8"),
+    readFile(path.join(raiz, "scripts", "instalar-cli-local.mjs"), "utf8"),
     readFile(path.join(raiz, "scripts", "testar-pacote-cli-publico.mjs"), "utf8"),
     readFile(path.join(raiz, "scripts", "cli-publico", "distribuicao-global.mjs"), "utf8"),
     readFile(path.join(raiz, ".gitignore"), "utf8"),
@@ -216,15 +454,24 @@ test("installers preservam gates de versão, home, READY e marcador governado", 
     assert.match(conteudo, /resultado.*estado|resultado\?\.estado|resultado\.estado/is);
     assert.match(conteudo, /launcher.*READY/is);
     assert.match(conteudo, /skill.*READY/is);
+    assert.match(conteudo, /sema\.cli\.result\/v1/u);
+    assert.match(conteudo, /CLI_SUCCESS/u);
   }
   assert.match(powerShell, /\$packageSpec = "\$\{packageName\}@\$\{Version\}"/u);
   assert.match(powerShell, /Resolve-CanonicalUserHome[\s\S]*npmCommand/u);
-  assert.match(powerShell, /view \$packageSpec version --json --cache \$npmCacheDir/u);
+  assert.match(powerShell, /"view", \$packageSpec, "version", "--json", "--cache", \$npmCacheDir/u);
   assert.match(powerShell, /\$resolvedPackageSpec = "\$\{packageName\}@\$\{requestedVersion\}"/u);
-  assert.match(powerShell, /install -g \$resolvedPackageSpec/u);
+  assert.match(powerShell, /"install", "-g", \$resolvedPackageSpec/u);
+  assert.match(powerShell, /Invoke-NpmCaptured[\s\S]*2>\$null/u);
+  assert.doesNotMatch(powerShell, /Managed launcher: \$launcher|PATH contains: \$launcherDir|Out-Host/u);
+  assert.match(powerShell, /Test-DistributionReady \$statusResult\.Text \$installedVersion/u);
   assert.match(shell, /PACKAGE_SPEC="\$\{PACKAGE_NAME\}@\$\{VERSION\}"/u);
   assert.match(shell, /RESOLVED_PACKAGE_SPEC="\$\{PACKAGE_NAME\}@\$\{REQUESTED_VERSION\}"/u);
   assert.match(shell, /npm install -g "\$RESOLVED_PACKAGE_SPEC"/u);
+  assert.match(shell, /npm install -g "\$RESOLVED_PACKAGE_SPEC"[^\r\n]*>\/dev\/null 2>&1/u);
+  assert.doesNotMatch(shell, /Unknown argument: \$arg|Managed launcher: \$LAUNCHER|added to: \$SHELL_PROFILE/u);
+  assert.match(shell, /export SEMA_INSTALLED_VERSION="\$INSTALLED_VERSION"/u);
+  assert.equal(instaladorLocal.match(/command: "skill"/gu)?.length, 3);
   assert.ok(shell.indexOf("validar_bloco_profile") < shell.indexOf("npm install -g"));
   assert.ok(shell.indexOf("ZDOTDIR must be an absolute path") < shell.indexOf("npm install -g"));
   assert.match(shell, /inicios === 1 && fins === 1 && texto\.includes\(bloco\)/u);
@@ -322,4 +569,124 @@ test("shell rejeita spec arbitrária sem invocar npm", () => {
   assert.notEqual(resultado.status, 0);
   assert.match(`${resultado.stdout}\n${resultado.stderr}`, /exact SemVer or latest/u);
   assert.doesNotMatch(`${resultado.stdout}\n${resultado.stderr}`, /Installing the Sema CLI/u);
+});
+
+test("shell rejeita argv hostil sem ecoar token", () => {
+  const segredoArgv = "--token=demo-secret";
+  const resultado = spawnSync("bash", ["./install-sema.sh", segredoArgv], {
+    cwd: raiz,
+    encoding: "utf8",
+  });
+  if ((resultado.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") return;
+  const saida = `${resultado.stdout}\n${resultado.stderr}`;
+  assert.notEqual(resultado.status, 0);
+  assert.match(saida, /Unknown installer argument/u);
+  assert.equal(saida.includes(segredoArgv), false);
+  assert.doesNotMatch(saida, /demo-secret/u);
+});
+
+test("PowerShell não repassa saída npm bruta nem caminho da home", {
+  skip: process.platform !== "win32",
+}, async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-installer-redaction-"));
+  try {
+    const home = path.join(base, "home-privada");
+    const bin = path.join(base, "fake-bin");
+    await Promise.all([mkdir(home, { recursive: true }), mkdir(bin, { recursive: true })]);
+    const marcador = "NPM_RAW_SECRET=/home/demo/.npm/_logs/private.log";
+    await writeFile(path.join(bin, "npm.cmd"), [
+      "@echo off",
+      "if /I \"%~1\"==\"view\" (",
+      "  echo \"3.0.0\"",
+      "  exit /b 0",
+      ")",
+      "if /I \"%~1\"==\"install\" (",
+      `  echo ${marcador}`,
+      `  echo ${marcador} 1>&2`,
+      "  exit /b 42",
+      ")",
+      "exit /b 43",
+      "",
+    ].join("\r\n"), "utf8");
+    const powershell = path.join(
+      process.env.SystemRoot ?? "C:\\Windows",
+      "System32",
+      "WindowsPowerShell",
+      "v1.0",
+      "powershell.exe",
+    );
+    const resultado = spawnSync(powershell, [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      path.join(raiz, "install-sema.ps1"),
+      "-Version",
+      "3.0.0",
+    ], {
+      cwd: raiz,
+      env: {
+        ...process.env,
+        HOME: home,
+        USERPROFILE: home,
+        SEMA_NPM_PACKAGE: "@semacode/cli",
+        PATH: `${bin};${path.dirname(process.execPath)};${process.env.PATH ?? ""}`,
+      },
+      encoding: "utf8",
+    });
+    const saida = `${resultado.stdout}\n${resultado.stderr}`;
+    assert.notEqual(resultado.status, 0);
+    assert.match(saida, /npm failed to install the Sema CLI globally/u);
+    assert.equal(saida.includes(marcador), false);
+    assert.equal(saida.includes(home), false);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("shell não repassa saída npm bruta nem caminho da home", {
+  skip: process.platform === "win32",
+}, async (t) => {
+  const probe = spawnSync("bash", ["-c", "command -v node >/dev/null 2>&1"], { encoding: "utf8" });
+  if ((probe.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT" || probe.status !== 0) {
+    t.skip("bash com Node.js indisponível");
+    return;
+  }
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-installer-redaction-"));
+  try {
+    const home = path.join(base, "home-privada");
+    const bin = path.join(base, "fake-bin");
+    await Promise.all([mkdir(home, { recursive: true }), mkdir(bin, { recursive: true })]);
+    const marcador = "NPM_RAW_SECRET=/home/demo/.npm/_logs/private.log";
+    await writeFile(path.join(bin, "npm"), [
+      "#!/usr/bin/env bash",
+      "case \"${1:-}\" in",
+      "  view) printf '\"3.0.0\"\\n' ; exit 0 ;;",
+      `  install) printf '%s\\n' '${marcador}'; printf '%s\\n' '${marcador}' >&2; exit 42 ;;`,
+      "  *) exit 43 ;;",
+      "esac",
+      "",
+    ].join("\n"), { encoding: "utf8", mode: 0o755 });
+    const resultado = spawnSync("bash", ["./install-sema.sh", "--version=3.0.0"], {
+      cwd: raiz,
+      env: {
+        ...process.env,
+        HOME: home,
+        USERPROFILE: "",
+        ZDOTDIR: "",
+        SHELL: "/bin/bash",
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+      },
+      encoding: "utf8",
+    });
+    const saida = `${resultado.stdout}\n${resultado.stderr}`;
+    assert.notEqual(resultado.status, 0);
+    assert.match(saida, /npm failed to install the Sema CLI globally/u);
+    assert.equal(saida.includes(marcador), false);
+    assert.equal(saida.includes(home), false);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
 });

@@ -56,7 +56,12 @@ sema skill sync --help
 sema unknown --option value --help
 ```
 
-## JSON Control Output
+## Public JSON Output
+
+`sema --version` (and its version aliases) prints one plain exact SemVer string.
+It is intentionally not wrapped in JSON.
+
+### Help and command control
 
 Adding `--json` to help or a command-control failure emits exactly one JSON
 document on stdout and keeps stderr empty:
@@ -79,15 +84,50 @@ a non-zero process status equal to `exitCode`. Failure messages are public and
 redacted: they do not include stacks, absolute paths, raw argv, or internal
 causes.
 
-In `2.4.0`, this envelope is only for help and command-control failures.
-Command-control failures are unknown top-level commands or subcommands and
-missing or invalid required CLI arguments/options rejected before effects.
-Structured failures returned by a syntactically valid domain operation retain
-their legacy command payload. An uncaught runtime exception is a control failure
-and uses the redacted `FATAL_ERROR` envelope.
-Successful command-specific JSON payloads retain their existing top-level
-shapes without added, removed, renamed, or wrapped fields. A general result
-envelope is reserved for `3.0.0`, after handlers return a shared result type.
+Command-control failures are unknown top-level commands or subcommands, missing
+or invalid required CLI arguments/options rejected before valid dispatch, and
+uncaught runtime exceptions. An uncaught exception uses the redacted
+`FATAL_ERROR` control envelope. `sema.cli.control/v1` is never nested inside a
+command result.
+
+### Valid command results
+
+In 3.0.0, every syntactically valid command invoked with `--json` emits exactly
+one `sema.cli.result/v1` document on stdout with empty stderr:
+
+```json
+{
+  "schemaVersion": "sema.cli.result/v1",
+  "ok": true,
+  "kind": "SUCCESS",
+  "command": "resumo",
+  "code": "CLI_SUCCESS",
+  "message": null,
+  "exitCode": 0,
+  "payload": {
+    "comando": "resumo",
+    "sucesso": true
+  }
+}
+```
+
+The result envelope contains exactly `schemaVersion`, `ok`, `kind`, `command`,
+`code`, `message`, `exitCode`, and `payload`; extra or missing fields are
+invalid, and `data` is not an alias for `payload`. `command` is the canonical
+top-level command name. `payload` is always present and may be any JSON value,
+including an object, array, scalar, or `null`.
+
+- `SUCCESS` requires `ok: true`, `code: "CLI_SUCCESS"`, `message: null`, and
+  `exitCode: 0`.
+- `DOMAIN_ERROR` requires `ok: false`, `code: "CLI_DOMAIN_ERROR"`, a non-empty
+  safe public `message`, and a positive `exitCode` equal to the process status.
+
+The envelope describes the CLI result transport and classification. It does
+not replace the command's domain model: consumers must unwrap `payload` and
+evaluate fields such as `payload.sucesso`, `payload.aprovado`,
+`payload.bloqueado`, or another command-specific verdict separately. A
+syntactically valid operation that returns a structured domain failure uses
+`DOMAIN_ERROR`; it does not fall back to `sema.cli.control/v1`.
 
 ## Codex Setup
 
@@ -138,9 +178,9 @@ gate.
   global skill without touching plugin caches or workspace files.
 
 `resumo` and `inspecionar` default to `--drift none`, so they do not fabricate
-scores or implementation evidence. In this mode those fields are `null` or
-explicitly not evaluated. `sema drift --cache none` still runs the analysis but
-does not touch persistent cache. `cache` reuses only a validated extraction hit;
+scores or implementation evidence. In this mode those fields inside `payload`
+are `null` or explicitly not evaluated. `sema drift --cache none` still runs
+the analysis but does not touch persistent cache. `cache` reuses only a validated extraction hit;
 `fresh` ignores hits and republishes recalculated extraction data. Cache objects
 live in the operating system's user-cache directory outside the workspace, and
 the final links, diagnostics, score, and success decision are always recomputed.

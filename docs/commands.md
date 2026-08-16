@@ -13,14 +13,11 @@ sema docs-impacto --intencao "<acao>" --json
 
 If `sema` is absent from `PATH`, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH, cmd.exe resolves `sema.cmd`, and the absolute fallback is `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version`. `sema skill sync --json` repairs launcher and skill without touching the workspace or plugin caches.
 
-## Invocation control
-
-- `--help` and `-h` win in any argv position and exit before operational modules or handlers are imported.
-- `dist/bin.js` is the executable bootstrap; `dist/index.js` is the package API.
-- With `--json`, help and unknown/invalid CLI syntax use exactly one `sema.cli.control/v1` document on stdout with empty stderr.
-- Valid command payloads and structured domain-level failures keep their command-specific shape in 2.4; uncaught runtime exceptions use redacted `FATAL_ERROR`. The general result envelope starts only in 3.0.
-
 Then read every required doc returned by `docs-impacto`.
+
+## Public JSON output
+
+`sema --version` stays plain exact SemVer text. With `--json`, help and command-control failures use exactly one six-field `sema.cli.control/v1` document on stdout with empty stderr. Every syntactically valid command uses exactly one eight-field `sema.cli.result/v1` document containing only `schemaVersion`, `ok`, `kind`, `command`, `code`, `message`, `exitCode`, and `payload`. The command-specific result is nested under `payload`, never `data`; envelope `ok` does not replace domain fields inside that payload. Valid structured domain failures use `DOMAIN_ERROR`, while uncaught runtime exceptions remain redacted `FATAL_ERROR` control failures.
 
 ## Global Distribution
 
@@ -49,15 +46,15 @@ Then read every required doc returned by `docs-impacto`.
 - `sema verificar <arquivo-ou-pasta> --json`: runs aggregated final verification.
 - `sema finalizar-mudanca --intencao "<acao>" --doc-lida <arquivo> --json`: proves documentation reading before closure.
 
-Honest closure: treat drift JSON as the source of truth. `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes`, or broken impls mean the change is not complete yet. Do not report "clean drift" without green JSON.
+Honest closure: unwrap drift JSON and treat its command payload as the source of truth. `payload.sucesso:false`, non-empty `payload.vinculos_quebrados`, non-empty `payload.rotas_divergentes`, or non-empty `payload.impls_quebrados` mean the change is not complete yet. Do not report "clean drift" without a green payload.
 
 Focused drift exposes its planned, declared, inferred, and missing files plus catalog visit/read metrics in `escopo_aplicado`. File and module scopes fail closed without a safe anchor, with homonymous implementation candidates, or with missing local dependencies; only `--escopo projeto` may walk every configured code root. Logical roots such as `src` are probed deterministically without a discovery walk. Configured contract origins and code roots are confined before enumeration, and `inspecionar`, `impacto`, and `renomear-semantico` reuse the same directed boundary without reopening arbitrary external paths.
 
 Drift analysis and cache modes are explicit:
 
 - `sema drift` defaults to `--cache fresh`. `none` still executes drift but performs zero persistent-cache I/O; `cache` reuses a fully validated extraction hit and publishes misses; `fresh` ignores hits, recalculates, and publishes the new extraction.
-- `sema resumo` and `sema inspecionar` default to `--drift none`. In that mode they do not execute drift and return `null` for score, confidence, implementation, routes, or other code evidence that was not observed. Use `--drift cache` or `--drift fresh` when that evidence is required. `--com-drift` remains a temporary alias for `--drift fresh`.
-- When a query explicitly runs drift, `analiseDrift.sucesso` exposes the result and a failed requested analysis returns a nonzero exit code.
+- `sema resumo` and `sema inspecionar` default to `--drift none`. In that mode their payload does not execute drift and returns `null` for score, confidence, implementation, routes, or other code evidence that was not observed. Use `--drift cache` or `--drift fresh` when that evidence is required. `--com-drift` remains a temporary alias for `--drift fresh`.
+- When a query explicitly runs drift, `payload.analiseDrift.sucesso` exposes the result and a failed requested analysis returns a nonzero exit code.
 - The value aliases `off`, `auto`, and `refresh` normalize to `none`, `cache`, and `fresh` for one compatibility release and emit a structured deprecation warning. Wrong flags, repeated flags, conflicts, and invalid values fail instead of falling back silently.
 - Persistent cache objects live outside the workspace under the operating system's user-cache directory. Workspace identity is hashed; public JSON and events expose only an opaque key and `$SEMA_CACHE/...` paths. Corruption or cache unavailability becomes a miss and never changes the drift result. Only validated extraction data is reused; links, diagnostics, scores, and the final success decision are recalculated.
 
@@ -151,7 +148,7 @@ Spatial model and render mode are orthogonal: `THREE_D + HEADLESS` is valid, whi
 - Do not stop after `sema compilar` if the contract target files still do not exist.
 - Do not replace `sema compilar` with `sema testar` when the contract requires generated code.
 - Do not create a Markdown report to pretend a gate ran.
-- Do not say drift passed when `sema drift --cache fresh --json` returned `sucesso:false`, broken link, divergent route, or broken impl.
+- Do not say drift passed when the unwrapped `sema drift --cache fresh --json` payload returned `sucesso:false`, a non-empty `vinculos_quebrados`, `rotas_divergentes`, or `impls_quebrados` list.
 - Do not declare a UI responsive without mobile/desktop proof; horizontal scroll at 390px blocks closure.
 
 Governed code policy: keep the `SEMA-GOVERNED` marker, split large code by real responsibility, preserve contract links, and never treat a generated output directory as the final delivery.

@@ -1,0 +1,204 @@
+module sema.produto.distribuicao_global.instaladores {
+  docs {
+    resumo: "Governa install-sema.ps1 e install-sema.sh como instaladores globais transacionais, com resolucao de latest ou SemVer exata e leitura compatível do status legado 2.x ou do envelope result/v1 3.x antes de persistir PATH ou profile."
+    status: "MODELADA"
+    arquivo: "contratos/sema/cli_distribuicao_launcher.sema"
+    arquivo: "contratos/sema/cli_distribuicao_transacao.sema"
+    arquivo: "contratos/sema/cli_distribuicao_skill.sema"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento_postinstall.sema"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento_smoke.sema"
+    arquivo: "docs/cli.md"
+    arquivo: "docs/security.md"
+    arquivo: "docs/testing.md"
+  }
+
+  use sema.produto.distribuicao_global
+
+  use sema.produto.distribuicao_global.transacao
+
+  use sema.produto.distribuicao_global.skill
+
+  vinculos {
+    arquivo: "install-sema.ps1"
+    arquivo: "install-sema.sh"
+    arquivo: "testes/unidade/instaladores-distribuicao-global.test.ts"
+  }
+
+  type StatusDistribuicaoInstalador {
+    fields {
+      familia: FamiliaStatusInstaladorCli
+      sucesso: Booleano
+      operacao: Texto
+      estado: Texto
+      launcher_estado: Texto
+      skill_estado: Texto
+      alterado: Booleano
+    }
+    invariants {
+      operacao deve_ser status
+      estado deve_ser READY
+      launcher_estado deve_ser READY
+      skill_estado deve_ser READY
+      alterado deve_ser falso
+    }
+  }
+
+  enum FamiliaStatusInstaladorCli {
+    LEGACY_2_X,
+    RESULT_V1_3_X
+  }
+
+  task normalizar_status_distribuicao_2x_3x {
+    input {
+      versao_instalada: Texto required
+      resposta_json: Json required
+    }
+    output {
+      status: StatusDistribuicaoInstalador
+      familia_detectada: FamiliaStatusInstaladorCli
+      shape_exato: Booleano
+      controle_rejeitado: Booleano
+      wrapper_duplo_rejeitado: Booleano
+    }
+    rules {
+      versao_instalada deve_ser semver_exata_da_cli_instalada
+      resposta_json deve_ser objeto_json_unico
+      resposta_json deve_ser status_legado_top_level quando versao_instalada_maior == 2
+      resposta_json deve_ser envelope_sema_cli_result_v1_exato quando versao_instalada_maior == 3
+      resposta_json deve_ser conter_payload_status_legado quando versao_instalada_maior == 3
+      resposta_json deve_ser success_cli_success_skill_status_exit_zero quando versao_instalada_maior == 3
+    }
+    forbidden {
+      aceitar_sema_cli_control_v1_como_status
+      aceitar_data_no_lugar_de_payload_em_3x
+      aceitar_payload_result_v1_dentro_de_payload_result_v1
+      aceitar_campo_extra_ou_ausente_no_envelope_3x
+      aceitar_domain_error_como_distribuicao_ready
+      aceitar_status_2x_envelopado
+      aceitar_status_3x_sem_envelope
+      escolher_shape_por_heuristica_sem_consultar_versao_instalada
+      aceitar_estado_launcher_ou_skill_diferente_de_ready
+      aceitar_alterado_verdadeiro_apos_status
+    }
+    impl {
+      ts: scripts.cli_publico.resultado_cli.extrairPayloadCliCompativelComVersao
+    }
+    vinculos {
+      arquivo: "install-sema.ps1"
+      arquivo: "install-sema.sh"
+      arquivo: "scripts/cli-publico/resultado-cli.mjs"
+      arquivo: "testes/unidade/instaladores-distribuicao-global.test.ts"
+      simbolo: scripts.cli_publico.resultado_cli.extrairPayloadCliCompativelComVersao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "2s"
+      retry: "nenhum"
+      compensacao: "falhar_fechado_sem_persistir_path"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      status existe
+      status deve_ser distribuicao_ready_sem_mutacao
+      familia_detectada deve_ser em [LEGACY_2_X, RESULT_V1_3_X]
+      shape_exato == verdadeiro
+      controle_rejeitado == verdadeiro
+      wrapper_duplo_rejeitado == verdadeiro
+    }
+    tests {
+      caso "normaliza status legado da CLI 2.x" {
+        given {
+          versao_instalada: "2.4.0"
+          resposta_json {
+            sucesso: verdadeiro
+            operacao: status
+            resultado {
+              estado: READY
+              alterado: falso
+              launcher {
+                estado: READY
+              }
+              skill {
+                estado: READY
+              }
+            }
+          }
+        }
+
+        expect {
+          sucesso: verdadeiro
+          familia_detectada: "LEGACY_2_X"
+          shape_exato: verdadeiro
+        }
+      }
+      caso "normaliza payload status do result v1 da CLI 3.x" {
+        given {
+          versao_instalada: "3.0.0"
+          resposta_json {
+            schemaVersion: sema.cli.result/v1
+            ok: verdadeiro
+            kind: SUCCESS
+            command: skill
+            code: CLI_SUCCESS
+            message: nulo
+            exitCode: 0
+            payload {
+              sucesso: verdadeiro
+              operacao: status
+              resultado {
+                estado: READY
+                alterado: falso
+                launcher {
+                  estado: READY
+                }
+                skill {
+                  estado: READY
+                }
+              }
+            }
+          }
+        }
+
+        expect {
+          sucesso: verdadeiro
+          familia_detectada: "RESULT_V1_3_X"
+          shape_exato: verdadeiro
+          controle_rejeitado: verdadeiro
+          wrapper_duplo_rejeitado: verdadeiro
+        }
+      }
+    }
+  }
+
+  policy instaladores_globais_transacionais {
+    task: normalizar_status_distribuicao_2x_3x
+    forbidden {
+      aceitar_range_tag_ou_url_diferente_de_latest_ou_semver_exata
+      confiar_apenas_no_exit_code_do_npm
+      confiar_apenas_no_exit_code_do_launcher
+      persistir_path_antes_de_confirmar_versoes_e_status_ready
+      aceitar_versao_instalada_diferente_da_resolvida
+      aceitar_launcher_de_outra_versao
+      interpretar_status_3x_como_shape_2x
+      interpretar_status_2x_como_shape_3x
+      escrever_no_workspace
+      escrever_em_cache_de_plugin_ou_marketplace
+      seguir_symlink_junction_ou_reparse_point_em_home
+      deixar_temporario_ou_profile_parcial_na_falha
+      expor_home_token_argv_ou_saida_npm_bruta
+    }
+    vinculos {
+      arquivo: "install-sema.ps1"
+      arquivo: "install-sema.sh"
+      arquivo: "testes/unidade/instaladores-distribuicao-global.test.ts"
+      arquivo: "testes/unidade/distribuicao-global.test.ts"
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "180s"
+      retry: "nenhum"
+      compensacao: "remover_temporarios_reverter_profile_parcial_e_falhar_fechado"
+      criticidade_operacional: alta
+    }
+  }
+}

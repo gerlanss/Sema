@@ -5,7 +5,7 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 
 1. Leia `SEMA_BOOT.md`.
 2. Rode `sema --version`; se o shell falhar, use `$HOME/.sema/bin/sema` no macOS/Linux. No Windows, PowerShell usa `sema.ps1` no PATH e cmd.exe usa `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` como fallback absoluto. Só então pare e peça instalação ou reparo.
-3. Use diretamente a CLI local: `sema resumo --drift none`, `sema docs-impacto`, `sema inspecionar --drift none`, `sema drift --cache fresh` e `sema impacto`.
+3. Use diretamente a CLI local: `sema resumo --drift none`, `sema docs-impacto`, `sema inspecionar --drift none`, `sema drift --cache fresh` e `sema impacto`. Na 3.0.0, `sema --version` continua texto SemVer exato; com `--json`, help e falhas de controle usam `sema.cli.control/v1`, enquanto comandos sintaticamente válidos usam o envelope exato de oito campos `sema.cli.result/v1`, com resultado em `payload` e `ok` distinto do veredito de domínio do payload.
 4. Quando a capacidade correta não estiver clara, use `sema descobrir recomendar --intencao "<objetivo>" --json`; não autoexecute resultado ambíguo.
 5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 6. Chame docs-impacto com a intenção declarada antes de agir.
@@ -40,7 +40,7 @@ Falha fechada:
 - Um mesmo arquivo de codigo pode ser governado por varios contratos .sema via vinculos; Sema Codigo deve preservar essa rastreabilidade.
 - Se score, achados ou decisaoAgente parecerem bons, trate como sinal de triagem e confira evidência concreta no contrato e no código.
 - Se validar artefato inline com 100/100, ainda preserve cabeçalho SEMA-GOVERNED no arquivo físico sincronizado.
-- Se `sema drift --cache fresh` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, a mudança não pode ser declarada concluída; corrija contrato/código e rode drift fresh de novo.
+- Se o `payload` de `sema drift --cache fresh --json` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou `impls_quebrados`, a mudança não pode ser declarada concluída; corrija contrato/código e rode drift fresh de novo.
 - Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, nao conclua sem acabamento moderno, contextual e evidenciado; em UI mobile estreita (ex. 390px), `document.documentElement.scrollWidth <= document.documentElement.clientWidth` precisa ser verdadeiro.
 - Se texto visivel PT-BR perder acento ou cedilha em termos como descricao, lancamentos, saude ou alimentacao, trate como defeito bloqueante quando houver i18n/idioma declarado.
 - Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.
@@ -66,7 +66,7 @@ Sinal e evidência:
 - Score composto, `achados[]` e `decisaoAgente` orientam a ação; abaixo de 80 bloqueia, alvo evolui 0.5 ponto até 100, e nada substitui evidência concreta.
 - Palavra-chave ou regex passando não prova governança se contrato, código e comportamento não batem.
 - `resumo` e `inspecionar` usam `--drift none` por padrão; campos derivados nulos significam não avaliados, nunca zero.
-- `sema drift --cache fresh --json` com `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas bloqueia fechamento. Cache persistente é aceleração, não prova final.
+- `sema drift --cache fresh --json` com `payload.sucesso:false`, `payload.vinculos_quebrados`, `payload.rotas_divergentes` ou `payload.impls_quebrados` bloqueia fechamento. Cache persistente é aceleração, não prova final.
 - Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
 Acabamento visual e terminal:

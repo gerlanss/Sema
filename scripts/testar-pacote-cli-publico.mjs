@@ -20,6 +20,10 @@ import {
 } from "./cli-publico/sistemas-interativos.mjs";
 import { validarGeradoresInstalados } from "./cli-publico/toolchains-geradas.mjs";
 import {
+  extrairPayloadResultadoCliV1,
+  validarEnvelopeControleCliV1,
+} from "./cli-publico/resultado-cli.mjs";
+import {
   ambienteInstalacaoIsolada,
   caminhosCachePluginIsolado,
   caminhosEstadoSemaReal,
@@ -161,32 +165,14 @@ function validarEnvelopeControleJson(resultado, contexto, esperado, caminhosSens
     throw new Error(`The installed public CLI wrote JSON control output to stderr during ${contexto}.`);
   }
 
-  let payload;
-  try {
-    payload = JSON.parse(resultado.stdout);
-  } catch {
-    throw new Error(`The installed public CLI did not emit exactly one JSON document during ${contexto}.`);
-  }
-
-  const chavesEsperadas = ["code", "exitCode", "kind", "message", "ok", "schemaVersion"];
-  if (
-    payload === null ||
-    typeof payload !== "object" ||
-    Array.isArray(payload) ||
-    Object.keys(payload).sort().join("\n") !== chavesEsperadas.join("\n") ||
-    payload.schemaVersion !== "sema.cli.control/v1" ||
-    payload.ok !== esperado.ok ||
-    payload.kind !== esperado.kind ||
-    payload.exitCode !== resultado.status ||
-    typeof payload.code !== "string" ||
-    payload.code.length === 0 ||
-    typeof payload.message !== "string" ||
-    payload.message.length === 0
-  ) {
-    throw new Error(`The installed public CLI emitted an invalid JSON control envelope during ${contexto}.`);
-  }
-  if (esperado.code && payload.code !== esperado.code) {
-    throw new Error(`The installed public CLI emitted ${payload.code} instead of ${esperado.code} during ${contexto}.`);
+  const payload = validarEnvelopeControleCliV1(resultado.stdout, {
+    contexto,
+    exitCode: resultado.status,
+    kind: esperado.kind,
+    code: esperado.code,
+  });
+  if (payload.ok !== esperado.ok) {
+    throw new Error(`The installed public CLI emitted incoherent ok during ${contexto}.`);
   }
   if (payloadContemCaminhoSensivel(payload, caminhosSensiveis)) {
     throw new Error(`The installed public CLI exposed a sensitive path during ${contexto}.`);
@@ -198,12 +184,17 @@ function validarEnvelopeControleJson(resultado, contexto, esperado, caminhosSens
 }
 
 function executarJsonCliInstalada(semaBin, argumentos, cwd, opcoes = {}) {
-  return JSON.parse(executarComSaida(
+  return extrairPayloadResultadoCliV1(executarComSaida(
     process.execPath,
     [semaBin, ...argumentos, "--json"],
     cwd,
     opcoes,
-  ));
+  ), {
+    contexto: argumentos.join(" "),
+    command: argumentos[0],
+    exitCode: 0,
+    kind: "SUCCESS",
+  });
 }
 
 function ambienteCacheIsolado(raizCache) {
@@ -817,7 +808,12 @@ async function main() {
       [semaBin, "resumo", path.join(raiz, "exemplos", "calculadora.sema"), "--micro", "--json"],
       sandbox,
     );
-    const resumo = JSON.parse(resumoSaida);
+    const resumo = extrairPayloadResultadoCliV1(resumoSaida, {
+      contexto: "resumo de contrato instalado",
+      command: "resumo",
+      exitCode: 0,
+      kind: "SUCCESS",
+    });
     if (
       resumo.comando !== "resumo" ||
       resumo.modulo !== "exemplos.calculadora" ||
@@ -898,7 +894,12 @@ async function main() {
       if (resultadoProfile.status !== 0) {
         throw new Error(`The npm package failed profile ${profile}: ${resultadoProfile.stderr || resultadoProfile.stdout}`);
       }
-      const jsonProfile = JSON.parse(resultadoProfile.stdout);
+      const jsonProfile = extrairPayloadResultadoCliV1(resultadoProfile.stdout, {
+        contexto: `profile validar ${profile}`,
+        command: "profile",
+        exitCode: resultadoProfile.status,
+        kind: "SUCCESS",
+      });
       if (!jsonProfile.aprovado || jsonProfile.bloqueado) {
         throw new Error(`The npm package did not approve the ${profile} example.`);
       }

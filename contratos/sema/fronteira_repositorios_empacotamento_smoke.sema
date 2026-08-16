@@ -1,9 +1,13 @@
 module sema.produto.fronteira_repositorios.empacotamento.smoke {
   docs {
-    resumo: "Prova em instalacao isolada o tarball da fabrica publica unica: destino canonico revalidado, publicacao cross-volume por temporario local e hardlink no-replace, sweep integral sem maps, segredos ou billing, zero temporarios e stages, 12 runtimes, docs, exemplos, skill e postinstall identicos a fonte."
+    resumo: "Prova em instalacao isolada o tarball da fabrica publica unica, incluindo envelopes control/v1 e result/v1 exatos, captura de handlers e subprocessos, rejeicao de dev watch --json e instaladores compativeis com CLI 2.x e 3.x."
     arquivo: "contratos/sema/fronteira_repositorios_empacotamento.sema"
     arquivo: "contratos/sema/cli_distribuicao_launcher.sema"
     arquivo: "contratos/sema/cli_distribuicao_skill.sema"
+    arquivo: "contratos/sema/cli_distribuicao_instaladores.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_resultados.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_handlers.sema"
     arquivo: "docs/drift-cache.md"
     arquivo: "docs/testing.md"
   }
@@ -11,6 +15,14 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
   use sema.produto.distribuicao_global
 
   use sema.produto.distribuicao_global.skill
+
+  use sema.produto.distribuicao_global.instaladores
+
+  use sema.produto.cli_invocacao_publica
+
+  use sema.produto.cli_invocacao_publica.resultados
+
+  use sema.produto.cli_invocacao_publica.handlers
 
   task provar_pacote_cli_publico_isolado {
     input {
@@ -35,6 +47,13 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
       publicacao_cross_volume_no_replace: Booleano
       sweep_global_comprovado: Booleano
       residuos_temporarios_ausentes: Booleano
+      controle_json_v1_exato: Booleano
+      resultado_json_v1_exato: Booleano
+      payload_json_objeto_lista_escalar_nulo: Booleano
+      handlers_json_isolados: Booleano
+      subprocessos_json_capturados: Booleano
+      dev_watch_json_rejeitado: Booleano
+      instaladores_2x_3x_compativeis: Booleano
     }
     rules {
       versao deve_ser preenchido
@@ -73,6 +92,13 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
         publicacao_cross_volume_no_replace: publico
         sweep_global_comprovado: publico
         residuos_temporarios_ausentes: publico
+        controle_json_v1_exato: publico
+        resultado_json_v1_exato: publico
+        payload_json_objeto_lista_escalar_nulo: publico
+        handlers_json_isolados: publico
+        subprocessos_json_capturados: publico
+        dev_watch_json_rejeitado: publico
+        instaladores_2x_3x_compativeis: publico
       }
     }
     audit {
@@ -99,6 +125,11 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
       aceitar_publicacao_que_substitui_destino_existente
       aceitar_tarball_com_source_map_pem_key_p12_pfx_env_ou_billing
       aceitar_smoke_com_temporario_ou_stage_residual
+      aceitar_result_v1_com_data_ou_campo_extra
+      aceitar_payload_result_v1_restrito_a_objeto
+      aceitar_log_de_handler_ou_subprocesso_fora_do_envelope_json
+      aceitar_dev_watch_json_com_watcher_ou_subprocesso_iniciado
+      aceitar_instalador_que_confunde_status_2x_e_envelope_3x
     }
     impl {
       ts: scripts.testar_pacote_cli_publico.main
@@ -110,12 +141,16 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
       arquivo: "scripts/instalar-cli-local.mjs"
       arquivo: "scripts/cli-publico/bootstrap-codex.mjs"
       arquivo: "scripts/cli-publico/fronteira-publica.mjs"
+      arquivo: "scripts/cli-publico/resultado-cli.mjs"
       arquivo: "scripts/cli-publico/pipeline-conteudo.mjs"
       arquivo: "scripts/cli-publico/sistemas-interativos.mjs"
       arquivo: "scripts/cli-publico/toolchains-geradas.mjs"
       arquivo: "pacotes/cli/scripts/bloquear-pack-workspace.mjs"
       arquivo: "pacotes/cli/package.json"
       arquivo: "pacotes/cli/src/bin.ts"
+      arquivo: "pacotes/cli/src/saidaCli.ts"
+      arquivo: "pacotes/cli/src/resultadoCli.ts"
+      arquivo: "pacotes/cli/src/cliRuntime.ts"
       arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
       arquivo: "pacotes/cli/src/distribuicao/skillGlobal.ts"
       arquivo: "pacotes/cli/src/distribuicao/index.ts"
@@ -125,6 +160,11 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
       arquivo: "testes/unidade/distribuicao-skill-global.test.ts"
       arquivo: "testes/unidade/distribuicao-global.test.ts"
       arquivo: "testes/unidade/empacotamento-publico.test.ts"
+      arquivo: "testes/integracao/cli-invocacao-publica.test.ts"
+      arquivo: "testes/unidade/cli-resultado-v3.test.ts"
+      arquivo: "testes/unidade/instaladores-distribuicao-global.test.ts"
+      arquivo: "install-sema.ps1"
+      arquivo: "install-sema.sh"
       simbolo: scripts.testar_pacote_cli_publico.main
     }
     execucao {
@@ -152,6 +192,13 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
       publicacao_cross_volume_no_replace == verdadeiro
       sweep_global_comprovado == verdadeiro
       residuos_temporarios_ausentes == verdadeiro
+      controle_json_v1_exato == verdadeiro
+      resultado_json_v1_exato == verdadeiro
+      payload_json_objeto_lista_escalar_nulo == verdadeiro
+      handlers_json_isolados == verdadeiro
+      subprocessos_json_capturados == verdadeiro
+      dev_watch_json_rejeitado == verdadeiro
+      instaladores_2x_3x_compativeis == verdadeiro
     }
     tests {
       caso "tarball instala distribuicao global sem PATH em sandbox" {
@@ -178,6 +225,13 @@ module sema.produto.fronteira_repositorios.empacotamento.smoke {
           publicacao_cross_volume_no_replace: verdadeiro
           sweep_global_comprovado: verdadeiro
           residuos_temporarios_ausentes: verdadeiro
+          controle_json_v1_exato: verdadeiro
+          resultado_json_v1_exato: verdadeiro
+          payload_json_objeto_lista_escalar_nulo: verdadeiro
+          handlers_json_isolados: verdadeiro
+          subprocessos_json_capturados: verdadeiro
+          dev_watch_json_rejeitado: verdadeiro
+          instaladores_2x_3x_compativeis: verdadeiro
         }
       }
     }

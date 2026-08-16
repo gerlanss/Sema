@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { planejarExemplosOficiais } from "../../pacotes/cli/src/exemplosOficiais.js";
+import { extrairPayloadResultadoCliV1 } from "../helpers/resultado-cli-v1.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/bin.js");
 const MARCADOR_INICIO = "<!-- sema:agent-entrypoint:start -->";
@@ -198,14 +199,14 @@ async function provarSyncCodexFalhaFechado(conteudoOriginal: Buffer): Promise<vo
     const resultado = executarCli(repo, ["sync-codex", "--json"], base);
 
     assert.notEqual(resultado.status, 0, diagnosticoCli(resultado));
-    const payload = JSON.parse(resultado.stdout) as {
+    const payload = extrairPayloadResultadoCliV1<{
       sucesso: boolean;
       resultadosCodex: {
         arquivos: Array<{ caminho: string; status: string }>;
         entrypointsLegadosPendentes: string[];
         entrypointsLegadosLimpos: boolean;
       };
-    };
+    }>(resultado.stdout, { command: "sync-codex", exitCode: resultado.status });
     assert.equal(payload.sucesso, false);
     assert.equal(payload.resultadosCodex.entrypointsLegadosLimpos, false);
     assert.ok(payload.resultadosCodex.entrypointsLegadosPendentes.includes("AGENTS.md"));

@@ -4,7 +4,10 @@ These docs describe the public Codex-native local CLI distribution of Sema.
 
 Sema is local-first: Codex runs the CLI inside a project folder, reads `.sema`
 contracts, checks drift, maps impact, and closes changes with documentation
-evidence. `AGENTS.md` is the official Codex entrypoint. Public docs are written
+evidence. In 3.0.0, valid commands using `--json` return the exact
+`sema.cli.result/v1` envelope with command data nested under `payload`, while
+help and command-control failures keep the separate `sema.cli.control/v1`
+envelope. `AGENTS.md` is the official Codex entrypoint. Public docs are written
 in English.
 
 Sema is an independent product and is not affiliated with or endorsed by
@@ -13,8 +16,8 @@ program or submission.
 
 Start here:
 
-- [CLI](./cli.md)
-- [Commands](./commands.md)
+- [CLI](./cli.md) — installation and the public JSON output contract
+- [Commands](./commands.md) — command catalog and envelope-consumption rules
 - [Drift Cache And Query Evidence](./drift-cache.md)
 - [Syntax](./syntax.md)
 - [Profiles](./profiles.md)

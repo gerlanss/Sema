@@ -79,10 +79,16 @@ JSON help must be one parseable `sema.cli.control/v1` document containing
 exactly `schemaVersion`, `ok`, `kind`, `code`, `message`, and `exitCode`. The
 smoke must also prove a non-zero `UNKNOWN_COMMAND` control response whose
 process status equals `exitCode`, with no stack, absolute path, raw argv, or
-second JSON document. Successful command payloads remain unwrapped in `2.4.0`;
-existing smoke assertions against their top-level fields are compatibility
-evidence. The general success envelope belongs to `3.0.0` after handlers share
-one result abstraction.
+second JSON document. Every syntactically valid command using `--json` must be
+one parseable `sema.cli.result/v1` document containing exactly
+`schemaVersion`, `ok`, `kind`, `command`, `code`, `message`, `exitCode`, and
+`payload`. Smoke assertions must unwrap `payload` before checking
+command-specific fields, and recorded fixtures must contain that payload rather
+than either public CLI envelope. Coverage must include object, array, scalar,
+and `null` payloads, coherent `SUCCESS` and `DOMAIN_ERROR` results, process
+status equality, empty stderr, no `data` alias, and rejection of missing,
+extra, nested, or mismatched envelope fields. `--version` remains a plain exact
+SemVer text check.
 
 Focused distribution tests live in
 `testes/unidade/distribuicao-launcher-global.test.ts`,

@@ -19,7 +19,7 @@ Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use o
 15. Payload inline acima de 262144 caracteres não é lentidão: divida por responsabilidade; não aumente timeout para tentar passar limite de transporte.
 16. Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.
 17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. Não trate isso como falha do Sema.
-18. Para fechamento, rode `sema drift --cache fresh --json`; cache persistente só acelera navegação e não é prova final. Se retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou impl quebrada, não conclua.
+18. Para fechamento, rode `sema drift --cache fresh --json`; cache persistente só acelera navegação e não é prova final. Se o `payload` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou `impls_quebrados`, não conclua. Na 3.0.0, não procure campos de domínio no topo do envelope `sema.cli.result/v1` nem use `ok` como substituto do veredito do payload.
 19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonômico, com hierarquia clara, estados e evidência. Em UI, valide mobile/desktop e prove `scrollWidth <= clientWidth` em viewport estreito como 390px.
 20. Não substitua o contexto Sema por AGENTS.md, README.md, busca local, inferência por nome ou bom senso.
 
@@ -67,7 +67,7 @@ Fail-closed:
 - Um mesmo arquivo de codigo pode ser governado por varios contratos .sema via vinculos; Sema Codigo deve preservar essa rastreabilidade.
 - Se score, achados ou decisaoAgente parecerem bons, trate como sinal de triagem e confira evidência concreta no contrato e no código.
 - Se validar artefato inline com 100/100, ainda preserve cabeçalho SEMA-GOVERNED no arquivo físico sincronizado.
-- Se `sema drift --cache fresh` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou impls quebradas, a mudança não pode ser declarada concluída; corrija contrato/código e rode drift fresh de novo.
+- Se o `payload` de `sema drift --cache fresh --json` retornar sucesso:false, `vinculos_quebrados`, `rotas_divergentes` ou `impls_quebrados`, a mudança não pode ser declarada concluída; corrija contrato/código e rode drift fresh de novo.
 - Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, nao conclua sem acabamento moderno, contextual e evidenciado; em UI mobile estreita (ex. 390px), `document.documentElement.scrollWidth <= document.documentElement.clientWidth` precisa ser verdadeiro.
 - Se texto visivel PT-BR perder acento ou cedilha em termos como descricao, lancamentos, saude ou alimentacao, trate como defeito bloqueante quando houver i18n/idioma declarado.
 - Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.

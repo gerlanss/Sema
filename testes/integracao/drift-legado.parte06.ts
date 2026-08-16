@@ -8,6 +8,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
+import { extrairPayloadResultadoCliV1 } from "../helpers/resultado-cli-v1.ts";
 import {
   criarProjetoAngularConsumer,
   criarProjetoAngularStandaloneConsumer,
@@ -54,14 +55,24 @@ function executar(args: string[], cwd?: string) {
   if (isolarCache) {
     assert.equal(existsSync(RAIZ_CACHE_SENTINELA), false, "comando legado com --cache none nao pode materializar a raiz de cache");
   }
-  if (argumentos[0] === "drift" && resultado.status === 1 && driftFalhouSomentePorPontuacao(resultado.stdout)) {
+  const comandoResultadoCli = argumentos[0] ?? "";
+  const exitCodeResultadoCli = resultado.status;
+  if (
+    comandoResultadoCli === "drift"
+    && resultado.status === 1
+    && driftFalhouSomentePorPontuacao(resultado.stdout, comandoResultadoCli, exitCodeResultadoCli)
+  ) {
     resultado.status = 0;
   }
-  return resultado;
+  return Object.assign(resultado, { comandoResultadoCli, exitCodeResultadoCli });
 }
-function driftFalhouSomentePorPontuacao(stdout: string): boolean {
+function driftFalhouSomentePorPontuacao(
+  stdout: string,
+  command: string,
+  exitCode: number | null,
+): boolean {
   try {
-    const json = JSON.parse(stdout);
+    const json = extrairPayloadResultadoCliV1(stdout, { command, exitCode });
     const travas = json.resumo_operacional?.travasPontuacao ?? [];
     return json.sucesso === false
       && travas.length > 0
@@ -73,6 +84,16 @@ function driftFalhouSomentePorPontuacao(stdout: string): boolean {
   } catch {
     return false;
   }
+}
+function extrairPayloadExecucaoCli<T = any>(execucao: {
+  stdout: string;
+  comandoResultadoCli: string;
+  exitCodeResultadoCli: number | null;
+}): T {
+  return extrairPayloadResultadoCliV1<T>(execucao.stdout, {
+    command: execucao.comandoResultadoCli,
+    exitCode: execucao.exitCodeResultadoCli,
+  });
 }
 function localizarPrimeiroContrato(base: string, candidatos: string[]): string | undefined {
   for (const candidato of candidatos) {
@@ -99,7 +120,7 @@ registrarSmokeReal(existsSync("C:\\GitHub\\FuteBot"), "smoke real: drift resolve
     const execucao = executar(["drift", "C:\\GitHub\\FuteBot\\sema", "--json"], path.resolve("."));
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     const implsValidos = new Set(json.impls_validos.map((impl: { caminho: string }) => impl.caminho));
 
     for (const caminhoEsperado of [
@@ -153,7 +174,7 @@ if (existsSync(GESTECH_BASE)) {
       const execucao = executar(["drift", contratoFlaskGestech, "--json"], GESTECH_BASE);
       assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-      const json = JSON.parse(execucao.stdout);
+      const json = extrairPayloadExecucaoCli(execucao);
       assert.equal(json.impls_quebrados.length, 0);
       assert.equal(json.rotas_divergentes.length, 0);
       assert.equal(json.impls_validos.length >= 4, true);
@@ -168,7 +189,7 @@ if (existsSync(GESTECH_BASE)) {
         const execucao = executar(["drift", contrato, "--json"], GESTECH_BASE);
         assert.equal(execucao.status, 0, `${contrato}\n${execucao.stderr || execucao.stdout}`);
 
-        const json = JSON.parse(execucao.stdout);
+        const json = extrairPayloadExecucaoCli(execucao);
         assert.equal(json.impls_quebrados.length, 0, contrato);
         assert.equal(json.rotas_divergentes.length, 0, contrato);
       }
@@ -182,7 +203,7 @@ if (existsSync(GESTECH_BASE)) {
       const execucao = executar(["drift", contratoFirebaseGestech, "--json"], GESTECH_BASE);
       assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-      const json = JSON.parse(execucao.stdout);
+      const json = extrairPayloadExecucaoCli(execucao);
       assert.equal(json.impls_quebrados.length, 0);
       assert.equal(json.recursos_divergentes.length, 0);
       assert.equal(json.recursos_validos.length >= 1, true);
@@ -279,7 +300,7 @@ test("cli drift ignora worktrees e consumidores laterais por padrao e inclui qua
 
     const padrao = executar(["drift", "--json"], base);
     assert.equal(padrao.status, 0, padrao.stderr || padrao.stdout);
-    const jsonPadrao = JSON.parse(padrao.stdout);
+    const jsonPadrao = extrairPayloadExecucaoCli(padrao);
     assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]pedidos[\\/]page\.tsx$/i.test(surface.arquivo)), true);
     assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]ranking[\\/]page\.tsx$/i.test(surface.arquivo)), false);
     assert.equal(jsonPadrao.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])\.claude[\\/]worktrees[\\/]/i.test(surface.arquivo)), false);
@@ -287,7 +308,7 @@ test("cli drift ignora worktrees e consumidores laterais por padrao e inclui qua
 
     const amplo = executar(["drift", "--escopo", "projeto", "--incluir-worktrees", "--incluir-consumidores-laterais", "--json"], base);
     assert.equal(amplo.status, 0, amplo.stderr || amplo.stdout);
-    const jsonAmplo = JSON.parse(amplo.stdout);
+    const jsonAmplo = extrairPayloadExecucaoCli(amplo);
     assert.equal(jsonAmplo.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])\.claude[\\/]worktrees[\\/]/i.test(surface.arquivo)), true);
     assert.equal(jsonAmplo.consumerSurfaces.some((surface: { arquivo: string }) => /(^|[\\/])showcases[\\/]/i.test(surface.arquivo)), true);
   } finally {
@@ -333,7 +354,7 @@ test("cli drift resolve html de espelho seletivo em web/public sem config explic
     const execucao = executar(["drift", "contratos/site.sema", "--escopo", "modulo", "--json"], base);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.vinculos_quebrados.some((vinculo: { valor: string }) => vinculo.valor === "web/public/login.html"), false);
     assert.equal(json.vinculos_quebrados.some((vinculo: { valor: string }) => vinculo.valor === "web/public/panel.html"), false);
     assert.equal(json.vinculos_validos.some((vinculo: { valor: string; arquivo: string }) =>
@@ -423,7 +444,7 @@ def list_whatsapp_contacts():
     const execucao = executar(["drift", "--escopo", "modulo", "--json"], base);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]whatsapp[\\/]page\.tsx$/i.test(surface.arquivo)), true);
     assert.equal(json.consumerSurfaces.some((surface: { arquivo: string }) => /[\\/]src[\\/]app[\\/]ranking[\\/]page\.tsx$/i.test(surface.arquivo)), false);
   } finally {

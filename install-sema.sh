@@ -14,7 +14,7 @@ for arg in "$@"; do
       VERSION="${arg#*=}"
       ;;
     *)
-      echo "Unknown argument: $arg" >&2
+      echo "Unknown installer argument." >&2
       exit 1
       ;;
   esac
@@ -93,13 +93,46 @@ status_pronto() {
   node --input-type=module --eval '
     import { readFileSync } from "node:fs";
     try {
-      const payload = JSON.parse(readFileSync(0, "utf8"));
-      const pronto = payload?.sucesso === true
+      const document = JSON.parse(readFileSync(0, "utf8"));
+      const match = /^([0-9]+)\./u.exec(process.env.SEMA_INSTALLED_VERSION ?? "");
+      if (!match) process.exit(1);
+      const major = Number(match[1]);
+      const isObject = (value) => value !== null
+        && typeof value === "object"
+        && !Array.isArray(value);
+      const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+      const legacyReady = (payload) => isObject(payload)
+        && !hasOwn(payload, "schemaVersion")
+        && (!hasOwn(payload, "comando") || payload.comando === "skill")
+        && (!hasOwn(payload, "schema") || payload.schema === "sema.skill-distribution/v1")
+        && payload.sucesso === true
         && payload.operacao === "status"
         && payload.resultado?.estado === "READY"
         && payload.resultado?.launcher?.estado === "READY"
         && payload.resultado?.skill?.estado === "READY"
         && payload.resultado?.alterado === false;
+      let pronto = false;
+      if (major === 2) {
+        pronto = legacyReady(document);
+      } else if (major === 3) {
+        const expectedKeys = [
+          "schemaVersion", "ok", "kind", "command", "code", "message", "exitCode", "payload",
+        ];
+        const actualKeys = isObject(document) ? Object.keys(document) : [];
+        const exactShape = actualKeys.length === expectedKeys.length
+          && expectedKeys.every((key) => hasOwn(document, key));
+        pronto = exactShape
+          && document.schemaVersion === "sema.cli.result/v1"
+          && document.ok === true
+          && document.kind === "SUCCESS"
+          && document.command === "skill"
+          && document.code === "CLI_SUCCESS"
+          && document.message === null
+          && document.exitCode === 0
+          && isObject(document.payload)
+          && !hasOwn(document.payload, "schemaVersion")
+          && legacyReady(document.payload);
+      }
       process.exit(pronto ? 0 : 1);
     } catch {
       process.exit(1);
@@ -144,7 +177,7 @@ export HOME="$USER_HOME_DIR"
 export USERPROFILE="$USER_HOME_DIR"
 PACKAGE_SPEC="${PACKAGE_NAME}@${VERSION}"
 
-if ! REQUESTED_VERSION="$(npm view "$PACKAGE_SPEC" version --json --cache "$TMP_DIR/npm-cache" | extrair_versao_json)"; then
+if ! REQUESTED_VERSION="$(npm view "$PACKAGE_SPEC" version --json --cache "$TMP_DIR/npm-cache" 2>/dev/null | extrair_versao_json)"; then
   echo "npm could not resolve the requested Sema CLI version." >&2
   exit 1
 fi
@@ -159,9 +192,12 @@ fi
 RESOLVED_PACKAGE_SPEC="${PACKAGE_NAME}@${REQUESTED_VERSION}"
 
 echo "Installing the Sema CLI via npm..."
-npm install -g "$RESOLVED_PACKAGE_SPEC" --cache "$TMP_DIR/npm-cache" --no-audit --no-fund
+if ! npm install -g "$RESOLVED_PACKAGE_SPEC" --cache "$TMP_DIR/npm-cache" --no-audit --no-fund >/dev/null 2>&1; then
+  echo "npm failed to install the Sema CLI globally." >&2
+  exit 1
+fi
 
-if ! INSTALLED_PACKAGE_VERSION="$(npm list -g --depth=0 --json "$PACKAGE_NAME" | extrair_versao_instalada)"; then
+if ! INSTALLED_PACKAGE_VERSION="$(npm list -g --depth=0 --json "$PACKAGE_NAME" 2>/dev/null | extrair_versao_instalada)"; then
   echo "npm could not verify the installed Sema CLI version." >&2
   exit 1
 fi
@@ -182,7 +218,10 @@ if [[ ! -f "$SKILL_ENTRYPOINT" ]]; then
   exit 1
 fi
 
-INSTALLED_VERSION="$("$LAUNCHER" --version)"
+if ! INSTALLED_VERSION="$("$LAUNCHER" --version 2>/dev/null)"; then
+  echo "The managed Sema launcher could not report its version." >&2
+  exit 1
+fi
 INSTALLED_VERSION="${INSTALLED_VERSION//$'\r'/}"
 if [[ ! "$INSTALLED_VERSION" =~ $SEMVER_EXATA ]]; then
   echo "The managed Sema launcher returned an invalid version." >&2
@@ -192,13 +231,14 @@ if [[ "$INSTALLED_VERSION" != "$INSTALLED_PACKAGE_VERSION" ]]; then
   echo "The managed Sema launcher version does not match the installed package." >&2
   exit 1
 fi
+export SEMA_INSTALLED_VERSION="$INSTALLED_VERSION"
 
 set +e
 STATUS_JSON="$("$LAUNCHER" skill status --json 2>/dev/null)"
 STATUS_EXIT=$?
 set -e
 if [[ $STATUS_EXIT -ne 0 ]] || ! printf '%s' "$STATUS_JSON" | status_pronto; then
-  if ! "$LAUNCHER" skill sync --json >/dev/null; then
+  if ! "$LAUNCHER" skill sync --json >/dev/null 2>&1; then
     echo "The managed Sema distribution could not be synchronized." >&2
     exit 1
   fi
@@ -232,8 +272,7 @@ case ":${PATH:-}:" in
 esac
 
 echo "Sema $INSTALLED_VERSION was installed successfully."
-echo "Managed launcher: $LAUNCHER"
-echo "The launcher directory was added to: $SHELL_PROFILE"
+echo "Managed launcher and shell profile are ready."
 echo "Quick check:"
 echo "  sema --version"
 echo "  sema --help"

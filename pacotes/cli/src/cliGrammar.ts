@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.produto.cli_invocacao_publica.argumentos
+// SEMA-GOVERNED: sema.produto.cli_invocacao_publica.argumentos, sema.produto.cli_invocacao_publica.handlers
 // Descrição: valida a gramática pública da CLI sem consultar handlers, filesystem, ambiente ou rede.
 
 import {
@@ -226,7 +226,9 @@ function validarDev(args: readonly string[]): boolean {
   if (!parsed) return false;
   const modo = valorOpcao(parsed, "--modo");
   if (modo && modo !== "rigoroso" && modo !== "permissivo") return false;
-  return !valorOpcao(parsed, "--promover") || (!valorOpcao(parsed, "--pasta") && !modo);
+  const promover = valorOpcao(parsed, "--promover");
+  if (parsed.flags.has("--json") && !promover) return false;
+  return !promover || (!valorOpcao(parsed, "--pasta") && !modo);
 }
 
 function validarSync(args: readonly string[]): boolean {

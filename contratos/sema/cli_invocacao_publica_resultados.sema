@@ -1,0 +1,187 @@
+module sema.produto.cli_invocacao_publica.resultados {
+  docs {
+    resumo: "Define o envelope geral de resultado JSON da CLI publica: schema result/v1, oito campos exatos, comando canonico, codigo estavel, mensagem nula ou segura e payload JSON obrigatorio sem restricao ao formato do valor."
+    status: "MODELADA"
+    arquivo: "contratos/sema/cli_invocacao_publica.sema"
+    arquivo: "contratos/sema/cli_invocacao_publica_handlers.sema"
+    arquivo: "contratos/sema/fronteira_repositorios_empacotamento_smoke.sema"
+    arquivo: "docs/cli.md"
+    arquivo: "docs/commands.md"
+    arquivo: "docs/testing.md"
+  }
+
+  type EnvelopeResultadoJsonV1 {
+    fields {
+      schemaVersion: Texto
+      ok: Booleano
+      kind: TipoResultadoPublicoCli
+      command: Texto
+      code: Texto
+      message: Json
+      exitCode: Inteiro
+      payload: Json
+    }
+    invariants {
+      schemaVersion deve_ser sema_cli_result_v1
+      kind deve_ser em [SUCCESS, DOMAIN_ERROR]
+      command deve_ser forma_canonica_da_gramatica_publica
+      code deve_ser em [CLI_SUCCESS, CLI_DOMAIN_ERROR]
+      message deve_ser nulo_ou_texto_publico_seguro
+      payload existe
+    }
+  }
+
+  enum TipoResultadoPublicoCli {
+    SUCCESS,
+    DOMAIN_ERROR
+  }
+
+  task criar_envelope_resultado_json_v1 {
+    input {
+      comando: Texto required
+      codigoSaida: Inteiro required
+      stdout: Texto required
+    }
+    output {
+      envelope: EnvelopeResultadoJsonV1
+      oito_campos_exatos: Booleano
+      coerencia_resultado: Booleano
+      payload_json_preservado: Booleano
+      mensagem_publica_segura: Booleano
+    }
+    rules {
+      comando deve_ser forma_canonica_retornada_pela_gramatica_publica
+      codigoSaida deve_ser inteiro_entre_zero_e_255
+      stdout deve_ser captura_integral_do_runtime_sem_stderr
+    }
+    forbidden {
+      usar_schema_sema_cli_control_v1_para_resultado_de_handler
+      usar_data_no_lugar_de_payload
+      omitir_payload_quando_o_valor_for_nulo
+      restringir_payload_a_objeto
+      acrescentar_campo_ao_envelope_resultado
+      omitir_campo_do_envelope_resultado
+      aceitar_command_derivado_de_argv_bruto
+      incluir_stack_caminho_absoluto_segredo_ou_argv_em_message
+      usar_cli_success_em_domain_error
+      usar_cli_domain_error_em_success
+      criar_wrapper_result_v1_dentro_de_payload
+    }
+    impl {
+      ts: cli.src.resultado_cli.criarEnvelopeResultadoCliV1
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/resultadoCli.ts"
+      arquivo: "pacotes/cli/src/cliGrammar.ts"
+      arquivo: "pacotes/cli/src/saidaCli.ts"
+      arquivo: "scripts/cli-publico/resultado-cli.mjs"
+      arquivo: "testes/unidade/cli-resultado-v3.test.ts"
+      arquivo: "testes/integracao/cli-resultado-v3.test.ts"
+      simbolo: cli.src.resultado_cli.criarEnvelopeResultadoCliV1
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "nenhuma_mutacao_permitida"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      envelope existe
+      envelope deve_ser schema_sema_cli_result_v1
+      envelope deve_ser conter_exatamente_oito_campos
+      envelope deve_ser conter_payload_mesmo_quando_nulo
+      envelope deve_ser derivado_apenas_de_comando_codigo_saida_e_stdout
+      envelope deve_ser success_com_message_nula quando codigoSaida == 0
+      envelope deve_ser domain_error_com_message_publica_segura quando codigoSaida > 0
+      oito_campos_exatos == verdadeiro
+      coerencia_resultado == verdadeiro
+      payload_json_preservado == verdadeiro
+      mensagem_publica_segura == verdadeiro
+    }
+    tests {
+      caso "sucesso aceita payload JSON escalar" {
+        given {
+          comando: "resumo"
+          codigoSaida: 0
+          stdout: 42
+        }
+
+        expect {
+          sucesso: verdadeiro
+          oito_campos_exatos: verdadeiro
+          coerencia_resultado: verdadeiro
+          payload_json_preservado: verdadeiro
+        }
+      }
+      caso "erro de dominio aceita payload JSON nulo" {
+        given {
+          comando: "validar"
+          codigoSaida: 2
+          stdout: "null"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          oito_campos_exatos: verdadeiro
+          coerencia_resultado: verdadeiro
+          payload_json_preservado: verdadeiro
+          mensagem_publica_segura: verdadeiro
+        }
+      }
+    }
+  }
+
+  task emitir_resultado_invocacao_publica {
+    input {
+      envelope: EnvelopeResultadoJsonV1 required
+      modo_json: Booleano required
+    }
+    output {
+      stdout_json_unico: Booleano
+      stderr_vazio: Booleano
+      codigo_saida: Inteiro
+      serializacao_unica: Booleano
+    }
+    rules {
+      modo_json == verdadeiro
+      envelope deve_ser validado_antes_da_primeira_escrita_publica
+    }
+    forbidden {
+      emitir_resultado_em_stderr
+      emitir_log_antes_ou_depois_do_envelope
+      emitir_mais_de_um_documento_json
+      serializar_envelope_duas_vezes
+      aceitar_envelope_controle_como_resultado
+      aceitar_saida_bruta_de_handler_ou_subprocesso
+    }
+    impl {
+      ts: cli.src.saida_cli.emitirResultadoCliJsonV1
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/saidaCli.ts"
+      arquivo: "pacotes/cli/src/bin.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "scripts/cli-publico/resultado-cli.mjs"
+      arquivo: "scripts/testar-pacote-cli-publico.mjs"
+      arquivo: "testes/unidade/cli-resultado-v3.test.ts"
+      arquivo: "testes/integracao/cli-resultado-v3.test.ts"
+      simbolo: cli.src.saida_cli.emitirResultadoCliJsonV1
+      simbolo: cli.src.bin.executarCliPublica
+      simbolo: scripts.testar_pacote_cli_publico.main
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "50ms"
+      retry: "nenhum"
+      compensacao: "nenhuma_saida_parcial_permitida"
+      criticidade_operacional: alta
+    }
+    guarantees {
+      stdout_json_unico == verdadeiro
+      stderr_vazio == verdadeiro
+      codigo_saida deve_ser igual_a_envelope_exit_code
+      serializacao_unica == verdadeiro
+    }
+  }
+}

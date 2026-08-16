@@ -8,6 +8,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
+import { extrairPayloadResultadoCliV1 } from "../helpers/resultado-cli-v1.ts";
 import {
   criarProjetoAngularConsumer,
   criarProjetoAngularStandaloneConsumer,
@@ -27,10 +28,24 @@ import {
 const CLI = path.resolve("pacotes/cli/dist/bin.js");
 const SEMA_SMOKE_REAL = process.env.SEMA_SMOKE_REAL === "1";
 function executarImportacao(args: string[], cwd?: string) {
-  return spawnSync(process.execPath, [CLI, ...args], {
+  const resultado = spawnSync(process.execPath, [CLI, ...args], {
     stdio: "pipe",
     encoding: "utf8",
     cwd,
+  });
+  return Object.assign(resultado, {
+    comandoResultadoCli: args[0] ?? "",
+    exitCodeResultadoCli: resultado.status,
+  });
+}
+function extrairPayloadExecucaoCli<T = any>(execucao: {
+  stdout: string;
+  comandoResultadoCli: string;
+  exitCodeResultadoCli: number | null;
+}): T {
+  return extrairPayloadResultadoCliV1<T>(execucao.stdout, {
+    command: execucao.comandoResultadoCli,
+    exitCode: execucao.exitCodeResultadoCli,
   });
 }
 function registrarSmokeReal(condicao: boolean, nome: string, corpo: () => Promise<void> | void) {
@@ -52,7 +67,7 @@ registrarSmokeReal(existsSync("C:\\GitHub\\Teste2\\backend"), "smoke real: impor
       const execucao = executarImportacao(["importar", "nestjs", "C:\\GitHub\\Teste2\\backend", "--saida", baseSaida, "--json"], path.resolve("."));
       assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-      const json = JSON.parse(execucao.stdout);
+      const json = extrairPayloadExecucaoCli(execucao);
       assert.equal(json.resumo.sucesso, true);
       assert.equal(json.resumo.modulos >= 1, true);
       assert.equal(json.resumo.rotas >= 1, true);
@@ -73,7 +88,7 @@ registrarSmokeReal(existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")
 
       const execucaoRaiz = executarImportacao(["importar", "nextjs", diretorioRaiz, "--saida", baseRaiz, "--json"], path.resolve("."));
       assert.equal(execucaoRaiz.status, 0, execucaoRaiz.stderr || execucaoRaiz.stdout);
-      const jsonRaiz = JSON.parse(execucaoRaiz.stdout);
+      const jsonRaiz = extrairPayloadExecucaoCli(execucaoRaiz);
       assert.equal(jsonRaiz.resumo.sucesso, true);
       assert.equal(jsonRaiz.resumo.modulos >= 1, true);
       assert.equal(jsonRaiz.resumo.rotas >= 1, true);
@@ -85,14 +100,14 @@ registrarSmokeReal(existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")
 
       const execucaoApi = executarImportacao(["importar", "nextjs", diretorioApi, "--saida", baseApi, "--json"], path.resolve("."));
       assert.equal(execucaoApi.status, 0, execucaoApi.stderr || execucaoApi.stdout);
-      const jsonApi = JSON.parse(execucaoApi.stdout);
+      const jsonApi = extrairPayloadExecucaoCli(execucaoApi);
       assert.equal(jsonApi.resumo.sucesso, true);
       assert.equal(jsonApi.resumo.modulos >= 1, true);
       assert.equal(jsonApi.resumo.rotas >= 1, true);
 
       const execucaoSubpasta = executarImportacao(["importar", "nextjs", diretorioSubpasta, "--saida", baseSubpasta, "--json"], path.resolve("."));
       assert.equal(execucaoSubpasta.status, 0, execucaoSubpasta.stderr || execucaoSubpasta.stdout);
-      const jsonSubpasta = JSON.parse(execucaoSubpasta.stdout);
+      const jsonSubpasta = extrairPayloadExecucaoCli(execucaoSubpasta);
       assert.equal(jsonSubpasta.resumo.sucesso, true);
       assert.equal(jsonSubpasta.resumo.modulos, 1);
       assert.equal(jsonSubpasta.resumo.rotas >= 1, true);
@@ -105,7 +120,7 @@ registrarSmokeReal(existsSync("C:\\GitHub\\Gestech\\Lothar.io\\apps\\dashboard")
 
       const validacaoSubpasta = executarImportacao(["validar", baseSubpasta, "--json"], path.resolve("."));
       assert.equal(validacaoSubpasta.status, 0, validacaoSubpasta.stderr || validacaoSubpasta.stdout);
-      const jsonValidacao = JSON.parse(validacaoSubpasta.stdout);
+      const jsonValidacao = extrairPayloadExecucaoCli(validacaoSubpasta);
       assert.equal(jsonValidacao.sucesso, true);
     } finally {
       await rm(baseRaiz, { recursive: true, force: true });
@@ -121,7 +136,7 @@ for (const projetoPython of ["C:\\GitHub\\BotSauro", "C:\\GitHub\\FuteBot"]) {
         const execucao = executarImportacao(["importar", "python", projetoPython, "--saida", baseSaida, "--json"], path.resolve("."));
         assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-        const json = JSON.parse(execucao.stdout);
+        const json = extrairPayloadExecucaoCli(execucao);
         assert.equal(json.resumo.sucesso, true);
         assert.equal(json.resumo.modulos >= 1, true);
         assert.equal(json.resumo.tarefas >= 1, true);
@@ -149,7 +164,7 @@ test("cli importa projeto Next.js consumer a partir do bridge e inventaria super
     ]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "nextjs-consumer");
     assert.equal(json.resumo.sucesso, true);
     assert.equal(json.resumo.modulos, 1);
@@ -184,7 +199,7 @@ test("cli importa projeto React Vite consumer a partir do bridge e inventaria pa
     ]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "react-vite-consumer");
     assert.equal(json.resumo.sucesso, true);
 
@@ -215,7 +230,7 @@ test("cli importa projeto Angular consumer a partir do bridge e inventaria route
     ]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "angular-consumer");
     assert.equal(json.resumo.sucesso, true);
 
@@ -247,7 +262,7 @@ test("cli importa projeto Angular standalone consumer sem routes e inventaria sh
     ]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "angular-consumer");
     assert.equal(json.resumo.sucesso, true);
 
@@ -279,7 +294,7 @@ test("cli importa projeto Flutter consumer a partir do bridge e inventaria route
     ]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "flutter-consumer");
     assert.equal(json.resumo.sucesso, true);
 
@@ -303,7 +318,7 @@ test("cli importa projeto Firebase worker legado e gera rascunho com impl ts e h
     const execucao = executarImportacao(["importar", "firebase", base, "--saida", path.join(base, "sema"), "--json"]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "firebase");
     assert.equal(json.resumo.sucesso, true);
     assert.equal(json.resumo.tarefas >= 3, true);
@@ -351,7 +366,7 @@ export class PagamentosService {
     const execucao = executarImportacao(["importar", "typescript", base, "--saida", path.join(base, "sema"), "--json"]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "typescript");
     assert.equal(json.resumo.sucesso, true);
     assert.equal(json.resumo.tarefas, 2);
@@ -385,7 +400,7 @@ def liberar(transacao_id: str) -> bool:
     const execucao = executarImportacao(["importar", "python", base, "--saida", path.join(base, "sema"), "--json"]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "python");
     assert.equal(json.resumo.sucesso, true);
     assert.equal(json.resumo.tarefas, 2);
@@ -416,7 +431,7 @@ test("cli importa projeto Dart generico e gera task com impl dart", async () => 
     const execucao = executarImportacao(["importar", "dart", base, "--saida", path.join(base, "sema"), "--json"]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "dart");
     assert.equal(json.resumo.sucesso, true);
     assert.equal(json.resumo.tarefas, 1);
@@ -438,7 +453,7 @@ test("cli importa projeto ASP.NET Core legado e gera route + task com impl cs", 
     const execucao = executarImportacao(["importar", "dotnet", base, "--saida", path.join(base, "sema"), "--json"]);
     assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 
-    const json = JSON.parse(execucao.stdout);
+    const json = extrairPayloadExecucaoCli(execucao);
     assert.equal(json.fonte, "dotnet");
     assert.equal(json.resumo.sucesso, true);
     assert.equal(json.resumo.rotas >= 2, true);

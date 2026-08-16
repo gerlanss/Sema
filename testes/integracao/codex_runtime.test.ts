@@ -18,6 +18,7 @@ import {
 } from "../../pacotes/cli/src/agentEntryPoints.ts";
 import { avaliarDependenciasVerificacao } from "../../pacotes/cli/src/doctorCommand.ts";
 import { PACOTES_RUNTIME } from "../../scripts/empacotar-cli-publica.mjs";
+import { extrairPayloadResultadoCliV1 } from "../helpers/resultado-cli-v1.ts";
 
 const CLI = path.resolve("pacotes/cli/dist/bin.js");
 
@@ -97,7 +98,10 @@ test("resumo de modulo emite exatamente o payload contratado", () => {
   });
 
   assert.equal(execucao.status, 0, execucao.stderr);
-  const payload = JSON.parse(execucao.stdout);
+  const payload = extrairPayloadResultadoCliV1(execucao.stdout, {
+    command: "resumo",
+    exitCode: execucao.status,
+  });
   assert.deepEqual(Object.keys(payload), [
     "comando",
     "modo",
@@ -150,7 +154,10 @@ test("resumo de projeto emite exatamente o payload contratado", () => {
   });
 
   assert.equal(execucao.status, 0, execucao.stderr);
-  const payload = JSON.parse(execucao.stdout);
+  const payload = extrairPayloadResultadoCliV1(execucao.stdout, {
+    command: "resumo",
+    exitCode: execucao.status,
+  });
   assert.deepEqual(Object.keys(payload), [
     "comando",
     "modo",
@@ -204,7 +211,10 @@ test("inspecionar não fabrica evidência de código por padrão", () => {
   });
 
   assert.equal(execucao.status, 0, execucao.stderr);
-  const payload = JSON.parse(execucao.stdout);
+  const payload = extrairPayloadResultadoCliV1(execucao.stdout, {
+    command: "inspecionar",
+    exitCode: execucao.status,
+  });
   assert.equal(payload.configuracao.analiseDrift.modo, "none");
   assert.equal(payload.configuracao.analiseDrift.executada, false);
   assert.equal(payload.configuracao.analiseDrift.sucesso, null);
