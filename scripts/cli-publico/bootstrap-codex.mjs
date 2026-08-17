@@ -90,9 +90,18 @@ export async function validarBootstrapCodexInstalado({
   if (await readFile(path.join(projetoCodex, "README.md"), "utf8") !== readmeOriginal) {
     throw new Error("The installed CLI overwrote an existing README during Codex bootstrap.");
   }
+  if (!(await existe(path.join(projetoCodex, "exemplos", "crud_simples.sema")))) {
+    throw new Error("The installed CLI did not materialize the starter official example exemplos/crud_simples.sema.");
+  }
+  for (const arquivoExemplo of exemplosInterativosPublicos) {
+    if (await existe(path.join(projetoCodex, arquivoExemplo))) {
+      throw new Error(`The installed CLI materialized the full example package without --com-exemplos: ${arquivoExemplo}.`);
+    }
+  }
+  executarCliInstalada(["iniciar", "--template", "base", "--com-exemplos"], projetoCodex);
   for (const arquivoExemplo of exemplosInterativosPublicos) {
     if (!(await existe(path.join(projetoCodex, arquivoExemplo)))) {
-      throw new Error(`The installed CLI did not materialize nested official example ${arquivoExemplo}.`);
+      throw new Error(`The installed CLI did not materialize nested official example ${arquivoExemplo} after --com-exemplos.`);
     }
   }
   await mkdir(path.join(projetoCodex, ".github"), { recursive: true });
