@@ -301,53 +301,53 @@ export function converterDatabase(database: BlocoGenericoAst): IrBancoDados {
       .filter((item): item is IrRecursoPersistencia => Boolean(item)),
   };
 }
+const ORIGENS_INTEROP_IMPLEMENTACAO: Record<string, IrImplementacaoTask["origem"]> = {
+  ts: "ts",
+  typescript: "ts",
+  js: "js",
+  javascript: "js",
+  py: "py",
+  python: "py",
+  dart: "dart",
+  lua: "lua",
+  cs: "cs",
+  csharp: "cs",
+  dotnet: "cs",
+  java: "java",
+  go: "go",
+  golang: "go",
+  rust: "rust",
+  rs: "rust",
+  cpp: "cpp",
+  cxx: "cpp",
+  cc: "cpp",
+  "c++": "cpp",
+  php: "php",
+};
+const PAPEIS_IMPLEMENTACAO_IR = new Set(["rota", "servico", "persistencia", "repositorio"]);
+
 export function converterImplementacoes(bloco?: BlocoGenericoAst): IrImplementacaoTask[] {
   const implementacoes: IrImplementacaoTask[] = [];
   for (const campo of bloco?.campos ?? []) {
-    const origem = campo.nome.toLowerCase();
-    if (origem === "ts" || origem === "typescript") {
-      implementacoes.push({ origem: "ts", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
+    const segmentos = campo.nome.toLowerCase().split("_");
+    if (segmentos.length > 2) {
       continue;
     }
-    if (origem === "js" || origem === "javascript") {
-      implementacoes.push({ origem: "js", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
+    const origem = ORIGENS_INTEROP_IMPLEMENTACAO[segmentos[0] ?? ""];
+    if (!origem) {
       continue;
     }
-    if (origem === "py" || origem === "python") {
-      implementacoes.push({ origem: "py", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
+    const papel = segmentos[1];
+    if (papel !== undefined && !PAPEIS_IMPLEMENTACAO_IR.has(papel)) {
       continue;
     }
-    if (origem === "dart") {
-      implementacoes.push({ origem: "dart", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-      continue;
-    }
-    if (origem === "lua") {
-      implementacoes.push({ origem: "lua", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-      continue;
-    }
-    if (origem === "cs" || origem === "csharp" || origem === "dotnet") {
-      implementacoes.push({ origem: "cs", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-      continue;
-    }
-    if (origem === "java") {
-      implementacoes.push({ origem: "java", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-      continue;
-    }
-    if (origem === "go" || origem === "golang") {
-      implementacoes.push({ origem: "go", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-      continue;
-    }
-    if (origem === "rust" || origem === "rs") {
-      implementacoes.push({ origem: "rust", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-      continue;
-    }
-    if (origem === "cpp" || origem === "cxx" || origem === "cc" || origem === "c++") {
-      implementacoes.push({ origem: "cpp", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-      continue;
-    }
-    if (origem === "php") {
-      implementacoes.push({ origem: "php", caminho: campo.valor, resolucaoImpl: campo.valor, statusImpl: "nao_verificado" });
-    }
+    implementacoes.push({
+      origem,
+      papel: papel as IrImplementacaoTask["papel"],
+      caminho: campo.valor,
+      resolucaoImpl: campo.valor,
+      statusImpl: "nao_verificado",
+    });
   }
   return implementacoes;
 }

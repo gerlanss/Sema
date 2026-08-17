@@ -1,3 +1,5 @@
+// SEMA-GOVERNED: sema.produto.dsl_impl
+// Descrição: modelos do IR do nucleo com impl multi-papel por camada.
 import type { Diagnostico } from "../diagnosticos/index.js";
 import type {
   ContratoErroRouteSemantico,
@@ -50,6 +52,7 @@ export interface IrCampo {
 export interface IrImplementacaoTask {
   origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
   caminho: string;
+  papel?: "rota" | "servico" | "persistencia" | "repositorio";
   origemArquivo?: string;
   origemSimbolo?: string;
   resolucaoImpl?: string;

@@ -87,6 +87,20 @@ impl {
 
 `sema compilar --alvo javascript` defines a generation target. `impl { js: ... }` defines the live-code origin linked to the contract. They are different layers and both are valid.
 
+## Layered `impl` Roles
+
+Layered code (route + service + persistence in the same language) can declare one `impl` per role. Append a supported role to the origin: `rota`, `servico`, `persistencia` or `repositorio`.
+
+```sema
+impl {
+  ts_rota: server.routes.monitores.criarMonitor
+  ts_servico: server.services.monitores.criarMonitor
+  ts_persistencia: server.repositories.monitores.criar
+}
+```
+
+Each origin-plus-role pair must appear at most once; the bare origin (for example `ts`) stays valid for single-layer tasks, and drift resolves every role independently.
+
 ## Small Canonical Lists
 
 - `effects`: `persistencia`, `consulta`, `evento`, `auditoria`, `db.write`, `queue.publish`, `fs.write`, `network.egress`, `secret.read`, `shell.exec`.

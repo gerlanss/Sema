@@ -1,0 +1,100 @@
+module sema.produto.dsl_impl {
+  docs {
+    resumo: "Impl multi-papel por camada: uma mesma task rastreia rota, servico, persistencia e repositorio da mesma origem sem meia-verdade estrutural."
+    arquivo: "docs/syntax.md"
+  }
+
+  task validar_impl_multi_papel_por_camada {
+    input {
+      contrato_alvo: Texto required
+    }
+    output {
+      papeis_aceitos: Booleano
+      origem_papel_unico_por_combinacao: Booleano
+      origem_nua_mantida: Booleano
+      papel_invalido_rejeitado: Booleano
+      cada_papel_resolvido_pelo_drift: Booleano
+    }
+    rules {
+      contrato_alvo deve_ser informado
+    }
+    authz {
+      escopo: sema.dsl.impl_validar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+      }
+      output {
+        papeis_aceitos: interno
+        origem_papel_unico_por_combinacao: interno
+        origem_nua_mantida: interno
+        papel_invalido_rejeitado: interno
+        cada_papel_resolvido_pelo_drift: interno
+      }
+    }
+    audit {
+      evento: sema.dsl.impl_validado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      aceitar_papel_fora_do_catalogo
+      duplicar_combinacao_de_origem_e_papel
+      quebrar_contratos_com_impl_nu_existente
+      resolver_apenas_o_primeiro_papel_no_drift
+    }
+    impl {
+      ts: nucleo.src.semantico.analisador_part01.validarImplementacoesTask
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/analisador.part01.ts"
+      arquivo: "pacotes/nucleo/src/ir/conversor.part01.ts"
+      arquivo: "pacotes/nucleo/src/ir/modelos.ts"
+      arquivo: "testes/unidade/impl-multi-papel.test.ts"
+      simbolo: nucleo.src.semantico.analisador_part01.validarImplementacoesTask
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "nenhuma"
+      criticidade_operacional: media
+    }
+    guarantees {
+      papeis_aceitos existe
+      origem_papel_unico_por_combinacao existe
+      origem_nua_mantida == verdadeiro
+      papel_invalido_rejeitado == verdadeiro
+      cada_papel_resolvido_pelo_drift == verdadeiro
+    }
+    error {
+      papel_invalido {
+        mensagem: impl declarou papel fora do catalogo rota servico persistencia repositorio
+        categoria: contrato
+        recuperabilidade: imediata
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+    }
+    tests {
+      caso "task em camadas declara rota servico e persistencia" {
+        given {
+          contrato_alvo: "testes/unidade/impl-multi-papel.test.ts"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          papeis_aceitos: verdadeiro
+          cada_papel_resolvido_pelo_drift: verdadeiro
+        }
+      }
+    }
+  }
+}

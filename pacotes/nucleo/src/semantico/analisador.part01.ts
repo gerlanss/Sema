@@ -88,6 +88,7 @@ export interface InteropSemantico {
 export interface ImplementacaoTaskSemantica {
   origem: "ts" | "js" | "py" | "dart" | "lua" | "cs" | "java" | "go" | "rust" | "cpp" | "php";
   caminho: string;
+  papel?: "rota" | "servico" | "persistencia" | "repositorio";
 }
 export interface ContextoSemantico {
   modulo: string;
@@ -365,6 +366,32 @@ export function coletarErrosTask(task: TaskAst): ErroSemanticoTask[] {
   }
   return [...erros.values()];
 }
+export const PAPEIS_IMPLEMENTACAO_SUPORTADOS = new Set(["rota", "servico", "persistencia", "repositorio"] as const);
+
+export interface NomeCampoImplementacao {
+  origem: ImplementacaoTaskSemantica["origem"];
+  papel?: ImplementacaoTaskSemantica["papel"];
+}
+
+export function normalizarNomeCampoImplementacao(valor: string): NomeCampoImplementacao | undefined {
+  const segmentos = valor.toLowerCase().split("_");
+  if (segmentos.length > 2) {
+    return undefined;
+  }
+  const origem = normalizarOrigemImplementacao(segmentos[0] ?? "");
+  if (!origem) {
+    return undefined;
+  }
+  const papel = segmentos[1];
+  if (papel === undefined) {
+    return { origem };
+  }
+  if (!PAPEIS_IMPLEMENTACAO_SUPORTADOS.has(papel as (typeof PAPEIS_IMPLEMENTACAO_SUPORTADOS extends Set<infer T> ? T : never))) {
+    return undefined;
+  }
+  return { origem, papel: papel as ImplementacaoTaskSemantica["papel"] };
+}
+
 export function coletarResumoTask(task: TaskAst): ResumoTaskSemantico {
   return {
     input: (task.input?.campos ?? []).map(converterCampoSemantico),
@@ -373,8 +400,10 @@ export function coletarResumoTask(task: TaskAst): ResumoTaskSemantico {
     guarantees: (task.guarantees?.linhas ?? []).map((linha) => linha.conteudo),
     implementacoes: (task.impl?.campos ?? [])
       .map((campo) => {
-        const origem = normalizarOrigemImplementacao(campo.nome);
-        return origem ? { origem, caminho: campo.valor } : undefined;
+        const nome = normalizarNomeCampoImplementacao(campo.nome);
+        return nome
+          ? { origem: nome.origem, ...(nome.papel ? { papel: nome.papel } : {}), caminho: campo.valor }
+          : undefined;
       })
       .filter((item): item is ImplementacaoTaskSemantica => Boolean(item)),
   };
@@ -383,39 +412,41 @@ export function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnosti
   if (!task.impl) {
     return;
   }
-  const origens = new Set<string>();
+  const chaves = new Set<string>();
   for (const campo of task.impl.campos) {
-    const origem = normalizarOrigemImplementacao(campo.nome);
-    if (!origem) {
+    const nome = normalizarNomeCampoImplementacao(campo.nome);
+    if (!nome) {
       diagnosticos.push(
         criarDiagnostico(
           "SEM059",
           `Task "${task.nome}" declarou implementacao externa invalida em impl: "${campo.nome}".`,
           "erro",
           campo.intervalo,
-          "Use apenas ts, js, py, dart, lua, cs, java, go, rust, cpp ou php dentro do bloco impl.",
+          "Use ts, js, py, dart, lua, cs, java, go, rust, cpp ou php, opcionalmente com papel: ts_rota, ts_servico, ts_persistencia ou ts_repositorio.",
         ),
       );
       continue;
     }
-    if (origens.has(origem)) {
+    const rotulo = nome.papel ? `${nome.origem}_${nome.papel}` : nome.origem;
+    const chave = `${nome.origem}:${nome.papel ?? "-"}`;
+    if (chaves.has(chave)) {
       diagnosticos.push(
         criarDiagnostico(
           "SEM060",
-          `Task "${task.nome}" declarou mais de uma implementacao ${origem} no bloco impl.`,
+          `Task "${task.nome}" declarou mais de uma implementacao ${rotulo} no bloco impl.`,
           "erro",
           campo.intervalo,
-          "Cada origem externa deve aparecer no maximo uma vez dentro de impl.",
+          "Cada combinacao de origem e papel deve aparecer no maximo uma vez; use papeis distintos como ts_rota e ts_servico para camadas diferentes.",
         ),
       );
       continue;
     }
-    origens.add(origem);
+    chaves.add(chave);
     if (!PADRAO_CAMINHO_INTEROP.test(campo.valor)) {
       diagnosticos.push(
         criarDiagnostico(
           "SEM061",
-          `Task "${task.nome}" declarou caminho invalido para impl ${origem}: "${campo.valor}".`,
+          `Task "${task.nome}" declarou caminho invalido para impl ${rotulo}: "${campo.valor}".`,
           "erro",
           campo.intervalo,
           "Use um identificador de implementacao como pacote.modulo.funcao ou app.servico.metodo.",
