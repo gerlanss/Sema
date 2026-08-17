@@ -41,6 +41,7 @@ export interface ResumoAlvoVerificacao {
   framework: FrameworkGeracao;
   estrutura: EstruturaSaida;
   testesExecutados: boolean;
+  origem?: "executado" | "cache";
 }
 
 export interface ResumoModuloVerificacao {

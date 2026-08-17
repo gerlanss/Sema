@@ -38,17 +38,17 @@ module sema.produto.governanca_ia.drift.mudancas {
         caminhos_confinados: interno
       }
     }
-    forbidden {
-      varrer_raiz_inteira_em_escopo_arquivo_ou_modulo
-      aceitar_arquivo_fora_workspace_por_fallback
-      expor_caminho_externo_no_mapa
-    }
     audit {
       evento: sema.impacto.mapeado
       ator: agente.sema
       correlacao: request_id
       retencao: "30d"
       motivo: obrigatorio
+    }
+    forbidden {
+      varrer_raiz_inteira_em_escopo_arquivo_ou_modulo
+      aceitar_arquivo_fora_workspace_por_fallback
+      expor_caminho_externo_no_mapa
     }
     impl {
       ts: cli.src.drift.gerarMapaImpactoSemantico
@@ -125,17 +125,17 @@ module sema.produto.governanca_ia.drift.mudancas {
         caminhos_confinados: interno
       }
     }
-    forbidden {
-      ler_arquivo_fora_workspace
-      expor_conteudo_ou_caminho_externo_em_sugestao
-      varrer_raiz_inteira_em_escopo_arquivo_ou_modulo
-    }
     audit {
       evento: sema.renomeacao.assistida
       ator: agente.sema
       correlacao: request_id
       retencao: "30d"
       motivo: obrigatorio
+    }
+    forbidden {
+      ler_arquivo_fora_workspace
+      expor_conteudo_ou_caminho_externo_em_sugestao
+      varrer_raiz_inteira_em_escopo_arquivo_ou_modulo
     }
     impl {
       ts: cli.src.drift.assistirRenomeacaoSemantica

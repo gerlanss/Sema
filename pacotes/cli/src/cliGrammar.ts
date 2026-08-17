@@ -485,7 +485,7 @@ function validarComandoBasico(comando: string, args: readonly string[]): boolean
       const estrutura = valorOpcao(parsed, "--estrutura"), framework = valorOpcao(parsed, "--framework");
       return Boolean(alvo && ALVOS_GERACAO.has(alvo)) && (!estrutura || ESTRUTURAS.has(estrutura)) && (!framework || FRAMEWORKS.has(framework));
     }
-    case "verificar": return parsearArgumentos(args, { opcoes: ["--saida"], maxPosicionais: 1 }) !== null;
+    case "verificar": return parsearArgumentos(args, { opcoes: ["--saida", "--alvo"], flags: ["--sem-cache"], maxPosicionais: 1 }) !== null;
     case "formatar": return parsearArgumentos(args, { flags: ["--check"], maxPosicionais: 1 }) !== null;
     case "inspecionar": {
       const parsed = parsearArgumentos(args, { opcoes: ["--drift", "--cache"], flags: ["--com-drift"], maxPosicionais: 1 });

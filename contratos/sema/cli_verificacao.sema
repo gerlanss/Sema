@@ -1,0 +1,131 @@
+module sema.produto.cli_verificacao {
+  docs {
+    resumo: "Verificacao de contratos com escopo explicito por alvo, aviso de stack e reuso de execucao por hash de conteudo fora do workspace."
+    arquivo: "docs/commands.md"
+  }
+
+  task verificar_contratos_com_escopo_e_reuso {
+    input {
+      entrada: Texto required
+      alvo_explicito: Texto
+      sem_cache: Booleano required
+      base_saida: Texto required
+    }
+    output {
+      alvo_unico_respeitado: Booleano
+      escopo_por_stack_avisado: Booleano
+      reuso_por_hash_do_contrato: Booleano
+      origem_do_resultado_exposta: Booleano
+      cache_fora_do_workspace: Booleano
+      cache_nao_autoritativo: Booleano
+      execucao_completa_com_sem_cache: Booleano
+    }
+    rules {
+      alvo_explicito deve_ser alvo_de_geracao_valido_quando_presente
+      alvo_explicito deve_ser unico_quando_presente
+      sem_cache deve_ser respeitado_como_execucao_completa
+    }
+    authz {
+      escopo: sema.verificar.executar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        entrada: interno
+        alvo_explicito: publico
+        sem_cache: publico
+        base_saida: interno
+      }
+      output {
+        alvo_unico_respeitado: interno
+        escopo_por_stack_avisado: interno
+        reuso_por_hash_do_contrato: interno
+        origem_do_resultado_exposta: interno
+        cache_fora_do_workspace: interno
+        cache_nao_autoritativo: interno
+        execucao_completa_com_sem_cache: interno
+      }
+    }
+    audit {
+      evento: sema.verificar.executado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      escrever_cache_de_verificacao_dentro_do_workspace
+      reusar_resultado_com_hash_de_contrato_diferente
+      reusar_resultado_quando_arquivos_gerados_sumiram
+      esconder_origem_cache_no_resumo
+      reportar_sucesso_de_cache_como_execucao_fresca
+      bloquear_verificacao_por_aviso_de_stack
+    }
+    impl {
+      ts: cli.src.verificacao_cache.calcularChaveVerificacao
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/verificacaoCache.ts"
+      arquivo: "pacotes/cli/src/index.part07.ts"
+      arquivo: "pacotes/cli/src/initTemplatesBase.ts"
+      arquivo: "testes/unidade/verificacao-cache.test.ts"
+      simbolo: cli.src.verificacao_cache.calcularChaveVerificacao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "nenhum"
+      compensacao: "executar com --sem-cache quando o cache nao for confiavel"
+      criticidade_operacional: media
+    }
+    guarantees {
+      alvo_unico_respeitado existe
+      escopo_por_stack_avisado existe
+      reuso_por_hash_do_contrato existe
+      origem_do_resultado_exposta == verdadeiro
+      cache_fora_do_workspace == verdadeiro
+      cache_nao_autoritativo == verdadeiro
+      execucao_completa_com_sem_cache == verdadeiro
+    }
+    error {
+      alvo_invalido {
+        mensagem: alvo explicito de verificacao nao e um alvo de geracao valido
+        categoria: negocio
+        recuperabilidade: imediata
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+    }
+    tests {
+      caso "chave muda com conteudo do contrato" {
+        given {
+          entrada: "contratos/demo.sema"
+          alvo_explicito: "typescript"
+          sem_cache: falso
+          base_saida: "./.tmp/verificar"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          reuso_por_hash_do_contrato: verdadeiro
+        }
+      }
+      caso "alvo unico reduz escopo para stack ts" {
+        given {
+          entrada: "."
+          alvo_explicito: "typescript"
+          sem_cache: falso
+          base_saida: "./.tmp/verificar"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          alvo_unico_respeitado: verdadeiro
+        }
+      }
+    }
+  }
+}

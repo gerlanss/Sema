@@ -52,6 +52,68 @@ import {
 } from "./driftOrcamento.js";
 import { REGISTRO_COMANDOS } from "./comandos.js";
 import {
+  SCHEMA_CACHE_VERIFICACAO,
+  calcularChaveVerificacao,
+  carregarCacheVerificacao,
+  gravarCacheVerificacao,
+} from "./verificacaoCache.js";
+
+export interface OpcoesVerificar {
+  alvo?: string;
+  semCache?: boolean;
+}
+
+const FONTES_POR_ALVO_SUPORTADO: Record<string, AlvoGeracao[]> = {
+  typescript: ["typescript", "javascript"],
+  javascript: ["typescript", "javascript"],
+  nestjs: ["typescript", "javascript"],
+  express: ["typescript", "javascript"],
+  fastify: ["typescript", "javascript"],
+  nextjs: ["typescript", "javascript"],
+  "nextjs-consumer": ["typescript", "javascript"],
+  "react-vite-consumer": ["typescript", "javascript"],
+  "angular-consumer": ["typescript", "javascript"],
+  firebase: ["typescript", "javascript"],
+  python: ["python"],
+  fastapi: ["python"],
+  flask: ["python"],
+  dart: ["dart"],
+  "flutter-consumer": ["dart"],
+  dotnet: ["dotnet"],
+  java: ["javascript"],
+  lua: ["lua"],
+  php: ["php"],
+  cpp: ["cpp"],
+};
+
+export function alvosSuportadosPelaStack(fontesLegado: string[] | undefined): AlvoGeracao[] | undefined {
+  if (!fontesLegado?.length) {
+    return undefined;
+  }
+  const suportados = new Set<AlvoGeracao>();
+  for (const fonte of fontesLegado) {
+    for (const alvo of FONTES_POR_ALVO_SUPORTADO[fonte] ?? []) {
+      suportados.add(alvo);
+    }
+  }
+  return suportados.size > 0 ? [...suportados] : undefined;
+}
+
+export function avisoEscopoStackVerificacao(
+  fontesLegado: string[] | undefined,
+  alvosEfetivos: AlvoGeracao[],
+): string | undefined {
+  const suportados = alvosSuportadosPelaStack(fontesLegado);
+  if (!suportados) {
+    return undefined;
+  }
+  const foraDaStack = alvosEfetivos.filter((alvo) => alvo !== "html" && alvo !== "css" && !suportados.includes(alvo));
+  if (foraDaStack.length === 0) {
+    return undefined;
+  }
+  return `Alvos fora da stack detectada (${(fontesLegado ?? []).join(", ")}): ${foraDaStack.join(", ")}. Considere reduzir "alvos" no sema.config.json, remover "fontesLegado" auto-declaradas ou usar --alvo unico.`;
+}
+import {
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
   ARQUIVO_SEMA_BOOT,
@@ -286,6 +348,7 @@ export async function comandoVerificar(
   entrada: string | undefined,
   baseSaida: string,
   cwd = process.cwd(),
+  opcoes: OpcoesVerificar = {},
 ): Promise<number> {
   const contextoProjeto = await carregarProjeto(entrada, cwd);
   const modulos = contextoProjeto.modulosSelecionados;
@@ -295,7 +358,16 @@ export async function comandoVerificar(
     return 1;
   }
 
-  const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const alvos = opcoes.alvo
+    ? [opcoes.alvo as AlvoGeracao]
+    : resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const avisoEscopo = avisoEscopoStackVerificacao(
+    contextoProjeto.configCarregada?.config.fontesLegado,
+    alvos,
+  );
+  if (avisoEscopo) {
+    console.warn(avisoEscopo);
+  }
   const configuracoesAlvo = alvos.map((alvo) => ({
     alvo,
     ...resolverConfiguracaoVerificacaoPorAlvo(alvo, contextoProjeto.configCarregada),
@@ -322,13 +394,55 @@ export async function comandoVerificar(
       arquivoFonte: modulo.caminho,
       alvos: [],
     };
+    const conteudoContrato = await readFile(modulo.caminho, "utf8").catch(() => "");
     for (const configuracaoAlvo of configuracoesAlvo) {
       const { alvo, framework, estrutura } = configuracaoAlvo;
       const pastaAlvo = path.join(baseSaida, alvo, nomeSubpastaModulo(modulo.caminho));
+      const chave = calcularChaveVerificacao({
+        versaoCli: pacoteCli.version,
+        versaoNode: process.versions.node ?? "",
+        modulo: ir.nome,
+        alvo,
+        framework: framework ?? "",
+        estrutura,
+        conteudoContrato,
+      });
+      const emCache = opcoes.semCache ? undefined : await carregarCacheVerificacao(chave, pastaAlvo);
+      if (emCache) {
+        resumoModulo.alvos.push({
+          alvo,
+          arquivosGerados: emCache.arquivosGerados.length,
+          quantidadeTestes: emCache.quantidadeTestes,
+          pastaSaida: pastaAlvo,
+          sucesso: emCache.sucesso,
+          framework,
+          estrutura,
+          testesExecutados: false,
+          origem: "cache",
+        });
+        if (!emCache.sucesso) {
+          imprimirResumoVerificacao([...resumos, resumoModulo]);
+          console.error(`Falha registrada em cache na verificacao do modulo ${modulo.caminho} para o alvo ${alvo}.`);
+          return 1;
+        }
+        continue;
+      }
       const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
       const escrita = await escreverArquivos(pastaAlvo, arquivos, { artefatoGerado: true });
       artefatosGeradosAcimaDoLimite.push(...escrita.artefatosGeradosAcimaDoLimite);
       const { execucao, testesExecutados } = executarTestesParaVerificacao(alvo, pastaAlvo, arquivos, framework);
+      await gravarCacheVerificacao({
+        schemaVersion: SCHEMA_CACHE_VERIFICACAO,
+        chave,
+        versaoCli: pacoteCli.version,
+        alvo,
+        modulo: ir.nome,
+        sucesso: execucao.codigoSaida === 0,
+        quantidadeTestes: execucao.quantidadeTestes,
+        testesExecutados,
+        arquivosGerados: arquivos.map((arquivo) => arquivo.caminhoRelativo),
+        geradoEm: new Date().toISOString(),
+      });
       resumoModulo.alvos.push({
         alvo,
         arquivosGerados: arquivos.length,
@@ -338,6 +452,7 @@ export async function comandoVerificar(
         framework,
         estrutura,
         testesExecutados,
+        origem: "executado",
       });
       if (execucao.codigoSaida !== 0) {
         imprimirResumoVerificacao([...resumos, resumoModulo]);
@@ -361,6 +476,7 @@ export async function comandoVerificarJson(
   entrada: string | undefined,
   baseSaida: string,
   cwd = process.cwd(),
+  opcoes: OpcoesVerificar = {},
 ): Promise<number> {
   const contextoProjeto = await carregarProjeto(entrada, cwd);
   const modulos = contextoProjeto.modulosSelecionados;
@@ -376,7 +492,13 @@ export async function comandoVerificarJson(
     return 1;
   }
 
-  const alvos = resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const alvos = opcoes.alvo
+    ? [opcoes.alvo as AlvoGeracao]
+    : resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const avisoEscopo = avisoEscopoStackVerificacao(
+    contextoProjeto.configCarregada?.config.fontesLegado,
+    alvos,
+  );
   const configuracoesAlvo = alvos.map((alvo) => ({
     alvo,
     ...resolverConfiguracaoVerificacaoPorAlvo(alvo, contextoProjeto.configCarregada),
@@ -418,14 +540,55 @@ export async function comandoVerificarJson(
       alvos: [],
       saidaTestes: [],
     };
+    const conteudoContrato = await readFile(modulo.caminho, "utf8").catch(() => "");
 
     for (const configuracaoAlvo of configuracoesAlvo) {
       const { alvo, framework, estrutura } = configuracaoAlvo;
       const pastaAlvo = path.join(baseSaida, alvo, nomeSubpastaModulo(modulo.caminho));
+      const chave = calcularChaveVerificacao({
+        versaoCli: pacoteCli.version,
+        versaoNode: process.versions.node ?? "",
+        modulo: ir.nome,
+        alvo,
+        framework: framework ?? "",
+        estrutura,
+        conteudoContrato,
+      });
+      const emCache = opcoes.semCache ? undefined : await carregarCacheVerificacao(chave, pastaAlvo);
+      if (emCache) {
+        resumoModulo.alvos.push({
+          alvo,
+          arquivosGerados: emCache.arquivosGerados.length,
+          quantidadeTestes: emCache.quantidadeTestes,
+          pastaSaida: pastaAlvo,
+          sucesso: emCache.sucesso,
+          framework,
+          estrutura,
+          testesExecutados: false,
+          origem: "cache",
+        });
+        resumoModulo.saidaTestes.push({ alvo, stdout: "", stderr: `resultado reutilizado do cache de verificacao (chave ${chave.slice(0, 12)})` });
+        if (!emCache.sucesso) {
+          codigoSaida = 1;
+        }
+        continue;
+      }
       const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
       const escrita = await escreverArquivos(pastaAlvo, arquivos, { artefatoGerado: true });
       artefatosGeradosAcimaDoLimite.push(...escrita.artefatosGeradosAcimaDoLimite);
       const { execucao, testesExecutados } = executarTestesParaVerificacao(alvo, pastaAlvo, arquivos, framework, true);
+      await gravarCacheVerificacao({
+        schemaVersion: SCHEMA_CACHE_VERIFICACAO,
+        chave,
+        versaoCli: pacoteCli.version,
+        alvo,
+        modulo: ir.nome,
+        sucesso: execucao.codigoSaida === 0,
+        quantidadeTestes: execucao.quantidadeTestes,
+        testesExecutados,
+        arquivosGerados: arquivos.map((arquivo) => arquivo.caminhoRelativo),
+        geradoEm: new Date().toISOString(),
+      });
       resumoModulo.alvos.push({
         alvo,
         arquivosGerados: arquivos.length,
@@ -435,6 +598,7 @@ export async function comandoVerificarJson(
         framework,
         estrutura,
         testesExecutados,
+        origem: "executado",
       });
       resumoModulo.saidaTestes.push({ alvo, stdout: execucao.saidaPadrao, stderr: execucao.saidaErro });
       if (execucao.codigoSaida !== 0) {
@@ -455,6 +619,7 @@ export async function comandoVerificarJson(
   console.log(JSON.stringify({
     comando: "verificar",
     sucesso: codigoSaida === 0,
+    avisoEscopo,
     modulos: resumos,
     totais,
     artefatosGeradosAcimaDoLimite,

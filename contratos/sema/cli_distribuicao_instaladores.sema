@@ -135,7 +135,7 @@ module sema.produto.distribuicao_global.instaladores {
         given {
           versao_instalada: "3.0.0"
           resposta_json {
-            schemaVersion: sema.cli.result/v1
+            schemaVersion: sema.cli.result/ v1
             ok: verdadeiro
             kind: SUCCESS
             command: skill
