@@ -11,7 +11,7 @@ not the product boundary.
 - Version: `3.5.0`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-17
-- Reference commit: `5758af5`
+- Reference commit: `0207431`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
