@@ -129,15 +129,16 @@ export function normalizarCaminhoRota(caminho?: string): string {
   if (!caminho) {
     return "/";
   }
-  const limpo = normalizarCaminhoFlask(caminho.trim().replace(/\s*\/\s*/g, "/"));
+  const limpo = normalizarCaminhoFlask(caminho.trim().replace(/\s*\/\s*/g, "/"))
+    .replace(/:([A-Za-z_]\w*)/g, "{$1}");
   const comBarra = limpo.startsWith("/") ? limpo : `/${limpo}`;
   const normalizado = comBarra.replace(/\/+/g, "/");
   return normalizado.endsWith("/") && normalizado !== "/" ? normalizado.slice(0, -1) : normalizado;
 }
 
-export function extrairFontesHttpTypeScript(fontesLegado: FonteLegado[]): Array<"nestjs" | "nextjs" | "firebase"> {
-  return fontesLegado.filter((fonte): fonte is "nestjs" | "nextjs" | "firebase" =>
-    fonte === "nestjs" || fonte === "nextjs" || fonte === "firebase");
+export function extrairFontesHttpTypeScript(fontesLegado: FonteLegado[]): Array<"nestjs" | "nextjs" | "firebase" | "express" | "fastify"> {
+  return fontesLegado.filter((fonte): fonte is "nestjs" | "nextjs" | "firebase" | "express" | "fastify" =>
+    fonte === "nestjs" || fonte === "nextjs" || fonte === "firebase" || fonte === "express" || fonte === "fastify");
 }
 
 export function extrairFontesHttpBackend(fontesLegado: FonteLegado[]): Array<"dotnet" | "java" | "go" | "rust" | "php"> {
@@ -292,12 +293,12 @@ export function sugerirCandidatosParaTaskSemImpl(simbolos: SimboloResolvido[], n
   )).slice(0, 5);
 }
 
-export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust" | "php"> {
+export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "express" | "fastify" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust" | "php"> {
   const fontesTs = extrairFontesHttpTypeScript(fontesLegado);
   const fontesBackend = extrairFontesHttpBackend(fontesLegado);
   const implTsOuJs = task.implementacoesExternas.find((impl) => impl.origem === "ts" || impl.origem === "js");
   if (implTsOuJs) {
-    const esperadas = new Set<"nestjs" | "nextjs" | "firebase">();
+    const esperadas = new Set<"nestjs" | "nextjs" | "firebase" | "express" | "fastify">();
     if (/\.route\.(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/i.test(implTsOuJs.caminho) || /\.route\./i.test(implTsOuJs.caminho)) {
       esperadas.add("nextjs");
     }
@@ -307,13 +308,19 @@ export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]
     if (fontesTs.includes("firebase") && /(apps\.worker|worker|sema_contract_bridge|health)/i.test(implTsOuJs.caminho)) {
       esperadas.add("firebase");
     }
+    if (/\bexpress\b|\broutes?\b|\brouter\b/i.test(implTsOuJs.caminho) && fontesTs.includes("express")) {
+      esperadas.add("express");
+    }
+    if (/\bfastify\b/i.test(implTsOuJs.caminho) && fontesTs.includes("fastify")) {
+      esperadas.add("fastify");
+    }
     if (esperadas.size > 0) {
       return [...esperadas];
     }
     if (fontesTs.length > 0) {
       return fontesTs;
     }
-    return ["nestjs", "nextjs", "firebase"];
+    return ["nestjs", "nextjs", "firebase", "express", "fastify"];
   }
   if (task.implementacoesExternas.some((impl) => impl.origem === "py")) {
     const fontesPython = fontesLegado.filter((fonte): fonte is "fastapi" | "flask" => fonte === "fastapi" || fonte === "flask");

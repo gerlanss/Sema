@@ -23,6 +23,8 @@ import { coletarSuperficiesAngularStandaloneConsumer } from "./angular-consumer-
 
 export type FonteImportacao =
   | "nestjs"
+  | "express"
+  | "fastify"
   | "fastapi"
   | "flask"
   | "nextjs"

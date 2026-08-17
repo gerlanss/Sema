@@ -43,7 +43,7 @@ export interface SimboloResolvido {
 }
 export type ConsumerFramework = "nextjs-consumer" | "react-vite-consumer" | "angular-consumer" | "flutter-consumer";
 export interface RotaResolvida {
-  origem: "nestjs" | "fastapi" | "flask" | "nextjs" | ConsumerFramework | "firebase" | "dotnet" | "java" | "go" | "rust" | "php";
+  origem: "nestjs" | "express" | "fastify" | "fastapi" | "flask" | "nextjs" | ConsumerFramework | "firebase" | "dotnet" | "java" | "go" | "rust" | "php";
   metodo: string;
   caminho: string;
   arquivo: string;

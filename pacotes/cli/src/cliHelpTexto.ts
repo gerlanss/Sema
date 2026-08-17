@@ -117,7 +117,7 @@ export function criarAjudaRaiz(versao: string): string {
       "modos: drift direto usa fresh por padrão; --cache none ainda executa sem cache persistente; resumo/inspecionar usam --drift none por padrão e não fabricam evidência",
       "impacto: sema impacto <arquivo-ou-pasta> --alvo <token> [--mudanca <descricao>] [--escopo <arquivo|modulo|projeto>] [--json]",
       "renomeação: sema renomear-semantico <arquivo-ou-pasta> --de <nome-atual> --para <nome-novo> [--escopo <arquivo|modulo|projeto>] [--json]",
-      "importação: sema importar <nestjs|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|php|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]",
+      "importação: sema importar <nestjs|express|fastify|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|firebase|dotnet|java|go|rust|cpp|php|typescript|python|dart> <diretorio> [--saida <diretorio>] [--namespace <base>] [--json]",
       "validação: sema validar <arquivo-ou-pasta> [--json]",
       "diagnóstico: sema diagnosticos <arquivo.sema> [--json]",
       "geração: sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]",

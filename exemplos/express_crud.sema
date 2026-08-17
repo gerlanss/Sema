@@ -1,0 +1,139 @@
+module exemplos.express.crud {
+  entity Monitor {
+    fields {
+      id: Id
+      nome: Texto
+      url: Texto
+      ativo: Booleano
+    }
+  }
+
+  task criar_monitor {
+    input {
+      nome: Texto required
+      url: Texto required
+    }
+    output {
+      monitor: Monitor
+    }
+    rules {
+      nome deve_ser preenchido
+      url deve_ser preenchido
+    }
+    effects {
+      persistencia Monitor
+      auditoria monitor_criado
+    }
+    guarantees {
+      monitor existe
+    }
+    tests {
+      caso "cria monitor" {
+        given {
+          nome: "API Pagamentos"
+          url: "https://api.exemplo.dev/status"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task listar_monitores {
+    input {
+      ativo: Booleano
+    }
+    output {
+      monitores: Lista
+    }
+    effects {
+      consulta Monitor
+    }
+    guarantees {
+      monitores existe
+    }
+    tests {
+      caso "lista monitores" {
+        given {
+          ativo: verdadeiro
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task remover_monitor {
+    input {
+      id: Id required
+    }
+    output {
+      removido: Booleano
+    }
+    rules {
+      id deve_ser valido
+    }
+    effects {
+      persistencia Monitor
+      auditoria monitor_removido
+    }
+    guarantees {
+      removido == verdadeiro
+    }
+    tests {
+      caso "remove monitor por id" {
+        given {
+          id: "mon_1"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route monitores_criar {
+    metodo: POST
+    caminho: /monitores
+    task: criar_monitor
+    finalidade: cadastro_monitor
+    input {
+      nome: Texto
+      url: Texto
+    }
+    output {
+      monitor: Monitor
+    }
+  }
+
+  route monitores_listar {
+    metodo: GET
+    caminho: /monitores
+    task: listar_monitores
+    finalidade: consulta_monitores
+    input {
+      ativo: Booleano
+    }
+    output {
+      monitores: Lista
+    }
+  }
+
+  route monitores_remover {
+    metodo: DELETE
+    caminho: "/monitores/{id}"
+    task: remover_monitor
+    finalidade: exclusao_monitor
+    input {
+      id: Id
+    }
+    output {
+      removido: Booleano
+    }
+  }
+}

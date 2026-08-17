@@ -25,7 +25,7 @@ import { ArquivoImportado, FonteImportacao, ModuloImportado, ResultadoImportacao
 import { camposDeParametrosRotaBackend, criarCampoResultadoBackend, descreverEfeitosPorHeuristica, inferirDatabasesPorHeuristica, mapearTipoBackendParaSema } from "./importador.part02.js";
 import { caminhoImplGenerico, importarFirebaseBase } from "./importador.part07.js";
 import { acumularModuloImportado, criarModuloImportadoSimples, importarDartBase, importarDotnetBase, importarPythonBase, resolverArquivoRustParaSimbolo, selecionarSimbolosPreferidos } from "./importador.part08.js";
-import { importarNextJsBase, importarTypeScriptBase } from "./importador.part06.js";
+import { importarExpressFastifyBase, importarNextJsBase, importarTypeScriptBase } from "./importador.part06.js";
 import { importarAngularConsumerBase, importarFlutterConsumerBase, importarNextJsConsumerBase, importarReactViteConsumerBase } from "./importador.part04.js";
 import { formatarModuloImportado, moduloParaCodigo, montarArquivoImportado } from "./importador.part05.js";
 
@@ -393,6 +393,10 @@ export async function importarProjetoLegado(
   let modulos: ModuloImportado[] = [];
   if (fonte === "nestjs") {
     modulos = await importarTypeScriptBase(base, namespace, true);
+  } else if (fonte === "express") {
+    modulos = await importarExpressFastifyBase(base, namespace, "express");
+  } else if (fonte === "fastify") {
+    modulos = await importarExpressFastifyBase(base, namespace, "fastify");
   } else if (fonte === "nextjs") {
     modulos = await importarNextJsBase(base, namespace);
   } else if (fonte === "nextjs-consumer") {

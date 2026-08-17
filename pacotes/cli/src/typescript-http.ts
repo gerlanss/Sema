@@ -8,7 +8,7 @@ export type {
   RotaTypeScriptExtraida,
   SemanticaHandlerTypeScriptHttp,
 } from "./typescript-http-modelos.js";
-export { extrairRotasTypeScriptHttp } from "./typescript-http-rotas.js";
+export { extrairRotasExpressFastify, extrairRotasTypeScriptHttp } from "./typescript-http-rotas.js";
 export {
   inferirSemanticaHandlerTypeScriptHttp,
   localizarExportacaoTypeScriptHttp,

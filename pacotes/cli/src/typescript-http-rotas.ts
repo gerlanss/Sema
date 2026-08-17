@@ -142,6 +142,105 @@ export function extrairRotasNodeWorker(sourceFile: ts.SourceFile, relacaoArquivo
   return deduplicarRotas(rotas);
 }
 
+export function extrairRotasExpressFastify(sourceFile: ts.SourceFile): RotaTypeScriptExtraida[] {
+  const textoArquivo = sourceFile.getFullText();
+  const importouExpress = /(?:from\s+["']express["']|require\(\s*["']express["']\s*\))/.test(textoArquivo);
+  const importouFastify = /(?:from\s+["']fastify["']|require\(\s*["']fastify["']\s*\))/.test(textoArquivo);
+  if (!importouExpress && !importouFastify) {
+    return [];
+  }
+
+  const rotas: RotaTypeScriptExtraida[] = [];
+
+  const escolherOrigemChamada = (receptor: string): "express" | "fastify" | undefined => {
+    if (/fastify/i.test(receptor)) {
+      return "fastify";
+    }
+    if (importouExpress) {
+      return "express";
+    }
+    if (importouFastify) {
+      return "fastify";
+    }
+    return undefined;
+  };
+
+  const visitar = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
+      const receptor = node.expression.expression.text;
+      const nomeMetodo = node.expression.name.text.toLowerCase();
+
+      if (nomeMetodo === "route" && node.arguments[0] && ts.isObjectLiteralExpression(node.arguments[0]) && importouFastify) {
+        let metodo: string | undefined;
+        let caminho: string | undefined;
+        for (const propriedade of node.arguments[0].properties) {
+          if (!ts.isPropertyAssignment(propriedade) || !ts.isIdentifier(propriedade.name)) {
+            continue;
+          }
+          const valor = propriedade.initializer && ts.isStringLiteralLike(propriedade.initializer)
+            ? propriedade.initializer.text
+            : undefined;
+          if (propriedade.name.text === "method" && valor) {
+            metodo = valor.toUpperCase();
+          }
+          if (propriedade.name.text === "url" && valor) {
+            caminho = valor;
+          }
+        }
+        if (metodo && caminho?.startsWith("/") && METODOS_HTTP.has(metodo)) {
+          rotas.push({
+            origem: "fastify",
+            metodo,
+            caminho: converterCaminhoParametros(caminho),
+            simbolo: receptor,
+            parametros: extrairParametrosCaminhoDoisPontos(caminho),
+          });
+        }
+      } else if (nomeMetodo === "all" || METODOS_HTTP.has(nomeMetodo.toUpperCase())) {
+        const caminho = node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])
+          ? node.arguments[0].text
+          : undefined;
+        const origem = escolherOrigemChamada(receptor);
+        const handler = node.arguments[1] && ts.isIdentifier(node.arguments[1]) ? node.arguments[1].text : undefined;
+        if (caminho?.startsWith("/") && origem) {
+          const metodos = nomeMetodo === "all"
+            ? ["GET", "POST", "PUT", "PATCH", "DELETE"]
+            : [nomeMetodo.toUpperCase()];
+          for (const metodo of metodos) {
+            rotas.push({
+              origem,
+              metodo,
+              caminho: converterCaminhoParametros(caminho),
+              simbolo: handler ?? receptor,
+              parametros: extrairParametrosCaminhoDoisPontos(caminho),
+            });
+          }
+        }
+      }
+    }
+    node.forEachChild(visitar);
+  };
+
+  visitar(sourceFile);
+  return deduplicarRotas(rotas);
+}
+
+function converterCaminhoParametros(caminho: string): string {
+  return caminho.replace(/:([A-Za-z_]\w*)/g, "{$1}");
+}
+
+function extrairParametrosCaminhoDoisPontos(caminho: string): ParametroRotaTypeScript[] {
+  const parametros: ParametroRotaTypeScript[] = [];
+  for (const correspondencia of caminho.matchAll(/:([A-Za-z_]\w*)/g)) {
+    const nome = correspondencia[1]!;
+    parametros.push({
+      nome,
+      tipoSema: /(^|_)id$/i.test(nome) ? "Id" : "Texto",
+    });
+  }
+  return parametros;
+}
+
 export function extrairRotasTypeScriptHttp(
   sourceFile: ts.SourceFile,
   relacaoArquivo: string,
@@ -161,5 +260,6 @@ export function extrairRotasTypeScriptHttp(
   }
 
   rotas.push(...extrairRotasNodeWorker(sourceFile, relacaoArquivo));
+  rotas.push(...extrairRotasExpressFastify(sourceFile));
   return deduplicarRotas(rotas);
 }

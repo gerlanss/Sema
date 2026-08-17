@@ -54,7 +54,7 @@ const TEMPLATES_INIT = new Set([
   "crud-simples", "auth-completo", "api-rest", "workflow", "pedido", "usuario", "upload",
 ]);
 const FONTES_IMPORTACAO = new Set([
-  "nestjs", "fastapi", "flask", "nextjs", "nextjs-consumer", "react-vite-consumer",
+  "nestjs", "express", "fastify", "fastapi", "flask", "nextjs", "nextjs-consumer", "react-vite-consumer",
   "angular-consumer", "flutter-consumer", "firebase", "typescript", "javascript",
   "python", "dart", "lua", "dotnet", "java", "go", "rust", "cpp", "php",
 ]);

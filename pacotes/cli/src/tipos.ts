@@ -2,6 +2,8 @@ export type EstruturaSaida = "flat" | "modulos" | "backend";
 
 export type FonteLegado =
   | "nestjs"
+  | "express"
+  | "fastify"
   | "fastapi"
   | "flask"
   | "nextjs"

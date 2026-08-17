@@ -8,7 +8,7 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `3.1.0`
+- Version: `3.2.0`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-17
 - Reference commit: `5758af5`

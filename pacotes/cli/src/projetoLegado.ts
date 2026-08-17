@@ -31,6 +31,14 @@ export async function inferirFontesLegado(
     if (/@nestjs\/common|@nestjs\/core/.test(packageJsonRaiz)) {
       encontrados.add("nestjs");
     }
+    if (/"express"\s*:/.test(packageJsonRaiz)) {
+      encontrados.add("express");
+      encontrados.add("typescript");
+    }
+    if (/"fastify"\s*:/.test(packageJsonRaiz)) {
+      encontrados.add("fastify");
+      encontrados.add("typescript");
+    }
     if (/typescript/.test(packageJsonRaiz)) {
       encontrados.add("typescript");
     }
@@ -83,6 +91,10 @@ export async function inferirFontesLegado(
 
       const temNest = textosPackage.some((texto) => /@nestjs\/common|@nestjs\/core/.test(texto ?? ""))
         || amostrasTs.some((texto) => /@nestjs\/common|@nestjs\/core|@Controller\(|@Get\(|@Post\(|@Put\(|@Patch\(|@Delete\(/.test(texto ?? ""));
+      const temExpress = textosPackage.some((texto) => /"express"\s*:/.test(texto ?? ""))
+        || amostrasTs.some((texto) => /(?:from\s+["']express["']|require\(\s*["']express["']\s*\)|\bexpress\s*\(\s*\))/.test(texto ?? ""));
+      const temFastify = textosPackage.some((texto) => /"fastify"\s*:/.test(texto ?? ""))
+        || amostrasTs.some((texto) => /(?:from\s+["']fastify["']|require\(\s*["']fastify["']\s*\)|\bfastify\s*\(\s*\{)/.test(texto ?? ""));
       const temNext = textosPackage.some((texto) => /"next"\s*:/.test(texto ?? ""))
         || nextConfigs.length > 0
         || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/api\/.+\/route\.(?:ts|tsx|js|jsx)$/.test(relacao));
@@ -105,6 +117,12 @@ export async function inferirFontesLegado(
 
       if (temNest) {
         encontrados.add("nestjs");
+      }
+      if (temExpress) {
+        encontrados.add("express");
+      }
+      if (temFastify) {
+        encontrados.add("fastify");
       }
       if (temNext) {
         encontrados.add("nextjs");

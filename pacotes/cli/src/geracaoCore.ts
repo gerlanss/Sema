@@ -125,6 +125,8 @@ export function normalizarFonteImportacao(valor: string | undefined): FonteImpor
   }
   if (
     valor === "nestjs"
+    || valor === "express"
+    || valor === "fastify"
     || valor === "fastapi"
     || valor === "flask"
     || valor === "nextjs"

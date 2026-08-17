@@ -23,6 +23,7 @@ module sema.produto.governanca_ia.drift {
     output {
       impls_resolvidas: Booleano
       rotas_resolvidas: Booleano
+      rotas_express_fastify_resolvidas: Booleano
       ambiguidades_explicitas: Booleano
       escopo_aplicado: Booleano
       escopo_estreito_sem_alvo_bloqueado: Booleano
@@ -65,6 +66,7 @@ module sema.produto.governanca_ia.drift {
       output {
         impls_resolvidas: interno
         rotas_resolvidas: interno
+        rotas_express_fastify_resolvidas: interno
         ambiguidades_explicitas: interno
         escopo_aplicado: interno
         escopo_estreito_sem_alvo_bloqueado: interno
@@ -125,6 +127,8 @@ module sema.produto.governanca_ia.drift {
       arquivo: "pacotes/cli/src/drift.part11.ts"
       arquivo: "pacotes/cli/src/drift.part13.ts"
       arquivo: "pacotes/cli/src/drift.part14.ts"
+      arquivo: "pacotes/cli/src/drift.part09.ts"
+      arquivo: "pacotes/cli/src/typescript-http-rotas.ts"
       arquivo: "pacotes/cli/src/driftEscopo.ts"
       arquivo: "pacotes/cli/src/driftEscopoReferencias.ts"
       arquivo: "pacotes/cli/src/driftCatalogo.ts"
@@ -138,6 +142,7 @@ module sema.produto.governanca_ia.drift {
       arquivo: "testes/unidade/drift-escopo-dependencias.test.ts"
       arquivo: "testes/unidade/drift-escopo-referencias.test.ts"
       arquivo: "testes/unidade/drift-leitura-compartilhada.test.ts"
+      arquivo: "testes/unidade/drift-rotas-express-fastify.test.ts"
       arquivo: "testes/unidade/projeto-carregamento-escopo.test.ts"
       simbolo: cli.src.drift.analisarDriftLegado
     }
@@ -151,6 +156,7 @@ module sema.produto.governanca_ia.drift {
     guarantees {
       impls_resolvidas existe
       rotas_resolvidas existe
+      rotas_express_fastify_resolvidas existe
       ambiguidades_explicitas existe
       escopo_aplicado existe
       escopo_estreito_sem_alvo_bloqueado existe

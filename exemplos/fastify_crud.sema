@@ -1,0 +1,146 @@
+module exemplos.fastify.crud {
+  entity Pedido {
+    fields {
+      id: Id
+      cliente: Texto
+      total: Decimal
+      status: Texto
+    }
+  }
+
+  task criar_pedido {
+    input {
+      cliente: Texto required
+      total: Decimal required
+    }
+    output {
+      pedido: Pedido
+    }
+    rules {
+      cliente deve_ser preenchido
+      total deve_ser positivo
+    }
+    effects {
+      persistencia Pedido
+      auditoria pedido_criado
+    }
+    guarantees {
+      pedido existe
+    }
+    tests {
+      caso "cria pedido" {
+        given {
+          cliente: "Ana"
+          total: 149.9
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task obter_pedido {
+    input {
+      id: Id required
+    }
+    output {
+      pedido: Pedido
+    }
+    rules {
+      id deve_ser valido
+    }
+    effects {
+      consulta Pedido
+    }
+    guarantees {
+      pedido existe
+    }
+    tests {
+      caso "obtem pedido por id" {
+        given {
+          id: "ped_1"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task atualizar_pedido {
+    input {
+      id: Id required
+      status: Texto required
+    }
+    output {
+      pedido: Pedido
+    }
+    rules {
+      id deve_ser valido
+      status deve_ser preenchido
+    }
+    effects {
+      persistencia Pedido
+      auditoria pedido_atualizado
+    }
+    guarantees {
+      pedido existe
+    }
+    tests {
+      caso "atualiza status do pedido" {
+        given {
+          id: "ped_1"
+          status: "pago"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route pedidos_criar {
+    metodo: POST
+    caminho: /pedidos
+    task: criar_pedido
+    finalidade: cadastro_pedido
+    input {
+      cliente: Texto
+      total: Decimal
+    }
+    output {
+      pedido: Pedido
+    }
+  }
+
+  route pedidos_obter {
+    metodo: GET
+    caminho: "/pedidos/{id}"
+    task: obter_pedido
+    finalidade: consulta_pedido
+    input {
+      id: Id
+    }
+    output {
+      pedido: Pedido
+    }
+  }
+
+  route pedidos_atualizar {
+    metodo: PATCH
+    caminho: "/pedidos/{id}"
+    task: atualizar_pedido
+    finalidade: alteracao_pedido
+    input {
+      id: Id
+      status: Texto
+    }
+    output {
+      pedido: Pedido
+    }
+  }
+}

@@ -86,6 +86,8 @@ export function normalizarFonteLegado(valor: string): FonteLegado | undefined {
   }
   if (
     valor === "nestjs"
+    || valor === "express"
+    || valor === "fastify"
     || valor === "fastapi"
     || valor === "flask"
     || valor === "nextjs"

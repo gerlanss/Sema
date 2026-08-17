@@ -9,7 +9,7 @@ export interface ParametroRotaTypeScript {
 }
 
 export interface RotaTypeScriptExtraida {
-  origem: "nextjs" | "firebase";
+  origem: "nextjs" | "firebase" | "express" | "fastify";
   metodo: string;
   caminho: string;
   simbolo: string;

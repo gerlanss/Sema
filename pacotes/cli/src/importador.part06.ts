@@ -13,6 +13,7 @@ import { extrairRotasJava, extrairSimbolosJava } from "./java-http.js";
 import { extrairParametrosCaminhoFlask, extrairRotasFlaskDecoradas } from "./python-http.js";
 import { extrairRotasRust, extrairSimbolosRust } from "./rust-http.js";
 import {
+  extrairRotasExpressFastify,
   extrairRotasTypeScriptHttp,
   inferirSemanticaHandlerTypeScriptHttp,
   localizarExportacaoTypeScriptHttp,
@@ -142,6 +143,109 @@ export function importarNestJsDeArquivo(
     tasks: deduplicarTarefas(tasks),
     routes: deduplicarRotas(routes),
   }];
+}
+
+function nomearTarefaRotaChamada(metodo: string, caminho: string): string {
+  const ultimoSegmento = caminho.replace(/\{[^}]+\}/g, "").split("/").filter(Boolean).pop() ?? "recurso";
+  const singular = ultimoSegmento.length > 3 && /es$/.test(ultimoSegmento)
+    ? ultimoSegmento.replace(/es$/, "")
+    : ultimoSegmento.replace(/s$/, "");
+  switch (metodo) {
+    case "POST":
+      return `criar_${singular}`;
+    case "PUT":
+    case "PATCH":
+      return `atualizar_${singular}`;
+    case "DELETE":
+      return `remover_${singular}`;
+    case "GET":
+      return caminho.includes("{") ? `obter_${singular}` : `listar_${ultimoSegmento}`;
+    default:
+      return `${metodo.toLowerCase()}_${ultimoSegmento}`;
+  }
+}
+
+export function importarExpressFastifyDeArquivo(
+  diretorioBase: string,
+  arquivo: string,
+  namespaceBase: string,
+  origemDesejada: "express" | "fastify",
+): ModuloImportado[] {
+  const relacao = path.relative(diretorioBase, arquivo);
+  const codigo = ts.sys.readFile(arquivo, "utf8") ?? "";
+  const sourceFile = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const contextoSegmentos = inferirContextoPorArquivo(relacao);
+  const nomeModulo = [namespaceBase, ...contextoSegmentos].join(".");
+  const rotasArquivo = extrairRotasExpressFastify(sourceFile).filter((rota) => rota.origem === origemDesejada);
+  if (rotasArquivo.length === 0) {
+    return [];
+  }
+
+  const tasks: TarefaImportada[] = [];
+  const routes: RotaImportada[] = [];
+  for (const rota of rotasArquivo) {
+    const taskNome = nomearTarefaRotaChamada(rota.metodo, rota.caminho);
+    const implSimbolo = /^[A-Za-z_]\w*$/.test(rota.simbolo) ? rota.simbolo : undefined;
+    tasks.push({
+      nome: taskNome,
+      resumo: `Task importada automaticamente da rota ${rota.metodo} ${rota.caminho} em ${relacao}.`,
+      input: rota.parametros.map((parametro) => ({
+        nome: parametro.nome,
+        tipo: parametro.tipoSema,
+        obrigatorio: true,
+      })),
+      output: [],
+      errors: [],
+      effects: [],
+      impl: implSimbolo ? { ts: caminhoImplTs(diretorioBase, arquivo, implSimbolo) } : undefined,
+      origemArquivo: relacao,
+      origemSimbolo: rota.simbolo,
+    });
+    routes.push({
+      nome: `${taskNome}_publico`,
+      resumo: `Rota ${origemDesejada} importada automaticamente de ${relacao}.`,
+      metodo: rota.metodo,
+      caminho: rota.caminho,
+      task: taskNome,
+      input: rota.parametros.map((parametro) => ({
+        nome: parametro.nome,
+        tipo: parametro.tipoSema,
+        obrigatorio: true,
+      })),
+      output: [],
+      errors: [],
+    });
+  }
+
+  const { entities, enums } = criarEntidadesReferenciadas(new Map(), new Set(), new Set());
+  sincronizarRotasComTasks(routes, tasks);
+
+  return [{
+    nome: nomeModulo,
+    resumo: `Rascunho Sema importado de um contexto ${origemDesejada === "express" ? "Express" : "Fastify"} legado em ${contextoSegmentos.join("/")}.`,
+    entities,
+    enums,
+    tasks: deduplicarTarefas(tasks),
+    routes: deduplicarRotas(routes),
+  }];
+}
+
+export async function importarExpressFastifyBase(
+  diretorio: string,
+  namespaceBase: string,
+  origem: "express" | "fastify",
+): Promise<ModuloImportado[]> {
+  const arquivos = await listarArquivosRecursivos(diretorio, [".ts"]);
+  const uteis = arquivos.filter((arquivo) =>
+    !arquivo.endsWith(".spec.ts")
+    && !arquivo.endsWith(".test.ts")
+    && !arquivo.endsWith(".d.ts"));
+
+  const modulos: ModuloImportado[] = [];
+  for (const arquivo of uteis) {
+    modulos.push(...importarExpressFastifyDeArquivo(diretorio, arquivo, namespaceBase, origem));
+  }
+  return modulos;
 }
 
 export async function importarTypeScriptBase(
