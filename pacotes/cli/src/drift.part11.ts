@@ -19,6 +19,7 @@ import type {
   TipoRecursoPersistencia,
 } from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
+import { resolverAlvoPadrao, resolverEstruturaSaidaPadrao, resolverFrameworkPadrao } from "./projeto.js";
 import type { FonteLegado } from "./tipos.js";
 import { coletarSuperficiesAngularStandaloneConsumer } from "./angular-consumer-standalone.js";
 import { extrairSimbolosCpp } from "./cpp-symbols.js";
@@ -40,7 +41,7 @@ import { construirContextoRelevanciaConsumer, filtrarConsumerSurfacesPorEscopo, 
 import { indexarTypeScript, inferirConsumerFrameworkPrincipal } from "./drift.part06.js";
 import { indexarCpp, indexarDart, indexarDotnet, indexarGo, indexarJava, indexarLua, indexarPersistenciaDeclarativa, indexarPython, indexarRust } from "./drift.part07.js";
 import { indexarPersistenciaDetalhada, resolverPersistenciaLocalPorTask } from "./drift.part08.js";
-import { calcularConfiancaTask, calcularRiscoOperacional, calcularScoreTask, chaveCaminhoCanonicoDrift, encontrarAncoraSuperficie, encontrarCandidatosFisicosImplementacaoDrift, indexarArquivosRastreaveis, resumirLacunasTask, resumirOperacional } from "./drift.part04.js";
+import { calcularConfiancaTask, calcularRiscoOperacional, calcularScoreTask, carregarEvidenciaVerificacaoDrift, chaveCaminhoCanonicoDrift, encontrarAncoraSuperficie, encontrarCandidatosFisicosImplementacaoDrift, indexarArquivosRastreaveis, resumirLacunasTask, resumirOperacional } from "./drift.part04.js";
 import { coletarVinculosIr, construirMapaRecursos, extrairRecursosEsperados, resolverRecursoEsperado } from "./drift.part10.js";
 import { analisarPersistenciaReal, escolherRotasEsperadas, normalizarCaminhoRota, ordenarCandidatos, sugerirCandidatosParaImpl, sugerirCandidatosParaTaskSemImpl } from "./drift.part09.js";
 import { escolherArquivoPorVinculo, escolherSimboloPorVinculo } from "./drift.part03.js";
@@ -405,6 +406,24 @@ export async function analisarDriftLegado(
   }
   configuracaoEscopo.bloqueios = [...bloqueiosAnalise];
 
+  const evidenciaPorModulo = new Map<string, Awaited<ReturnType<typeof carregarEvidenciaVerificacaoDrift>>>();
+  for (const item of contexto.modulosSelecionados) {
+    const nomeModulo = item.resultado.ir?.nome;
+    if (!nomeModulo) {
+      continue;
+    }
+    const frameworkVerificacao = resolverFrameworkPadrao(undefined, contexto.configCarregada);
+    const evidencia = await carregarEvidenciaVerificacaoDrift({
+      caminhoContrato: item.caminho,
+      nomeModulo,
+      alvo: resolverAlvoPadrao(undefined, contexto.configCarregada),
+      framework: frameworkVerificacao,
+      estrutura: resolverEstruturaSaidaPadrao(undefined, frameworkVerificacao, contexto.configCarregada),
+    });
+    if (evidencia) {
+      evidenciaPorModulo.set(nomeModulo, evidencia);
+    }
+  }
 
   for (const resumo of tasksResumo) {
     const chaveTask = `${resumo.modulo}:${resumo.task}`;
@@ -436,8 +455,10 @@ export async function analisarDriftLegado(
 
     resumo.confiancaVinculo = calcularConfiancaTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados);
     resumo.riscoOperacional = calcularRiscoOperacional(task);
-    resumo.lacunas = resumirLacunasTask(task, resumo.semImplementacao, resumo.implsQuebrados, resumoVinculos.quebrados, guardrails);
-    resumo.scoreSemantico = calcularScoreTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados, resumo.semImplementacao);
+    const evidenciaVerificada = evidenciaPorModulo.get(resumo.modulo);
+    resumo.lacunas = resumirLacunasTask(task, resumo.semImplementacao, resumo.implsQuebrados, resumoVinculos.quebrados, guardrails, evidenciaVerificada);
+    resumo.scoreSemantico = calcularScoreTask(task, resumo.implsValidos, resumo.implsQuebrados, resumoVinculos.validos, resumoVinculos.quebrados, resumo.semImplementacao, evidenciaVerificada);
+    resumo.evidenciaVerificacao = evidenciaVerificada;
     resumo.ancoragemVinculo = task.vinculos.length > 0
       ? "propria"
       : arquivosAncoraHerdados.length > 0

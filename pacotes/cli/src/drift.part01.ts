@@ -167,6 +167,11 @@ export interface ResumoTaskDrift {
   implsQuebrados: number;
   semImplementacao: boolean;
   scoreSemantico: number;
+  evidenciaVerificacao?: {
+    sucesso: boolean;
+    quantidadeTestes: number;
+    alvo: string;
+  };
   confiancaVinculo: NivelConfiancaSemantica;
   riscoOperacional: NivelRiscoSemantico;
   lacunas: string[];

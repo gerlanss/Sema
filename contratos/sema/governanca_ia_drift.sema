@@ -24,6 +24,7 @@ module sema.produto.governanca_ia.drift {
       impls_resolvidas: Booleano
       rotas_resolvidas: Booleano
       rotas_express_fastify_resolvidas: Booleano
+      score_pesando_comportamento_verificado: Booleano
       ambiguidades_explicitas: Booleano
       escopo_aplicado: Booleano
       escopo_estreito_sem_alvo_bloqueado: Booleano
@@ -67,6 +68,7 @@ module sema.produto.governanca_ia.drift {
         impls_resolvidas: interno
         rotas_resolvidas: interno
         rotas_express_fastify_resolvidas: interno
+        score_pesando_comportamento_verificado: interno
         ambiguidades_explicitas: interno
         escopo_aplicado: interno
         escopo_estreito_sem_alvo_bloqueado: interno
@@ -120,6 +122,7 @@ module sema.produto.governanca_ia.drift {
       arquivo: "pacotes/cli/src/drift.ts"
       arquivo: "pacotes/cli/src/angular-consumer-standalone.ts"
       arquivo: "pacotes/cli/src/drift.part04.ts"
+      arquivo: "testes/unidade/drift-score-evidencia.test.ts"
       arquivo: "pacotes/cli/src/drift.part05.ts"
       arquivo: "pacotes/cli/src/drift.part06.ts"
       arquivo: "pacotes/cli/src/drift.part07.ts"
@@ -157,6 +160,7 @@ module sema.produto.governanca_ia.drift {
       impls_resolvidas existe
       rotas_resolvidas existe
       rotas_express_fastify_resolvidas existe
+      score_pesando_comportamento_verificado existe
       ambiguidades_explicitas existe
       escopo_aplicado existe
       escopo_estreito_sem_alvo_bloqueado existe

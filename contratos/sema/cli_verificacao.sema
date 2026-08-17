@@ -19,6 +19,7 @@ module sema.produto.cli_verificacao {
       cache_fora_do_workspace: Booleano
       cache_nao_autoritativo: Booleano
       execucao_completa_com_sem_cache: Booleano
+      evidencia_consumida_pelo_score: Booleano
     }
     rules {
       alvo_explicito deve_ser alvo_de_geracao_valido_quando_presente
@@ -46,6 +47,7 @@ module sema.produto.cli_verificacao {
         cache_fora_do_workspace: interno
         cache_nao_autoritativo: interno
         execucao_completa_com_sem_cache: interno
+        evidencia_consumida_pelo_score: interno
       }
     }
     audit {
@@ -69,6 +71,7 @@ module sema.produto.cli_verificacao {
     vinculos {
       arquivo: "pacotes/cli/src/verificacaoCache.ts"
       arquivo: "pacotes/cli/src/index.part07.ts"
+      arquivo: "pacotes/cli/src/drift.part04.ts"
       arquivo: "pacotes/cli/src/initTemplatesBase.ts"
       arquivo: "testes/unidade/verificacao-cache.test.ts"
       simbolo: cli.src.verificacao_cache.calcularChaveVerificacao
@@ -88,6 +91,7 @@ module sema.produto.cli_verificacao {
       cache_fora_do_workspace == verdadeiro
       cache_nao_autoritativo == verdadeiro
       execucao_completa_com_sem_cache == verdadeiro
+      evidencia_consumida_pelo_score == verdadeiro
     }
     error {
       alvo_invalido {

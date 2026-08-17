@@ -249,6 +249,46 @@ export function calcularConfiancaTask(
   return "baixa";
 }
 
+export interface EvidenciaVerificacaoDrift {
+  sucesso: boolean;
+  quantidadeTestes: number;
+  alvo: string;
+}
+
+export async function carregarEvidenciaVerificacaoDrift(opcoes: {
+  caminhoContrato: string;
+  nomeModulo: string;
+  alvo: string;
+  framework: string;
+  estrutura: string;
+}): Promise<EvidenciaVerificacaoDrift | undefined> {
+  const { readFile } = await import("node:fs/promises");
+  const { calcularChaveVerificacao, carregarManifestoVerificacao } = await import("./verificacaoCache.js");
+  const pacoteCli = (await import("../package.json", { with: { type: "json" } })).default;
+  const conteudoContrato = await readFile(opcoes.caminhoContrato, "utf8").catch(() => "");
+  if (!conteudoContrato) {
+    return undefined;
+  }
+  const chave = calcularChaveVerificacao({
+    versaoCli: pacoteCli.version,
+    versaoNode: process.versions.node ?? "",
+    modulo: opcoes.nomeModulo,
+    alvo: opcoes.alvo,
+    framework: opcoes.framework,
+    estrutura: opcoes.estrutura,
+    conteudoContrato,
+  });
+  const manifesto = await carregarManifestoVerificacao(chave);
+  if (!manifesto) {
+    return undefined;
+  }
+  return {
+    sucesso: manifesto.sucesso,
+    quantidadeTestes: manifesto.quantidadeTestes,
+    alvo: manifesto.alvo,
+  };
+}
+
 export function calcularScoreTask(
   task: IrTask,
   implsValidos: number,
@@ -256,6 +296,7 @@ export function calcularScoreTask(
   vinculosValidos: number,
   vinculosQuebrados: number,
   semImplementacao: boolean,
+  evidenciaVerificada?: EvidenciaVerificacaoDrift,
 ): number {
   let score = 45;
   if (!semImplementacao && task.implementacoesExternas.length > 0) {
@@ -270,6 +311,9 @@ export function calcularScoreTask(
   }
   if (task.execucao.explicita) {
     score += 5;
+  }
+  if (evidenciaVerificada?.sucesso && evidenciaVerificada.quantidadeTestes > 0) {
+    score += 8;
   }
   return Math.max(0, Math.min(100, score));
 }
@@ -292,6 +336,7 @@ export function resumirLacunasTask(
     efeitoPrivilegiado: boolean;
     exigeSegredos: boolean;
   },
+  evidenciaVerificada?: EvidenciaVerificacaoDrift,
 ): string[] {
   const lacunas: string[] = [];
   if (semImplementacao) {
@@ -308,6 +353,9 @@ export function resumirLacunasTask(
   }
   if (!task.execucao.explicita) {
     lacunas.push("execucao_implicita");
+  }
+  if ((guardrails.publica || guardrails.sensivel) && !semImplementacao && !evidenciaVerificada) {
+    lacunas.push("sem_evidencia_verificada");
   }
   if (guardrails.publica && !task.execucao.explicita) {
     lacunas.push("superficie_publica_sem_execucao");

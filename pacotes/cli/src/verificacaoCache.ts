@@ -77,6 +77,25 @@ export async function carregarCacheVerificacao(
   return entrada;
 }
 
+export async function carregarManifestoVerificacao(
+  chave: string,
+  raizCache?: string,
+): Promise<EntradaCacheVerificacao | undefined> {
+  const pasta = resolverPastaCacheVerificacao(raizCache);
+  if (!pasta) {
+    return undefined;
+  }
+  try {
+    const entrada = JSON.parse(await readFile(path.join(pasta, `${chave}.json`), "utf8")) as EntradaCacheVerificacao;
+    if (entrada.schemaVersion !== SCHEMA_CACHE_VERIFICACAO || entrada.chave !== chave) {
+      return undefined;
+    }
+    return entrada;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function gravarCacheVerificacao(
   entrada: EntradaCacheVerificacao,
   raizCache?: string,
