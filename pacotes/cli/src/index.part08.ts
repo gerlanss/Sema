@@ -137,7 +137,7 @@ export async function principal(): Promise<number> {
       codigoSaida = await comandoIniciar(
         cwd,
         normalizarTemplateIniciar(obterOpcao(resto, "--template")),
-        { force: possuiFlag(resto, "--force") },
+        { force: possuiFlag(resto, "--force"), exemplosCompletos: possuiFlag(resto, "--com-exemplos") },
       );
       break;
     case "author":

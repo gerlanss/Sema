@@ -50,10 +50,12 @@ module sema.produto.cli_init_templates {
       template_nome: Texto required
       base_projeto: Texto required
       sobrescrever_existentes: Booleano optional
+      exemplos_completos: Booleano optional
     }
     output {
       contrato_inicial: Booleano
       exemplos_oficiais: Booleano
+      starter_exemplos_por_padrao: Booleano
       agents_md: Booleano
       docs_comandos: Booleano
       docs_sintaxe: Booleano
@@ -86,10 +88,12 @@ module sema.produto.cli_init_templates {
         template_nome: publico
         base_projeto: interno
         sobrescrever_existentes: publico
+        exemplos_completos: publico
       }
       output {
         contrato_inicial: publico
         exemplos_oficiais: publico
+        starter_exemplos_por_padrao: publico
         agents_md: publico
         docs_comandos: publico
         docs_sintaxe: publico
@@ -122,6 +126,7 @@ module sema.produto.cli_init_templates {
       escrever_bootstrap_antes_de_validar_todos_os_destinos
       seguir_symlink_ou_junction_fora_do_workspace
       readme_inicial_prometendo_evidencia_de_implementacao_em_resumo_default
+      materializar_catalogo_completo_de_exemplos_sem_flag_explicita
     }
     impl {
       ts: cli.src.init_command.comandoIniciar
@@ -143,6 +148,7 @@ module sema.produto.cli_init_templates {
     guarantees {
       contrato_inicial existe
       exemplos_oficiais existe
+      starter_exemplos_por_padrao existe
       agents_md existe
       docs_comandos existe
       docs_sintaxe existe

@@ -194,7 +194,7 @@ function validarSemArgumentos(args: readonly string[]): boolean {
 
 function validarIniciar(args: readonly string[]): boolean {
   const parsed = parsearArgumentos(args, {
-    opcoes: ["--template"], flags: ["--force"], maxPosicionais: 0,
+    opcoes: ["--template"], flags: ["--force", "--com-exemplos"], maxPosicionais: 0,
   });
   const template = parsed ? valorOpcao(parsed, "--template") : undefined;
   return parsed !== null && (template === undefined || TEMPLATES_INICIAR.has(template));
@@ -511,7 +511,7 @@ function validarComandoBasico(comando: string, args: readonly string[]): boolean
       return parsed !== null && FONTES_IMPORTACAO.has(parsed.posicionais[0]!);
     }
     case "docs-impacto": {
-      const parsed = parsearArgumentos(args, { opcoes: ["--intencao", "--arquivo"], flags: ["--criar-ausentes"], repetiveis: ["--arquivo"], maxPosicionais: 64 });
+      const parsed = parsearArgumentos(args, { opcoes: ["--intencao", "--arquivo"], flags: ["--criar-ausentes", "--completo"], repetiveis: ["--arquivo"], maxPosicionais: 64 });
       return parsed !== null && Boolean(valorOpcao(parsed, "--intencao") ?? parsed.posicionais[0]);
     }
     case "finalizar-mudanca": {

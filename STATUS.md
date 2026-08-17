@@ -8,10 +8,10 @@ not the product boundary.
 
 ## Current Line
 
-- Version: `3.0.0`
+- Version: `3.1.0`
 - Package: `@semacode/cli`
-- Last updated: 2026-08-16
-- Reference commit: `e7b74db`
+- Last updated: 2026-08-17
+- Reference commit: `5758af5`
 - Support: `suporte@otimitare.online`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,

@@ -25,6 +25,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       docs_sem_decisao: Lista
       bloqueio_emitido_quando_falta_leitura: Booleano
       templates_crus_bloqueados: Booleano
+      docs_sem_substancia_bloqueadas: Booleano
       diagnostico_compacto_emitido: Booleano
     }
     authz {
@@ -53,6 +54,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
         docs_sem_decisao: interno
         bloqueio_emitido_quando_falta_leitura: interno
         templates_crus_bloqueados: interno
+        docs_sem_substancia_bloqueadas: interno
         diagnostico_compacto_emitido: interno
       }
     }
@@ -73,6 +75,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       usar_sem_impacto_doc_sem_motivo
       usar_motivo_sem_impacto_sem_doc
       finalizar_com_template_cru_criado_pela_sema
+      finalizar_com_doc_sem_substancia
     }
     impl {
       ts: cli.src.docs.verificarDocumentacaoMudanca
@@ -100,6 +103,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       docs_sem_decisao deve_ser vazia_quando_sem_impacto_doc_ausente
       bloqueio_emitido_quando_falta_leitura existe
       templates_crus_bloqueados existe
+      docs_sem_substancia_bloqueadas existe
       diagnostico_compacto_emitido existe
       documentacao_atualizada_ou_justificada == verdadeiro
     }
@@ -122,6 +126,14 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       }
       documentacao_template_cru {
         mensagem: IA tentou concluir usando esqueleto criado pela Sema sem preencher procedimento validacao e rollback reais
+        categoria: negocio
+        recuperabilidade: permanente
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+      documentacao_sem_substancia {
+        mensagem: IA tentou concluir com documento obrigatorio praticamente vazio sem procedimento validacao e rollback reais
         categoria: negocio
         recuperabilidade: permanente
         acao_chamador: corrigir

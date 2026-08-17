@@ -318,7 +318,7 @@ test("planejamento de exemplos oficiais inclui arvore segura e deterministica", 
   );
 });
 
-test("sema iniciar materializa e preserva exemplos oficiais aninhados", async () => {
+test("sema iniciar materializa starter por padrao e exemplos aninhados com --com-exemplos", async () => {
   const { base, repo } = await criarSandbox("sema-iniciar-exemplos-aninhados-");
   const preservado = path.join(repo, "exemplos", "sistemas-interativos", "game-pixel-16-bit.json");
   const sentinela = Buffer.from('{"manual":true}\n', "utf8");
@@ -326,9 +326,18 @@ test("sema iniciar materializa e preserva exemplos oficiais aninhados", async ()
   try {
     await mkdir(path.dirname(preservado), { recursive: true });
     await writeFile(preservado, sentinela);
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
+    const starter = executarCli(repo, ["iniciar", "--template", "base"], base);
 
-    assert.equal(resultado.status, 0, diagnosticoCli(resultado));
+    assert.equal(starter.status, 0, diagnosticoCli(starter));
+    assert.equal(existsSync(path.join(repo, "exemplos", "crud_simples.sema")), true);
+    assert.equal(
+      existsSync(path.join(repo, "exemplos", "sistemas-interativos", "simulation-3d-calibrated-autonomous.json")),
+      false,
+    );
+
+    const completo = executarCli(repo, ["iniciar", "--template", "base", "--com-exemplos"], base);
+
+    assert.equal(completo.status, 0, diagnosticoCli(completo));
     assert.deepEqual(await readFile(preservado), sentinela);
     assert.equal(
       existsSync(path.join(
@@ -354,7 +363,7 @@ test("sema iniciar recusa junction aninhada em exemplos sem escrita externa", as
   try {
     await mkdir(path.join(repo, "exemplos"), { recursive: true });
     await criarJunction(outside, path.join(repo, "exemplos", "sistemas-interativos"));
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
+    const resultado = executarCli(repo, ["iniciar", "--template", "base", "--com-exemplos"], base);
 
     exigirFalhaFatalTexto(resultado);
     assert.deepEqual(await readdir(outside), []);

@@ -391,6 +391,7 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
           route: route.nome,
           metodo: route.metodo,
           caminho: route.caminho,
+          frameworksEsperados: [...esperadas],
           motivo: `Nenhuma rota publica ${route.metodo} ${route.caminho} foi encontrada no codigo legado para o framework esperado.`,
         };
         rotasDivergentes.push(registro);
@@ -398,6 +399,7 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
           tipo: "rota_divergente",
           modulo: ir.nome,
           route: route.nome,
+          frameworksEsperados: [...esperadas],
           mensagem: registro.motivo,
         });
       }

@@ -42,6 +42,7 @@ import {
   type OpcoesDriftLegado,
 } from "./drift.js";
 import {
+  compactarDocumentoObrigatorio,
   resolverDocumentacaoObrigatoria,
   verificarDocumentacaoMudanca,
 } from "./docs.js";
@@ -524,7 +525,7 @@ export function resolverEntradaDocs(posicionais: string[], args: string[]): { in
 export async function comandoDocsImpacto(posicionais: string[], args: string[], emJson: boolean): Promise<number> {
   const { intencao, arquivosAlvo } = resolverEntradaDocs(posicionais, args);
   if (!intencao.trim()) {
-    console.error("Uso: sema docs-impacto --intencao <acao> [--arquivo <caminho>] [--criar-ausentes] [--json]");
+    console.error("Uso: sema docs-impacto --intencao <acao> [--arquivo <caminho>] [--criar-ausentes] [--completo] [--json]");
     return 1;
   }
 
@@ -534,10 +535,17 @@ export async function comandoDocsImpacto(posicionais: string[], args: string[], 
     arquivosAlvo,
     criarAusentes: possuiFlag(args, "--criar-ausentes"),
   });
+  const completo = possuiFlag(args, "--completo");
 
   const payload = {
     comando: "docs-impacto",
-    ...resultado,
+    ...(completo ? resultado : {
+      ...resultado,
+      leituraObrigatoria: resultado.leituraObrigatoria.map(compactarDocumentoObrigatorio),
+      docsAusentes: resultado.docsAusentes.map(compactarDocumentoObrigatorio),
+      docsCriadas: resultado.docsCriadas.map(compactarDocumentoObrigatorio),
+      modoDocumentos: "compacto",
+    }),
   };
 
   if (emJson) {

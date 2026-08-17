@@ -9,7 +9,7 @@ import {
   validarDestinosEscritaWorkspace,
 } from "./workspaceWrite.js";
 
-import { BloqueioDocumentacaoMudanca, DocumentoObrigatorioMudanca, DocumentoPlanejado, REGRAS_DOCUMENTACAO, ResultadoDocumentacaoObrigatoria, ResultadoVerificacaoDocumentacaoMudanca, adicionarDocsRaizExistentes, adicionarReadmesDeArquivos, caminhoEstaDentro, caminhoExiste, criarTemplateDoc, documentoPareceTemplateCriadoPelaSema, inferirCategorias, listarArquivosRecursivo, normalizarRelativo, normalizarTexto, resumoConteudo, termosRelacionamentoContratos } from "./docs.part01.js";
+import { BloqueioDocumentacaoMudanca, DocumentoObrigatorioMudanca, DocumentoPlanejado, REGRAS_DOCUMENTACAO, ResultadoDocumentacaoObrigatoria, ResultadoVerificacaoDocumentacaoMudanca, adicionarDocsRaizExistentes, adicionarReadmesDeArquivos, caminhoEstaDentro, caminhoExiste, criarTemplateDoc, documentoPareceTemplateCriadoPelaSema, documentoTemSubstancia, inferirCategorias, listarArquivosRecursivo, normalizarRelativo, normalizarTexto, resumoConteudo, termosRelacionamentoContratos } from "./docs.part01.js";
 
 export async function adicionarContratosRelacionados(
   baseProjeto: string,
@@ -136,6 +136,7 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
       item.conteudo = conteudo.conteudo;
       item.truncado = conteudo.truncado;
       item.templatePendente = documentoPareceTemplateCriadoPelaSema(conteudoCompleto) || undefined;
+      item.substancia = documentoTemSubstancia(conteudoCompleto);
     }
 
     leituraObrigatoria.push(item);
@@ -205,6 +206,9 @@ export async function verificarDocumentacaoMudanca(opcoes: {
   const docsTemplatePendentes = impacto.leituraObrigatoria.filter((doc) => (
     doc.existe && doc.templatePendente && setDocsLidas.has(doc.relativo)
   ));
+  const docsSemSubstancia = impacto.leituraObrigatoria.filter((doc) => (
+    doc.existe && !doc.templatePendente && doc.substancia === false
+  ));
   const diagnosticosOrcamento = await emitirDiagnosticosArquivosOrcamento({
     baseProjeto,
     arquivos: opcoes.arquivosAlvo ?? [],
@@ -229,6 +233,12 @@ export async function verificarDocumentacaoMudanca(opcoes: {
       severidade: 4,
       caminho: doc.relativo,
       mensagem: `Documentacao obrigatoria ainda e template cru criado pela Sema: ${doc.relativo}. Edite com procedimento, validacao e rollback reais antes de finalizar.`,
+    })),
+    ...docsSemSubstancia.map((doc): BloqueioDocumentacaoMudanca => ({
+      tipo: "documentacao_sem_substancia",
+      severidade: 4,
+      caminho: doc.relativo,
+      mensagem: `Documentacao obrigatoria sem substancia: ${doc.relativo}. O conteudo esta praticamente vazio; preencha procedimento, validacao e rollback reais antes de finalizar.`,
     })),
     ...diagnosticosOrcamento
       .filter((diagnostico) => diagnostico.bloqueia)

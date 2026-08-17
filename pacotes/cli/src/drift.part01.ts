@@ -89,6 +89,7 @@ export interface DiagnosticoDrift {
   linhas?: number;
   severidade?: "aviso" | "erro";
   limite_bloqueio_linhas?: number;
+  frameworksEsperados?: string[];
   mensagem: string;
 }
 export interface RegistroImplDrift {

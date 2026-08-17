@@ -29,6 +29,7 @@ export interface DocumentoObrigatorioMudanca {
   truncado?: boolean;
   template?: string;
   templatePendente?: boolean;
+  substancia?: boolean;
 }
 
 export interface BloqueioDocumentacaoMudanca {
@@ -36,6 +37,7 @@ export interface BloqueioDocumentacaoMudanca {
     | "documentacao_ausente"
     | "leitura_obrigatoria_nao_comprovada"
     | "documentacao_template_cru"
+    | "documentacao_sem_substancia"
     | "arquivo_monolitico"
     | "codigo_governado_sem_cabecalho";
   severidade: 4 | 5;
@@ -388,6 +390,16 @@ export function documentoPareceTemplateCriadoPelaSema(conteudo: string): boolean
   ].some((placeholder) => texto.includes(placeholder));
 
   return criadoPelaSema && placeholderPendente;
+}
+
+export const MINIMO_CARACTERES_SUBSTANCIA_DOC = 120;
+
+export function documentoTemSubstancia(conteudo: string): boolean {
+  const texto = normalizarTexto(conteudo)
+    .replace(/[#*_>`|-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return texto.length >= MINIMO_CARACTERES_SUBSTANCIA_DOC;
 }
 
 export function resumoConteudo(conteudo: string): { conteudo: string; truncado: boolean } {

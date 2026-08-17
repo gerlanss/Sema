@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { escreverArquivos } from "./fsGovernado.js";
 import { arquivosTemplateIniciar, type TemplateIniciar } from "./initTemplatesBase.js";
-import { materializarExemplosOficiais, planejarExemplosOficiais } from "./exemplosOficiais.js";
+import { materializarExemplosOficiais, normalizarCaminhoExemplo, planejarExemplosOficiais } from "./exemplosOficiais.js";
 import { validarDestinosEscritaWorkspace } from "./workspaceWrite.js";
 
 async function sincronizarKitIaInicial(cwd: string): Promise<{
@@ -45,10 +45,17 @@ async function sincronizarKitIaInicial(cwd: string): Promise<{
   };
 }
 
+const EXEMPLOS_STARTER_INICIAR = new Set([
+  "exemplos/crud_simples.sema",
+  "exemplos/cadastro_usuario.sema",
+  "exemplos/pedido.sema",
+  "exemplos/autenticacao.sema",
+]);
+
 export async function comandoIniciar(
   cwd: string,
   template: TemplateIniciar,
-  opcoes: { force?: boolean } = {},
+  opcoes: { force?: boolean; exemplosCompletos?: boolean } = {},
 ): Promise<number> {
   const arquivos = arquivosTemplateIniciar(template);
   const planoExemplos = await planejarExemplosOficiais();
@@ -56,6 +63,9 @@ export async function comandoIniciar(
     console.error("Diretorio de exemplos oficiais nao foi encontrado no pacote da CLI.");
     return 1;
   }
+  const exemplosIniciar = opcoes.exemplosCompletos
+    ? planoExemplos.arquivos
+    : planoExemplos.arquivos.filter((arquivo) => EXEMPLOS_STARTER_INICIAR.has(normalizarCaminhoExemplo(arquivo.caminhoRelativo)));
   const [{ ARQUIVOS_RESUMO_PROJETO_IA }, { listarDestinosEntrypointCodex }] = await Promise.all([
     import("./index.part04.js"),
     import("./agentEntryPoints.js"),
@@ -65,7 +75,7 @@ export async function comandoIniciar(
     cwd,
     [
       ...caminhosTemplate,
-      ...planoExemplos.arquivos.map((arquivo) => arquivo.caminhoRelativo),
+      ...exemplosIniciar.map((arquivo) => arquivo.caminhoRelativo),
       ...ARQUIVOS_RESUMO_PROJETO_IA,
       ...listarDestinosEntrypointCodex("AGENTS.md"),
     ],
@@ -80,7 +90,11 @@ export async function comandoIniciar(
     : arquivos.filter((arquivo) => !existentes.has(arquivo.caminhoRelativo));
 
   await escreverArquivos(cwd, arquivosParaEscrever, { inserirCabecalhoGovernado: true });
-  const exemplos = await materializarExemplosOficiais(cwd, true);
+  const exemplos = await materializarExemplosOficiais(
+    cwd,
+    true,
+    opcoes.exemplosCompletos ? undefined : EXEMPLOS_STARTER_INICIAR,
+  );
   if (!exemplos.sucesso) {
     console.error(exemplos.erro);
     return 1;
@@ -96,6 +110,9 @@ export async function comandoIniciar(
   console.log(`Projeto Sema inicializado com template ${template}.`);
   console.log(`Arquivos do projeto: ${arquivosParaEscrever.length} escritos, ${opcoes.force ? 0 : existentes.size} preservados.`);
   console.log(`Exemplos oficiais sincronizados em ${exemplos.destino} (${exemplos.criados.length} criados, ${exemplos.preservados.length} preservados).`);
+  if (!opcoes.exemplosCompletos) {
+    console.log("Starter de exemplos instalado; rode sema instalar-exemplos ou sema iniciar --com-exemplos para o pacote completo.");
+  }
   console.log(`Kit IA Codex-native sincronizado (${kitIa.artefatos.length} artefatos; entrypoint ${kitIa.codex.entrypointCodex}; ${kitIa.codex.criados.length} criados, ${kitIa.codex.atualizados.length} atualizados, ${kitIa.codex.preservados.length} preservados).`);
   return 0;
 }

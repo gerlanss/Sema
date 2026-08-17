@@ -96,9 +96,14 @@ export async function planejarExemplosOficiais(): Promise<PlanoExemplosOficiais>
   };
 }
 
+export function normalizarCaminhoExemplo(caminho: string): string {
+  return caminho.replace(/\\/g, "/");
+}
+
 export async function materializarExemplosOficiais(
   baseProjeto = process.cwd(),
   preservarExistentes = true,
+  somenteCaminhos?: ReadonlySet<string>,
 ): Promise<ResultadoMaterializacaoExemplos> {
   const plano = await planejarExemplosOficiais();
   const origem = plano.origem;
@@ -116,14 +121,18 @@ export async function materializarExemplosOficiais(
     };
   }
 
+  const arquivosSelecionados = somenteCaminhos
+    ? plano.arquivos.filter((arquivo) => somenteCaminhos.has(normalizarCaminhoExemplo(arquivo.caminhoRelativo)))
+    : plano.arquivos;
+
   const criados: string[] = [];
   const preservados: string[] = [];
   await validarDestinosEscritaWorkspace(
     baseProjeto,
-    plano.arquivos.map((arquivo) => arquivo.caminhoRelativo),
+    arquivosSelecionados.map((arquivo) => arquivo.caminhoRelativo),
   );
 
-  for (const arquivo of plano.arquivos) {
+  for (const arquivo of arquivosSelecionados) {
     const resultado = await escreverArquivoWorkspaceSeguro(
       baseProjeto,
       arquivo.caminhoRelativo,
