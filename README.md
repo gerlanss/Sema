@@ -25,8 +25,8 @@ documentation before closing the change.
 
 **[Watch on YouTube](https://youtu.be/IXkIlC9FxIs)**
 
-Codex is Sema's first native agent integration, and software is its first
-proving ground. The same governance model already supports workflows,
+Claude, Codex, zCode (GLM) and Kimi are the proven agent integrations, and
+software is the first proving ground. The same governance model already supports workflows,
 operations, games, research, legal review, writing, proposals, conversations,
 and other systems where an agent must preserve intent across a real change.
 
@@ -55,7 +55,16 @@ answer practical questions before touching a project:
 - whether code and contract have semantic drift;
 - which documentation must be read or updated;
 - what impact the proposed change has;
-- whether a contract can generate starter code or tests.
+- whether a contract can generate starter code or tests;
+- which public routes exist in the live code, across Express, Fastify, Koa,
+  NestJS, Next.js (App and Pages Router, including mounted routers and route
+  prefixes) and consumer surfaces such as React/Vite, Angular, SvelteKit, Nuxt
+  and Flutter;
+- whether the declared visual identity is materialized, with contract-driven
+  design tokens for CSS, TypeScript/JavaScript themes, SCSS, Tailwind and
+  terminal UIs, in light and dark modes;
+- whether executed tests actually back the contract score, instead of trusting
+  declared blocks alone.
 
 Sema does not replace human approval, platform policy, security review, or legal
 judgment. It is a local governance layer for scope, evidence, drift, and quality.
@@ -303,7 +312,8 @@ sema ajuda-ia
 sema starter-ia
 sema prompt-curto contratos/sema/software.sema --json
 sema contexto-ia contratos/sema/software.sema --saida .tmp/contexto --json
-sema verificar contratos/sema/software.sema --saida .tmp/verificacao --json
+sema verificar contratos/sema/software.sema --alvo typescript --saida .tmp/verificacao --json
+sema importar express src --json
 ```
 
 ## License
