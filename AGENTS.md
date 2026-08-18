@@ -10,10 +10,11 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 6. Chame docs-impacto com a intenção declarada antes de agir.
 7. Chame inspecionar no contrato `.sema` aplicável.
-8. Antes de editar código existente, rode `sema drift --cache fresh` e impacto.
-9. Antes de criar ou editar `.sema`, use exemplos oficiais.
-10. Ao concluir mudança de contrato, rode validar.
-11. Antes de finalizar, use finalizar-mudanca com as docs lidas.
+8. Para módulo novo com contrato validado, gere o andaime com `sema compilar <contrato> --alvo <alvoPadrao>`, preencha a implementação real mantendo `impl`/`vinculos` e feche com `sema verificar`.
+9. Antes de editar código existente, rode `sema drift --cache fresh` e impacto.
+10. Antes de criar ou editar `.sema`, use exemplos oficiais.
+11. Ao concluir mudança de contrato, rode validar.
+12. Antes de finalizar, use finalizar-mudanca com as docs lidas.
 
 É proibido substituir esse fluxo por leitura manual de `AGENTS.md`, `README.md`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 

@@ -11,8 +11,9 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
 6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato `.sema` aplicável.
 7. Antes de editar código existente, rode `sema drift --cache fresh` e impacto pela CLI local.
-8. Antes de criar ou corrigir `.sema`, use os exemplos oficiais na CLI local.
-9. Se qualquer etapa falhar, pare e diga que está bloqueado.
+8. Para módulo novo com contrato validado, gere o andaime com `sema compilar` no alvo padrão, preencha a implementação real mantendo `impl`/`vinculos` e feche com `sema verificar`.
+9. Antes de criar ou corrigir `.sema`, use os exemplos oficiais na CLI local.
+10. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
 Não substitua esse fluxo por leitura manual de `AGENTS.md`, `README.md`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
 

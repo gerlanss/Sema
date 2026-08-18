@@ -206,8 +206,9 @@ Você está em um projeto governado por Sema. O contrato semântico vem antes de
 5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
 6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicável.
 7. Antes de editar código existente, rode \`sema drift --cache fresh\` e impacto pela CLI local.
-8. Antes de criar ou corrigir \`.sema\`, use os exemplos oficiais na CLI local.
-9. Se qualquer etapa falhar, pare e diga que está bloqueado.
+8. Para módulo novo com contrato validado, gere o andaime com \`sema compilar\` no alvo padrão, preencha a implementação real mantendo \`impl\`/\`vinculos\` e feche com \`sema verificar\`.
+9. Antes de criar ou corrigir \`.sema\`, use os exemplos oficiais na CLI local.
+10. Se qualquer etapa falhar, pare e diga que está bloqueado.
 
 Não substitua esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
 
@@ -502,10 +503,11 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
 6. Chame docs-impacto com a intenção declarada antes de agir.
 7. Chame inspecionar no contrato \`.sema\` aplicável.
-8. Antes de editar código existente, rode \`sema drift --cache fresh\` e impacto.
-9. Antes de criar ou editar \`.sema\`, use exemplos oficiais.
-10. Ao concluir mudança de contrato, rode validar.
-11. Antes de finalizar, use finalizar-mudanca com as docs lidas.
+8. Para módulo novo com contrato validado, gere o andaime com \`sema compilar <contrato> --alvo <alvoPadrao>\`, preencha a implementação real mantendo \`impl\`/\`vinculos\` e feche com \`sema verificar\`.
+9. Antes de editar código existente, rode \`sema drift --cache fresh\` e impacto.
+10. Antes de criar ou editar \`.sema\`, use exemplos oficiais.
+11. Ao concluir mudança de contrato, rode validar.
+12. Antes de finalizar, use finalizar-mudanca com as docs lidas.
 
 É proibido substituir esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 
@@ -715,8 +717,9 @@ This is the minimum workflow for Codex in a local workspace.
 7. If the right capability is unclear, run \`sema descobrir recomendar --intencao "<goal>" --json\`; do not auto-run ambiguous recommendations.
 8. Use \`exemplos/\` and \`docs/syntax.md\` before creating or editing a contract.
 9. Run \`sema drift --cache fresh\` and \`sema impacto\` before editing existing code.
-10. Run \`sema formatar\` and \`sema validar\` after changing a \`.sema\` contract.
-11. Run \`sema finalizar-mudanca\` with the documents read before closure.
+10. For a new module with a validated contract, scaffold with \`sema compilar <contract> --alvo <default target>\`, fill the real implementation keeping \`impl\`/\`vinculos\`, and close with \`sema verificar\`.
+11. Run \`sema formatar\` and \`sema validar\` after changing a \`.sema\` contract.
+12. Run \`sema finalizar-mudanca\` with the documents read before closure.
 
 Contract edit rule: \`.sema\` has its own size budget. Above ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} lines, plan a split by domain/capability; above ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}, do not create or edit before splitting. Do not use parte_1/parte_2 and do not force a 1:1 contract-to-file relationship; several contracts can govern the same file through \`vinculos\`.
 
