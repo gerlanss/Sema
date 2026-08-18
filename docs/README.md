@@ -1,6 +1,6 @@
 # Sema Documentation
 
-These docs describe the public Codex-native local CLI distribution of Sema.
+These docs describe the public local-first CLI distribution of Sema, proven with Claude, Codex, zCode (GLM) and Kimi.
 
 Sema is local-first: Codex runs the CLI inside a project folder, reads `.sema`
 contracts, checks drift, maps impact, and closes changes with documentation
@@ -11,8 +11,8 @@ envelope. `AGENTS.md` is the official Codex entrypoint. Public docs are written
 in English.
 
 Sema is an independent product and is not affiliated with or endorsed by
-OpenAI. Codex-native describes Sema's product direction, not an official OpenAI
-program or submission.
+OpenAI. Proven compatibility with Claude, Codex, zCode (GLM) and Kimi describes
+Sema's product direction, not an official OpenAI program.
 
 Start here:
 
@@ -35,4 +35,4 @@ Start here:
 - [Security](./security.md)
 - [Codex Integration](./ai-integration.md)
 
-Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
+Official support: [suporte@otimitare.com](mailto:suporte@otimitare.com)

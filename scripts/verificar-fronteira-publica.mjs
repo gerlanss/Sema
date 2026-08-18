@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const raiz = process.cwd();
-const emailSuporte = "suporte@otimitare.online";
+const emailSuporte = "suporte@otimitare.com";
 const extensoesTexto = new Set([
   ".cjs",
   ".css",
@@ -324,7 +324,7 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     }
     if (padraoNomeToolMcpLegado.test(conteudo)) {
       protocoloSemNomesMcp = false;
-      registrar(bloqueios, arquivo, "protocolo Codex-native ainda ensina nome de tool MCP legado");
+      registrar(bloqueios, arquivo, "protocolo publico ainda ensina nome de tool MCP legado");
     }
     if (padraoMojibakeVisivel.test(conteudo)) {
       textoPublicoSemMojibake = false;
@@ -398,13 +398,15 @@ async function verificarFronteiraPublica({ json = false } = {}) {
   if (manifestCli.bugs?.email !== emailSuporte) {
     registrar(bloqueios, "pacotes/cli/package.json", "manifesto da CLI precisa usar o email oficial de suporte");
   }
-  const produtoCodexNative =
-    readme.includes("Codex-native") &&
+  const produtoMultiAgente =
+    readme.includes("Claude") &&
+    readme.includes("Codex") &&
+    readme.includes("zCode (GLM)") &&
+    readme.includes("Kimi") &&
     readme.includes("AGENTS.md") &&
-    String(manifestCli.description ?? "").includes("Codex-native") &&
     (manifestCli.keywords ?? []).includes("codex");
-  if (!produtoCodexNative) {
-    registrar(bloqueios, "README.md", "superficie publica precisa assumir Codex-native e AGENTS.md como entrypoint oficial");
+  if (!produtoMultiAgente) {
+    registrar(bloqueios, "README.md", "superficie publica precisa declarar compatibilidade comprovada com Claude, Codex, zCode (GLM) e Kimi, e AGENTS.md como entrypoint oficial");
   }
 
   const marketplace = JSON.parse(await readFile(path.join(raiz, ".agents", "plugins", "marketplace.json"), "utf8").catch(() => "{}"));
@@ -512,8 +514,8 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     docs_publicas_em_ingles: docsPublicasEmIngles,
     suporte_email_oficial: suporteEmailOficial,
     revenda_comercial_bloqueada: revendaComercialBloqueada,
-    produto_codex_native: produtoCodexNative,
-    entrypoint_codex_oficial: produtoCodexNative && entrypointsNaoCodex.every((caminho) => !bloqueios.some((item) => item.caminho === caminho)),
+    produto_multi_agente: produtoMultiAgente,
+    entrypoint_codex_oficial: produtoMultiAgente && entrypointsNaoCodex.every((caminho) => !bloqueios.some((item) => item.caminho === caminho)),
     cli_sem_autorizacao_local: cliSemAutorizacaoLocal && artefatosRuntimeProibidos.every((caminho) => !bloqueios.some((item) => item.caminho === caminho)),
     skill_bootstrap_codex_oficial: skillBootstrapCodexOficial,
     plugin_marca_oficial: pluginMarcaOficial,
@@ -533,7 +535,7 @@ async function verificarFronteiraPublica({ json = false } = {}) {
   if (json) {
     console.log(JSON.stringify(result, null, 2));
   } else if (aprovado) {
-    console.log("Fronteira publica Codex-native local-only aprovada.");
+    console.log("Fronteira publica local-only multi-agente aprovada.");
   } else {
     console.error("Fronteira publica local-only bloqueada:");
     for (const bloqueio of bloqueios) {

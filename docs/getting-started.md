@@ -79,4 +79,4 @@ external cache locations, and recovery behavior.
 The public CLI does not require private service credentials or an external
 request before local commands run.
 
-Support: suporte@otimitare.online
+Support: suporte@otimitare.com

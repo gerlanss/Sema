@@ -10,4 +10,4 @@ Profile work must stay aligned with the local CLI contract flow:
   package smoke tests;
 - commercial replicas or resale require written permission from OtimiTare.
 
-Support: suporte@otimitare.online
+Support: suporte@otimitare.com

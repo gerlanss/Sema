@@ -4,8 +4,9 @@
   <img src="./logo.png" alt="Sema logo" width="240">
 </p>
 
-Sema is a Codex-native, local-first semantic governance layer for AI agents.
-Codex is its first native integration, not its product ceiling. Sema turns
+Sema is a local-first semantic governance layer for AI agents, with proven
+compatibility in Claude, Codex, zCode (GLM) and Kimi. Those integrations are
+the proven baseline, not the product ceiling. Sema turns
 human intent into explicit contracts, constraints, impact analysis, verified
 execution, and evidence instead of asking an agent to rely on prompt context
 alone.
@@ -40,14 +41,14 @@ Sema, not an official OpenAI program, integration, or submission.
 This public repository is intentionally scoped to the local CLI experience.
 It does not publish private or sensitive operational material.
 
-Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
+Official support: [suporte@otimitare.com](mailto:suporte@otimitare.com)
 
 ## What Sema Does
 
 Sema uses `.sema` contracts to describe modules, tasks, inputs, outputs, rules,
 guarantees, effects, links to implementation files, and validation expectations.
-The current CLI helps Codex answer practical questions before touching a
-project:
+The current CLI helps coding agents — Claude, Codex, zCode (GLM) and Kimi —
+answer practical questions before touching a project:
 
 - which contract applies to the change;
 - which files are probably affected;
@@ -293,7 +294,7 @@ study, modify, and share Sema under the license terms, but you may not resell it
 rebrand it as a competing product, offer it as a commercial replica, or bundle
 it as a material paid feature without written permission from OtimiTare.
 
-Commercial licensing questions go to [suporte@otimitare.online](mailto:suporte@otimitare.online).
+Commercial licensing questions go to [suporte@otimitare.com](mailto:suporte@otimitare.com).
 
 ## Useful Commands
 

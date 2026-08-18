@@ -101,8 +101,8 @@ export function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperad
       throw new Error(`The public package manifest must not include private workspace artifact ${artifact}.`);
     }
   }
-  if (!String(json.description ?? "").includes("Codex-native")) {
-    throw new Error("The public package manifest must describe Sema as Codex-native.");
+  if (!["Claude", "Codex", "GLM", "Kimi"].every((agente) => String(json.description ?? "").includes(agente))) {
+    throw new Error("The public package manifest must declare proven compatibility with Claude, Codex, zCode (GLM) and Kimi.");
   }
   if (json.bin?.sema !== "dist/bin.js" || json.main !== "dist/index.js" || json.types !== "dist/index.d.ts") {
     throw new Error("The public package must separate the executable bin from the root API entrypoint.");
@@ -213,11 +213,11 @@ export function validarReadmePublico(conteudo) {
   if (secoesAusentes.length > 0) {
     throw new Error(`The published README is missing required sections: ${secoesAusentes.join(", ")}.`);
   }
-  if (!conteudo.includes("suporte@otimitare.online")) {
-    throw new Error("The published README must use suporte@otimitare.online for support.");
+  if (!conteudo.includes("suporte@otimitare.com")) {
+    throw new Error("The published README must use suporte@otimitare.com for support.");
   }
-  if (!conteudo.includes("Codex-native")) {
-    throw new Error("The published README must position Sema as Codex-native.");
+  if (!["Claude", "Codex", "GLM", "Kimi"].every((agente) => conteudo.includes(agente))) {
+    throw new Error("The published README must declare proven compatibility with Claude, Codex, zCode (GLM) and Kimi.");
   }
   if (!conteudo.includes("npm install -g @semacode/cli") || !conteudo.includes("sema skill status --json")) {
     throw new Error("The published README must document the npm-bundled global Sema skill.");

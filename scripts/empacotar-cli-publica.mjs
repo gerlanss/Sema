@@ -560,8 +560,8 @@ async function prepararManifestPublico(contexto) {
     icon: manifestCli.icon,
     license: manifestCli.license ?? "SEE LICENSE IN LICENSE",
     repository: manifestCli.repository,
-    homepage: manifestCli.homepage ?? "https://otimitare.online",
-    bugs: manifestCli.bugs ?? { url: "https://otimitare.online", email: "suporte@otimitare.online" },
+    homepage: manifestCli.homepage ?? "https://otimitare.com",
+    bugs: manifestCli.bugs ?? { url: "https://otimitare.com", email: "suporte@otimitare.com" },
     keywords: manifestCli.keywords ?? ["sema", "ai", "contracts", "governance", "local-cli", "drift", "dsl"],
     engines: manifestCli.engines ?? { node: ">=20" },
     publishConfig: { access: "public", ...(manifestCli.publishConfig ?? {}) },
@@ -780,9 +780,9 @@ async function executarEmpacotamento(contexto) {
     pacote_gerado: true,
     dependencias_file_removidas: Object.values(manifest.dependencies ?? {})
       .every((versao) => typeof versao !== "string" || !versao.startsWith("file:")),
-    metadados_suporte_email: manifest.bugs?.email === "suporte@otimitare.online" && readme.includes("suporte@otimitare.online"),
+    metadados_suporte_email: manifest.bugs?.email === "suporte@otimitare.com" && readme.includes("suporte@otimitare.com"),
     licenca_nao_comercial_incluida: license.includes("commercial replica") && license.includes("resale permission"),
-    produto_codex_native: String(manifest.description ?? "").includes("Codex-native") && readme.includes("AGENTS.md"),
+    produto_multi_agente: ["Claude", "Codex", "GLM", "Kimi"].every((agente) => String(manifest.description ?? "").includes(agente)) && readme.includes("AGENTS.md"),
     cli_sem_autorizacao_local: arquivosRuntimeAnalisados > 0,
     launcher_absoluto_empacotado: manifest.bin?.sema === "dist/bin.js"
       && manifest.main === "dist/index.js"

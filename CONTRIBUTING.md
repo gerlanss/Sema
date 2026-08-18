@@ -59,4 +59,4 @@ workflow or add an MCP server to the plugin.
 
 Sema is public source, but commercial resale and commercial replication require
 written permission from OtimiTare. Support goes to
-[suporte@otimitare.online](mailto:suporte@otimitare.online).
+[suporte@otimitare.com](mailto:suporte@otimitare.com).

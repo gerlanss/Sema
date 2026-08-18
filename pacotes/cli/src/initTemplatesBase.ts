@@ -1,5 +1,5 @@
 // SEMA-GOVERNED: sema.produto.cli_init_templates, sema.produto.governanca_ia.drift.cache.modos
-// Descrição: contrato base e dispatcher dos templates Codex-native de inicialização.
+// Descrição: contrato base e dispatcher dos templates multi-agente de inicialização.
 
 
 import type { FrameworkGeracao } from "@sema/padroes";

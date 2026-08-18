@@ -1,17 +1,17 @@
 # @semacode/cli
 
-`@semacode/cli` is the public Codex-native local CLI for Sema semantic
-governance.
+`@semacode/cli` is the public local-first CLI for Sema semantic
+governance, proven with Claude, Codex, zCode (GLM) and Kimi.
 
 It validates `.sema` contracts, checks semantic drift, maps impact, enforces
 documentation gates, generates starter code, and prepares contract-first
-context for Codex inside a local project folder.
+contract-first context for coding agents inside a local project folder.
 
 Sema is an independent product and is not affiliated with or endorsed by
-OpenAI. Codex-native describes Sema's official product direction, not an
-official OpenAI program, integration, or submission.
+OpenAI. Proven compatibility with Claude, Codex, zCode (GLM) and Kimi
+describes Sema's product direction, not an official OpenAI program.
 
-Official support: [suporte@otimitare.online](mailto:suporte@otimitare.online)
+Official support: [suporte@otimitare.com](mailto:suporte@otimitare.com)
 
 ## Install
 
@@ -296,4 +296,4 @@ from OtimiTare.
 
 ## Support
 
-Use [suporte@otimitare.online](mailto:suporte@otimitare.online) for support.
+Use [suporte@otimitare.com](mailto:suporte@otimitare.com) for support.

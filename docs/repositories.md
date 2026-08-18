@@ -1,6 +1,6 @@
 # Repository Boundary
 
-The public Sema repository should contain only the Codex-native local CLI, the
+The public Sema repository should contain only the local-first multi-agent CLI, the
 first-contact Codex skill, runtime packages, examples, tests that run locally,
 and English documentation.
 
@@ -49,7 +49,7 @@ authorization, a product-license check, activation key, credits, token, billing
 service, or control panel.
 
 Sema is an independent product and is not affiliated with or endorsed by
-OpenAI. Codex-native is Sema's official product direction, not an official
+OpenAI. Proven compatibility with Claude, Codex, zCode (GLM) and Kimi is Sema's product direction, not an official
 OpenAI program or submission.
 
 ## Commercial Use
@@ -57,4 +57,4 @@ OpenAI program or submission.
 The public Sema source may not be copied, rebranded, bundled, or replicated for
 commercial resale without written permission from OtimiTare.
 
-Support: suporte@otimitare.online
+Support: suporte@otimitare.com

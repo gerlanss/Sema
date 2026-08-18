@@ -113,7 +113,7 @@ export async function comandoIniciar(
   if (!opcoes.exemplosCompletos) {
     console.log("Starter de exemplos instalado; rode sema instalar-exemplos ou sema iniciar --com-exemplos para o pacote completo.");
   }
-  console.log(`Kit IA Codex-native sincronizado (${kitIa.artefatos.length} artefatos; entrypoint ${kitIa.codex.entrypointCodex}; ${kitIa.codex.criados.length} criados, ${kitIa.codex.atualizados.length} atualizados, ${kitIa.codex.preservados.length} preservados).`);
+  console.log(`Kit IA multi-agente sincronizado (${kitIa.artefatos.length} artefatos; entrypoint ${kitIa.codex.entrypointCodex}; ${kitIa.codex.criados.length} criados, ${kitIa.codex.atualizados.length} atualizados, ${kitIa.codex.preservados.length} preservados).`);
   return 0;
 }
 

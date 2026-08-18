@@ -36,7 +36,7 @@ sema finalizar-mudanca \
   keywords literal.
 - Do not include private or sensitive operational material.
 - Prefer local CLI examples.
-- Point support requests to suporte@otimitare.online.
+- Point support requests to suporte@otimitare.com.
 
 ## Contract Structure
 

@@ -10,7 +10,7 @@ identifiers.
 - impact map
 - governed code
 - traceability
-- Codex-native
+- agent-native (Claude, Codex, zCode/GLM, Kimi)
 - local runtime
 - finalization
 - evidence
@@ -26,4 +26,4 @@ identifiers.
 
 ## Public Support
 
-Use suporte@otimitare.online for support references.
+Use suporte@otimitare.com for support references.

@@ -51,4 +51,4 @@ Git history:
 2. Remove it from the affected artifact.
 3. Rebuild and rescan before publishing.
 
-Official support: suporte@otimitare.online
+Official support: suporte@otimitare.com

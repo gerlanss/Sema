@@ -1,12 +1,12 @@
 # Sema CLI
 
-Sema is a Codex-native local CLI distribution. The public package reads the
+Sema is a local-first CLI distribution, proven with Claude, Codex, zCode (GLM) and Kimi. The public package reads the
 workspace on the user's machine, validates `.sema` contracts, checks drift,
 maps impact, and generates code without login, user authorization, license
 activation, tokens, credits, billing services, a control panel, or external
 service credentials.
 
-Support: suporte@otimitare.online
+Support: suporte@otimitare.com
 
 ## Install
 

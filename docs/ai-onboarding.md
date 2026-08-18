@@ -78,4 +78,4 @@ repository rules: `AGENTS.md` remains the only official workspace entrypoint.
 Sema is an independent product and is not affiliated with or endorsed by
 OpenAI.
 
-Support: suporte@otimitare.online
+Support: suporte@otimitare.com

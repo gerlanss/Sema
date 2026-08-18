@@ -121,7 +121,7 @@ export async function validarBootstrapCodexInstalado({
     !syncCodex.resultadosCodex.docsComandos ||
     !syncCodex.resultadosCodex.politicaModosDriftExplicita
   ) {
-    throw new Error("The installed public CLI did not complete the Codex-native synchronization flow.");
+    throw new Error("The installed public CLI did not complete the AGENTS.md synchronization flow.");
   }
   const agents = await readFile(path.join(projetoCodex, "AGENTS.md"), "utf8");
   if (!agents.includes("Sema para Codex") || /\bsema\s+preflight\b|\buse_cli_local\b/i.test(agents)) {
