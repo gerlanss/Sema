@@ -75,16 +75,16 @@ Unknown commands/subcommands, missing or invalid CLI syntax, and uncaught
 runtime exceptions use the control envelope; structured domain-level failures
 after valid dispatch use `sema.cli.result/v1` with `kind: "DOMAIN_ERROR"`.
 
-## Codex Setup
+## Agent Setup
 
-`AGENTS.md` is the official Sema entrypoint for Codex:
+`AGENTS.md` is the official Sema entrypoint for coding agents:
 
 ```bash
 sema sync-codex --json
 ```
 
-Codex automatically loads `AGENTS.md` as durable repository guidance. See the
-[Codex `AGENTS.md` documentation](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+Agent tools that read `AGENTS.md` — Claude, Codex, zCode (GLM) and Kimi among
+them — load it as durable repository guidance.
 
 The CLI is the engine and source of truth; `AGENTS.md` is the automatic
 workspace protocol. The Sema skill bootstraps a project that does not have Sema
@@ -107,7 +107,7 @@ If a shell still cannot resolve `sema`, invoke the managed launcher directly:
 On Windows, PowerShell resolves `sema.ps1` from `PATH`, `cmd.exe` resolves
 `sema.cmd`, and `sema-managed.ps1` is the PATH-independent fallback.
 
-## Codex-Native Architecture
+## Architecture
 
 - `AGENTS.md` is the only official entrypoint. `sync-codex` changes only valid
   Sema-managed blocks and preserves malformed or manual content for review.
@@ -149,7 +149,7 @@ sema sync-codex --json
 
 Initialization preserves existing files and rejects symlink or junction
 escapes. Use `--force` only when overwriting the template destinations is an
-explicit human decision; the Codex bootstrap skill never adds it.
+explicit human decision; the bootstrap skill never adds it.
 
 ## Code Generation
 
