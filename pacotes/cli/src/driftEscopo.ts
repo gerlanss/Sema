@@ -390,6 +390,64 @@ function candidatosRotasDeterministicos(
   return [...candidatos.values()];
 }
 
+function candidatosRotasNextDeterministicos(
+  contexto: ContextoProjetoCarregado,
+  irs: IrModulo[],
+  diretoriosCodigo: readonly string[],
+): string[] {
+  const candidatos = new Map<string, string>();
+  const extensoes = [".ts", ".tsx", ".js", ".jsx"];
+
+  for (const ir of irs) {
+    for (const rota of ir.routes) {
+      const caminho = (rota.caminho ?? "").trim();
+      if (!caminho.startsWith("/")) {
+        continue;
+      }
+      const segmentos = caminho.split("/").filter(Boolean).map((segmento) =>
+        segmento.replace(/^\{(.+)\}$/u, "[$1]").replace(/^:(.+)$/u, "[$1]"));
+      if (segmentos.length === 0) {
+        continue;
+      }
+      const ultimo = segmentos.at(-1)!;
+      const intermediarios = segmentos.slice(0, -1);
+      const segmentosApi = segmentos[0] === "api" ? segmentos.slice(1) : segmentos;
+      const ultimoApi = segmentosApi.length > 0 ? segmentosApi.at(-1)! : undefined;
+      const intermediariosApi = segmentosApi.length > 0 ? segmentosApi.slice(0, -1) : [];
+
+      for (const raiz of diretoriosCodigo) {
+        for (const extensao of extensoes) {
+          // Next.js App Router: src/app/<caminho>/route.ts e app/<caminho>/route.ts
+          adicionarCandidatoPreservandoForma(
+            candidatos,
+            contexto.baseProjeto,
+            path.resolve(raiz, "src", "app", ...segmentos, `route${extensao}`),
+          );
+          adicionarCandidatoPreservandoForma(
+            candidatos,
+            contexto.baseProjeto,
+            path.resolve(raiz, "app", ...segmentos, `route${extensao}`),
+          );
+          // Next.js Pages Router API: src/pages/api/<caminho>.ts e pages/api/<caminho>.ts
+          if (ultimoApi !== undefined) {
+            adicionarCandidatoPreservandoForma(
+              candidatos,
+              contexto.baseProjeto,
+              path.resolve(raiz, "src", "pages", "api", ...intermediariosApi, `${ultimoApi}${extensao}`),
+            );
+            adicionarCandidatoPreservandoForma(
+              candidatos,
+              contexto.baseProjeto,
+              path.resolve(raiz, "pages", "api", ...intermediariosApi, `${ultimoApi}${extensao}`),
+            );
+          }
+        }
+      }
+    }
+  }
+  return [...candidatos.values()];
+}
+
 function candidatosConvencionaisEscopo(
   contexto: ContextoProjetoCarregado,
   irs: IrModulo[],
@@ -559,6 +617,7 @@ export async function planejarEscopoDrift(
         raizesAncoradas,
       ),
       ...candidatosRotasDeterministicos(contexto, irs, raizesAncoradas),
+      ...candidatosRotasNextDeterministicos(contexto, irs, raizesAncoradas),
       ...candidatosConvencionaisEscopo(contexto, irs, raizesAncoradas),
     ];
     const sondagensDeterministicas = await sondarArquivosRegularesContidos(
