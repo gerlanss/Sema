@@ -203,7 +203,7 @@ export function validarRuntimeLocalDireto(caminhoTarball, raiz) {
 export function validarReadmePublico(conteudo) {
   const secoesObrigatorias = [
     "## Install",
-    "## Codex Setup",
+    "## Agent Setup",
     "## Local Workflow",
     "## Code Generation",
     "## Public Boundary",
