@@ -74,8 +74,14 @@ async function resolverDiretoriosConfiguradosConfinados(
     let canonico = absoluto;
     try {
       const [real, informacao] = await Promise.all([realpath(absoluto), stat(absoluto)]);
-      if (!informacao.isDirectory()) {
-        throw new Error(`${identificadorSeguro} nao e diretorio`);
+      const ehContratoIndividual = campo === "origens"
+        && informacao.isFile()
+        && absoluto.toLowerCase().endsWith(".sema");
+      if (!informacao.isDirectory() && !ehContratoIndividual) {
+        const esperado = campo === "origens"
+          ? "um diretorio de contratos (ex.: ./contratos) ou um arquivo .sema individual"
+          : "um diretorio de codigo vivo";
+        throw new Error(`${identificadorSeguro} nao e ${esperado}. Corrija "${campo}" no sema.config.json; configuracoes geradas por versoes antigas da CLI podem listar arquivos direto.`);
       }
       if (!caminhoEstaDentro(baseReal, real)) {
         throw new Error(`${identificadorSeguro} resolve fora da base do projeto`);

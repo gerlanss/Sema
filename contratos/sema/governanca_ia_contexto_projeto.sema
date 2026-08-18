@@ -19,6 +19,7 @@ module sema.produto.governanca_ia.contexto.projeto {
       espelho_contratos_remoto: Booleano
       codigo_local_opcional_para_contrato: Booleano
       contratos_descobertos_separados: Booleano
+      origens_aceita_contrato_arquivo: Booleano
       contratos_carregados_minimos: Booleano
       fechamento_uses_aplicado: Booleano
       descoberta_codigo_adiada: Booleano
@@ -41,6 +42,8 @@ module sema.produto.governanca_ia.contexto.projeto {
     }
     vinculos {
       arquivo: "pacotes/cli/src/projetoCarregar.ts"
+      arquivo: "pacotes/cli/src/projetoOrigens.ts"
+      arquivo: "testes/unidade/projeto-origens-arquivo.test.ts"
       arquivo: "pacotes/cli/src/projetoCatalogo.ts"
       arquivo: "pacotes/cli/src/projetoOrigens.ts"
       arquivo: "pacotes/cli/src/projetoTipos.ts"
@@ -65,6 +68,7 @@ module sema.produto.governanca_ia.contexto.projeto {
       espelho_contratos_remoto existe
       codigo_local_opcional_para_contrato existe
       contratos_descobertos_separados existe
+      origens_aceita_contrato_arquivo existe
       contratos_carregados_minimos existe
       fechamento_uses_aplicado existe
       descoberta_codigo_adiada existe
