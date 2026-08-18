@@ -78,7 +78,7 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
 
   for (const regra of REGRAS_DOCUMENTACAO.filter((item) => categorias.includes(item.categoria))) {
     for (const doc of regra.docs) {
-      registrar(doc);
+      registrar({ ...doc, obrigatoriedade: "recomendada" });
     }
   }
 
@@ -127,6 +127,7 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
       criado,
       criacaoAutomatica: doc.permitirCriacao,
       obrigatorio: true,
+      obrigatoriedade: doc.obrigatoriedade ?? "bloqueante",
       template: existe ? undefined : template,
     };
 
@@ -144,7 +145,7 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
 
   const docsAusentes = leituraObrigatoria.filter((doc) => !doc.existe);
   const docsCriadas = leituraObrigatoria.filter((doc) => doc.criado);
-  const bloqueios = docsAusentes.map((doc): BloqueioDocumentacaoMudanca => ({
+  const bloqueios = docsAusentes.filter((doc) => doc.obrigatoriedade !== "recomendada").map((doc): BloqueioDocumentacaoMudanca => ({
     tipo: "documentacao_ausente",
     severidade: 4,
     caminho: doc.relativo,
@@ -162,6 +163,9 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
     leituraObrigatoria,
     docsAusentes,
     docsCriadas,
+    leituraRecomendada: leituraObrigatoria
+      .filter((doc) => doc.obrigatoriedade === "recomendada")
+      .map(compactarDocumentoObrigatorio),
     bloqueios,
     instrucoes: [
       "A IA deve ler todos os itens de leituraObrigatoria antes de executar a mudanca.",
@@ -202,12 +206,14 @@ export async function verificarDocumentacaoMudanca(opcoes: {
 
   const docsLidas = [...new Set((opcoes.docsLidas ?? []).map((doc) => normalizarDocLida(baseProjeto, doc)).filter(Boolean))];
   const setDocsLidas = new Set(docsLidas);
-  const docsNaoLidas = impacto.leituraObrigatoria.filter((doc) => doc.existe && !setDocsLidas.has(doc.relativo));
+  const docsNaoLidas = impacto.leituraObrigatoria.filter((doc) => (
+    doc.existe && doc.obrigatoriedade !== "recomendada" && !setDocsLidas.has(doc.relativo)
+  ));
   const docsTemplatePendentes = impacto.leituraObrigatoria.filter((doc) => (
-    doc.existe && doc.templatePendente && setDocsLidas.has(doc.relativo)
+    doc.existe && doc.obrigatoriedade !== "recomendada" && doc.templatePendente && setDocsLidas.has(doc.relativo)
   ));
   const docsSemSubstancia = impacto.leituraObrigatoria.filter((doc) => (
-    doc.existe && !doc.templatePendente && doc.substancia === false
+    doc.existe && doc.obrigatoriedade !== "recomendada" && !doc.templatePendente && doc.substancia === false
   ));
   const diagnosticosOrcamento = await emitirDiagnosticosArquivosOrcamento({
     baseProjeto,
@@ -260,6 +266,7 @@ export async function verificarDocumentacaoMudanca(opcoes: {
     intencao: opcoes.intencao,
     categorias: impacto.categorias,
     docsLidas,
+    leituraRecomendada: impacto.leituraRecomendada,
     leituraObrigatoria: impacto.leituraObrigatoria.map(compactarDocumentoObrigatorio),
     docsNaoLidas: docsNaoLidas.map(compactarDocumentoObrigatorio),
     docsAusentes: impacto.docsAusentes.map(compactarDocumentoObrigatorio),

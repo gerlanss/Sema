@@ -26,6 +26,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       bloqueio_emitido_quando_falta_leitura: Booleano
       templates_crus_bloqueados: Booleano
       docs_sem_substancia_bloqueadas: Booleano
+      leitura_recomendada_nao_bloqueia_fechamento: Booleano
       diagnostico_compacto_emitido: Booleano
     }
     authz {
@@ -55,6 +56,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
         bloqueio_emitido_quando_falta_leitura: interno
         templates_crus_bloqueados: interno
         docs_sem_substancia_bloqueadas: interno
+        leitura_recomendada_nao_bloqueia_fechamento: interno
         diagnostico_compacto_emitido: interno
       }
     }
@@ -76,6 +78,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       usar_motivo_sem_impacto_sem_doc
       finalizar_com_template_cru_criado_pela_sema
       finalizar_com_doc_sem_substancia
+      bloquear_fechamento_por_leitura_recomendada
     }
     impl {
       ts: cli.src.docs.verificarDocumentacaoMudanca
@@ -104,6 +107,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       bloqueio_emitido_quando_falta_leitura existe
       templates_crus_bloqueados existe
       docs_sem_substancia_bloqueadas existe
+      leitura_recomendada_nao_bloqueia_fechamento existe
       diagnostico_compacto_emitido existe
       documentacao_atualizada_ou_justificada == verdadeiro
     }

@@ -14,6 +14,7 @@ export interface DocumentoPlanejado {
   tipo: TipoDocumentoMudanca;
   motivo: string;
   permitirCriacao: boolean;
+  obrigatoriedade?: "bloqueante" | "recomendada";
 }
 
 export interface DocumentoObrigatorioMudanca {
@@ -30,6 +31,7 @@ export interface DocumentoObrigatorioMudanca {
   template?: string;
   templatePendente?: boolean;
   substancia?: boolean;
+  obrigatoriedade: "bloqueante" | "recomendada";
 }
 
 export interface BloqueioDocumentacaoMudanca {
@@ -56,6 +58,7 @@ export interface ResultadoDocumentacaoObrigatoria {
   leituraObrigatoria: DocumentoObrigatorioMudanca[];
   docsAusentes: DocumentoObrigatorioMudanca[];
   docsCriadas: DocumentoObrigatorioMudanca[];
+  leituraRecomendada: DocumentoObrigatorioMudanca[];
   bloqueios: BloqueioDocumentacaoMudanca[];
   instrucoes: string[];
 }
@@ -64,6 +67,7 @@ export interface ResultadoVerificacaoDocumentacaoMudanca {
   sucesso: boolean;
   baseProjeto: string;
   intencao: string;
+  leituraRecomendada: DocumentoObrigatorioMudanca[];
   categorias: string[];
   docsLidas: string[];
   leituraObrigatoria: DocumentoObrigatorioMudanca[];

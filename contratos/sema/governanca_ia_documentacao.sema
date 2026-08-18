@@ -25,6 +25,7 @@ module sema.produto.governanca_ia.documentacao {
       docs_criadas_sao_esqueleto: Booleano
       substancia_avaliada: Booleano
       modo_compacto_padrao_docs_impacto: Booleano
+      leitura_recomendada_nao_bloqueante: Booleano
       escopo_documental_preciso: Booleano
       tokens_genericos_ignorados: Booleano
     }
@@ -55,6 +56,7 @@ module sema.produto.governanca_ia.documentacao {
         docs_criadas_sao_esqueleto: interno
         substancia_avaliada: interno
         modo_compacto_padrao_docs_impacto: interno
+        leitura_recomendada_nao_bloqueante: interno
         escopo_documental_preciso: interno
         tokens_genericos_ignorados: interno
       }
@@ -74,6 +76,7 @@ module sema.produto.governanca_ia.documentacao {
       criar_documento_antes_de_validar_todos_os_destinos
       seguir_symlink_ou_junction_em_documentacao
       emitir_conteudo_documental_por_padrao_no_payload_docs_impacto
+      bloquear_por_doc_recomendada_de_categoria_sem_relacao_com_arquivos_alvo
     }
     impl {
       ts: cli.src.docs.resolverDocumentacaoObrigatoria
@@ -102,6 +105,7 @@ module sema.produto.governanca_ia.documentacao {
       docs_criadas_sao_esqueleto == verdadeiro
       substancia_avaliada == verdadeiro
       modo_compacto_padrao_docs_impacto == verdadeiro
+      leitura_recomendada_nao_bloqueante == verdadeiro
       escopo_documental_preciso == verdadeiro
       tokens_genericos_ignorados == verdadeiro
     }
