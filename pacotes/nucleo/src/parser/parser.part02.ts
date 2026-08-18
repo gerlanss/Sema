@@ -108,6 +108,8 @@ export class Parser {
       return [
         "docs",
         "comments",
+        "design",
+        "tokens",
         "fields",
         "invariants",
         "transitions",

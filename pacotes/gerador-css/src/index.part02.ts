@@ -4,6 +4,7 @@ import type { IrModulo } from "@sema/nucleo";
 import {
   normalizarNomeModulo,
   normalizarNomeParaSimbolo,
+  resolverDesignTokens,
   type ArquivoGerado,
 } from "@sema/padroes";
 import { gerarCabecalhoSemaCss, gerarEstilosEntity, gerarEstilosEnum, gerarEstilosTask } from "./index.part01.js";
@@ -12,15 +13,16 @@ export function gerarCss(modulo: IrModulo): ArquivoGerado[] {
   const entidades = modulo.entities.map(gerarEstilosEntity).join("\n");
   const tasks = modulo.tasks.map(gerarEstilosTask).join("\n");
   const enums = modulo.enums.map(gerarEstilosEnum).join("\n");
+  const design = resolverDesignTokens(modulo.design);
   const css = `${gerarCabecalhoSemaCss(modulo)}
 /* ========================================
    Design System — Variaveis
    ======================================== */
 :root {
   /* Cores principais */
-  --sema-cor-primaria: #6366f1;
-  --sema-cor-primaria-hover: #4f46e5;
-  --sema-cor-primaria-suave: #eef2ff;
+  --sema-cor-primaria: ${design.cores.primaria};
+  --sema-cor-primaria-hover: ${design.cores.primariaHover};
+  --sema-cor-primaria-suave: ${design.cores.primariaSuave};
   --sema-cor-sucesso: #10b981;
   --sema-cor-sucesso-fundo: #ecfdf5;
   --sema-cor-erro: #ef4444;
@@ -29,20 +31,20 @@ export function gerarCss(modulo: IrModulo): ArquivoGerado[] {
   --sema-cor-aviso: #f59e0b;
   --sema-cor-info: #3b82f6;
   /* Neutros */
-  --sema-cor-fundo: #fafafa;
-  --sema-cor-superficie: #ffffff;
-  --sema-cor-texto: #18181b;
-  --sema-cor-texto-secundario: #71717a;
-  --sema-cor-borda: #e4e4e7;
-  --sema-cor-borda-foco: #a5b4fc;
+  --sema-cor-fundo: ${design.cores.fundo};
+  --sema-cor-superficie: ${design.cores.superficie};
+  --sema-cor-texto: ${design.cores.texto};
+  --sema-cor-texto-secundario: ${design.cores.textoSecundario};
+  --sema-cor-borda: ${design.cores.borda};
+  --sema-cor-borda-foco: ${design.cores.bordaFoco};
   --sema-cor-entidade: #8b5cf6;
   /* Tipografia */
-  --sema-fonte: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --sema-fonte-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
-  --sema-tamanho-base: 0.9375rem;
-  --sema-tamanho-titulo: 1.75rem;
-  --sema-tamanho-subtitulo: 1.25rem;
-  --sema-tamanho-pequeno: 0.8125rem;
+  --sema-fonte: ${design.tipografia.fonte};
+  --sema-fonte-mono: ${design.tipografia.fonteMono};
+  --sema-tamanho-base: ${design.escala.base};
+  --sema-tamanho-titulo: ${design.escala.titulo};
+  --sema-tamanho-subtitulo: ${design.escala.subtitulo};
+  --sema-tamanho-pequeno: ${design.escala.pequeno};
   /* Espacamento */
   --sema-espacamento-xs: 0.25rem;
   --sema-espacamento-sm: 0.5rem;
@@ -50,8 +52,8 @@ export function gerarCss(modulo: IrModulo): ArquivoGerado[] {
   --sema-espacamento-lg: 1.5rem;
   --sema-espacamento-xl: 2rem;
   /* Bordas e sombras */
-  --sema-raio: 0.5rem;
-  --sema-raio-lg: 0.75rem;
+  --sema-raio: ${design.forma.raio};
+  --sema-raio-lg: ${design.forma.raioLg};
   --sema-sombra: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   --sema-sombra-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
   /* Transicoes */

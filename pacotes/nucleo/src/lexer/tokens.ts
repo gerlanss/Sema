@@ -54,6 +54,8 @@ export const PALAVRAS_CHAVE = new Set([
   "error",
   "docs",
   "comments",
+  "design",
+  "tokens",
   "table",
   "view",
   "query",

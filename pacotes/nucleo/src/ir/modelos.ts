@@ -385,8 +385,24 @@ export interface IrBancoDados {
   resources: IrRecursoPersistencia[];
 }
 
+export interface IrDesignTokens {
+  paleta?: string;
+  tipografia?: string;
+  densidade?: string;
+  forma?: string;
+  movimento?: string;
+  overrides: Record<string, string>;
+}
+
+export interface IrDesign {
+  dominio?: string;
+  identidade?: string;
+  tokens: IrDesignTokens;
+}
+
 export interface IrModulo {
   nome: string;
+  design?: IrDesign;
   uses: string[];
   imports: IrUse[];
   interoperabilidades: IrInteropExterno[];

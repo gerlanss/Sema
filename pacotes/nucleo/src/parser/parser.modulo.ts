@@ -26,6 +26,7 @@ export function parseModuloParser(parser: Parser): ModuloAst | undefined {
     parser.consumirValor("{", "Era esperado abrir o corpo do modulo com {.");
 
     const uses: UseAst[] = [];
+    let design: BlocoGenericoAst | undefined;
     let vinculos: BlocoGenericoAst | undefined;
     const databases: BlocoGenericoAst[] = [];
     const types: TypeAst[] = [];
@@ -73,6 +74,13 @@ export function parseModuloParser(parser: Parser): ModuloAst | undefined {
         case "comments":
           if (parser.iniciaBlocoSimples("comments")) {
             comments = parser.parseBlocoGenerico("comments");
+            break;
+          }
+          extras.push(parser.parseBlocoGenerico("desconhecido"));
+          break;
+        case "design":
+          if (parser.iniciaBlocoSimples("design")) {
+            design = parser.parseBlocoGenerico("design");
             break;
           }
           extras.push(parser.parseBlocoGenerico("desconhecido"));
@@ -216,6 +224,7 @@ export function parseModuloParser(parser: Parser): ModuloAst | undefined {
       tipo: "module",
       nome,
       uses,
+      design,
       vinculos,
       docs,
       comments,

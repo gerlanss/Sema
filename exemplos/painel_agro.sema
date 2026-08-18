@@ -1,0 +1,68 @@
+module exemplos.painel.agro {
+  design {
+    dominio: agro
+    identidade: rustico_moderno
+    tokens {
+      paleta: terra
+      tipografia: display
+      densidade: confortavel
+      forma: arredondada
+      movimento: suave
+      cor_primaria: "#7c2d12"
+    }
+  }
+
+  entity Safra {
+    fields {
+      id: Id
+      cultura: Texto
+      hectares: Decimal
+    }
+  }
+
+  task registrar_safra {
+    input {
+      cultura: Texto required
+      hectares: Decimal required
+    }
+    output {
+      safra: Safra
+    }
+    rules {
+      hectares deve_ser positivo
+    }
+    effects {
+      persistencia Safra
+      auditoria safra_registrada
+    }
+    guarantees {
+      safra existe
+    }
+    tests {
+      caso "registra safra" {
+        given {
+          cultura: "Cafe"
+          hectares: 12.5
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route safras_criar {
+    metodo: POST
+    caminho: /safras
+    task: registrar_safra
+    finalidade: cadastro_safra
+    input {
+      cultura: Texto
+      hectares: Decimal
+    }
+    output {
+      safra: Safra
+    }
+  }
+}

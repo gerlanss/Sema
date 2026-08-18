@@ -58,7 +58,7 @@ import {
   forbiddenContemRegra,
 } from "./seguranca.js";
 
-import { InteropSemantico, OpcoesAnaliseSemantica, PADRAO_CAMINHO_INTEROP, ResultadoSemantico, ResumoTaskSemantico, SimboloSemantico, TIPOS_PRIMITIVOS, coletarResumoTask, diagnosticoDuplicado, localizarBloco, localizarCampo, validarCamposDeTipos, validarVinculos } from "./analisador.part01.js";
+import { InteropSemantico, OpcoesAnaliseSemantica, PADRAO_CAMINHO_INTEROP, ResultadoSemantico, ResumoTaskSemantico, SimboloSemantico, TIPOS_PRIMITIVOS, coletarResumoTask, diagnosticoDuplicado, localizarBloco, localizarCampo, validarCamposDeTipos, validarVinculos, valorCampoCompleto } from "./analisador.part01.js";
 import { descreverSugestoes, recomporCaminhoRoute, resolverUseSema, serializarTransicao, validarSuperficie } from "./analisador.part04.js";
 import { validarFlow, validarInvariantesDeCampos, validarState } from "./analisador.part05.js";
 import { validarStatusTextoComState, validarTask } from "./analisador.part07.js";
@@ -281,6 +281,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   }
 
   validarVinculos(modulo.vinculos, diagnosticos, `modulo ${modulo.nome}`);
+  validarDesignModulo(modulo, diagnosticos);
   for (const worker of modulo.workers) {
     validarSuperficie(worker, "worker", tasksConhecidas, tiposConhecidos, diagnosticos);
   }
@@ -353,4 +354,73 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
     },
     diagnosticos,
   };
+}
+
+export const PALETAS_DESIGN_SUPORTADAS = new Set(["padrao", "terra", "floresta", "oceano", "noturno", "grafite", "neon", "pixel"]);
+export const TIPOGRAFIAS_DESIGN_SUPORTADAS = new Set(["padrao", "humanista", "tecnica", "display"]);
+export const DENSIDADES_DESIGN_SUPORTADAS = new Set(["compacta", "padrao", "confortavel"]);
+export const FORMAS_DESIGN_SUPORTADAS = new Set(["reta", "padrao", "arredondada", "pill"]);
+export const MOVIMENTOS_DESIGN_SUPORTADAS = new Set(["nenhum", "padrao", "suave"]);
+export const CAMPOS_TOKENS_DESIGN = new Set([
+  "paleta", "tipografia", "densidade", "forma", "movimento",
+  "cor_primaria", "cor_primaria_hover", "cor_primaria_suave", "cor_fundo", "cor_superficie",
+  "cor_texto", "cor_texto_secundario", "cor_borda", "fonte", "fonte_titulo", "fonte_mono", "raio_base",
+]);
+
+export function validarDesignModulo(modulo: import("../ast/tipos.js").ModuloAst, diagnosticos: Diagnostico[]): void {
+  const design = modulo.design;
+  if (!design) {
+    return;
+  }
+  for (const campo of design.campos) {
+    if (!["dominio", "identidade"].includes(campo.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM110",
+          `Design do modulo "${modulo.nome}" declarou campo invalido: "${campo.nome}".`,
+          "erro",
+          campo.intervalo,
+          "Use dominio, identidade ou o subbloco tokens { ... } com paleta, tipografia, densidade, forma, movimento ou overrides de cor/fonte/raio.",
+        ),
+      );
+    }
+  }
+  const PRESETS: Array<[Set<string>, string]> = [
+    [PALETAS_DESIGN_SUPORTADAS, "paleta"],
+    [TIPOGRAFIAS_DESIGN_SUPORTADAS, "tipografia"],
+    [DENSIDADES_DESIGN_SUPORTADAS, "densidade"],
+    [FORMAS_DESIGN_SUPORTADAS, "forma"],
+    [MOVIMENTOS_DESIGN_SUPORTADAS, "movimento"],
+  ];
+  const tokens = design.blocos.find((bloco): bloco is import("../ast/tipos.js").BlocoGenericoAst => bloco.tipo === "bloco_generico" && bloco.palavraChave === "tokens");
+  if (!tokens) {
+    return;
+  }
+  for (const campo of tokens.campos) {
+    if (!CAMPOS_TOKENS_DESIGN.has(campo.nome)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM111",
+          `Tokens de design do modulo "${modulo.nome}" declarou campo invalido: "${campo.nome}".`,
+          "erro",
+          campo.intervalo,
+          `Use ${[...CAMPOS_TOKENS_DESIGN].join(", ")} dentro de tokens { ... }.`,
+        ),
+      );
+      continue;
+    }
+    const preset = PRESETS.find(([conjunto, nome]) => nome === campo.nome);
+    const valor = valorCampoCompleto(campo) ?? "";
+    if (preset && !preset[0].has(valor)) {
+      diagnosticos.push(
+        criarDiagnostico(
+          "SEM112",
+          `Design do modulo "${modulo.nome}" declarou ${campo.nome} invalida: "${valor}".`,
+          "erro",
+          campo.intervalo,
+          `Use ${[...preset[0]].join(", ")} ou um override livre (ex.: cor_primaria: "#b45309").`,
+        ),
+      );
+    }
+  }
 }

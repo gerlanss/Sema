@@ -1,0 +1,104 @@
+module sema.produto.dsl_design {
+  docs {
+    resumo: "Bloco design no contrato declara a identidade visual propria de cada modulo; presets por dominio e overrides livres alimentam todos os materializadores de tokens."
+    arquivo: "docs/syntax.md"
+  }
+
+  task declarar_identidade_visual_do_modulo {
+    input {
+      contrato_alvo: Texto required
+    }
+    output {
+      presets_aceitos: Booleano
+      overrides_livres_aceitos: Booleano
+      tokens_resolvidos_por_materializador: Booleano
+      css_gerado_tematizado: Booleano
+      pacote_de_tokens_emitido: Booleano
+      ausencia_de_design_sinalizada: Booleano
+    }
+    rules {
+      contrato_alvo deve_ser informado
+    }
+    authz {
+      escopo: sema.dsl.design_declarar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        contrato_alvo: interno
+      }
+      output {
+        presets_aceitos: interno
+        overrides_livres_aceitos: interno
+        tokens_resolvidos_por_materializador: interno
+        css_gerado_tematizado: interno
+        pacote_de_tokens_emitido: interno
+        ausencia_de_design_sinalizada: interno
+      }
+    }
+    audit {
+      evento: sema.dsl.design_declarado
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      gerar_ui_neutra_quando_design_existe
+      ignorar_overrides_livres_de_cor_fonte_ou_raio
+      emitir_pacote_de_tokens_sem_contrato_design
+      copiar_estetica_de_outro_dominio_sem_declarar
+    }
+    impl {
+      ts: padroes.src.design.resolverDesignTokens
+    }
+    vinculos {
+      arquivo: "pacotes/padroes/src/design.ts"
+      arquivo: "pacotes/gerador-css/src/index.part02.ts"
+      arquivo: "pacotes/cli/src/geracaoCore.ts"
+      arquivo: "pacotes/nucleo/src/semantico/analisador.part08.ts"
+      arquivo: "testes/unidade/dsl-design.test.ts"
+      simbolo: padroes.src.design.resolverDesignTokens
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      compensacao: "nenhuma"
+      criticidade_operacional: media
+    }
+    guarantees {
+      presets_aceitos existe
+      overrides_livres_aceitos == verdadeiro
+      tokens_resolvidos_por_materializador == verdadeiro
+      css_gerado_tematizado == verdadeiro
+      pacote_de_tokens_emitido == verdadeiro
+      ausencia_de_design_sinalizada existe
+    }
+    error {
+      preset_invalido {
+        mensagem: design declarou paleta tipografia densidade forma ou movimento fora do catalogo
+        categoria: contrato
+        recuperabilidade: imediata
+        acao_chamador: corrigir
+        impacta_estado: falso
+        requer_compensacao: falso
+      }
+    }
+    tests {
+      caso "painel agro com paleta terra e override" {
+        given {
+          contrato_alvo: "exemplos/painel_agro.sema"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          overrides_livres_aceitos: verdadeiro
+          css_gerado_tematizado: verdadeiro
+        }
+      }
+    }
+  }
+}

@@ -81,7 +81,8 @@ export interface DiagnosticoDrift {
     | "codigo_monolitico"
     | "codigo_governado_sem_cabecalho"
     | "escopo_estreito_sem_vinculos"
-    | "escopo_estreito_ambiguo";
+    | "escopo_estreito_ambiguo"
+    | "design_nao_declarado";
   modulo: string;
   task?: string;
   route?: string;

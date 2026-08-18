@@ -32,6 +32,8 @@ export type PalavraBloco =
   | "database"
   | "docs"
   | "comments"
+  | "design"
+  | "tokens"
   | "table"
   | "view"
   | "query"

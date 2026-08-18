@@ -1,3 +1,4 @@
+export * from "./design.js";
 export type AlvoGeracao = "typescript" | "python" | "dart" | "lua" | "javascript" | "html" | "css" | "php" | "dotnet" | "cpp";
 export type FrameworkGeracao = "base" | "nestjs" | "fastapi";
 

@@ -347,8 +347,31 @@ export function converterParaIr(modulo: ModuloAst, diagnosticos: Diagnostico[], 
     ],
   });
 
+  const designBloco = modulo.design;
+  const tokensDesign = designBloco?.blocos.find((bloco): bloco is import("../ast/tipos.js").BlocoGenericoAst =>
+    bloco.tipo === "bloco_generico" && bloco.palavraChave === "tokens");
+  const design = designBloco
+    ? {
+        dominio: designBloco.campos.find((campo) => campo.nome === "dominio")?.valor,
+        identidade: designBloco.campos.find((campo) => campo.nome === "identidade")?.valor,
+        tokens: {
+          ...Object.fromEntries(
+            (tokensDesign?.campos ?? [])
+              .filter((campo) => ["paleta", "tipografia", "densidade", "forma", "movimento"].includes(campo.nome))
+              .map((campo) => [campo.nome, campo.valor]),
+          ),
+          overrides: Object.fromEntries(
+            (tokensDesign?.campos ?? [])
+              .filter((campo) => !["paleta", "tipografia", "densidade", "forma", "movimento"].includes(campo.nome))
+              .map((campo) => [campo.nome, campo.valor]),
+          ),
+        },
+      }
+    : undefined;
+
   return {
     nome: modulo.nome,
+    design,
     uses: contexto?.modulosImportados.length
       ? [...contexto.modulosImportados]
       : modulo.uses.filter((use) => use.origem === "sema").map((use) => use.caminho),

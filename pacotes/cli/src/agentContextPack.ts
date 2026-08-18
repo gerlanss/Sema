@@ -159,6 +159,7 @@ function criarPoliticaDesignVisualAgentContext(): PoliticaDesignVisualAgentConte
     criteriosMinimos: [
       "não parecer template de 2010",
       "não reciclar a mesma estética para domínios diferentes",
+    "declarar bloco design no contrato antes de construir UI",
       "domínio e público moldam layout, linguagem, componentes e interação",
       "hierarquia visual clara",
       "paleta com contraste e identidade do domínio",

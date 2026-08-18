@@ -3,6 +3,8 @@ import type { IntervaloFonte } from "../diagnosticos/index.js";
 export type TipoBloco =
   | "module"
   | "use"
+  | "design"
+  | "tokens"
   | "database"
   | "type"
   | "entity"
@@ -174,6 +176,7 @@ export interface ModuloAst extends NoAstBase {
   vinculos?: BlocoGenericoAst;
   docs?: BlocoGenericoAst;
   comments?: BlocoGenericoAst;
+  design?: BlocoGenericoAst;
   databases: BlocoGenericoAst[];
   types: TypeAst[];
   entities: EntityAst[];

@@ -161,6 +161,14 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
           ),
       });
     }
+    if (ir.routes.length > 0 && !ir.design) {
+      diagnosticos.push({
+        tipo: "design_nao_declarado",
+        modulo: ir.nome,
+        severidade: "aviso",
+        mensagem: `Modulo "${ir.nome}" expoe rotas de UI sem bloco design; declare identidade e tokens para a interface nao regredir ao padrao.`,
+      });
+    }
     for (const route of ir.routes) {
       if (!route.task || route.perfilCompatibilidade !== "publico") {
         continue;

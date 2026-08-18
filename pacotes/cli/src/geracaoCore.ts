@@ -5,7 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { compilarCodigo, formatarDiagnosticos, type IrModulo } from "@sema/nucleo";
-import { descreverEstruturaModulo, type AlvoGeracao, type FrameworkGeracao } from "@sema/padroes";
+import { descreverEstruturaModulo, resolverDesignTokens, type AlvoGeracao, type FrameworkGeracao } from "@sema/padroes";
 import { gerarDart } from "@sema/gerador-dart";
 import { gerarLua } from "@sema/gerador-lua";
 import { gerarPython } from "@sema/gerador-python";
@@ -182,35 +182,127 @@ export function garantirIr(resultado: ReturnType<typeof compilarCodigo>, caminho
   return resultado.ir;
 }
 
+export function gerarDesignTokensArquivos(ir: IrModulo, alvo: AlvoGeracao): Array<{ caminhoRelativo: string; conteudo: string }> {
+  if (!ir.design || !["css", "html", "typescript", "javascript"].includes(alvo)) {
+    return [];
+  }
+  const design = resolverDesignTokens(ir.design);
+  const cabecalho = `/* SEMA-GOVERNED — design tokens de ${ir.nome}; edite o bloco design do contrato, nao este arquivo. */\n`;
+
+  const css = `${cabecalho}:root {
+  --sema-cor-primaria: ${design.cores.primaria};
+  --sema-cor-primaria-hover: ${design.cores.primariaHover};
+  --sema-cor-primaria-suave: ${design.cores.primariaSuave};
+  --sema-cor-fundo: ${design.cores.fundo};
+  --sema-cor-superficie: ${design.cores.superficie};
+  --sema-cor-texto: ${design.cores.texto};
+  --sema-cor-texto-secundario: ${design.cores.textoSecundario};
+  --sema-cor-borda: ${design.cores.borda};
+  --sema-cor-borda-foco: ${design.cores.bordaFoco};
+  --sema-fonte: ${design.tipografia.fonte};
+  --sema-fonte-titulo: ${design.tipografia.fonteTitulo};
+  --sema-fonte-mono: ${design.tipografia.fonteMono};
+  --sema-raio: ${design.forma.raio};
+  --sema-movimento-duracao: ${design.movimentoDuracao};
+}
+`;
+
+  const objetoTokens = JSON.stringify({
+    colors: design.cores,
+    typography: { ...design.tipografia, scale: design.escala },
+    shape: design.forma,
+    motion: { duration: design.movimentoDuracao },
+    domain: ir.design.dominio ?? null,
+    identity: ir.design.identidade ?? null,
+  }, null, 2);
+
+  const ts = `// SEMA-GOVERNED — design tokens de ${ir.nome}; edite o bloco design do contrato, nao este arquivo.
+export const designTokens = ${objetoTokens} as const;
+export type DesignTokens = typeof designTokens;
+`;
+
+  const js = `// SEMA-GOVERNED — design tokens de ${ir.nome}; edite o bloco design do contrato, nao este arquivo.
+export const designTokens = ${objetoTokens};
+`;
+
+  const scss = `${cabecalho}$sema-cor-primaria: ${design.cores.primaria};
+$sema-cor-primaria-hover: ${design.cores.primariaHover};
+$sema-cor-fundo: ${design.cores.fundo};
+$sema-cor-superficie: ${design.cores.superficie};
+$sema-cor-texto: ${design.cores.texto};
+$sema-cor-texto-secundario: ${design.cores.textoSecundario};
+$sema-cor-borda: ${design.cores.borda};
+$sema-fonte: ${design.tipografia.fonte};
+$sema-fonte-titulo: ${design.tipografia.fonteTitulo};
+$sema-raio: ${design.forma.raio};
+`;
+
+  const tailwind = `// SEMA-GOVERNED — tema Tailwind derivado do bloco design de ${ir.nome}.
+export const theme = {
+  extend: {
+    colors: {
+      sema: {
+        primary: "${design.cores.primaria}",
+        "primary-hover": "${design.cores.primariaHover}",
+        "primary-soft": "${design.cores.primariaSuave}",
+        background: "${design.cores.fundo}",
+        surface: "${design.cores.superficie}",
+        text: "${design.cores.texto}",
+        "text-muted": "${design.cores.textoSecundario}",
+        border: "${design.cores.borda}",
+      },
+    },
+    borderRadius: { sema: "${design.forma.raio}" },
+    transitionDuration: { sema: "${design.movimentoDuracao}" },
+  },
+};
+`;
+
+  const tui = `{\n  "comentario": "SEMA-GOVERNED — tema de terminal derivado do bloco design de ${ir.nome}",\n  "cores": ${JSON.stringify(design.cores, null, 2)},\n  "movimento": "${design.movimentoDuracao}"\n}\n`;
+
+  return [
+    { caminhoRelativo: `design/design-tokens.css`, conteudo: css },
+    { caminhoRelativo: `design/tokens.ts`, conteudo: ts },
+    { caminhoRelativo: `design/tokens.js`, conteudo: js },
+    { caminhoRelativo: `design/_tokens.scss`, conteudo: scss },
+    { caminhoRelativo: `design/tailwind.theme.js`, conteudo: tailwind },
+    { caminhoRelativo: `design/theme-tui.json`, conteudo: tui },
+  ];
+}
+
 export function gerarArquivosPorAlvo(ir: IrModulo, alvo: AlvoGeracao, framework: FrameworkGeracao) {
-  if (alvo === "python") {
-    return gerarPython(ir, { framework });
-  }
-  if (alvo === "dart") {
-    return gerarDart(ir);
-  }
-  if (alvo === "lua") {
-    return gerarLua(ir);
-  }
-  if (alvo === "javascript") {
-    return gerarJavaScript(ir);
-  }
-  if (alvo === "html") {
-    return gerarHtml(ir);
-  }
-  if (alvo === "css") {
-    return gerarCss(ir);
-  }
-  if (alvo === "php") {
-    return gerarPhp(ir);
-  }
-  if (alvo === "dotnet") {
-    return gerarDotNet(ir);
-  }
-  if (alvo === "cpp") {
-    return gerarCpp(ir);
-  }
-  return gerarTypeScript(ir, { framework });
+  const extras = gerarDesignTokensArquivos(ir, alvo);
+  const base = (() => {
+    if (alvo === "python") {
+      return gerarPython(ir, { framework });
+    }
+    if (alvo === "dart") {
+      return gerarDart(ir);
+    }
+    if (alvo === "lua") {
+      return gerarLua(ir);
+    }
+    if (alvo === "javascript") {
+      return gerarJavaScript(ir);
+    }
+    if (alvo === "html") {
+      return gerarHtml(ir);
+    }
+    if (alvo === "css") {
+      return gerarCss(ir);
+    }
+    if (alvo === "php") {
+      return gerarPhp(ir);
+    }
+    if (alvo === "dotnet") {
+      return gerarDotNet(ir);
+    }
+    if (alvo === "cpp") {
+      return gerarCpp(ir);
+    }
+    return gerarTypeScript(ir, { framework });
+  })();
+  return extras.length > 0 ? [...base, ...extras] : base;
 }
 
 export function aplicarEstruturaSaida(
