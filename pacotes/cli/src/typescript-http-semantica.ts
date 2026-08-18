@@ -34,8 +34,12 @@ export function localizarExportacaoEmStatement(
   statement: ts.Statement,
   nomeExportado: string,
   sourceFile: ts.SourceFile,
+  permitirNaoExportada = false,
 ): ExportacaoTypeScriptHttp | undefined {
-  if (ts.isFunctionDeclaration(statement) && statement.name?.text === nomeExportado && statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+  const declarada = (statement: ts.FunctionDeclaration | ts.VariableStatement): boolean =>
+    permitirNaoExportada
+      || statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) === true;
+  if (ts.isFunctionDeclaration(statement) && statement.name?.text === nomeExportado && declarada(statement)) {
     return {
       corpo: statement.body,
       retorno: statement.type?.getText(sourceFile),
@@ -44,7 +48,7 @@ export function localizarExportacaoEmStatement(
     };
   }
 
-  if (!ts.isVariableStatement(statement) || !statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
+  if (!ts.isVariableStatement(statement) || !declarada(statement)) {
     return undefined;
   }
 
@@ -161,9 +165,10 @@ export function extrairRetornoHttp(
 export function localizarExportacaoTypeScriptHttp(
   sourceFile: ts.SourceFile,
   nomeExportado: string,
+  permitirNaoExportada = false,
 ): ExportacaoTypeScriptHttp | undefined {
   for (const node of sourceFile.statements) {
-    const localizada = localizarExportacaoEmStatement(node, nomeExportado, sourceFile);
+    const localizada = localizarExportacaoEmStatement(node, nomeExportado, sourceFile, permitirNaoExportada);
     if (localizada) {
       return localizada;
     }
@@ -174,8 +179,9 @@ export function localizarExportacaoTypeScriptHttp(
 export function inferirSemanticaHandlerTypeScriptHttp(
   sourceFile: ts.SourceFile,
   nomeExportado: string,
+  permitirNaoExportada = false,
 ): SemanticaHandlerTypeScriptHttp | undefined {
-  const exportacao = localizarExportacaoTypeScriptHttp(sourceFile, nomeExportado);
+  const exportacao = localizarExportacaoTypeScriptHttp(sourceFile, nomeExportado, permitirNaoExportada);
   if (!exportacao?.corpo) {
     return undefined;
   }
@@ -194,6 +200,12 @@ export function inferirSemanticaHandlerTypeScriptHttp(
   for (const parametro of exportacao.parametros) {
     if (ts.isIdentifier(parametro.name)) {
       requestNames.add(parametro.name.text);
+    }
+  }
+  const responseNames = new Set<string>();
+  for (const [indice, parametro] of exportacao.parametros.entries()) {
+    if (indice > 0 && ts.isIdentifier(parametro.name)) {
+      responseNames.add(parametro.name.text);
     }
   }
 
@@ -343,6 +355,57 @@ export function inferirSemanticaHandlerTypeScriptHttp(
   };
 
   const visitarSemantica = (node: ts.Node): void => {
+    if (ts.isPropertyAccessExpression(node)
+      && ts.isPropertyAccessExpression(node.expression)
+      && ts.isIdentifier(node.expression.expression)
+      && requestNames.has(node.expression.expression.text)) {
+      const origemAcesso = node.expression.name.text;
+      const nomeCampo = node.name.text;
+      const ehQuery = origemAcesso === "query" || origemAcesso === "params"
+        || (origemAcesso === "request" && (nomeCampo === "query" || nomeCampo === "searchParams"));
+      const ehBody = origemAcesso === "body" || (origemAcesso === "request" && nomeCampo === "body");
+      if (ehQuery && origemAcesso !== "params") {
+        query.push({
+          nome: nomeCampo,
+          tipoTexto: inferirTipoPorContexto(node, nomeCampo) ?? "string",
+          obrigatorio: false,
+        });
+      } else if (ehBody) {
+        body.push({
+          nome: nomeCampo,
+          tipoTexto: inferirTipoPorContexto(node, nomeCampo) ?? "string",
+          obrigatorio: false,
+        });
+      }
+    }
+
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "json") {
+      let alvo = node.expression.expression;
+      let status: number | undefined;
+      if (ts.isCallExpression(alvo)
+        && ts.isPropertyAccessExpression(alvo.expression)
+        && alvo.expression.name.text === "status"
+        && alvo.arguments[0]
+        && ts.isNumericLiteral(alvo.arguments[0])) {
+        status = Number(alvo.arguments[0].text);
+        alvo = alvo.expression.expression;
+      }
+      if (ts.isIdentifier(alvo) && responseNames.has(alvo.text)) {
+        const argumento = node.arguments[0];
+        const campos = argumento && ts.isObjectLiteralExpression(argumento)
+          ? extrairCamposObjetoLiteral(argumento, sourceFile)
+          : argumento && ts.isIdentifier(argumento) && valoresLocais.has(argumento.text)
+            ? valoresLocais.get(argumento.text)!.campos
+            : [];
+        if (typeof status === "number") {
+          statuses.push(status);
+        }
+        if (status === undefined || status < 400) {
+          response.push(...campos);
+        }
+      }
+    }
+
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const alvo = node.expression.expression;
       const metodo = node.expression.name.text;

@@ -186,15 +186,29 @@ export function importarExpressFastifyDeArquivo(
   for (const rota of rotasArquivo) {
     const taskNome = nomearTarefaRotaChamada(rota.metodo, rota.caminho);
     const implSimbolo = /^[A-Za-z_]\w*$/.test(rota.simbolo) ? rota.simbolo : undefined;
-    tasks.push({
-      nome: taskNome,
-      resumo: `Task importada automaticamente da rota ${rota.metodo} ${rota.caminho} em ${relacao}.`,
-      input: rota.parametros.map((parametro) => ({
+    const semantica = implSimbolo
+      ? inferirSemanticaHandlerTypeScriptHttp(sourceFile, implSimbolo, true)
+      : undefined;
+    const converterCampoInferido = (campo: { nome: string; tipoTexto?: string; obrigatorio: boolean }) => ({
+      nome: campo.nome,
+      tipo: mapearTipoPrimitivo(campo.tipoTexto ?? "string") === "Vazio" ? "Texto" : mapearTipoPrimitivo(campo.tipoTexto ?? "string"),
+      obrigatorio: campo.obrigatorio,
+    });
+    const camposInferidos = deduplicarCampos([
+      ...rota.parametros.map((parametro) => ({
         nome: parametro.nome,
         tipo: parametro.tipoSema,
         obrigatorio: true,
       })),
-      output: [],
+      ...(semantica?.query ?? []).map(converterCampoInferido),
+      ...(semantica?.body ?? []).map(converterCampoInferido),
+    ]);
+    const camposResposta = deduplicarCampos((semantica?.response ?? []).map(converterCampoInferido));
+    tasks.push({
+      nome: taskNome,
+      resumo: `Task importada automaticamente da rota ${rota.metodo} ${rota.caminho} em ${relacao}.`,
+      input: camposInferidos,
+      output: camposResposta,
       errors: [],
       effects: [],
       impl: implSimbolo ? { ts: caminhoImplTs(diretorioBase, arquivo, implSimbolo) } : undefined,
@@ -207,12 +221,8 @@ export function importarExpressFastifyDeArquivo(
       metodo: rota.metodo,
       caminho: rota.caminho,
       task: taskNome,
-      input: rota.parametros.map((parametro) => ({
-        nome: parametro.nome,
-        tipo: parametro.tipoSema,
-        obrigatorio: true,
-      })),
-      output: [],
+      input: camposInferidos,
+      output: camposResposta,
       errors: [],
     });
   }

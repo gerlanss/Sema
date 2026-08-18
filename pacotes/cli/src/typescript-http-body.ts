@@ -33,6 +33,18 @@ export function resolverMetadadosOrigemBody(
     return bodyAliases.get(normalizado.text);
   }
 
+  if (
+    ts.isPropertyAccessExpression(normalizado)
+    && normalizado.name.text === "body"
+    && ts.isIdentifier(normalizado.expression)
+    && requestNames.has(normalizado.expression.text)
+  ) {
+    return {
+      tipoTexto: typeNodeDeclarado?.getText(sourceFile),
+      campos: [],
+    };
+  }
+
   if (ehCallRequest(expr, requestNames, "json")) {
     return extrairMetadadosTipoExplicito(expr, sourceFile, typeNodeDeclarado);
   }
