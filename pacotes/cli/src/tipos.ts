@@ -4,6 +4,7 @@ export type FonteLegado =
   | "nestjs"
   | "express"
   | "fastify"
+  | "koa"
   | "fastapi"
   | "flask"
   | "nextjs"

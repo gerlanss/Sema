@@ -169,7 +169,7 @@ export function importarExpressFastifyDeArquivo(
   diretorioBase: string,
   arquivo: string,
   namespaceBase: string,
-  origemDesejada: "express" | "fastify",
+  origemDesejada: "express" | "fastify" | "koa",
 ): ModuloImportado[] {
   const relacao = path.relative(diretorioBase, arquivo);
   const codigo = ts.sys.readFile(arquivo, "utf8") ?? "";
@@ -222,7 +222,7 @@ export function importarExpressFastifyDeArquivo(
 
   return [{
     nome: nomeModulo,
-    resumo: `Rascunho Sema importado de um contexto ${origemDesejada === "express" ? "Express" : "Fastify"} legado em ${contextoSegmentos.join("/")}.`,
+    resumo: `Rascunho Sema importado de um contexto ${origemDesejada === "express" ? "Express" : origemDesejada === "koa" ? "Koa" : "Fastify"} legado em ${contextoSegmentos.join("/")}.`,
     entities,
     enums,
     tasks: deduplicarTarefas(tasks),
@@ -233,7 +233,7 @@ export function importarExpressFastifyDeArquivo(
 export async function importarExpressFastifyBase(
   diretorio: string,
   namespaceBase: string,
-  origem: "express" | "fastify",
+  origem: "express" | "fastify" | "koa",
 ): Promise<ModuloImportado[]> {
   const arquivos = await listarArquivosRecursivos(diretorio, [".ts"]);
   const uteis = arquivos.filter((arquivo) =>

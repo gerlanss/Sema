@@ -23,7 +23,7 @@ module sema.produto.governanca_ia.drift {
     output {
       impls_resolvidas: Booleano
       rotas_resolvidas: Booleano
-      rotas_express_fastify_resolvidas: Booleano
+      rotas_node_resolvidas: Booleano
       score_pesando_comportamento_verificado: Booleano
       ambiguidades_explicitas: Booleano
       escopo_aplicado: Booleano
@@ -67,7 +67,7 @@ module sema.produto.governanca_ia.drift {
       output {
         impls_resolvidas: interno
         rotas_resolvidas: interno
-        rotas_express_fastify_resolvidas: interno
+        rotas_node_resolvidas: interno
         score_pesando_comportamento_verificado: interno
         ambiguidades_explicitas: interno
         escopo_aplicado: interno
@@ -159,7 +159,7 @@ module sema.produto.governanca_ia.drift {
     guarantees {
       impls_resolvidas existe
       rotas_resolvidas existe
-      rotas_express_fastify_resolvidas existe
+      rotas_node_resolvidas existe
       score_pesando_comportamento_verificado existe
       ambiguidades_explicitas existe
       escopo_aplicado existe

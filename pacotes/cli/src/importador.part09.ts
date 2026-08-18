@@ -397,6 +397,8 @@ export async function importarProjetoLegado(
     modulos = await importarExpressFastifyBase(base, namespace, "express");
   } else if (fonte === "fastify") {
     modulos = await importarExpressFastifyBase(base, namespace, "fastify");
+  } else if (fonte === "koa") {
+    modulos = await importarExpressFastifyBase(base, namespace, "koa");
   } else if (fonte === "nextjs") {
     modulos = await importarNextJsBase(base, namespace);
   } else if (fonte === "nextjs-consumer") {

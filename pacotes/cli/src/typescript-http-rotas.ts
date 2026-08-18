@@ -142,24 +142,132 @@ export function extrairRotasNodeWorker(sourceFile: ts.SourceFile, relacaoArquivo
   return deduplicarRotas(rotas);
 }
 
+function combinarCaminhoPrefixo(base: string | undefined, sufixo: string): string {
+  const prefixo = (base ?? "").replace(/\/+$/u, "");
+  const caminho = sufixo.startsWith("/") ? sufixo : `/${sufixo}`;
+  const combinado = `${prefixo}${caminho}`.replace(/\/{2,}/gu, "/");
+  return combinado.length > 1 && combinado.endsWith("/") ? combinado.slice(0, -1) : combinado;
+}
+
+function extrairPrefixoRegister(node: ts.CallExpression): string | undefined {
+  const opcoes = node.arguments[1];
+  if (!opcoes || !ts.isObjectLiteralExpression(opcoes)) {
+    return undefined;
+  }
+  for (const propriedade of opcoes.properties) {
+    if (ts.isPropertyAssignment(propriedade)
+      && ts.isIdentifier(propriedade.name)
+      && propriedade.name.text === "prefix"
+      && propriedade.initializer
+      && ts.isStringLiteralLike(propriedade.initializer)) {
+      return propriedade.initializer.text;
+    }
+  }
+  return undefined;
+}
+
 export function extrairRotasExpressFastify(sourceFile: ts.SourceFile): RotaTypeScriptExtraida[] {
   const textoArquivo = sourceFile.getFullText();
   const importouExpress = /(?:from\s+["']express["']|require\(\s*["']express["']\s*\))/.test(textoArquivo);
   const importouFastify = /(?:from\s+["']fastify["']|require\(\s*["']fastify["']\s*\))/.test(textoArquivo);
-  if (!importouExpress && !importouFastify) {
+  const importouKoa = /(?:from\s+["'](?:@koa\/router|koa-router|koa)["']|require\(\s*["'](?:@koa\/router|koa-router|koa)["']\s*\))/.test(textoArquivo);
+  if (!importouExpress && !importouFastify && !importouKoa) {
     return [];
   }
 
+  const arestasMontagem: Array<{ pai: string; filho: string; prefixo: string }> = [];
+  const prefixoDireto = new Map<string, string>();
+  const prefixoPorParametro = new Map<string, string>();
+  const prefixoResolvido = new Map<string, string>();
+
+  const resolverPrefixo = (receptor: string, profundidade = 0): string => {
+    if (prefixoResolvido.has(receptor)) {
+      return prefixoResolvido.get(receptor)!;
+    }
+    if (profundidade > 8) {
+      return "";
+    }
+    let prefixo = prefixoDireto.get(receptor) ?? "";
+    const aresta = arestasMontagem.find((item) => item.filho === receptor);
+    if (aresta) {
+      prefixo = combinarCaminhoPrefixo(resolverPrefixo(aresta.pai, profundidade + 1), aresta.prefixo);
+    }
+    prefixoResolvido.set(receptor, prefixo);
+    return prefixo;
+  };
+
+  const visitarMontagens = (node: ts.Node): void => {
+    if (ts.isVariableStatement(node)) {
+      for (const declaracao of node.declarationList.declarations) {
+        if (!ts.isIdentifier(declaracao.name) || !declaracao.initializer) {
+          continue;
+        }
+        const init = declaracao.initializer;
+        const argumentoFastify = ts.isCallExpression(init)
+          && ts.isIdentifier(init.expression)
+          && /fastify/i.test(init.expression.text)
+          && init.arguments[0]
+          && ts.isObjectLiteralExpression(init.arguments[0])
+          ? init.arguments[0]
+          : undefined;
+        if (argumentoFastify) {
+          for (const propriedade of argumentoFastify.properties) {
+            if (ts.isPropertyAssignment(propriedade)
+              && ts.isIdentifier(propriedade.name)
+              && propriedade.name.text === "prefix"
+              && propriedade.initializer
+              && ts.isStringLiteralLike(propriedade.initializer)) {
+              prefixoDireto.set(declaracao.name.text, propriedade.initializer.text);
+            }
+          }
+        }
+      }
+    }
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
+      const receptor = node.expression.expression.text;
+      const nomeMetodo = node.expression.name.text.toLowerCase();
+
+      if (nomeMetodo === "use"
+        && node.arguments[0]
+        && ts.isStringLiteralLike(node.arguments[0])
+        && node.arguments[0].text.startsWith("/")
+        && node.arguments[1]
+        && ts.isIdentifier(node.arguments[1])) {
+        arestasMontagem.push({ pai: receptor, filho: node.arguments[1].text, prefixo: node.arguments[0].text });
+      } else if (nomeMetodo === "prefix"
+        && node.arguments[0]
+        && ts.isStringLiteralLike(node.arguments[0])
+        && node.arguments[0].text.startsWith("/")) {
+        prefixoDireto.set(receptor, combinarCaminhoPrefixo(node.arguments[0].text, prefixoDireto.get(receptor) ?? ""));
+      } else if (nomeMetodo === "register" && importouFastify) {
+        const prefixo = extrairPrefixoRegister(node);
+        const alvo = node.arguments[0];
+        if (prefixo && alvo) {
+          const funcao = ts.isFunctionExpression(alvo) || ts.isArrowFunction(alvo) ? alvo : undefined;
+          const parametro = funcao?.parameters[0];
+          if (parametro && ts.isIdentifier(parametro.name)) {
+            prefixoPorParametro.set(parametro.name.text, prefixo);
+          }
+        }
+      }
+    }
+    node.forEachChild(visitarMontagens);
+  };
+  visitarMontagens(sourceFile);
+
   const rotas: RotaTypeScriptExtraida[] = [];
 
-  const escolherOrigemChamada = (receptor: string): "express" | "fastify" | undefined => {
+  const escolherOrigemChamada = (receptor: string): "express" | "fastify" | "koa" | undefined => {
     if (/fastify/i.test(receptor)) {
       return "fastify";
     }
     if (importouExpress) {
       return "express";
     }
-    if (importouFastify) {
+    if (importouKoa) {
+      return "koa";
+    }
+    if (importouFastify || prefixoPorParametro.has(receptor)) {
       return "fastify";
     }
     return undefined;
@@ -169,6 +277,7 @@ export function extrairRotasExpressFastify(sourceFile: ts.SourceFile): RotaTypeS
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
       const receptor = node.expression.expression.text;
       const nomeMetodo = node.expression.name.text.toLowerCase();
+      const prefixoReceptor = prefixoPorParametro.get(receptor) ?? resolverPrefixo(receptor);
 
       if (nomeMetodo === "route" && node.arguments[0] && ts.isObjectLiteralExpression(node.arguments[0]) && importouFastify) {
         let metodo: string | undefined;
@@ -191,12 +300,12 @@ export function extrairRotasExpressFastify(sourceFile: ts.SourceFile): RotaTypeS
           rotas.push({
             origem: "fastify",
             metodo,
-            caminho: converterCaminhoParametros(caminho),
+            caminho: converterCaminhoParametros(combinarCaminhoPrefixo(prefixoReceptor, caminho)),
             simbolo: receptor,
             parametros: extrairParametrosCaminhoDoisPontos(caminho),
           });
         }
-      } else if (nomeMetodo === "all" || METODOS_HTTP.has(nomeMetodo.toUpperCase())) {
+      } else if (nomeMetodo === "all" || nomeMetodo === "del" || METODOS_HTTP.has(nomeMetodo.toUpperCase())) {
         const caminho = node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])
           ? node.arguments[0].text
           : undefined;
@@ -205,14 +314,14 @@ export function extrairRotasExpressFastify(sourceFile: ts.SourceFile): RotaTypeS
         if (caminho?.startsWith("/") && origem) {
           const metodos = nomeMetodo === "all"
             ? ["GET", "POST", "PUT", "PATCH", "DELETE"]
-            : [nomeMetodo.toUpperCase()];
+            : [nomeMetodo === "del" ? "DELETE" : nomeMetodo.toUpperCase()];
           for (const metodo of metodos) {
             rotas.push({
               origem,
               metodo,
-              caminho: converterCaminhoParametros(caminho),
+              caminho: converterCaminhoParametros(combinarCaminhoPrefixo(prefixoReceptor, caminho)),
               simbolo: handler ?? receptor,
-              parametros: extrairParametrosCaminhoDoisPontos(caminho),
+              parametros: extrairParametrosCaminhoDoisPontos(combinarCaminhoPrefixo(prefixoReceptor, caminho)),
             });
           }
         }

@@ -1,0 +1,95 @@
+module exemplos.koa.crud {
+  entity Tarefa {
+    fields {
+      id: Id
+      titulo: Texto
+      concluida: Booleano
+    }
+  }
+
+  task criar_tarefa {
+    input {
+      titulo: Texto required
+    }
+    output {
+      tarefa: Tarefa
+    }
+    rules {
+      titulo deve_ser preenchido
+    }
+    effects {
+      persistencia Tarefa
+      auditoria tarefa_criada
+    }
+    guarantees {
+      tarefa existe
+    }
+    tests {
+      caso "cria tarefa" {
+        given {
+          titulo: "Revisar contrato"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task concluir_tarefa {
+    input {
+      id: Id required
+    }
+    output {
+      tarefa: Tarefa
+    }
+    rules {
+      id deve_ser valido
+    }
+    effects {
+      persistencia Tarefa
+      auditoria tarefa_concluida
+    }
+    guarantees {
+      tarefa existe
+    }
+    tests {
+      caso "conclui tarefa por id" {
+        given {
+          id: "tar_1"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route tarefas_criar {
+    metodo: POST
+    caminho: /api/tarefas
+    task: criar_tarefa
+    finalidade: cadastro_tarefa
+    input {
+      titulo: Texto
+    }
+    output {
+      tarefa: Tarefa
+    }
+  }
+
+  route tarefas_concluir {
+    metodo: PATCH
+    caminho: "/api/tarefas/{id}"
+    task: concluir_tarefa
+    finalidade: alteracao_tarefa
+    input {
+      id: Id
+    }
+    output {
+      tarefa: Tarefa
+    }
+  }
+}

@@ -25,6 +25,7 @@ export type FonteImportacao =
   | "nestjs"
   | "express"
   | "fastify"
+  | "koa"
   | "fastapi"
   | "flask"
   | "nextjs"

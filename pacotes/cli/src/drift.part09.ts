@@ -136,9 +136,9 @@ export function normalizarCaminhoRota(caminho?: string): string {
   return normalizado.endsWith("/") && normalizado !== "/" ? normalizado.slice(0, -1) : normalizado;
 }
 
-export function extrairFontesHttpTypeScript(fontesLegado: FonteLegado[]): Array<"nestjs" | "nextjs" | "firebase" | "express" | "fastify"> {
-  return fontesLegado.filter((fonte): fonte is "nestjs" | "nextjs" | "firebase" | "express" | "fastify" =>
-    fonte === "nestjs" || fonte === "nextjs" || fonte === "firebase" || fonte === "express" || fonte === "fastify");
+export function extrairFontesHttpTypeScript(fontesLegado: FonteLegado[]): Array<"nestjs" | "nextjs" | "firebase" | "express" | "fastify" | "koa"> {
+  return fontesLegado.filter((fonte): fonte is "nestjs" | "nextjs" | "firebase" | "express" | "fastify" | "koa" =>
+    fonte === "nestjs" || fonte === "nextjs" || fonte === "firebase" || fonte === "express" || fonte === "fastify" || fonte === "koa");
 }
 
 export function extrairFontesHttpBackend(fontesLegado: FonteLegado[]): Array<"dotnet" | "java" | "go" | "rust" | "php"> {
@@ -293,12 +293,12 @@ export function sugerirCandidatosParaTaskSemImpl(simbolos: SimboloResolvido[], n
   )).slice(0, 5);
 }
 
-export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "express" | "fastify" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust" | "php"> {
+export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]): Array<"nestjs" | "express" | "fastify" | "koa" | "fastapi" | "flask" | "nextjs" | "firebase" | "dotnet" | "java" | "go" | "rust" | "php"> {
   const fontesTs = extrairFontesHttpTypeScript(fontesLegado);
   const fontesBackend = extrairFontesHttpBackend(fontesLegado);
   const implTsOuJs = task.implementacoesExternas.find((impl) => impl.origem === "ts" || impl.origem === "js");
   if (implTsOuJs) {
-    const esperadas = new Set<"nestjs" | "nextjs" | "firebase" | "express" | "fastify">();
+    const esperadas = new Set<"nestjs" | "nextjs" | "firebase" | "express" | "fastify" | "koa">();
     if (/\.route\.(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/i.test(implTsOuJs.caminho) || /\.route\./i.test(implTsOuJs.caminho)) {
       esperadas.add("nextjs");
     }
@@ -314,13 +314,16 @@ export function escolherRotasEsperadas(task: IrTask, fontesLegado: FonteLegado[]
     if (/\bfastify\b/i.test(implTsOuJs.caminho) && fontesTs.includes("fastify")) {
       esperadas.add("fastify");
     }
+    if (/\bkoa\b/i.test(implTsOuJs.caminho) && fontesTs.includes("koa")) {
+      esperadas.add("koa");
+    }
     if (esperadas.size > 0) {
       return [...esperadas];
     }
     if (fontesTs.length > 0) {
       return fontesTs;
     }
-    return ["nestjs", "nextjs", "firebase", "express", "fastify"];
+    return ["nestjs", "nextjs", "firebase", "express", "fastify", "koa"];
   }
   if (task.implementacoesExternas.some((impl) => impl.origem === "py")) {
     const fontesPython = fontesLegado.filter((fonte): fonte is "fastapi" | "flask" => fonte === "fastapi" || fonte === "flask");

@@ -96,5 +96,73 @@ test("normalizarFonteLegado aceita express e fastify declarados no config", asyn
   const { normalizarFonteLegado } = await import("../../pacotes/cli/src/projetoConfig.js");
   assert.equal(normalizarFonteLegado("express"), "express");
   assert.equal(normalizarFonteLegado("fastify"), "fastify");
+  assert.equal(normalizarFonteLegado("koa"), "koa");
   assert.equal(normalizarFonteLegado("gin"), undefined);
+});
+
+test("mounts express propagam prefixo de app.use em cadeia", () => {
+  const sourceFile = compilar([
+    'import express from "express";',
+    "const app = express();",
+    "const api = express.Router();",
+    "const tarefas = express.Router();",
+    'app.use("/api", api);',
+    'api.use("/tarefas", tarefas);',
+    'tarefas.post("/", criarTarefa);',
+    'tarefas.get("/:id", obterTarefa);',
+    'app.get("/status", statusHandler);',
+  ].join("\n"));
+
+  const rotas = extrairRotasExpressFastify(sourceFile);
+
+  assert.deepEqual(
+    rotas.map((rota) => `${rota.origem} ${rota.metodo} ${rota.caminho}`).sort(),
+    ["express GET /api/tarefas/{id}", "express GET /status", "express POST /api/tarefas"],
+  );
+});
+
+test("prefixo fastify via register e construtor e respeitado", () => {
+  const sourceFile = compilar([
+    'import Fastify from "fastify";',
+    "const app = Fastify({ prefix: \"/v1\" });",
+    'app.get("/pedidos", listarPedidos);',
+    'app.register(async (instancia) => { instancia.post("/pedidos", criarPedido); }, { prefix: "/interno" });',
+  ].join("\n"));
+
+  const rotas = extrairRotasExpressFastify(sourceFile);
+
+  assert.deepEqual(
+    rotas.map((rota) => `${rota.origem} ${rota.metodo} ${rota.caminho}`).sort(),
+    ["fastify GET /v1/pedidos", "fastify POST /interno/pedidos"],
+  );
+});
+
+test("rotas koa com koa-router e prefix() recebem origem koa", () => {
+  const sourceFile = compilar([
+    'import Koa from "koa";',
+    'import Router from "@koa/router";',
+    "const app = new Koa();",
+    "const router = new Router();",
+    'router.prefix("/api");',
+    'router.post("/tarefas", criarTarefa);',
+    'router.del("/tarefas/:id", removerTarefa);',
+    "app.use(router.routes());",
+  ].join("\n"));
+
+  const rotas = extrairRotasExpressFastify(sourceFile);
+
+  assert.deepEqual(
+    rotas.map((rota) => `${rota.origem} ${rota.metodo} ${rota.caminho}`).sort(),
+    ["koa DELETE /api/tarefas/{id}", "koa POST /api/tarefas"],
+  );
+});
+
+test("escolherRotasEsperadas considera fontes koa", () => {
+  const task = {
+    nome: "criar_tarefa",
+    implementacoesExternas: [{ origem: "ts" as const, caminho: "server.routes.koa.criarTarefa" }],
+  } as Parameters<typeof escolherRotasEsperadas>[0];
+
+  const esperadas = escolherRotasEsperadas(task, ["typescript", "koa"] as import("../../pacotes/cli/src/tipos.js").FonteLegado[]);
+  assert.ok(esperadas.includes("koa"));
 });

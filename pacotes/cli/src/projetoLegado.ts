@@ -39,6 +39,10 @@ export async function inferirFontesLegado(
       encontrados.add("fastify");
       encontrados.add("typescript");
     }
+    if (/"koa"\s*:|@koa\/router|"koa-router"/.test(packageJsonRaiz)) {
+      encontrados.add("koa");
+      encontrados.add("typescript");
+    }
     if (/typescript/.test(packageJsonRaiz)) {
       encontrados.add("typescript");
     }
@@ -95,6 +99,8 @@ export async function inferirFontesLegado(
         || amostrasTs.some((texto) => /(?:from\s+["']express["']|require\(\s*["']express["']\s*\)|\bexpress\s*\(\s*\))/.test(texto ?? ""));
       const temFastify = textosPackage.some((texto) => /"fastify"\s*:/.test(texto ?? ""))
         || amostrasTs.some((texto) => /(?:from\s+["']fastify["']|require\(\s*["']fastify["']\s*\)|\bfastify\s*\(\s*\{)/.test(texto ?? ""));
+      const temKoa = textosPackage.some((texto) => /"koa"\s*:|@koa\/router|"koa-router"/.test(texto ?? ""))
+        || amostrasTs.some((texto) => /(?:from\s+["'](?:@koa\/router|koa-router|koa)["']|require\(\s*["'](?:@koa\/router|koa-router|koa)["']\s*\)|new\s+Router\s*\()/.test(texto ?? ""));
       const temNext = textosPackage.some((texto) => /"next"\s*:/.test(texto ?? ""))
         || nextConfigs.length > 0
         || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/api\/.+\/route\.(?:ts|tsx|js|jsx)$/.test(relacao));
@@ -123,6 +129,9 @@ export async function inferirFontesLegado(
       }
       if (temFastify) {
         encontrados.add("fastify");
+      }
+      if (temKoa) {
+        encontrados.add("koa");
       }
       if (temNext) {
         encontrados.add("nextjs");
