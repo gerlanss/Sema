@@ -381,6 +381,8 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
         && rotaResolvida.origem !== "react-vite-consumer"
         && rotaResolvida.origem !== "angular-consumer"
         && rotaResolvida.origem !== "flutter-consumer"
+        && rotaResolvida.origem !== "sveltekit-consumer"
+        && rotaResolvida.origem !== "nuxt-consumer"
         && esperadas.includes(rotaResolvida.origem));
       const combina = encontradas.some((rotaResolvida) =>
         rotaResolvida.metodo === route.metodo

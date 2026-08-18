@@ -32,7 +32,7 @@ import { extrairRotasTypeScriptHttp } from "./typescript-http.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 
 import { ConsumerFramework, RecursoResolvido, RegistroConsumerBridgeDrift, RegistroConsumerSurfaceDrift, RotaResolvida, SimboloResolvido } from "./drift.part01.js";
-import { arquivoEhRotasAngularConsumer, arquivoEhRotasAngularConsumerRaiz, arquivoEhRotasReactViteConsumer, arquivoEhSuperficieNextJsConsumer, arquivoEhSuperficieReactViteConsumer, extrairRotasAngularConsumer, extrairRotasReactViteConsumer, inferirRotaNextJsConsumer, inferirRotaReactViteConsumer, normalizarRelacaoConsumer, registrarAtribuicaoPrototypeTypeScript, registrarMetodosObjectAssignTypeScript } from "./drift.part05.js";
+import { arquivoEhRotasAngularConsumer, arquivoEhRotasAngularConsumerRaiz, arquivoEhRotasReactViteConsumer, arquivoEhSuperficieNextJsConsumer, arquivoEhSuperficieNuxtConsumer, arquivoEhSuperficieReactViteConsumer, arquivoEhSuperficieSvelteKitConsumer, extrairRotasAngularConsumer, extrairRotasReactViteConsumer, inferirRotaNextJsConsumer, inferirRotaNuxtConsumer, inferirRotaReactViteConsumer, inferirRotaSvelteKitConsumer, normalizarRelacaoConsumer, registrarAtribuicaoPrototypeTypeScript, registrarMetodosObjectAssignTypeScript } from "./drift.part05.js";
 import {
   caminhosSimbolicos,
   chaveCaminhoCanonicoDrift,
@@ -78,7 +78,15 @@ export function inferirConsumerFrameworkPrincipal(
     || /(?:^|\/)(?:lib\/)?(?:router|app_router|routes|main)\.dart$/i.test(arquivo))) {
     return "flutter-consumer";
   }
-  for (const framework of ["nextjs-consumer", "react-vite-consumer", "angular-consumer", "flutter-consumer"] as const) {
+  if (arquivos.some((arquivo) => /(?:^|\/)(?:src\/)?routes\/(?:[^/]+\/)*\+(?:page|layout|error|server)\.(?:svelte|ts|js)$/i.test(arquivo))) {
+    return "sveltekit-consumer";
+  }
+  if (arquivos.some((arquivo) =>
+    /^(?:app\/)?pages\/.+\.vue$/i.test(arquivo)
+    || /(?:^|\/)server\/api\/.+\.(?:get|post|put|patch|delete|head)\.(?:ts|js)$/i.test(arquivo))) {
+    return "nuxt-consumer";
+  }
+  for (const framework of ["nextjs-consumer", "react-vite-consumer", "angular-consumer", "flutter-consumer", "sveltekit-consumer", "nuxt-consumer"] as const) {
     if (fontesLegado.includes(framework)) {
       return framework;
     }
@@ -280,10 +288,54 @@ export async function indexarTypeScript(
   const sourceFiles = new Map<string, ts.SourceFile>();
   const arquivosProcessados = new Set<string>();
 
+  const registrarSuperficieSvelteKitDrift = (relacao: string, arquivo: string): void => {
+    const superficie = arquivoEhSuperficieSvelteKitConsumer(relacao)
+      ? inferirRotaSvelteKitConsumer(relacao)
+      : undefined;
+    if (!superficie) {
+      return;
+    }
+    consumerSurfaces.set(`${superficie.rota}:${arquivo}:${superficie.tipoArquivo}`, {
+      rota: superficie.rota,
+      arquivo,
+      tipoArquivo: superficie.tipoArquivo,
+    });
+    rotas.push({
+      origem: "sveltekit-consumer",
+      metodo: superficie.tipoArquivo === "server" ? "GET" : "VIEW",
+      caminho: superficie.rota,
+      arquivo,
+      simbolo: superficie.tipoArquivo,
+    });
+  };
+
+  const registrarSuperficieNuxtDrift = (relacao: string, arquivo: string): void => {
+    const superficie = arquivoEhSuperficieNuxtConsumer(relacao)
+      ? inferirRotaNuxtConsumer(relacao)
+      : undefined;
+    if (!superficie) {
+      return;
+    }
+    consumerSurfaces.set(`${superficie.rota}:${arquivo}:${superficie.tipoArquivo}`, {
+      rota: superficie.rota,
+      arquivo,
+      tipoArquivo: superficie.tipoArquivo,
+    });
+    rotas.push({
+      origem: "nuxt-consumer",
+      metodo: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"].includes(superficie.tipoArquivo)
+        ? superficie.tipoArquivo
+        : "VIEW",
+      caminho: superficie.rota,
+      arquivo,
+      simbolo: superficie.tipoArquivo,
+    });
+  };
+
   for (const diretorio of deduplicarRaizesSobrepostasDrift(diretorios)) {
     const arquivos = (await listarArquivosRecursivos(
       diretorio,
-      [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
+      [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".vue", ".svelte"],
       adaptadorLeitura,
     ))
       .filter((arquivo) =>
@@ -316,6 +368,12 @@ export async function indexarTypeScript(
       const codigo = adaptadorLeitura
         ? await adaptadorLeitura.lerTexto(arquivo)
         : await readFile(arquivo, "utf8");
+      if (/\.(?:vue|svelte)$/i.test(arquivo)) {
+        const relacaoSuperficie = path.relative(diretorio, arquivo);
+        registrarSuperficieSvelteKitDrift(relacaoSuperficie, arquivo);
+        registrarSuperficieNuxtDrift(relacaoSuperficie, arquivo);
+        continue;
+      }
       const origemArquivo = /\.(?:js|jsx|mjs|cjs)$/i.test(arquivo) ? "js" : "ts";
       const scriptKind = arquivo.endsWith(".tsx")
         ? ts.ScriptKind.TSX
@@ -379,6 +437,9 @@ export async function indexarTypeScript(
           simbolo: superficieReact.tipoArquivo,
         });
       }
+
+      registrarSuperficieSvelteKitDrift(relacao, arquivo);
+      registrarSuperficieNuxtDrift(relacao, arquivo);
 
       if (fonteDeclaraRotasReactVite(relacao, sourceFile)) {
         for (const rotaReact of extrairRotasReactViteConsumer(relacao, codigo)) {
@@ -562,6 +623,7 @@ export async function indexarTypeScript(
     }
 
     aplicarReexportacoesTypeScript(simbolos, reexportacoes);
+
   }
 
   return {

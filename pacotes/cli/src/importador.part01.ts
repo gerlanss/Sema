@@ -33,6 +33,8 @@ export type FonteImportacao =
   | "react-vite-consumer"
   | "angular-consumer"
   | "flutter-consumer"
+  | "sveltekit-consumer"
+  | "nuxt-consumer"
   | "firebase"
   | "typescript"
   | "python"

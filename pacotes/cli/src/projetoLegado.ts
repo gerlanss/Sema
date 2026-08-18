@@ -71,6 +71,8 @@ export async function inferirFontesLegado(
     const arquivosJava = await listarArquivosRecursivosLimitado(diretorio, [".java"], 5, 20);
     const arquivosGo = await listarArquivosRecursivosLimitado(diretorio, [".go"], 5, 20);
     const arquivosRust = await listarArquivosRecursivosLimitado(diretorio, [".rs"], 5, 20);
+    const arquivosVueSvelte = await listarArquivosRecursivosLimitado(diretorio, [".vue", ".svelte"], 5, 40);
+    const relacoesVueSvelte = arquivosVueSvelte.map((arquivo) => path.relative(diretorio, arquivo).replace(/\\/g, "/"));
     const arquivosCppBrutos = await listarArquivosRecursivosLimitado(diretorio, [".cpp", ".cc", ".cxx", ".hpp", ".h"], 5, 30);
     const arquivosCpp = arquivosCppBrutos.filter((arquivo) => !/(^|[\\/])(windows|linux|macos|runner|flutter|ephemeral|build|vendor)([\\/]|$)/i.test(arquivo));
     const arquivosPhp = (await listarArquivosRecursivosLimitado(diretorio, [".php"], 5, 30))
@@ -114,6 +116,11 @@ export async function inferirFontesLegado(
       const temSuperficieAngularConsumer = relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/.+\.component\.(?:ts|js)$/.test(relacao))
         || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app(?:\/.+)?\/[^/]+\.routes\.(?:ts|js)$/.test(relacao));
       const temBridgeAngularConsumer = relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?app\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|js)$/.test(relacao));
+      const temSvelteKitConsumer = relacoesVueSvelte.some((relacao) => /(?:^|\/)(?:src\/)?routes\/(?:[^/]+\/)*\+(?:page|layout|error|server)\.svelte$/i.test(relacao))
+        || relacoesTs.some((relacao) => /(?:^|\/)(?:src\/)?routes\/(?:[^/]+\/)*\+(?:page|server)\.(?:ts|js)$/i.test(relacao))
+        || textosPackage.some((texto) => /@sveltejs\/kit/.test(texto ?? ""));
+      const temNuxtConsumer = relacoesVueSvelte.some((relacao) => /^(?:app\/)?pages\/.+\.vue$/i.test(relacao))
+        || textosPackage.some((texto) => /"nuxt"\s*:/.test(texto ?? ""));
       const temAngularConsumer = temSuperficieAngularConsumer
         || ((textosPackage.some((texto) => /@angular\/core|@angular\/router/.test(texto ?? "")) || angularConfigs.length > 0) && temBridgeAngularConsumer);
       const temFirebase = marcadoresFirebaseProjeto.length > 0
@@ -144,6 +151,12 @@ export async function inferirFontesLegado(
       }
       if (temAngularConsumer) {
         encontrados.add("angular-consumer");
+      }
+      if (temSvelteKitConsumer) {
+        encontrados.add("sveltekit-consumer");
+      }
+      if (temNuxtConsumer) {
+        encontrados.add("nuxt-consumer");
       }
       if (temFirebase) {
         encontrados.add("firebase");

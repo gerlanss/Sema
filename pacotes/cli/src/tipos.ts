@@ -12,6 +12,8 @@ export type FonteLegado =
   | "react-vite-consumer"
   | "angular-consumer"
   | "flutter-consumer"
+  | "sveltekit-consumer"
+  | "nuxt-consumer"
   | "firebase"
   | "typescript"
   | "javascript"

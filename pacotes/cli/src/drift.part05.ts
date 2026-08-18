@@ -198,6 +198,85 @@ export function arquivoEhRotasFlutterConsumer(relacaoArquivo: string, codigo?: s
     || /MaterialApp(?:\.router)?\s*\(|CupertinoApp(?:\.router)?\s*\(|GoRouter\s*\(/.test(codigo ?? "");
 }
 
+export function arquivoEhBridgeSvelteKitConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?lib\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|js)$/i.test(relacao);
+}
+
+export function arquivoEhSuperficieSvelteKitConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:src\/)?routes\/(?:[^/]+\/)*\+(?:page|layout|error|server)\.(?:svelte|ts|js)$/i.test(relacao);
+}
+
+export function inferirRotaSvelteKitConsumer(relacaoArquivo: string): RegistroConsumerSurfaceDrift | undefined {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  const segmentos = relacao.split("/");
+  const indiceSrcRoutes = segmentos.findIndex((segmento, indice) => segmento === "src" && segmentos[indice + 1] === "routes");
+  const indiceRoutes = segmentos.findIndex((segmento) => segmento === "routes");
+  const inicioRoutes = indiceSrcRoutes >= 0 ? indiceSrcRoutes + 2 : indiceRoutes >= 0 ? indiceRoutes + 1 : -1;
+  if (inicioRoutes < 0) {
+    return undefined;
+  }
+
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  const tipoArquivo = arquivoFinal.match(/^\+(page|layout|error|server)\.(?:svelte|ts|js)$/i)?.[1]?.toLowerCase();
+  if (!tipoArquivo) {
+    return undefined;
+  }
+
+  return {
+    rota: montarRotaConsumer(segmentos.slice(inicioRoutes, -1)),
+    arquivo: relacaoArquivo,
+    tipoArquivo,
+  };
+}
+
+export function arquivoEhBridgeNuxtConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /(?:^|\/)(?:app\/)?composables\/(?:sema_consumer_bridge|sema\/.+)\.(?:ts|js)$/i.test(relacao);
+}
+
+export function arquivoEhSuperficieNuxtConsumer(relacaoArquivo: string): boolean {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  return /^(?:app\/)?pages\/.+\.vue$/i.test(relacao)
+    || /(?:^|\/)server\/api\/.+\.(?:get|post|put|patch|delete|head)\.(?:ts|js)$/i.test(relacao);
+}
+
+export function inferirRotaNuxtConsumer(relacaoArquivo: string): RegistroConsumerSurfaceDrift | undefined {
+  const relacao = normalizarRelacaoConsumer(relacaoArquivo);
+  const segmentos = relacao.split("/");
+
+  const indiceServer = segmentos.findIndex((segmento, indice) => segmento === "server" && segmentos[indice + 1] === "api");
+  if (indiceServer >= 0) {
+    const arquivoFinal = segmentos.at(-1) ?? "";
+    const metodo = arquivoFinal.match(/\.(get|post|put|patch|delete|head)\.(?:ts|js)$/i)?.[1]?.toUpperCase();
+    const nomeBase = arquivoFinal.replace(/\.(?:get|post|put|patch|delete|head)?\.(?:ts|js)$/i, "");
+    const caminhoAteArquivo = segmentos.slice(indiceServer + 1, -1);
+    return {
+      rota: montarRotaConsumer(nomeBase === "index" ? caminhoAteArquivo : [...caminhoAteArquivo, nomeBase]),
+      arquivo: relacaoArquivo,
+      tipoArquivo: metodo ?? "server",
+    };
+  }
+
+  const indicePages = segmentos.findIndex((segmento, indice) => segmento === "pages" && (indice === 0 || segmentos[indice - 1] === "app"));
+  if (indicePages < 0) {
+    return undefined;
+  }
+  const arquivoFinal = segmentos.at(-1) ?? "";
+  if (!arquivoFinal.endsWith(".vue")) {
+    return undefined;
+  }
+  const nomeBase = arquivoFinal.replace(/\.vue$/i, "");
+  const caminhoAteArquivo = segmentos.slice(indicePages + 1, -1);
+
+  return {
+    rota: montarRotaConsumer(nomeBase === "index" ? caminhoAteArquivo : [...caminhoAteArquivo, nomeBase]),
+    arquivo: relacaoArquivo,
+    tipoArquivo: "page",
+  };
+}
+
 export function inferirRotaNextJsConsumer(relacaoArquivo: string): RegistroConsumerSurfaceDrift | undefined {
   const relacao = normalizarRelacaoConsumer(relacaoArquivo);
   const segmentos = relacao.split("/");

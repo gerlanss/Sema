@@ -193,9 +193,10 @@ export async function importarConsumerBase(
   descricaoFramework: string,
   ehBridge: (relacaoArquivo: string) => boolean,
   coletarSuperficies: (baseProjeto: string, arquivos: string[]) => Promise<SuperficieConsumerImportada[]>,
+  extensoes: readonly string[] = [".ts", ".tsx", ".js", ".jsx"],
 ): Promise<ModuloImportado[]> {
   const escopo = resolverEscopoImportacaoFrontendConsumer(diretorio);
-  const arquivos = await listarArquivosRecursivos(escopo.baseProjeto, [".ts", ".tsx", ".js", ".jsx"]);
+  const arquivos = await listarArquivosRecursivos(escopo.baseProjeto, [...extensoes]);
   const arquivosBridge = arquivos.filter((arquivo) => ehBridge(path.relative(escopo.baseProjeto, arquivo)));
   const contextosBridge = await carregarContextosBridgeConsumer(escopo.baseProjeto, arquivosBridge);
   const { tasks, entities, enums } = extrairTasksBridgeConsumer(escopo.baseProjeto, contextosBridge);
@@ -225,6 +226,62 @@ export async function coletarSuperficiesNextJsConsumer(baseProjeto: string, arqu
   return arquivos
     .map((arquivo) => inferirCaminhoNextJsConsumer(path.relative(baseProjeto, arquivo)))
     .filter((item): item is SuperficieConsumerImportada => Boolean(item));
+}
+
+export async function coletarSuperficiesSvelteKitConsumer(baseProjeto: string, arquivos: string[]): Promise<SuperficieConsumerImportada[]> {
+  const { arquivoEhSuperficieSvelteKitConsumer, inferirRotaSvelteKitConsumer } = await import("./drift.part05.js");
+  return arquivos
+    .map((arquivo) => {
+      const relacao = path.relative(baseProjeto, arquivo);
+      if (!arquivoEhSuperficieSvelteKitConsumer(relacao)) {
+        return undefined;
+      }
+      const superficie = inferirRotaSvelteKitConsumer(relacao);
+      return superficie
+        ? { caminho: superficie.rota, arquivo: relacao, tipoArquivo: superficie.tipoArquivo }
+        : undefined;
+    })
+    .filter((item): item is SuperficieConsumerImportada => Boolean(item));
+}
+
+export async function coletarSuperficiesNuxtConsumer(baseProjeto: string, arquivos: string[]): Promise<SuperficieConsumerImportada[]> {
+  const { arquivoEhSuperficieNuxtConsumer, inferirRotaNuxtConsumer } = await import("./drift.part05.js");
+  return arquivos
+    .map((arquivo) => {
+      const relacao = path.relative(baseProjeto, arquivo);
+      if (!arquivoEhSuperficieNuxtConsumer(relacao)) {
+        return undefined;
+      }
+      const superficie = inferirRotaNuxtConsumer(relacao);
+      return superficie
+        ? { caminho: superficie.rota, arquivo: relacao, tipoArquivo: superficie.tipoArquivo }
+        : undefined;
+    })
+    .filter((item): item is SuperficieConsumerImportada => Boolean(item));
+}
+
+export async function importarSvelteKitConsumerBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const { arquivoEhBridgeSvelteKitConsumer } = await import("./drift.part05.js");
+  return importarConsumerBase(
+    diretorio,
+    namespaceBase,
+    "SvelteKit",
+    arquivoEhBridgeSvelteKitConsumer,
+    coletarSuperficiesSvelteKitConsumer,
+    [".ts", ".js", ".svelte"],
+  );
+}
+
+export async function importarNuxtConsumerBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
+  const { arquivoEhBridgeNuxtConsumer } = await import("./drift.part05.js");
+  return importarConsumerBase(
+    diretorio,
+    namespaceBase,
+    "Nuxt",
+    arquivoEhBridgeNuxtConsumer,
+    coletarSuperficiesNuxtConsumer,
+    [".ts", ".js", ".vue"],
+  );
 }
 
 export async function coletarSuperficiesReactViteConsumer(baseProjeto: string, arquivos: string[]): Promise<SuperficieConsumerImportada[]> {

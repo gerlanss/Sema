@@ -26,7 +26,7 @@ import { camposDeParametrosRotaBackend, criarCampoResultadoBackend, descreverEfe
 import { caminhoImplGenerico, importarFirebaseBase } from "./importador.part07.js";
 import { acumularModuloImportado, criarModuloImportadoSimples, importarDartBase, importarDotnetBase, importarPythonBase, resolverArquivoRustParaSimbolo, selecionarSimbolosPreferidos } from "./importador.part08.js";
 import { importarExpressFastifyBase, importarNextJsBase, importarTypeScriptBase } from "./importador.part06.js";
-import { importarAngularConsumerBase, importarFlutterConsumerBase, importarNextJsConsumerBase, importarReactViteConsumerBase } from "./importador.part04.js";
+import { importarAngularConsumerBase, importarFlutterConsumerBase, importarNextJsConsumerBase, importarReactViteConsumerBase, importarNuxtConsumerBase, importarSvelteKitConsumerBase } from "./importador.part04.js";
 import { formatarModuloImportado, moduloParaCodigo, montarArquivoImportado } from "./importador.part05.js";
 
 export async function importarJavaBase(diretorio: string, namespaceBase: string): Promise<ModuloImportado[]> {
@@ -409,6 +409,10 @@ export async function importarProjetoLegado(
     modulos = await importarAngularConsumerBase(base, namespace);
   } else if (fonte === "flutter-consumer") {
     modulos = await importarFlutterConsumerBase(base, namespace);
+  } else if (fonte === "sveltekit-consumer") {
+    modulos = await importarSvelteKitConsumerBase(base, namespace);
+  } else if (fonte === "nuxt-consumer") {
+    modulos = await importarNuxtConsumerBase(base, namespace);
   } else if (fonte === "firebase") {
     modulos = await importarFirebaseBase(base, namespace);
   } else if (fonte === "typescript") {

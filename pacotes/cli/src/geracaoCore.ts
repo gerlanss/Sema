@@ -136,6 +136,8 @@ export function normalizarFonteImportacao(valor: string | undefined): FonteImpor
     || valor === "react-vite-consumer"
     || valor === "angular-consumer"
     || valor === "flutter-consumer"
+    || valor === "sveltekit-consumer"
+    || valor === "nuxt-consumer"
     || valor === "firebase"
     || valor === "dotnet"
     || valor === "java"

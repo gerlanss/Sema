@@ -96,6 +96,8 @@ export function normalizarFonteLegado(valor: string): FonteLegado | undefined {
     || valor === "react-vite-consumer"
     || valor === "angular-consumer"
     || valor === "flutter-consumer"
+    || valor === "sveltekit-consumer"
+    || valor === "nuxt-consumer"
     || valor === "firebase"
     || valor === "typescript"
     || valor === "javascript"

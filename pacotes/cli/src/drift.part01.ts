@@ -41,7 +41,7 @@ export interface SimboloResolvido {
   arquivo: string;
   simbolo: string;
 }
-export type ConsumerFramework = "nextjs-consumer" | "react-vite-consumer" | "angular-consumer" | "flutter-consumer";
+export type ConsumerFramework = "nextjs-consumer" | "react-vite-consumer" | "angular-consumer" | "flutter-consumer" | "sveltekit-consumer" | "nuxt-consumer";
 export interface RotaResolvida {
   origem: "nestjs" | "express" | "fastify" | "koa" | "fastapi" | "flask" | "nextjs" | ConsumerFramework | "firebase" | "dotnet" | "java" | "go" | "rust" | "php";
   metodo: string;
