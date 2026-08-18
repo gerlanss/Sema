@@ -365,6 +365,8 @@ export const CAMPOS_TOKENS_DESIGN = new Set([
   "paleta", "tipografia", "densidade", "forma", "movimento",
   "cor_primaria", "cor_primaria_hover", "cor_primaria_suave", "cor_fundo", "cor_superficie",
   "cor_texto", "cor_texto_secundario", "cor_borda", "fonte", "fonte_titulo", "fonte_mono", "raio_base",
+  "cor_primaria_escuro", "cor_primaria_hover_escuro", "cor_primaria_suave_escuro", "cor_fundo_escuro",
+  "cor_superficie_escuro", "cor_texto_escuro", "cor_texto_secundario_escuro", "cor_borda_escuro",
 ]);
 
 export function validarDesignModulo(modulo: import("../ast/tipos.js").ModuloAst, diagnosticos: Diagnostico[]): void {

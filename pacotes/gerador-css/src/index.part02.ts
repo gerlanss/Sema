@@ -65,20 +65,20 @@ export function gerarCss(modulo: IrModulo): ArquivoGerado[] {
    ======================================== */
 @media (prefers-color-scheme: dark) {
   :root {
-    --sema-cor-primaria: #818cf8;
-    --sema-cor-primaria-hover: #a5b4fc;
-    --sema-cor-primaria-suave: #1e1b4b;
+    --sema-cor-primaria: ${design.coresEscuras.primaria};
+    --sema-cor-primaria-hover: ${design.coresEscuras.primariaHover};
+    --sema-cor-primaria-suave: ${design.coresEscuras.primariaSuave};
     --sema-cor-sucesso: #34d399;
     --sema-cor-sucesso-fundo: #064e3b;
     --sema-cor-erro: #f87171;
     --sema-cor-erro-texto: #fecaca;
     --sema-cor-erro-fundo: #450a0a;
-    --sema-cor-fundo: #09090b;
-    --sema-cor-superficie: #18181b;
-    --sema-cor-texto: #fafafa;
-    --sema-cor-texto-secundario: #a1a1aa;
-    --sema-cor-borda: #3f3f46;
-    --sema-cor-borda-foco: #6366f1;
+    --sema-cor-fundo: ${design.coresEscuras.fundo};
+    --sema-cor-superficie: ${design.coresEscuras.superficie};
+    --sema-cor-texto: ${design.coresEscuras.texto};
+    --sema-cor-texto-secundario: ${design.coresEscuras.textoSecundario};
+    --sema-cor-borda: ${design.coresEscuras.borda};
+    --sema-cor-borda-foco: ${design.coresEscuras.bordaFoco};
     --sema-cor-entidade: #a78bfa;
   }
 }

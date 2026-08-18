@@ -59,6 +59,33 @@ test("resolver combina preset e override livre", () => {
   assert.equal(padrao.cores.primaria, "#6366f1");
 });
 
+test("dark mode do css gerado acompanha a paleta e aceita override escuro", () => {
+  const r = compilarCodigo(
+    CONTRATO(["paleta: terra", "cor_primaria: \"#7c2d12\"", "cor_fundo_escuro: \"#100c08\""].join(" ")),
+    "painel.sema",
+  );
+  const css = gerarCss(r.ir!).map((arquivo) => arquivo.conteudo).join(String.fromCharCode(10));
+  const escuro = css.slice(css.indexOf("prefers-color-scheme: dark"));
+  assert.ok(escuro.includes("--sema-cor-primaria: #d97706"), "primaria escura deve vir da paleta terra");
+  assert.ok(escuro.includes("--sema-cor-fundo: #100c08"), "override de fundo escuro deve ser respeitado");
+  assert.ok(!escuro.includes("--sema-cor-fundo: #09090b"), "fundo escuro padrao nao deve vazar na paleta terra");
+
+  const padrao = compilarCodigo(CONTRATO(""), "painel.sema");
+  const cssPadrao = gerarCss(padrao.ir!).map((a) => a.conteudo).join(String.fromCharCode(10));
+  const escuroPadrao = cssPadrao.slice(cssPadrao.indexOf("prefers-color-scheme: dark"));
+  assert.ok(escuroPadrao.includes("--sema-cor-primaria: #818cf8"), "sem design mantém o escuro atual");
+});
+
+test("tokens.ts e design-tokens.css carregam as cores escuras da paleta", () => {
+  const r = compilarCodigo(CONTRATO("paleta: oceano"), "painel.sema");
+  const arquivos = gerarDesignTokensArquivos(r.ir!, "typescript");
+  const ts = arquivos.find((a) => a.caminhoRelativo === "design/tokens.ts")!.conteudo;
+  assert.ok(ts.includes('"darkColors"'), "tokens.ts deve expor darkColors");
+  const css = arquivos.find((a) => a.caminhoRelativo === "design/design-tokens.css")!.conteudo;
+  assert.ok(css.includes("prefers-color-scheme: dark"), "design-tokens.css deve ter bloco escuro");
+  assert.ok(css.includes("#38bdf8"), "paleta oceano deve aparecer");
+});
+
 test("css gerado fica tematizado pelo design do contrato", () => {
   const r = compilarCodigo(CONTRATO('paleta: terra\n      cor_primaria: "#7c2d12"\n      forma: arredondada'), "painel.sema");
   const css = gerarCss(r.ir!).map((arquivo) => arquivo.conteudo).join("\n");

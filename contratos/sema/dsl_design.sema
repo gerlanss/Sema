@@ -13,6 +13,7 @@ module sema.produto.dsl_design {
       overrides_livres_aceitos: Booleano
       tokens_resolvidos_por_materializador: Booleano
       css_gerado_tematizado: Booleano
+      dark_mode_tematizado: Booleano
       pacote_de_tokens_emitido: Booleano
       ausencia_de_design_sinalizada: Booleano
     }
@@ -34,6 +35,7 @@ module sema.produto.dsl_design {
         overrides_livres_aceitos: interno
         tokens_resolvidos_por_materializador: interno
         css_gerado_tematizado: interno
+        dark_mode_tematizado: interno
         pacote_de_tokens_emitido: interno
         ausencia_de_design_sinalizada: interno
       }
@@ -74,6 +76,7 @@ module sema.produto.dsl_design {
       overrides_livres_aceitos == verdadeiro
       tokens_resolvidos_por_materializador == verdadeiro
       css_gerado_tematizado == verdadeiro
+      dark_mode_tematizado == verdadeiro
       pacote_de_tokens_emitido == verdadeiro
       ausencia_de_design_sinalizada existe
     }

@@ -189,6 +189,20 @@ export function gerarDesignTokensArquivos(ir: IrModulo, alvo: AlvoGeracao): Arra
   const design = resolverDesignTokens(ir.design);
   const cabecalho = `/* SEMA-GOVERNED — design tokens de ${ir.nome}; edite o bloco design do contrato, nao este arquivo. */\n`;
 
+  const cssEscuro = `
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sema-cor-primaria: ${design.coresEscuras.primaria};
+    --sema-cor-primaria-hover: ${design.coresEscuras.primariaHover};
+    --sema-cor-fundo: ${design.coresEscuras.fundo};
+    --sema-cor-superficie: ${design.coresEscuras.superficie};
+    --sema-cor-texto: ${design.coresEscuras.texto};
+    --sema-cor-texto-secundario: ${design.coresEscuras.textoSecundario};
+    --sema-cor-borda: ${design.coresEscuras.borda};
+  }
+}
+`;
+
   const css = `${cabecalho}:root {
   --sema-cor-primaria: ${design.cores.primaria};
   --sema-cor-primaria-hover: ${design.cores.primariaHover};
@@ -205,10 +219,11 @@ export function gerarDesignTokensArquivos(ir: IrModulo, alvo: AlvoGeracao): Arra
   --sema-raio: ${design.forma.raio};
   --sema-movimento-duracao: ${design.movimentoDuracao};
 }
-`;
+${cssEscuro}`;
 
   const objetoTokens = JSON.stringify({
     colors: design.cores,
+    darkColors: design.coresEscuras,
     typography: { ...design.tipografia, scale: design.escala },
     shape: design.forma,
     motion: { duration: design.movimentoDuracao },

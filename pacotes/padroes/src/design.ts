@@ -13,6 +13,10 @@ export interface CoresDesign {
   bordaFoco: string;
 }
 
+export interface PaletaDesign extends CoresDesign {
+  escuras: CoresDesign;
+}
+
 export interface TipografiaDesign {
   fonte: string;
   fonteTitulo: string;
@@ -33,6 +37,7 @@ export interface FormaDesign {
 
 export interface DesignTokensResolvidos {
   cores: CoresDesign;
+  coresEscuras: CoresDesign;
   tipografia: TipografiaDesign;
   escala: EscalaTipografica;
   forma: FormaDesign;
@@ -52,46 +57,54 @@ interface DesignDeclarado {
   };
 }
 
-const PALETAS: Record<string, CoresDesign> = {
+const PALETAS: Record<string, PaletaDesign> = {
   padrao: {
     primaria: "#6366f1", primariaHover: "#4f46e5", primariaSuave: "#eef2ff",
     fundo: "#fafafa", superficie: "#ffffff", texto: "#18181b",
     textoSecundario: "#71717a", borda: "#e4e4e7", bordaFoco: "#a5b4fc",
+    escuras: { primaria: "#818cf8", primariaHover: "#a5b4fc", primariaSuave: "#1e1b4b", fundo: "#09090b", superficie: "#18181b", texto: "#fafafa", textoSecundario: "#a1a1aa", borda: "#3f3f46", bordaFoco: "#6366f1" },
   },
   terra: {
     primaria: "#b45309", primariaHover: "#92400e", primariaSuave: "#fef3c7",
     fundo: "#faf7f2", superficie: "#fffef9", texto: "#292524",
     textoSecundario: "#78716c", borda: "#e7e5e4", bordaFoco: "#d97706",
+    escuras: { primaria: "#d97706", primariaHover: "#f59e0b", primariaSuave: "#451a03", fundo: "#1c1410", superficie: "#292019", texto: "#faf5ef", textoSecundario: "#b8a894", borda: "#4a3a2c", bordaFoco: "#f59e0b" },
   },
   floresta: {
     primaria: "#15803d", primariaHover: "#166534", primariaSuave: "#dcfce7",
     fundo: "#f7faf7", superficie: "#ffffff", texto: "#1a2e1a",
     textoSecundario: "#6b7f6b", borda: "#dbe7db", bordaFoco: "#22c55e",
+    escuras: { primaria: "#4ade80", primariaHover: "#86efac", primariaSuave: "#14532d", fundo: "#0d1510", superficie: "#16211a", texto: "#f0faf0", textoSecundario: "#93a893", borda: "#2a3d2e", bordaFoco: "#4ade80" },
   },
   oceano: {
     primaria: "#0369a1", primariaHover: "#075985", primariaSuave: "#e0f2fe",
     fundo: "#f8fafc", superficie: "#ffffff", texto: "#0f172a",
     textoSecundario: "#64748b", borda: "#e2e8f0", bordaFoco: "#38bdf8",
+    escuras: { primaria: "#38bdf8", primariaHover: "#7dd3fc", primariaSuave: "#0c4a6e", fundo: "#0b1220", superficie: "#141f33", texto: "#f1f6fb", textoSecundario: "#8ba3bd", borda: "#28394f", bordaFoco: "#38bdf8" },
   },
   noturno: {
     primaria: "#22d3ee", primariaHover: "#06b6d4", primariaSuave: "#164e63",
     fundo: "#0f172a", superficie: "#1e293b", texto: "#e2e8f0",
     textoSecundario: "#94a3b8", borda: "#334155", bordaFoco: "#22d3ee",
+    escuras: { primaria: "#67e8f9", primariaHover: "#a5f3fc", primariaSuave: "#0e2a33", fundo: "#020617", superficie: "#111c2e", texto: "#eef6fa", textoSecundario: "#8899ab", borda: "#22334a", bordaFoco: "#67e8f9" },
   },
   grafite: {
     primaria: "#f97316", primariaHover: "#ea580c", primariaSuave: "#ffedd5",
     fundo: "#18181b", superficie: "#27272a", texto: "#fafafa",
     textoSecundario: "#a1a1aa", borda: "#3f3f46", bordaFoco: "#fb923c",
+    escuras: { primaria: "#fb923c", primariaHover: "#fdba74", primariaSuave: "#431407", fundo: "#101012", superficie: "#1d1d20", texto: "#fafafa", textoSecundario: "#a0a0a6", borda: "#3a3a40", bordaFoco: "#fb923c" },
   },
   neon: {
     primaria: "#a3e635", primariaHover: "#84cc16", primariaSuave: "#365314",
     fundo: "#0a0a0a", superficie: "#171717", texto: "#fafafa",
     textoSecundario: "#a3a3a3", borda: "#262626", bordaFoco: "#a3e635",
+    escuras: { primaria: "#bef264", primariaHover: "#d9f99d", primariaSuave: "#1a2e05", fundo: "#050505", superficie: "#101210", texto: "#fafafa", textoSecundario: "#9ca89c", borda: "#1f241f", bordaFoco: "#bef264" },
   },
   pixel: {
     primaria: "#fbbf24", primariaHover: "#f59e0b", primariaSuave: "#451a03",
     fundo: "#111827", superficie: "#1f2937", texto: "#f9fafb",
     textoSecundario: "#9ca3af", borda: "#374151", bordaFoco: "#fbbf24",
+    escuras: { primaria: "#fcd34d", primariaHover: "#fde68a", primariaSuave: "#3b2a05", fundo: "#0a0d16", superficie: "#151a28", texto: "#f9fafb", textoSecundario: "#98a1b3", borda: "#2b3446", bordaFoco: "#fcd34d" },
   },
 };
 
@@ -148,9 +161,22 @@ const CHAVES_COR: Record<string, keyof CoresDesign> = {
   cor_borda: "borda",
 };
 
+const CHAVES_COR_ESCURA: Record<string, keyof CoresDesign> = {
+  cor_primaria_escuro: "primaria",
+  cor_primaria_hover_escuro: "primariaHover",
+  cor_primaria_suave_escuro: "primariaSuave",
+  cor_fundo_escuro: "fundo",
+  cor_superficie_escuro: "superficie",
+  cor_texto_escuro: "texto",
+  cor_texto_secundario_escuro: "textoSecundario",
+  cor_borda_escuro: "borda",
+};
+
 export function resolverDesignTokens(design?: DesignDeclarado): DesignTokensResolvidos {
   const tokens = design?.tokens ?? {};
-  const cores = { ...PALETAS[tokens.paleta ?? "padrao"] ?? PALETAS.padrao! };
+  const paleta = PALETAS[tokens.paleta ?? "padrao"] ?? PALETAS.padrao!;
+  const { escuras, ...cores } = { ...paleta, escuras: { ...paleta.escuras } };
+  const coresEscuras = escuras;
   const tipografia = { ...TIPOGRAFIAS[tokens.tipografia ?? "padrao"] ?? TIPOGRAFIAS.padrao! };
   const escala = { ...DENSIDADES[tokens.densidade ?? "padrao"] ?? DENSIDADES.padrao! };
   const forma = { ...FORMAS[tokens.forma ?? "padrao"] ?? FORMAS.padrao! };
@@ -159,8 +185,11 @@ export function resolverDesignTokens(design?: DesignDeclarado): DesignTokensReso
   const overrides = tokens.overrides ?? {};
   for (const [chave, valor] of Object.entries(overrides)) {
     const alvoCor = CHAVES_COR[chave];
+    const alvoCorEscura = CHAVES_COR_ESCURA[chave];
     if (alvoCor) {
       cores[alvoCor] = valor;
+    } else if (alvoCorEscura) {
+      coresEscuras[alvoCorEscura] = valor;
     } else if (chave === "fonte") {
       tipografia.fonte = valor;
     } else if (chave === "fonte_titulo") {
@@ -173,7 +202,7 @@ export function resolverDesignTokens(design?: DesignDeclarado): DesignTokensReso
     }
   }
 
-  return { cores, tipografia, escala, forma, movimentoDuracao };
+  return { cores, coresEscuras, tipografia, escala, forma, movimentoDuracao };
 }
 
 export function listarNomesDesign(): { paletas: string[]; tipografias: string[]; densidades: string[]; formas: string[]; movimentos: string[] } {
