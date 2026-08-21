@@ -622,11 +622,11 @@ test("sentinela de pureza bloqueia leitura, subprocesso e rede de verdade", asyn
   }
 });
 
-test("todos os 43 comandos públicos encerram --help e -h sem dispatch, PATH ou mutação", async () => {
+test("todos os 44 comandos públicos encerram --help e -h sem dispatch, PATH ou mutação", async () => {
   const ambiente = await criarAmbienteIsolado("sema-cli-help-matriz-");
   try {
     const comandos = comandosPublicos();
-    assert.equal(comandos.length, 43, JSON.stringify(comandos));
+    assert.equal(comandos.length, 44, JSON.stringify(comandos));
     assert.equal(new Set(comandos).size, comandos.length);
     for (const registrado of Object.keys(REGISTRO_COMANDOS)) {
       assert.ok(comandos.includes(registrado), `handler público ausente da matriz: ${registrado}`);
