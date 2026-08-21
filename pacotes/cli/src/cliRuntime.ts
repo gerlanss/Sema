@@ -2,8 +2,6 @@
 // Descrição: executa o dispatcher operacional no processo interno capturado pela CLI pública.
 
 import path from "node:path";
-
-const CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME = 2;
 import { pathToFileURL } from "node:url";
 import { CODIGO_SAIDA_FATAL_RUNTIME_CLI } from "./resultadoCli.js";
 
@@ -20,26 +18,19 @@ export async function executarCliRuntimeInterno(
       ? codigoSaida
       : CODIGO_SAIDA_FATAL_RUNTIME_CLI;
   } catch (erro) {
-    const detalhesErro = erro as { name?: string; message?: string; caminhoTentado?: string; sugeridos?: string[] };
-    const ehContratoAusente = detalhesErro?.name === "ErroContratoNaoEncontrado"
-      || String(detalhesErro?.message ?? "").startsWith("Contrato nao encontrado:");
-    if (ehContratoAusente) {
+    if (typeof (erro as { categoria?: string })?.categoria === "string" && (erro as { categoria?: string }).categoria) {
+      const cli = erro as { categoria: string; codigoPublico: string; mensagemPublica: string; codigoSaida: number; detalhes?: Record<string, unknown> };
       const envelope = {
         schemaVersion: "sema.cli.control/v1",
         ok: false,
-        kind: "CONTRACT_NOT_FOUND",
-        code: "CLI_CONTRACT_NOT_FOUND",
-        message: "Contrato Sema nao encontrado. Consulte os detalhes no envelope.",
-        exitCode: CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME,
-        details: {
-          caminhoTentado: detalhesErro.caminhoTentado
-            ? path.relative(process.cwd(), detalhesErro.caminhoTentado) || detalhesErro.caminhoTentado
-            : "",
-          sugeridos: detalhesErro.sugeridos ?? [],
-        },
+        kind: cli.categoria,
+        code: cli.codigoPublico,
+        message: cli.mensagemPublica,
+        exitCode: cli.codigoSaida,
+        ...(cli.detalhes ? { details: cli.detalhes } : {}),
       };
       console.log(JSON.stringify(envelope, null, 2));
-      return CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME;
+      return cli.codigoSaida;
     }
     return CODIGO_SAIDA_FATAL_RUNTIME_CLI;
   }

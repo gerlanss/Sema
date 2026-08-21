@@ -2,6 +2,7 @@
 // Descrição: orquestra leitura de contratos, compilação e seleção de módulos do projeto.
 
 import { stat } from 'node:fs/promises';
+import { erroContratoNaoEncontrado } from './cliControlError.js';
 import path from 'node:path';
 import { compilarProjeto, listarArquivosSema, type ResultadoCompilacaoProjetoModulo } from '@sema/nucleo';
 import {
@@ -56,6 +57,10 @@ export class ErroContratoNaoEncontrado extends Error {
     super(mensagem);
     this.name = "ErroContratoNaoEncontrado";
   }
+
+  paraControleCli() {
+    return erroContratoNaoEncontrado({ caminhoTentado: this.caminhoTentado, sugeridos: this.sugeridos });
+  }
 }
 
 async function sugerirContratosProximos(baseProjeto: string, nomeArquivo: string): Promise<string[]> {
@@ -91,14 +96,10 @@ export async function carregarProjeto(
     const contratosProximos = entradaResolvida.toLowerCase().endsWith(".sema")
       ? await sugerirContratosProximos(baseSugestao, path.basename(entradaResolvida))
       : [];
-    const detalhe = contratosProximos.length > 0
-      ? ` Contratos .sema encontrados no workspace: ${contratosProximos.slice(0, 5).join(", ")}.`
-      : " Nenhum contrato .sema foi encontrado no workspace; rode sema iniciar ou declare o caminho correto.";
-    throw new ErroContratoNaoEncontrado(
-      `Contrato nao encontrado: ${entradaResolvida}.${detalhe}`,
-      entradaResolvida,
-      contratosProximos,
-    );
+    throw erroContratoNaoEncontrado({
+      caminhoTentado: entradaResolvida,
+      sugeridos: contratosProximos.slice(0, 5),
+    });
   }
   const baseProjeto = await resolverBaseProjeto(entradaResolvida, configCarregada);
   if (infoEntrada.isFile() && path.extname(entradaResolvida).toLowerCase() !== ".sema") {
