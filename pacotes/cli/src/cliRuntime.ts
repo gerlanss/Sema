@@ -6,7 +6,6 @@ import path from "node:path";
 const CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME = 2;
 import { pathToFileURL } from "node:url";
 import { CODIGO_SAIDA_FATAL_RUNTIME_CLI } from "./resultadoCli.js";
-import { criarEnvelopeControleJsonV1 } from "./saidaCli.js";
 
 export type PrincipalCliRuntime = () => Promise<number>;
 
@@ -25,18 +24,20 @@ export async function executarCliRuntimeInterno(
     const ehContratoAusente = detalhesErro?.name === "ErroContratoNaoEncontrado"
       || String(detalhesErro?.message ?? "").startsWith("Contrato nao encontrado:");
     if (ehContratoAusente) {
-      const envelope = criarEnvelopeControleJsonV1({
-        categoria: "CONTRACT_NOT_FOUND",
-        codigoPublico: "CLI_CONTRACT_NOT_FOUND",
-        mensagemPublica: "Contrato Sema nao encontrado. Consulte os detalhes no envelope.",
-        codigoSaida: CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME,
-        detalhes: {
+      const envelope = {
+        schemaVersion: "sema.cli.control/v1",
+        ok: false,
+        kind: "CONTRACT_NOT_FOUND",
+        code: "CLI_CONTRACT_NOT_FOUND",
+        message: "Contrato Sema nao encontrado. Consulte os detalhes no envelope.",
+        exitCode: CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME,
+        details: {
           caminhoTentado: detalhesErro.caminhoTentado
             ? path.relative(process.cwd(), detalhesErro.caminhoTentado) || detalhesErro.caminhoTentado
             : "",
           sugeridos: detalhesErro.sugeridos ?? [],
         },
-      });
+      };
       console.log(JSON.stringify(envelope, null, 2));
       return CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME;
     }

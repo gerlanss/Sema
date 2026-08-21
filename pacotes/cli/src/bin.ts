@@ -30,20 +30,6 @@ interface ExecucaoRuntimeJsonCapturada {
   readonly stdout: string;
 }
 
-function validarEnvelopeControleFilho(stdout: string): unknown | null {
-  const texto = stdout.trim();
-  if (!texto) return null;
-  try {
-    const documento = JSON.parse(texto) as Record<string, unknown>;
-    if (documento.schemaVersion === "sema.cli.control/v1" && documento.kind === "CONTRACT_NOT_FOUND") {
-      return documento;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
 function executarRuntimeJsonCapturado(
   argv: readonly string[],
 ): ExecucaoRuntimeJsonCapturada | null {
@@ -58,11 +44,7 @@ function executarRuntimeJsonCapturado(
   });
 
   if (execucao.status === CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME) {
-    const controle = validarEnvelopeControleFilho(execucao.stdout ?? "");
-    if (controle) {
-      return { codigoSaida: execucao.status!, stdout: JSON.stringify(controle) };
-    }
-    return null;
+    return { codigoSaida: execucao.status!, stdout: execucao.stdout ?? "" };
   }
   if (
     execucao.error
@@ -192,9 +174,8 @@ export async function executarCliPublica(
           1,
         );
       }
-      const controleFilho = validarEnvelopeControleFilho(execucao.stdout);
-      if (controleFilho && execucao.codigoSaida === CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME) {
-        console.log(JSON.stringify(controleFilho, null, 2));
+      if (execucao.codigoSaida === CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME) {
+        console.log(execucao.stdout);
         return execucao.codigoSaida;
       }
       return emitirResultadoCliJsonV1({
