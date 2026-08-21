@@ -1,0 +1,93 @@
+module sema.produto.cli_sessao {
+  docs {
+    resumo: "Comando sessao devolve envelope compacto de abertura: identidade, hash, frescor, contratos, gates e proximos passos."
+    arquivo: "docs/commands.md"
+  }
+
+  task abrir_sessao_governada {
+    input {
+      intencao: Texto
+      entrada: Texto
+    }
+    output {
+      workspace_identificado: Booleano
+      hash_contratos_calculado: Booleano
+      frescor_avaliado: Booleano
+      gates_expostos: Booleano
+      docs_bloqueantes_por_intencao: Booleano
+      proximos_passos_emitidos: Booleano
+    }
+    rules {
+      intencao deve_ser usada_para_gates_especificos
+    }
+    authz {
+      escopo: sema.sessao.abrir
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        intencao: publico
+        entrada: interno
+      }
+      output {
+        workspace_identificado: interno
+        hash_contratos_calculado: publico
+        frescor_avaliado: publico
+        gates_expostos: publico
+        docs_bloqueantes_por_intencao: publico
+        proximos_passos_emitidos: publico
+      }
+    }
+    audit {
+      evento: sema.sessao.aberta
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "7d"
+      motivo: obrigatorio
+    }
+    forbidden {
+      emitir_dados_de_codigo_vivo
+      esconder_stale_do_agente
+      listar_docs_que_nao_sao_bloqueantes_como_bloqueantes
+    }
+    impl {
+      ts: cli.src.comando_sessao.comandoSessao
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/comandoSessao.ts"
+      arquivo: "pacotes/cli/src/index.part04.ts"
+      arquivo: "testes/unidade/comando-sessao.test.ts"
+      simbolo: cli.src.comando_sessao.comandoSessao
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "15s"
+      retry: "nenhum"
+      compensacao: "nenhuma"
+      criticidade_operacional: media
+    }
+    guarantees {
+      workspace_identificado == verdadeiro
+      hash_contratos_calculado == verdadeiro
+      frescor_avaliado == verdadeiro
+      gates_expostos == verdadeiro
+      docs_bloqueantes_por_intencao existe
+      proximos_passos_emitidos existe
+    }
+    tests {
+      caso "sessao com intencao devolve gates e docs" {
+        given {
+          intencao: "alterar design do painel"
+          entrada: "."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          gates_expostos: verdadeiro
+        }
+      }
+    }
+  }
+}

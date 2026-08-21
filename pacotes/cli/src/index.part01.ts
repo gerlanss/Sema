@@ -130,6 +130,7 @@ export type Comando =
   | "docs-impacto"
   | "finalizar-mudanca"
   | "resumo"
+  | "sessao"
   | "prompt-curto"
   | "prompt-ia"
   | "prompt-ia-ui"

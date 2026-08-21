@@ -146,6 +146,7 @@ export function criarAjudaRaiz(versao: string): string {
       "sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--json]",
       "sema sync-codex [--json]",
       "sema instalar-exemplos [--json]",
+      "sema sessao [intencao] [entrada] [--json]",
       "sema docs-impacto --intencao <acao> [--arquivo <caminho>] [--criar-ausentes] [--completo] [--json]",
       "sema finalizar-mudanca --intencao <acao> [--arquivo <caminho>] [--doc-lida <caminho>] [--json]",
       "sema author briefing <arquivo.sema> [--json]",

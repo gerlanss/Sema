@@ -41,7 +41,7 @@ const COMANDOS_PUBLICOS = new Set([
   "impacto", "importar", "iniciar", "init", "inspecionar", "instalar-exemplos",
   "interativo", "ir", "pipeline", "profile", "prompt-curto", "prompt-ia",
   "prompt-ia-react", "prompt-ia-sema-primeiro", "prompt-ia-ui", "renomear-semantico",
-  "resumo", "rule-packs", "skill", "starter-ia", "sync", "sync-codex", "testar",
+  "resumo", "rule-packs", "sessao", "skill", "starter-ia", "sync", "sync-codex", "testar",
   "validar", "verificar", "ast",
 ]);
 
@@ -486,6 +486,7 @@ function validarComandoBasico(comando: string, args: readonly string[]): boolean
       return Boolean(alvo && ALVOS_GERACAO.has(alvo)) && (!estrutura || ESTRUTURAS.has(estrutura)) && (!framework || FRAMEWORKS.has(framework));
     }
     case "verificar": return parsearArgumentos(args, { opcoes: ["--saida", "--alvo"], flags: ["--sem-cache"], maxPosicionais: 1 }) !== null;
+    case "sessao": return parsearArgumentos(args, { flags: ["--json"], maxPosicionais: 2 }) !== null;
     case "formatar": return parsearArgumentos(args, { flags: ["--check"], maxPosicionais: 1 }) !== null;
     case "inspecionar": {
       const parsed = parsearArgumentos(args, { opcoes: ["--drift", "--cache"], flags: ["--com-drift"], maxPosicionais: 1 });

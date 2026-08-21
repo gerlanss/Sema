@@ -2,6 +2,7 @@
 // Descrição: gera contexto local e grava artefatos somente dentro da base validada.
 
 import { mkdir, readFile, readdir, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -154,6 +155,52 @@ function escolherTopArquivosResumo(
   return { arquivos: [], fonte: "nenhum" };
 }
 
+async function calcularHashContratos(caminhosContratos: string[], baseProjeto?: string): Promise<string> {
+  const hash = createHash("sha256");
+  const base = baseProjeto ?? (caminhosContratos[0] ? path.dirname(caminhosContratos[0]) : process.cwd());
+  const ordenados = [...caminhosContratos].sort();
+  for (const caminho of ordenados) {
+    const conteudo = await readFile(caminho, "utf8").catch(() => "");
+    const relativo = path.relative(base, caminho).replace(/[\\/]/g, "/");
+    hash.update(relativo);
+    hash.update(":");
+    hash.update(conteudo);
+    hash.update(String.fromCharCode(0));
+  }
+  return hash.digest("hex").slice(0, 16);
+}
+
+export async function verificarFrescorArtefatos(baseProjeto: string): Promise<{
+  fresco: boolean;
+  hashArtefato: string | null;
+  hashAtual: string;
+  contratosMudaram: boolean;
+  sugestao: string;
+}> {
+  const caminhoIndex = path.join(baseProjeto, "SEMA_INDEX.json");
+  let hashArtefato: string | null = null;
+  try {
+    const index = JSON.parse(await readFile(caminhoIndex, "utf8")) as { hashContratos?: string };
+    hashArtefato = index.hashContratos ?? null;
+  } catch {
+    hashArtefato = null;
+  }
+
+  const origens = await (await import("./projetoOrigens.js")).resolverOrigensProjeto(baseProjeto, baseProjeto, undefined);
+  const { listarArquivosDeOrigens } = await import("./projetoOrigens.js");
+  const contratos = await listarArquivosDeOrigens(origens);
+  const hashAtual = await calcularHashContratos(contratos, baseProjeto);
+
+  const fresco = hashArtefato === hashAtual;
+  return {
+    fresco,
+    hashArtefato,
+    hashAtual,
+    contratosMudaram: !fresco,
+    sugestao: fresco ? "" : "Artefatos de contexto estao desatualizados; rode sema sync-codex --json para regenerar.",
+  };
+}
+
 export async function gerarResumoProjetoIa(
   entrada: string | undefined,
   pastaSaidaOpcional?: string,
@@ -248,10 +295,13 @@ export async function gerarResumoProjetoIa(
   const semaBoot = renderizarSemaBoot(agentContextPack);
   const semaSmallModel = renderizarSemaSmallModel(agentContextPack);
   const docAgentesCapacidade = renderizarDocumentoAgentesPorCapacidade(agentContextPack);
+  const caminhosContratos = contextoProjeto.modulosSelecionados.map((item) => item.caminho);
+  const hashContratos = await calcularHashContratos(caminhosContratos, contextoProjeto.baseProjeto);
   const indexJson = {
     comando: "resumo-projeto",
     geradoEm,
     cliVersao: VERSAO_CLI,
+    hashContratos,
     baseProjeto,
     modoVerificacaoCodigo,
     analiseDrift: {
