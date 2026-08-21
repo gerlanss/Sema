@@ -8,7 +8,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ehCliControlError } from "./cliControlError.js";
 import { CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME } from "./cliRuntime.js";
-import { ErroContratoNaoEncontrado } from "./projetoCarregar.js";
 import { validarSintaxeInvocacaoPublica } from "./cliGrammar.js";
 import { detectarHelpAntesDispatch } from "./cliHelp.js";
 import { criarAjudaRaiz } from "./cliHelpTexto.js";
@@ -218,8 +217,7 @@ export async function executarCliPublica(
       );
     }
     if (
-      erro instanceof ErroContratoNaoEncontrado
-      || (erro as { name?: string })?.name === "ErroContratoNaoEncontrado"
+      (erro as { name?: string })?.name === "ErroContratoNaoEncontrado"
       || String((erro as { message?: string })?.message ?? "").startsWith("Contrato nao encontrado:")
     ) {
       const detalhesErro = erro as { caminhoTentado?: string; sugeridos?: string[] };
