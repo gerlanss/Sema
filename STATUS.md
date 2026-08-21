@@ -9,8 +9,8 @@ the first proving ground, not the product boundary.
 
 - Version: `3.9.4`
 - Package: `@semacode/cli`
-- Last updated: 2026-08-20
-- Reference commit: `4e264f0`
+- Last updated: 2026-08-21
+- Reference commit: `b19ebef`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
