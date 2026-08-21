@@ -146,9 +146,14 @@ export async function executarCliPublica(
           1,
         );
       }
-      if (execucao.stdout.trim().startsWith("{") && execucao.stdout.includes("sema.cli.control/v1")) {
-        console.log(execucao.stdout);
-        return execucao.codigoSaida;
+      try {
+        const doc = JSON.parse(execucao.stdout.trim()) as Record<string, unknown>;
+        if (doc.schemaVersion === "sema.cli.control/v1" && typeof doc.kind === "string" && doc.exitCode === execucao.codigoSaida) {
+          console.log(execucao.stdout);
+          return execucao.codigoSaida;
+        }
+      } catch {
+        // nao e um envelope de controle; segue o caminho normal
       }
       return emitirResultadoCliJsonV1({
         comando: sintaxe.comando,
