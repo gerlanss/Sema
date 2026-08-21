@@ -426,7 +426,7 @@ export async function comandoResumo(
   const escreverNaRaiz = possuiFlag(args, "--raiz");
   const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
   const analiseDrift = resolverAnaliseDriftConsultaCli(args, "resumo");
-  const alvoEhArquivo = (await stat(alvo)).isFile();
+  const alvoEhArquivo = (await stat(alvo).catch(() => undefined))?.isFile() ?? false;
 
   if (alvoEhArquivo) {
     const contexto = await carregarContextoModuloIa(alvo, analiseDrift);

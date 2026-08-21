@@ -47,6 +47,36 @@ function resolverFontesLegadoDeclaradas(
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
+export class ErroContratoNaoEncontrado extends Error {
+  constructor(
+    mensagem: string,
+    readonly caminhoTentado: string,
+    readonly sugeridos: string[],
+  ) {
+    super(mensagem);
+    this.name = "ErroContratoNaoEncontrado";
+  }
+}
+
+async function sugerirContratosProximos(baseProjeto: string, nomeArquivo: string): Promise<string[]> {
+  const origens = await resolverOrigensProjeto(baseProjeto, baseProjeto, undefined);
+  const encontrados: string[] = [];
+  for (const origem of origens) {
+    const arquivos = await listarArquivosDeOrigens([origem]);
+    for (const arquivo of arquivos) {
+      encontrados.push(path.relative(baseProjeto, arquivo).replace(/\\/g, "/"));
+    }
+  }
+  const alvo = nomeArquivo.replace(/\.sema$/i, "").toLowerCase();
+  return encontrados
+    .map((relativo) => ({
+      relativo,
+      pontuacao: relativo.toLowerCase().includes(alvo) ? 0 : 1,
+    }))
+    .sort((a, b) => a.pontuacao - b.pontuacao || a.relativo.localeCompare(b.relativo, "pt-BR"))
+    .map((item) => item.relativo).slice(0, 5);
+}
+
 export async function carregarProjeto(
   entrada: string | undefined,
   cwd: string,
@@ -55,8 +85,22 @@ export async function carregarProjeto(
   const entradaBase = entrada ? path.resolve(cwd, entrada) : cwd;
   const configCarregada = await carregarConfiguracaoProjeto(entradaBase);
   const entradaResolvida = entrada ? path.resolve(cwd, entrada) : await resolverEntradaPadrao(cwd, configCarregada);
+  const infoEntrada = await stat(entradaResolvida).catch(() => undefined);
+  if (!infoEntrada) {
+    const baseSugestao = configCarregada?.baseDiretorio ?? path.dirname(entradaResolvida);
+    const contratosProximos = entradaResolvida.toLowerCase().endsWith(".sema")
+      ? await sugerirContratosProximos(baseSugestao, path.basename(entradaResolvida))
+      : [];
+    const detalhe = contratosProximos.length > 0
+      ? ` Contratos .sema encontrados no workspace: ${contratosProximos.slice(0, 5).join(", ")}.`
+      : " Nenhum contrato .sema foi encontrado no workspace; rode sema iniciar ou declare o caminho correto.";
+    throw new ErroContratoNaoEncontrado(
+      `Contrato nao encontrado: ${entradaResolvida}.${detalhe}`,
+      entradaResolvida,
+      contratosProximos,
+    );
+  }
   const baseProjeto = await resolverBaseProjeto(entradaResolvida, configCarregada);
-  const infoEntrada = await stat(entradaResolvida);
   if (infoEntrada.isFile() && path.extname(entradaResolvida).toLowerCase() !== ".sema") {
     throw new Error(`Entrada de contrato precisa terminar em .sema: ${entradaResolvida}`);
   }

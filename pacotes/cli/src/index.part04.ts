@@ -269,7 +269,10 @@ export async function gerarResumoProjetoIa(
     entradaCanonica,
     agentContextPack,
     guiaPorCapacidade,
-    topArquivosCodigoDetectados: arquivosCodigoDetectados,
+    topArquivosCodigoDetectados: arquivosCodigoDetectados.map((item) => {
+      const rel = path.relative(contextoProjeto.baseProjeto, item);
+      return rel && !rel.startsWith("..") ? rel.replace(/[\\/]/g, "/") : item.replace(/[\\/]/g, "/");
+    }),
     modulos,
   };
   const micro = [

@@ -23,6 +23,7 @@ export type TipoControleCli =
   | "HELP"
   | "UNKNOWN_COMMAND"
   | "ARGUMENT_ERROR"
+  | "CONTRACT_NOT_FOUND"
   | "FATAL_ERROR";
 
 export interface EnvelopeControleJsonV1 {
@@ -32,6 +33,7 @@ export interface EnvelopeControleJsonV1 {
   readonly code: string;
   readonly message: string;
   readonly exitCode: number;
+  readonly details?: Record<string, unknown>;
 }
 
 export interface EntradaEnvelopeControleJsonV1 {
@@ -39,6 +41,7 @@ export interface EntradaEnvelopeControleJsonV1 {
   readonly codigoPublico: string;
   readonly mensagemPublica: string;
   readonly codigoSaida: number;
+  readonly detalhes?: Record<string, unknown>;
 }
 
 export interface OpcoesInvocacaoPublica {
@@ -61,6 +64,7 @@ const CODIGO_PADRAO: Readonly<Record<TipoControleCli, string>> = {
   HELP: "CLI_HELP",
   UNKNOWN_COMMAND: "CLI_UNKNOWN_COMMAND",
   ARGUMENT_ERROR: "CLI_ARGUMENT_ERROR",
+  CONTRACT_NOT_FOUND: "CLI_CONTRACT_NOT_FOUND",
   FATAL_ERROR: "CLI_FATAL_ERROR",
 };
 
@@ -68,6 +72,7 @@ const MENSAGEM_PADRAO: Readonly<Record<TipoControleCli, string>> = {
   HELP: "Ajuda da CLI Sema.",
   UNKNOWN_COMMAND: "Comando Sema desconhecido.",
   ARGUMENT_ERROR: "Argumentos inválidos. Consulte a ajuda do comando.",
+  CONTRACT_NOT_FOUND: "Contrato Sema nao encontrado. Consulte os detalhes no envelope.",
   FATAL_ERROR: "Falha ao executar a CLI da Sema.",
 };
 
@@ -142,6 +147,9 @@ export function criarEnvelopeControleJsonV1(
     code: normalizarCodigoPublico(entrada.categoria, entrada.codigoPublico),
     message: normalizarMensagemPublica(entrada.categoria, entrada.mensagemPublica),
     exitCode,
+    ...(entrada.detalhes && entrada.categoria === "CONTRACT_NOT_FOUND"
+      ? { details: entrada.detalhes }
+      : {}),
   };
 }
 

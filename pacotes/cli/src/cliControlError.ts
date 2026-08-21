@@ -4,6 +4,7 @@
 export type CategoriaFalhaControleCli =
   | "UNKNOWN_COMMAND"
   | "ARGUMENT_ERROR"
+  | "CONTRACT_NOT_FOUND"
   | "FATAL_ERROR";
 
 interface DefinicaoFalhaControleCli {
@@ -11,6 +12,8 @@ interface DefinicaoFalhaControleCli {
   readonly mensagemPublica: string;
   readonly codigoSaida: number;
 }
+
+const MENSAGEM_CONTRATO_NAO_ENCONTRADO = "Contrato Sema nao encontrado. Consulte os contratos sugeridos no envelope.";
 
 const DEFINICOES_FALHA_CONTROLE: Readonly<Record<CategoriaFalhaControleCli, DefinicaoFalhaControleCli>> = Object.freeze({
   UNKNOWN_COMMAND: Object.freeze({
@@ -22,6 +25,11 @@ const DEFINICOES_FALHA_CONTROLE: Readonly<Record<CategoriaFalhaControleCli, Defi
     codigoPublico: "CLI_ARGUMENT_ERROR",
     mensagemPublica: "Argumentos inválidos. Consulte a ajuda do comando.",
     codigoSaida: 1,
+  }),
+  CONTRACT_NOT_FOUND: Object.freeze({
+    codigoPublico: "CLI_CONTRACT_NOT_FOUND",
+    mensagemPublica: MENSAGEM_CONTRATO_NAO_ENCONTRADO,
+    codigoSaida: 2,
   }),
   FATAL_ERROR: Object.freeze({
     codigoPublico: "CLI_FATAL_ERROR",
@@ -35,8 +43,9 @@ export class CliControlError extends Error {
   readonly codigoPublico: string;
   readonly mensagemPublica: string;
   readonly codigoSaida: number;
+  readonly detalhes?: Record<string, unknown>;
 
-  constructor(categoria: CategoriaFalhaControleCli) {
+  constructor(categoria: CategoriaFalhaControleCli, detalhes?: Record<string, unknown>) {
     const definicao = DEFINICOES_FALHA_CONTROLE[categoria];
     super(definicao.mensagemPublica);
     this.name = "CliControlError";
@@ -44,6 +53,7 @@ export class CliControlError extends Error {
     this.codigoPublico = definicao.codigoPublico;
     this.mensagemPublica = definicao.mensagemPublica;
     this.codigoSaida = definicao.codigoSaida;
+    this.detalhes = detalhes;
   }
 }
 
@@ -53,6 +63,10 @@ export function erroComandoDesconhecido(): CliControlError {
 
 export function erroArgumentoInvalido(): CliControlError {
   return new CliControlError("ARGUMENT_ERROR");
+}
+
+export function erroContratoNaoEncontrado(detalhes: { caminhoTentado: string; sugeridos: string[] }): CliControlError {
+  return new CliControlError("CONTRACT_NOT_FOUND", detalhes);
 }
 
 export function erroFatalCli(): CliControlError {

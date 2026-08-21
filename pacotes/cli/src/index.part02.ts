@@ -195,7 +195,7 @@ export function coletarResumoSemanticoModulo(
     efeitos: limitarLista(efeitos, 8),
     erros: limitarLista(erros, 8),
     entidadesAfetadas: limitarLista(entidadesAfetadas, 8),
-    arquivosProvaveis: limitarLista(unicosOrdenados(briefing.oQueTocar), 8),
+    arquivosProvaveis: limitarLista(unicosOrdenados(briefing.oQueTocar.map((item) => relativizarCaminho(item))), 8),
     simbolosRelacionados: limitarLista(unicosOrdenados(briefing.simbolosRelacionados), 8),
     riscosPrincipais: limitarLista(unicosOrdenados(briefing.riscosPrincipais), 6),
     lacunas: limitarLista(unicosOrdenados(briefing.oQueEstaFrouxo), 6),
@@ -207,7 +207,7 @@ export function coletarResumoSemanticoModulo(
     consumerSurfaces: limitarLista(unicosOrdenados(briefing.consumerSurfaces ?? []), 8),
     consumerBridges: limitarLista(unicosOrdenados(briefing.consumerBridges ?? []), 8),
     ancoragensVinculo: limitarLista(unicosOrdenados(briefing.ancoragensVinculo ?? []), 8),
-    arquivosProvaveisEditar: limitarLista(unicosOrdenados(briefing.arquivosProvaveisEditar ?? briefing.oQueTocar), 8),
+    arquivosProvaveisEditar: limitarLista(unicosOrdenados((briefing.arquivosProvaveisEditar ?? briefing.oQueTocar).map((item) => relativizarCaminho(item))), 8),
   };
   return modoVerificacaoCodigo === "codigo_completo"
     ? resumo
@@ -498,4 +498,11 @@ ${resumo.consumerFramework ? "- se for tarefa visual consumer, priorize `appRout
 Contexto compacto:
 ${resumoTexto}
 `;
+}
+
+function relativizarCaminho(caminho: string): string {
+  const base = process.cwd();
+  const absoluto = path.resolve(base, caminho);
+  const relativo = path.relative(base, absoluto);
+  return relativo && !relativo.startsWith("..") ? relativo.replace(/[\\/]/g, "/") : caminho.replace(/[\\/]/g, "/");
 }

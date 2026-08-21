@@ -4,8 +4,11 @@
 
 import pacoteCli from "../package.json" with { type: "json" };
 import { spawnSync } from "node:child_process";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ehCliControlError } from "./cliControlError.js";
+import { CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME } from "./cliRuntime.js";
+import { ErroContratoNaoEncontrado } from "./projetoCarregar.js";
 import { validarSintaxeInvocacaoPublica } from "./cliGrammar.js";
 import { detectarHelpAntesDispatch } from "./cliHelp.js";
 import { criarAjudaRaiz } from "./cliHelpTexto.js";
@@ -27,6 +30,20 @@ interface ExecucaoRuntimeJsonCapturada {
   readonly stdout: string;
 }
 
+function validarEnvelopeControleFilho(stdout: string): unknown | null {
+  const texto = stdout.trim();
+  if (!texto) return null;
+  try {
+    const documento = JSON.parse(texto) as Record<string, unknown>;
+    if (documento.schemaVersion === "sema.cli.control/v1" && documento.kind === "CONTRACT_NOT_FOUND") {
+      return documento;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function executarRuntimeJsonCapturado(
   argv: readonly string[],
 ): ExecucaoRuntimeJsonCapturada | null {
@@ -40,6 +57,13 @@ function executarRuntimeJsonCapturado(
     windowsHide: true,
   });
 
+  if (execucao.status === CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME) {
+    const controle = validarEnvelopeControleFilho(execucao.stdout ?? "");
+    if (controle) {
+      return { codigoSaida: execucao.status!, stdout: JSON.stringify(controle) };
+    }
+    return null;
+  }
   if (
     execucao.error
     || execucao.signal !== null
@@ -89,18 +113,22 @@ function emitirFalhaControle(
   codigoPublico: string,
   mensagemPublica: string,
   codigoSaida: number,
+  detalhes?: Record<string, unknown>,
 ): number {
   const modoJson = argv.includes("--json");
   const relatorio = executarInvocacaoPublica({
     resultado: categoria,
     modoJson,
-    mensagemTexto: mensagemPublica,
+    mensagemTexto: detalhes && categoria === "CONTRACT_NOT_FOUND"
+      ? formatarDetalhesContratoAusente(mensagemPublica, detalhes)
+      : mensagemPublica,
     envelopeControle: modoJson
       ? criarEnvelopeControleJsonV1({
           categoria,
           codigoPublico,
           mensagemPublica,
           codigoSaida,
+          detalhes,
         })
       : undefined,
   });
@@ -108,6 +136,24 @@ function emitirFalhaControle(
     console.log(criarAjudaRaiz(pacoteCli.version));
   }
   return relatorio.codigoSaida;
+}
+
+function formatarDetalhesContratoAusente(mensagemPublica: string, detalhes: Record<string, unknown>): string {
+  const caminho = typeof detalhes.caminhoTentado === "string" ? detalhes.caminhoTentado : "";
+  const sugeridos = Array.isArray(detalhes.sugeridos) ? detalhes.sugeridos.filter((item): item is string => typeof item === "string") : [];
+  const linhas = [mensagemPublica];
+  if (caminho) {
+    linhas.push(`Caminho tentado: ${caminho}`);
+  }
+  if (sugeridos.length > 0) {
+    linhas.push(`Contratos disponiveis no workspace:`);
+    for (const sugerido of sugeridos.slice(0, 5)) {
+      linhas.push(`  - ${sugerido}`);
+    }
+  } else {
+    linhas.push("Nenhum contrato .sema foi encontrado no workspace; rode sema iniciar ou declare o caminho correto.");
+  }
+  return linhas.join(String.fromCharCode(10));
 }
 
 /**
@@ -146,6 +192,11 @@ export async function executarCliPublica(
           1,
         );
       }
+      const controleFilho = validarEnvelopeControleFilho(execucao.stdout);
+      if (controleFilho && execucao.codigoSaida === CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME) {
+        console.log(JSON.stringify(controleFilho, null, 2));
+        return execucao.codigoSaida;
+      }
       return emitirResultadoCliJsonV1({
         comando: sintaxe.comando,
         codigoSaida: execucao.codigoSaida,
@@ -163,6 +214,27 @@ export async function executarCliPublica(
         erro.codigoPublico,
         erro.mensagemPublica,
         erro.codigoSaida,
+        erro.detalhes,
+      );
+    }
+    if (
+      erro instanceof ErroContratoNaoEncontrado
+      || (erro as { name?: string })?.name === "ErroContratoNaoEncontrado"
+      || String((erro as { message?: string })?.message ?? "").startsWith("Contrato nao encontrado:")
+    ) {
+      const detalhesErro = erro as { caminhoTentado?: string; sugeridos?: string[] };
+      return emitirFalhaControle(
+        argv,
+        "CONTRACT_NOT_FOUND",
+        "CLI_CONTRACT_NOT_FOUND",
+        "Contrato Sema nao encontrado. Consulte os detalhes no envelope.",
+        2,
+        {
+          caminhoTentado: detalhesErro.caminhoTentado
+            ? path.relative(process.cwd(), detalhesErro.caminhoTentado) || detalhesErro.caminhoTentado
+            : "",
+          sugeridos: detalhesErro.sugeridos ?? [],
+        },
       );
     }
     return emitirFalhaControle(

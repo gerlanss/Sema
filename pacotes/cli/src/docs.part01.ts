@@ -229,7 +229,7 @@ export async function listarArquivosRecursivo(base: string, limite = 80): Promis
 export const REGRAS_DOCUMENTACAO: RegraDocumentacao[] = [
   {
     categoria: "deploy",
-    padroes: [/deploy/, /publicar/, /producao/, /release/, /pipeline/, /\bci\b/, /\bcd\b/, /vercel/, /cloudflare/, /docker/],
+    padroes: [/deploy/, /publicar/, /producao/, /release/, /pipeline/, /\bci\b/, /\bcd\b/, /vercel/, /cloudflare/, /docker/, /edge.?function/i, /\bruntime\b/i, /\blambda\b/i, /\bworker\b/i, /\bserverless\b/i],
     docs: [
       { relativo: "docs/deploy.md", tipo: "runbook", motivo: "runbook de deploy antes de publicar ou alterar pipeline", permitirCriacao: true },
       { relativo: "docs/env.md", tipo: "runbook", motivo: "variaveis, secrets e ambientes usados no deploy", permitirCriacao: true },

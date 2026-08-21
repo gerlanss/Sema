@@ -116,7 +116,7 @@ export async function comandoInspecionar(
 ): Promise<number> {
   const analiseDrift = resolverAnaliseDriftConsultaCli(args, "inspecionar");
   const alvo = entrada ? path.resolve(cwd, entrada) : cwd;
-  const alvoEhArquivo = (await stat(alvo)).isFile();
+  const alvoEhArquivo = (await stat(alvo).catch(() => undefined))?.isFile() ?? false;
   const escopoEstreito = analiseDrift.opcoes.escopo === "arquivo"
     || analiseDrift.opcoes.escopo === "modulo"
     || (analiseDrift.opcoes.escopo === undefined
