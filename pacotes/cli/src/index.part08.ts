@@ -73,7 +73,6 @@ import {
 import { escreverArquivos, caminhoExiste } from './fsGovernado.js';
 import { localizarDiretorioExemplosOficiais, materializarExemplosOficiais } from './exemplosOficiais.js';
 import { comandoIniciar, comandoInstalarExemplos } from './initCommand.js';
-import { comandoSessao } from './comandoSessao.js';
 import type { TemplateIniciar } from './initTemplatesBase.js';
 import { carregarModulos } from './carregarModulos.js';
 import { obterOpcao, obterOpcoesRepetidas, obterPosicionais, possuiFlag } from './cliArgs.js';
@@ -141,7 +140,8 @@ export async function principal(): Promise<number> {
         { force: possuiFlag(resto, "--force"), exemplosCompletos: possuiFlag(resto, "--com-exemplos") },
       );
       break;
-    case "sessao":
+    case "sessao": {
+      const { comandoSessao } = await import("./comandoSessao.js");
       codigoSaida = await comandoSessao(
         posicionais,
         resto,
@@ -149,6 +149,7 @@ export async function principal(): Promise<number> {
         cwd,
       );
       break;
+    }
     case "author":
       codigoSaida = await comandoAuthor(posicionais, resto, possuiFlag(resto, "--json"));
       break;
