@@ -2,8 +2,10 @@
 // Descrição: executa o dispatcher operacional no processo interno capturado pela CLI pública.
 
 import path from "node:path";
+
+const CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME = 2;
 import { pathToFileURL } from "node:url";
-import { CODIGO_SAIDA_FATAL_RUNTIME_CLI, CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME } from "./resultadoCli.js";
+import { CODIGO_SAIDA_FATAL_RUNTIME_CLI } from "./resultadoCli.js";
 import { criarEnvelopeControleJsonV1 } from "./saidaCli.js";
 
 export type PrincipalCliRuntime = () => Promise<number>;

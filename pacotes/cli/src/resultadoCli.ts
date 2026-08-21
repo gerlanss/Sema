@@ -3,7 +3,6 @@
 
 export const SCHEMA_RESULTADO_CLI_V1 = "sema.cli.result/v1" as const;
 export const CODIGO_SAIDA_FATAL_RUNTIME_CLI = 70 as const;
-export const CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME = 2 as const;
 
 export type TipoResultadoCliV1 = "SUCCESS" | "DOMAIN_ERROR";
 
