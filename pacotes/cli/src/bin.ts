@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ehCliControlError } from "./cliControlError.js";
-import { CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME } from "./cliRuntime.js";
+
 import { validarSintaxeInvocacaoPublica } from "./cliGrammar.js";
 import { detectarHelpAntesDispatch } from "./cliHelp.js";
 import { criarAjudaRaiz } from "./cliHelpTexto.js";
@@ -21,6 +21,7 @@ import {
 } from "./saidaCli.js";
 
 const FLAGS_VERSAO = new Set(["--versao", "--version", "-v"]);
+const CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME = 2;
 const CAMINHO_RUNTIME_CLI = fileURLToPath(new URL("./cliRuntime.js", import.meta.url));
 const LIMITE_BUFFER_RUNTIME_JSON = 16 * 1024 * 1024;
 

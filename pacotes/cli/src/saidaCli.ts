@@ -1,3 +1,4 @@
+export { CODIGO_SAIDA_CONTRATO_AUSENTE_RUNTIME } from "./resultadoCli.js";
 // SEMA-GOVERNED: sema.produto.cli_invocacao_publica, sema.produto.cli_invocacao_publica.resultados
 // Descrição: cria e emite os envelopes JSON públicos de controle v1 e resultado v1 da CLI.
 
