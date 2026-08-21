@@ -29,8 +29,14 @@ install or update because existing tasks do not reload their skill catalog.
 
 ```bash
 sema --version
+sema sessao "describe the change" --json
 sema resumo . --curto --drift none
 ```
+
+`sema sessao` opens a governed session with one compact envelope: workspace
+identity and contract hash, artifact freshness with the exact recovery command
+when stale, the blocking and recommended docs for the declared intent, the four
+gate commands, and concrete next steps.
 
 Public Sema is local-only. The CLI runs directly without a Sema login, user
 authorization, product-license check, activation key, token, credits, billing
@@ -123,6 +129,7 @@ On Windows, PowerShell resolves `sema.ps1` from `PATH`, `cmd.exe` resolves
 ## Local Workflow
 
 ```bash
+sema sessao "describe the change" --json
 sema docs-impacto --intencao "describe the change" --arquivo contratos/app.sema --json
 sema inspecionar contratos/app.sema --drift none --json
 sema drift contratos/app.sema --escopo modulo --cache fresh --json

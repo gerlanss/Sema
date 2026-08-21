@@ -140,6 +140,7 @@ The governed loop in a project:
 
 ```bash
 sema iniciar --template base                        # lean scaffold, preserves files
+sema sessao "describe the change" --json            # identity, freshness, blocking docs, gates
 sema docs-impacto --intencao "describe the change" --json
 sema validar contratos/app/pedidos.sema --json
 sema drift contratos/app/pedidos.sema --escopo modulo --cache fresh --json
@@ -147,6 +148,11 @@ sema compilar contratos/app/pedidos.sema --alvo typescript --saida .tmp/scaffold
 sema verificar contratos --alvo typescript --json   # executes the contract tests
 sema finalizar-mudanca --intencao "describe the change" --doc-lida AGENTS.md --json
 ```
+
+`sema sessao` is the opening move for agents: one compact envelope with the
+workspace's contract hash, artifact freshness, the docs that block the declared
+intent, and the exact gate commands for the loop. A stale artifact flag is a
+pre-action blocker — sync first, then act.
 
 `resumo` and `inspecionar` skip drift by default and leave unobserved evidence
 as `null`, never fabricated. Drift cache lives outside the workspace and is

@@ -5,16 +5,17 @@ Este workspace é governado por Sema. Antes de qualquer ação em código, contr
 
 1. Leia `SEMA_BOOT.md`.
 2. Rode `sema --version`; se o shell falhar, use `$HOME/.sema/bin/sema` no macOS/Linux. No Windows, PowerShell usa `sema.ps1` no PATH e cmd.exe usa `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` como fallback absoluto. Só então pare e peça instalação ou reparo.
-3. Use diretamente a CLI local: `sema resumo --drift none`, `sema docs-impacto`, `sema inspecionar --drift none`, `sema drift --cache fresh` e `sema impacto`. Na 3.0.0, `sema --version` continua texto SemVer exato; com `--json`, help e falhas de controle usam `sema.cli.control/v1`, enquanto comandos sintaticamente válidos usam o envelope exato de oito campos `sema.cli.result/v1`, com resultado em `payload` e `ok` distinto do veredito de domínio do payload.
-4. Quando a capacidade correta não estiver clara, use `sema descobrir recomendar --intencao "<objetivo>" --json`; não autoexecute resultado ambíguo.
-5. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
-6. Chame docs-impacto com a intenção declarada antes de agir.
-7. Chame inspecionar no contrato `.sema` aplicável.
-8. Para módulo novo com contrato validado, gere o andaime com `sema compilar <contrato> --alvo <alvoPadrao>`, preencha a implementação real mantendo `impl`/`vinculos` e feche com `sema verificar`.
-9. Antes de editar código existente, rode `sema drift --cache fresh` e impacto.
-10. Antes de criar ou editar `.sema`, use exemplos oficiais.
-11. Ao concluir mudança de contrato, rode validar.
-12. Antes de finalizar, use finalizar-mudanca com as docs lidas.
+3. Abra a sessão com `sema sessao "<intencao>" --json`: devolve identidade do workspace, hash dos contratos, frescor dos artefatos gerados, docs bloqueantes da intenção e os gates do ciclo. Se `frescor.fresco` for falso, rode o `sync-codex` sugerido antes de agir.
+4. Use diretamente a CLI local: `sema resumo --drift none`, `sema docs-impacto`, `sema inspecionar --drift none`, `sema drift --cache fresh` e `sema impacto`. Na 3.0.0, `sema --version` continua texto SemVer exato; com `--json`, help e falhas de controle usam `sema.cli.control/v1`, enquanto comandos sintaticamente válidos usam o envelope exato de oito campos `sema.cli.result/v1`, com resultado em `payload` e `ok` distinto do veredito de domínio do payload.
+5. Quando a capacidade correta não estiver clara, use `sema descobrir recomendar --intencao "<objetivo>" --json`; não autoexecute resultado ambíguo.
+6. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
+7. Chame docs-impacto com a intenção declarada antes de agir.
+8. Chame inspecionar no contrato `.sema` aplicável.
+9. Para módulo novo com contrato validado, gere o andaime com `sema compilar <contrato> --alvo <alvoPadrao>`, preencha a implementação real mantendo `impl`/`vinculos` e feche com `sema verificar`.
+10. Antes de editar código existente, rode `sema drift --cache fresh` e impacto.
+11. Antes de criar ou editar `.sema`, use exemplos oficiais.
+12. Ao concluir mudança de contrato, rode validar.
+13. Antes de finalizar, use finalizar-mudanca com as docs lidas.
 
 É proibido substituir esse fluxo por leitura manual de `AGENTS.md`, `README.md`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
 

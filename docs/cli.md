@@ -148,6 +148,7 @@ code, contracts, workflows, release scripts, or operational docs:
 
 ```bash
 sema --version
+sema sessao "describe the change" --json
 sema resumo --drift none
 sema docs-impacto --intencao "describe the change" --json
 sema inspecionar contratos/example.sema --drift none --json
@@ -162,6 +163,7 @@ gate.
 
 ## Core Commands
 
+- `sema sessao`: open a governed session; one envelope with workspace identity, artifact freshness, intent-specific blocking docs, gates, and next steps.
 - `sema iniciar`: create a governed starting point.
 - `sema validar`: validate `.sema` contracts.
 - `sema inspecionar`: inspect the applicable contract surface; add `--drift cache|fresh` to request code evidence.

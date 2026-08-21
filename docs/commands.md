@@ -7,6 +7,7 @@ Use this file when Codex does not know which command to run. A Sema command is a
 
 ```bash
 sema --version
+sema sessao "<intencao>" --json
 sema resumo --drift none
 sema docs-impacto --intencao "<acao>" --json
 ```
@@ -14,6 +15,10 @@ sema docs-impacto --intencao "<acao>" --json
 If `sema` is absent from `PATH`, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH, cmd.exe resolves `sema.cmd`, and the absolute fallback is `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version`. `sema skill sync --json` repairs launcher and skill without touching the workspace or plugin caches.
 
 Then read every required doc returned by `docs-impacto`.
+
+## Session Opening
+
+- `sema sessao "<intencao>" --json`: opens a governed session with one compact envelope. It returns workspace identity (`baseProjeto`, `hashContratos`, CLI version), artifact freshness (`frescor.fresco` plus the exact recovery command when stale), the project's contract count and modules, the declared intent's categories with blocking and recommended docs, the four gate commands for the full loop, and concrete next steps. Treat `frescor.fresco:false` as a pre-action blocker: run the suggested `sema sync-codex --json` before editing, because gates protect the consistency that stale artifacts break.
 
 ## Public JSON output
 
