@@ -31,7 +31,7 @@ Then read every required doc returned by `docs-impacto`.
 
 ## Contract and Discovery
 
-- `sema iniciar --template <template> [--force]`: creates a new Sema project and preserves existing files by default; `--force` is the only explicit overwrite path.
+- `sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge> [--force]`: creates a new Sema project and preserves existing files by default; `--force` is the only explicit overwrite path.
 - `sema validar <arquivo-ou-pasta> --json`: validates `.sema` contracts.
 - `sema diagnosticos <arquivo.sema> --json`: details errors and warnings.
 - `sema formatar <arquivo-ou-pasta>`: formats contracts.
@@ -67,9 +67,9 @@ A cache hit is acceleration, not final evidence; closure still requires fresh dr
 
 ## Sema Code
 
-- `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>`: generates starter/support artifacts from the contract.
+- `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio> [--estrutura <flat|modulos|backend>] [--framework <base|nestjs|fastapi>]`: generates starter/support artifacts from the contract.
 - `sema testar <arquivo.sema> --alvo <alvo> --saida <diretorio-temporario>`: generates and runs local tests when the target supports it.
-- `sema importar <fonte> <diretorio> --saida <diretorio> --json`: imports a legacy project into initial contracts.
+- `sema importar <nestjs|express|fastify|koa|fastapi|flask|nextjs|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|sveltekit-consumer|nuxt-consumer|firebase|typescript|python|dart|dotnet|java|go|rust|cpp|php> <diretorio> --saida <diretorio> --json`: imports a legacy project into initial contracts; only these sources have a real importer.
 - `sema renomear-semantico <arquivo-ou-pasta> --de <nome> --para <nome> --json`: helps rename symbols semantically.
 
 Rule for `--saida`: the folder passed to `sema compilar --saida` is generated output. It is not the final delivery by itself. The final delivery is the target files/links declared by the contract. If the contract asks for `index.html`, `css/styles.css`, and `js/app.js`, creating only `saida/expense_control.ts` does not complete the task.
@@ -80,7 +80,10 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 
 ## Canonical Syntax Lists
 
-- Origins for `use` and `impl`: `ts/typescript`, `js/javascript`, `py/python`, `dart`, `lua`, `cs/dotnet`, `java`, `go`, `rust`, `cpp`.
+- Origins for `use` and `impl` (11, aliases after `/`): `ts/typescript`, `js/javascript`, `py/python`, `dart`, `lua`, `cs/csharp/dotnet`, `java`, `go/golang`, `rust/rs`, `cpp/cxx/cc/c++`, `php`.
+- Layered `impl` roles: append `_rota`, `_servico`, `_persistencia` or `_repositorio` to any origin (`ts_rota`, `php_servico`, `cs_persistencia`, `py_repositorio`).
+- Generation targets (10): `typescript`, `javascript/js`, `python`, `php`, `dart`, `lua`, `html`, `css`, `dotnet/cs/csharp`, `cpp/c++/cxx/cc`.
+- `sema iniciar --template` (14): `base`, `nestjs`, `fastapi`, `nextjs-api`, `nextjs-consumer`, `react-vite-consumer`, `angular-consumer`, `flutter-consumer`, `node-firebase-worker`, `aspnet-api`, `springboot-api`, `go-http-api`, `rust-axum-api`, `cpp-service-bridge`.
 - Frequent `effects` categories: `persistencia`, `consulta`, `evento`, `auditoria`, `db.write`, `queue.publish`, `fs.write`, `network.egress`, `secret.read`, `shell.exec`.
 - Accepted `audit.motivo` values: `obrigatorio`, `opcional`, `dispensado`.
 

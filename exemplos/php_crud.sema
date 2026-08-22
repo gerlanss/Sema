@@ -1,0 +1,170 @@
+module exemplos.php.crud {
+  entity Pedido {
+    fields {
+      id: Id
+      cliente: Texto
+      total: Numero
+      status: Texto
+    }
+  }
+
+  task criar_pedido {
+    input {
+      cliente: Texto required
+      total: Numero required
+    }
+    output {
+      pedido: Pedido
+    }
+    rules {
+      cliente deve_ser preenchido
+      total deve_ser positivo
+    }
+    effects {
+      persistencia Pedido
+      auditoria pedido_criado
+    }
+    guarantees {
+      pedido existe
+    }
+    impl {
+      php_rota: pedidos.rota.criarPedido
+      php_servico: pedidos.servico.criarPedido
+      php_persistencia: pedidos.repositorio.criar
+    }
+    vinculos {
+      arquivo: "src/Pedidos/Controller/PedidoController.php"
+      arquivo: "src/Pedidos/Service/PedidoService.php"
+      arquivo: "src/Pedidos/Repository/PedidoRepository.php"
+      simbolo: pedidos.rota.criarPedido
+    }
+    tests {
+      caso "cria pedido" {
+        given {
+          cliente: "Cliente Exemplo"
+          total: 150.0
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task listar_pedidos {
+    input {
+      status: Texto
+    }
+    output {
+      pedidos: Lista
+    }
+    effects {
+      consulta Pedido
+    }
+    guarantees {
+      pedidos existe
+    }
+    impl {
+      php_rota: pedidos.rota.listarPedidos
+      php_servico: pedidos.servico.listarPedidos
+    }
+    vinculos {
+      arquivo: "src/Pedidos/Controller/PedidoController.php"
+      arquivo: "src/Pedidos/Service/PedidoService.php"
+      simbolo: pedidos.rota.listarPedidos
+    }
+    tests {
+      caso "lista pedidos por status" {
+        given {
+          status: "pago"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  task cancelar_pedido {
+    input {
+      id: Id required
+    }
+    output {
+      cancelado: Booleano
+    }
+    rules {
+      id deve_ser valido
+    }
+    effects {
+      persistencia Pedido
+      auditoria pedido_cancelado
+    }
+    guarantees {
+      cancelado == verdadeiro
+    }
+    impl {
+      php_rota: pedidos.rota.cancelarPedido
+      php_servico: pedidos.servico.cancelarPedido
+      php_persistencia: pedidos.repositorio.atualizarStatus
+    }
+    vinculos {
+      arquivo: "src/Pedidos/Controller/PedidoController.php"
+      arquivo: "src/Pedidos/Service/PedidoService.php"
+      arquivo: "src/Pedidos/Repository/PedidoRepository.php"
+      simbolo: pedidos.rota.cancelarPedido
+    }
+    tests {
+      caso "cancela pedido por id" {
+        given {
+          id: "ped_1"
+        }
+
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+
+  route pedidos_criar {
+    metodo: POST
+    caminho: /pedidos
+    task: criar_pedido
+    finalidade: cadastro_pedido
+    input {
+      cliente: Texto
+      total: Numero
+    }
+    output {
+      pedido: Pedido
+    }
+  }
+
+  route pedidos_listar {
+    metodo: GET
+    caminho: /pedidos
+    task: listar_pedidos
+    finalidade: consulta_pedidos
+    input {
+      status: Texto
+    }
+    output {
+      pedidos: Lista
+    }
+  }
+
+  route pedidos_cancelar {
+    metodo: PATCH
+    caminho: "/pedidos/{id}/cancelar"
+    task: cancelar_pedido
+    finalidade: cancelamento_pedido
+    input {
+      id: Id
+    }
+    output {
+      cancelado: Booleano
+    }
+  }
+}

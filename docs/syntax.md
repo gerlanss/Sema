@@ -62,18 +62,19 @@ module app.example {
 
 ## Canonical `use` and `impl` Origins
 
-Use these origins before inventing a new one:
+Use these origins before inventing a new one (aliases after `ou`):
 
 - `ts` ou `typescript`
 - `js` ou `javascript`
 - `py` ou `python`
 - `dart`
 - `lua`
-- `cs` ou `dotnet`
+- `cs`, `csharp` ou `dotnet`
 - `java`
-- `go`
-- `rust`
-- `cpp`
+- `go` ou `golang`
+- `rust` ou `rs`
+- `cpp`, `cxx`, `cc` ou `c++`
+- `php`
 
 Examples:
 
@@ -85,17 +86,35 @@ impl {
 }
 ```
 
+```sema
+use php app.legacy.pedidos
+
+impl {
+  php: pedidos.criarPedido
+}
+```
+
 `sema compilar --alvo javascript` defines a generation target. `impl { js: ... }` defines the live-code origin linked to the contract. They are different layers and both are valid.
 
 ## Layered `impl` Roles
 
-Layered code (route + service + persistence in the same language) can declare one `impl` per role. Append a supported role to the origin: `rota`, `servico`, `persistencia` or `repositorio`.
+Layered code (route + service + persistence in the same language) can declare one `impl` per role. Append a supported role to any origin: `rota`, `servico`, `persistencia` or `repositorio`.
 
 ```sema
 impl {
   ts_rota: server.routes.monitores.criarMonitor
   ts_servico: server.services.monitores.criarMonitor
   ts_persistencia: server.repositories.monitores.criar
+}
+```
+
+The role suffix combines with every origin, not only TypeScript:
+
+```sema
+impl {
+  php_rota: pedidos.rota.criarPedido
+  php_servico: pedidos.servico.criarPedido
+  php_persistencia: pedidos.repositorio.criar
 }
 ```
 

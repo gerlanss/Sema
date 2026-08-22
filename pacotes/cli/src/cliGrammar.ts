@@ -55,8 +55,8 @@ const TEMPLATES_INIT = new Set([
 ]);
 const FONTES_IMPORTACAO = new Set([
   "nestjs", "express", "fastify", "koa", "fastapi", "flask", "nextjs", "nextjs-consumer", "react-vite-consumer",
-  "angular-consumer", "flutter-consumer", "sveltekit-consumer", "nuxt-consumer", "firebase", "typescript", "javascript",
-  "python", "dart", "lua", "dotnet", "java", "go", "rust", "cpp", "php",
+  "angular-consumer", "flutter-consumer", "sveltekit-consumer", "nuxt-consumer", "firebase", "typescript",
+  "python", "dart", "dotnet", "java", "go", "rust", "cpp", "php",
 ]);
 const ALVOS_GERACAO = new Set([
   "typescript", "python", "dart", "lua", "javascript", "js", "html", "css", "php",

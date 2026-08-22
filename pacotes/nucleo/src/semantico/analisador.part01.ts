@@ -422,7 +422,7 @@ export function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnosti
           `Task "${task.nome}" declarou implementacao externa invalida em impl: "${campo.nome}".`,
           "erro",
           campo.intervalo,
-          "Use ts, js, py, dart, lua, cs, java, go, rust, cpp ou php, opcionalmente com papel: ts_rota, ts_servico, ts_persistencia ou ts_repositorio.",
+          "Use ts, js, py, dart, lua, cs, java, go, rust, cpp ou php, opcionalmente com papel de qualquer origem: <origem>_rota, <origem>_servico, <origem>_persistencia ou <origem>_repositorio (ex.: ts_rota, php_servico, cs_persistencia).",
         ),
       );
       continue;

@@ -28,7 +28,7 @@ export function criarAjudaRaiz(versao: string): string {
     "",
     renderizarSecaoAscii("Fluxos rápidos", [
       "[1] Projeto novo / produção inicial",
-      "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer> [--force] [--com-exemplos]",
+      "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge> [--force] [--com-exemplos]",
       "Arquivos existentes são preservados; use --force somente para sobrescrita explícita. O starter de exemplos vem por padrão; --com-exemplos instala o pacote completo.",
       "sema validar contratos/<modulo>.sema --json",
       "sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>",
