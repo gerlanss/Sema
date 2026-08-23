@@ -1,6 +1,6 @@
 {
   "name": "@semacode/cli",
-  "version": "3.12.1",
+  "version": "3.12.2",
   "type": "module",
   "description": "Local-first semantic governance CLI for AI agents, proven with Claude, Codex, zCode (GLM) and Kimi: contracts, drift, impact, docs gates, and code generation.",
   "license": "SEE LICENSE IN LICENSE",

@@ -788,7 +788,12 @@ async function resolverReferenciasLocais(
     const prefixoLocalResolvido = modulosPythonResolvidos.some((prefixo) =>
       prefixo !== modulo && modulo.startsWith(`${prefixo}.`),
     );
-    if (!referenciaPythonEhLocalObrigatoria(item.referencia) && !prefixoLocalResolvido) {
+    if (prefixoLocalResolvido) {
+      // Em `from modulo import nome`, `nome` pode ser simbolo exportado ou submodulo.
+      // Inclua o submodulo quando existir, mas sua ausencia nao prova dependencia quebrada.
+      return { referencia: item.referencia };
+    }
+    if (!referenciaPythonEhLocalObrigatoria(item.referencia)) {
       return item;
     }
     const candidatos = candidatosReferenciaLocalDrift(contexto, arquivoOrigem, item.referencia);

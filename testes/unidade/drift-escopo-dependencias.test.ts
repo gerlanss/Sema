@@ -378,7 +378,7 @@ async function criarWorkspacePython(codigo: string, comPacoteLocal: boolean): Pr
   return base;
 }
 
-test("from app import missing marca modulo filho ausente quando app e pacote local", async () => {
+test("from app import simbolo nao inventa modulo filho ausente quando app e pacote local", async () => {
   const base = await criarWorkspacePython("from app import missing", true);
   try {
     const contexto = await carregarProjeto("contratos/worker.sema", base, {
@@ -397,8 +397,49 @@ test("from app import missing marca modulo filho ausente quando app e pacote loc
       path.relative(base, arquivo).replace(/\\/g, "/"),
     );
 
-    assert.equal(expandido.cobertura, "parcial");
-    assert.equal(ausentes.includes("src/app/missing.py"), true);
+    assert.equal(expandido.cobertura, "completa");
+    assert.equal(ausentes.includes("src/app/missing.py"), false);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+test("from modulo import funcao resolve arquivo real sem inventar caminho da funcao", async () => {
+  const base = await criarWorkspacePython(
+    [
+      "try:",
+      "    from .editorial_accountability import assess_editorial_accountability",
+      "except ImportError:",
+      "    from editorial_accountability import assess_editorial_accountability",
+    ].join("\n"),
+    false,
+  );
+  try {
+    await writeFile(
+      path.join(base, "src", "editorial_accountability.py"),
+      "def assess_editorial_accountability():\n    return True\n",
+      "utf8",
+    );
+    const contexto = await carregarProjeto("contratos/worker.sema", base, {
+      escopo: "modulo",
+      adiarDescobertaCodigo: true,
+    });
+    const plano = await planejarEscopoDrift(contexto, {
+      escopo: "modulo",
+      ignorarWorktrees: true,
+      ignorarConsumidoresLaterais: true,
+      termosEscopo: [],
+    });
+    const catalogo = await criarCatalogoDrift({ baseDiretorio: base, arquivos: plano.arquivos });
+    const expandido = await expandirDependenciasPlanoDrift(contexto, plano, catalogo);
+    const arquivos = expandido.arquivos.map((arquivo) => path.relative(base, arquivo).replace(/\\/g, "/"));
+    const ausentes = expandido.arquivosAusentes.map((arquivo) =>
+      path.relative(base, arquivo).replace(/\\/g, "/"),
+    );
+
+    assert.equal(arquivos.includes("src/editorial_accountability.py"), true);
+    assert.equal(ausentes.includes("src/editorial_accountability/assess_editorial_accountability.py"), false);
+    assert.equal(expandido.cobertura, "completa");
   } finally {
     await rm(base, { recursive: true, force: true });
   }

@@ -110,6 +110,7 @@ module sema.produto.governanca_ia.drift {
       expor_caminho_absoluto_fora_do_workspace
       ler_arquivo_com_hardlink_sem_identidade_unica
       concluir_sucesso_com_dependencia_local_ausente
+      tratar_simbolo_python_importado_como_modulo_ausente_quando_modulo_pai_resolve
       tratar_vinculo_fisico_explicito_fora_da_raiz_codigo_como_inexistente
       tratar_cache_como_evidencia_final_de_drift
       escrever_cache_em_tmp_sema_cache_ou_qualquer_pasta_do_workspace
