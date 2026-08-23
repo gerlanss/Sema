@@ -746,6 +746,7 @@ function representarPlanoCache(
     arquivosDeclarados: ordenar(plano.arquivosDeclarados),
     arquivosInferidos: ordenar(plano.arquivosInferidos),
     arquivosAusentes: ordenar(plano.arquivosAusentes),
+    arquivosAusentesInferidos: ordenar(plano.arquivosAusentesInferidos),
     diretorios: ordenar(plano.diretorios),
     diretoriosCodigo: ordenar(contexto.diretoriosCodigo),
     ignorarWorktrees: configuracao.ignorarWorktrees,

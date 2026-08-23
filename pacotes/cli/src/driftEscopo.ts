@@ -30,6 +30,7 @@ export interface PlanoEscopoDrift {
   arquivosDeclarados: string[];
   arquivosInferidos: string[];
   arquivosAusentes: string[];
+  arquivosAusentesInferidos: string[];
   diretorios: string[];
   modulos: string[];
   cobertura: CoberturaEscopoDrift;
@@ -521,6 +522,7 @@ export async function planejarEscopoDrift(
       arquivosDeclarados: [],
       arquivosInferidos: [],
       arquivosAusentes: [],
+      arquivosAusentesInferidos: [],
       diretorios,
       modulos: contexto.modulosSelecionados
         .map((modulo) => modulo.resultado.ir?.nome)
@@ -539,6 +541,7 @@ export async function planejarEscopoDrift(
     .filter((ir): ir is IrModulo => Boolean(ir));
   const declarados = new Map<string, string>();
   const ausentes = new Map<string, string>();
+  const ausentesInferidos = new Map<string, string>();
   const inferidos = new Map<string, string>();
   const bloqueiosPlano = new Set<string>();
   const raizReal = await realpath(contexto.baseProjeto);
@@ -600,7 +603,9 @@ export async function planejarEscopoDrift(
     }
     const primeiroCandidato = gruposCandidatos[0]?.[0];
     if (encontrados.length === 0 && primeiroCandidato) {
-      ausentes.set(chaveCaminho(primeiroCandidato), primeiroCandidato);
+      // Candidato derivado do simbolo do impl, nao uma promessa do contrato:
+      // ausencia aqui e informacao de ancoragem, nunca vinculo quebrado.
+      ausentesInferidos.set(chaveCaminho(primeiroCandidato), primeiroCandidato);
     }
   }
 
@@ -643,6 +648,7 @@ export async function planejarEscopoDrift(
   }
   const arquivos = [...arquivosMesclados.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const arquivosAusentes = [...ausentes.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const arquivosAusentesInferidos = [...ausentesInferidos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const exigeAncoraCodigo = irs.some(moduloExigeAncoraCodigo);
   if (arquivos.length === 0
     && exigeAncoraCodigo
@@ -658,6 +664,7 @@ export async function planejarEscopoDrift(
     arquivosDeclarados: [...declarados.values()].sort((a, b) => a.localeCompare(b, "pt-BR")),
     arquivosInferidos: [...inferidos.values()].sort((a, b) => a.localeCompare(b, "pt-BR")),
     arquivosAusentes,
+    arquivosAusentesInferidos,
     diretorios: escolherDiretoriosLogicos(contexto, arquivos),
     modulos: irs.map((ir) => ir.nome),
     cobertura: arquivosAusentes.length === 0 && bloqueios.length === 0 ? "completa" : "parcial",

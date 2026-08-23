@@ -252,6 +252,7 @@ export async function analisarDriftLegado(
   configuracaoEscopo.arquivosDeclarados = planoEscopo.arquivosDeclarados.map(relativoEscopo);
   configuracaoEscopo.arquivosInferidos = planoEscopo.arquivosInferidos.map(relativoEscopo);
   configuracaoEscopo.arquivosAusentes = planoEscopo.arquivosAusentes.map(relativoEscopo);
+  configuracaoEscopo.arquivosAusentesInferidos = planoEscopo.arquivosAusentesInferidos.map(relativoEscopo);
   const bloqueiosAnalise = new Set(planoEscopo.bloqueios);
   configuracaoEscopo.bloqueios = [...bloqueiosAnalise];
   configuracaoEscopo.catalogo = metricasCatalogo;

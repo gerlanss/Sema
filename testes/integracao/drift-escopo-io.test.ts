@@ -303,7 +303,7 @@ test("drift focado sem config encontra src por raiz logica sem caminhada previa"
   }
 });
 
-test("implementacao sem candidato deixa cobertura parcial e preserva ancora valida", async () => {
+test("implementacao sem candidato falha pelo impl real, nao por arquivo inventado do simbolo", async () => {
   const base = await criarWorkspaceEscopo();
   try {
     await writeFile(path.join(base, "app", "ancora.py"), "def ancora():\n    return True\n", "utf8");
@@ -321,15 +321,19 @@ test("implementacao sem candidato deixa cobertura parcial e preserva ancora vali
     const resultado = await analisarDriftLegado(contexto, { escopo: "modulo" });
 
     assert.deepEqual(resultado.escopo_aplicado.arquivosPlanejados, ["app/ancora.py"]);
-    assert.deepEqual(resultado.escopo_aplicado.arquivosAusentes, ["app/inexistente.py"]);
-    assert.equal(resultado.escopo_aplicado.cobertura, "parcial");
+    assert.deepEqual(resultado.escopo_aplicado.arquivosAusentes, []);
+    assert.deepEqual(resultado.escopo_aplicado.arquivosAusentesInferidos, ["app/inexistente.py"]);
+    assert.equal(resultado.escopo_aplicado.cobertura, "completa");
     assert.deepEqual(resultado.escopo_aplicado.bloqueios, []);
     assert.equal(resultado.impls_quebrados.length, 1);
     assert.equal(resultado.sucesso, false);
     assert.equal(resultado.diagnosticos.some((diagnostico) =>
+      diagnostico.tipo === "impl_quebrado"
+      && diagnostico.task === "executar"), true);
+    assert.equal(resultado.diagnosticos.some((diagnostico) =>
       diagnostico.tipo === "vinculo_quebrado"
-      && diagnostico.arquivo === "app/inexistente.py"
-      && diagnostico.severidade === "erro"), true);
+      && diagnostico.arquivo === "app/inexistente.py"), false,
+    "candidato derivado de simbolo de impl nao pode virar vinculo_quebrado");
   } finally {
     await rm(base, { recursive: true, force: true });
   }

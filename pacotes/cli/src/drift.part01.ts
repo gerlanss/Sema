@@ -220,6 +220,7 @@ export interface ConfiguracaoEscopoDriftAplicada {
   arquivosDeclarados?: string[];
   arquivosInferidos?: string[];
   arquivosAusentes?: string[];
+  arquivosAusentesInferidos?: string[];
   bloqueios?: string[];
   catalogo?: MetricasCatalogoDrift;
   cache?: EstadoCacheDriftAplicado;
