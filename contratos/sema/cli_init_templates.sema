@@ -66,6 +66,7 @@ module sema.produto.cli_init_templates {
       alvo_javascript_visivel: Booleano
       arquivos_preservados: Lista
       destinos_bootstrap_prevalidados: Booleano
+      subpasta_governada_registrada_no_pai: Booleano
     }
     rules {
       template_nome deve_ser preenchido
@@ -104,6 +105,7 @@ module sema.produto.cli_init_templates {
         alvo_javascript_visivel: publico
         arquivos_preservados: publico
         destinos_bootstrap_prevalidados: publico
+        subpasta_governada_registrada_no_pai: publico
       }
     }
     audit {
@@ -127,6 +129,7 @@ module sema.produto.cli_init_templates {
       seguir_symlink_ou_junction_fora_do_workspace
       readme_inicial_prometendo_evidencia_de_implementacao_em_resumo_default
       materializar_catalogo_completo_de_exemplos_sem_flag_explicita
+      criar_config_local_em_subpasta_de_workspace_governado
     }
     impl {
       ts: cli.src.init_command.comandoIniciar
@@ -159,6 +162,7 @@ module sema.produto.cli_init_templates {
       alvo_javascript_visivel existe
       arquivos_preservados existe
       destinos_bootstrap_prevalidados == verdadeiro
+      subpasta_governada_registrada_no_pai == verdadeiro
     }
     error {
       destino_inseguro: "Destino de bootstrap atravessa symlink, junction ou a base do workspace."
@@ -193,6 +197,20 @@ module sema.produto.cli_init_templates {
         expect {
           sucesso: verdadeiro
           arquivos_preservados: "README.md, sema.config.json, contratos/pedidos.sema"
+        }
+      }
+      caso "inicia em subpasta de workspace governado registrando no pai" {
+        given {
+          template_nome: "flutter-consumer"
+          base_projeto: "./app_consumer"
+          config_ancestral: "sema.config.json com diretoriosCodigo [./backend]"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          subpasta_governada_registrada_no_pai: verdadeiro
+          diretorios_codigo_do_pai: "[./backend, ./app_consumer]"
+          config_local_na_subpasta: falso
         }
       }
     }

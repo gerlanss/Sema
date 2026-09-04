@@ -29,7 +29,7 @@ export function criarAjudaRaiz(versao: string): string {
     renderizarSecaoAscii("Fluxos rápidos", [
       "[1] Projeto novo / produção inicial",
       "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge> [--force] [--com-exemplos]",
-      "Arquivos existentes são preservados; use --force somente para sobrescrita explícita. O starter de exemplos vem por padrão; --com-exemplos instala o pacote completo.",
+      "Arquivos existentes são preservados; use --force somente para sobrescrita explícita. O starter de exemplos vem por padrão; --com-exemplos instala o pacote completo. Em subpasta de workspace já governado, a subpasta é registrada nos diretoriosCodigo do sema.config.json ancestral em vez de criar config local.",
       "sema validar contratos/<modulo>.sema --json",
       "sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>",
       "sema verificar <arquivo-ou-pasta> [--saida <dir>] [--alvo <alvo>] [--sem-cache] --json",

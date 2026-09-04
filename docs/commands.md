@@ -31,7 +31,7 @@ Then read every required doc returned by `docs-impacto`.
 
 ## Contract and Discovery
 
-- `sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge> [--force]`: creates a new Sema project and preserves existing files by default; `--force` is the only explicit overwrite path.
+- `sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge> [--force]`: creates a new Sema project and preserves existing files by default; `--force` is the only explicit overwrite path. When run inside a subfolder of an already governed workspace, the subfolder is registered under `diretoriosCodigo` of the ancestral `sema.config.json` (via the safe workspace write, deduplicated) instead of creating a local config, keeping one workspace, one config; if the parent config cannot be written, the scaffold proceeds and prints the exact line to add.
 - `sema validar <arquivo-ou-pasta> --json`: validates `.sema` contracts.
 - `sema diagnosticos <arquivo.sema> --json`: details errors and warnings.
 - `sema formatar <arquivo-ou-pasta>`: formats contracts.

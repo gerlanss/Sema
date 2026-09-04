@@ -2,11 +2,36 @@
 // Descrição: inicializa projetos preservando arquivos existentes e bloqueando escapes do workspace.
 
 import * as fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { escreverArquivos } from "./fsGovernado.js";
 import { arquivosTemplateIniciar, type TemplateIniciar } from "./initTemplatesBase.js";
 import { materializarExemplosOficiais, normalizarCaminhoExemplo, planejarExemplosOficiais } from "./exemplosOficiais.js";
-import { validarDestinosEscritaWorkspace } from "./workspaceWrite.js";
+import { carregarConfiguracaoProjeto } from "./projetoConfig.js";
+import { escreverArquivoWorkspaceSeguro, validarDestinosEscritaWorkspace } from "./workspaceWrite.js";
+
+async function registrarSubpastaNoConfigAncestral(caminhoConfig: string, subpastaAbsoluta: string): Promise<void> {
+  const basePai = path.dirname(caminhoConfig);
+  const relativoSubpasta = `./${path.relative(basePai, subpastaAbsoluta).replace(/\\/g, "/")}`;
+  try {
+    const configPai = JSON.parse(await readFile(caminhoConfig, "utf8")) as Record<string, unknown>;
+    const diretoriosAtuais = Array.isArray(configPai.diretoriosCodigo)
+      ? configPai.diretoriosCodigo.filter((valor): valor is string => typeof valor === "string")
+      : [];
+    const jaRegistrado = diretoriosAtuais.some((diretorio) =>
+      diretorio.replace(/\\/g, "/").toLowerCase() === relativoSubpasta.toLowerCase());
+    if (jaRegistrado) {
+      console.log(`Subpasta ${relativoSubpasta} ja consta em diretoriosCodigo de ${caminhoConfig}.`);
+      return;
+    }
+    configPai.diretoriosCodigo = [...diretoriosAtuais, relativoSubpasta];
+    await escreverArquivoWorkspaceSeguro(basePai, "sema.config.json", `${JSON.stringify(configPai, null, 2)}\n`, { sobrescrever: true });
+    console.log(`Subpasta ${relativoSubpasta} registrada em diretoriosCodigo de ${caminhoConfig}.`);
+  } catch (erro) {
+    console.error(`Nao foi possivel registrar a subpasta no config do workspace pai: ${erro instanceof Error ? erro.message : String(erro)}`);
+    console.error(`Adicione "${relativoSubpasta}" a diretoriosCodigo em ${caminhoConfig} para o drift cobrir esta subpasta.`);
+  }
+}
 
 async function sincronizarKitIaInicial(cwd: string): Promise<{
   artefatos: string[];
@@ -57,7 +82,19 @@ export async function comandoIniciar(
   template: TemplateIniciar,
   opcoes: { force?: boolean; exemplosCompletos?: boolean } = {},
 ): Promise<number> {
-  const arquivos = arquivosTemplateIniciar(template);
+  const arquivosCompletos = arquivosTemplateIniciar(template);
+  const configAncestral = await carregarConfiguracaoProjeto(cwd);
+  const subpastaGovernada = Boolean(configAncestral
+    && path.resolve(configAncestral.baseDiretorio) !== path.resolve(cwd));
+  // Em subpasta de workspace ja governado o config do template e omitido: a
+  // subpasta e registrada nos diretoriosCodigo do sema.config.json ancestral
+  // e o lookup de workspace continua subindo para o pai.
+  const arquivos = subpastaGovernada && configAncestral
+    ? arquivosCompletos.filter((arquivo) => arquivo.caminhoRelativo !== "sema.config.json")
+    : arquivosCompletos;
+  if (subpastaGovernada && configAncestral) {
+    await registrarSubpastaNoConfigAncestral(configAncestral.caminho, path.resolve(cwd));
+  }
   const planoExemplos = await planejarExemplosOficiais();
   if (!planoExemplos.origem) {
     console.error("Diretorio de exemplos oficiais nao foi encontrado no pacote da CLI.");

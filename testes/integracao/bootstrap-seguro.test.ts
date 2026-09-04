@@ -262,6 +262,50 @@ test("sema iniciar --force sobrescreve explicitamente os destinos do template", 
   }
 });
 
+test("sema iniciar em subpasta de workspace governado registra a subpasta no config do pai", async () => {
+  const { base, repo } = await criarSandbox("sema-iniciar-subpasta-pai-");
+
+  try {
+    const subpasta = path.join(repo, "app_consumer");
+    await mkdir(subpasta, { recursive: true });
+    await writeFile(path.join(repo, "sema.config.json"), `${JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./backend"],
+    }, null, 2)}\n`, "utf8");
+    const resultado = executarCli(subpasta, ["iniciar", "--template", "flutter-consumer"], base);
+
+    assert.equal(resultado.status, 0, diagnosticoCli(resultado));
+    assert.equal(existsSync(path.join(subpasta, "sema.config.json")), false, "subpasta governada pelo pai nao ganha config proprio");
+    assert.match(await readFile(path.join(subpasta, "pubspec.yaml"), "utf8"), /sema_flutter_consumer/);
+    const configPai = JSON.parse(await readFile(path.join(repo, "sema.config.json"), "utf8")) as { diretoriosCodigo: string[] };
+    assert.deepEqual(configPai.diretoriosCodigo, ["./backend", "./app_consumer"]);
+    assert.match(resultado.stdout, /registrada em diretoriosCodigo/);
+  } finally {
+    await limparSandbox(base);
+  }
+});
+
+test("sema iniciar em subpasta ja registrada preserva o config do pai byte a byte", async () => {
+  const { base, repo } = await criarSandbox("sema-iniciar-subpasta-dedupe-");
+
+  try {
+    const subpasta = path.join(repo, "app_consumer");
+    await mkdir(subpasta, { recursive: true });
+    const configOriginal = `${JSON.stringify({
+      origens: ["./contratos"],
+      diretoriosCodigo: ["./backend", "./app_consumer"],
+    }, null, 2)}\n`;
+    await writeFile(path.join(repo, "sema.config.json"), configOriginal, "utf8");
+    const resultado = executarCli(subpasta, ["iniciar", "--template", "flutter-consumer"], base);
+
+    assert.equal(resultado.status, 0, diagnosticoCli(resultado));
+    assert.equal(await readFile(path.join(repo, "sema.config.json"), "utf8"), configOriginal);
+    assert.match(resultado.stdout, /ja consta em diretoriosCodigo/);
+  } finally {
+    await limparSandbox(base);
+  }
+});
+
 test("sema iniciar recusa junction em contratos sem criar pedidos.sema fora do repositório", async () => {
   const { base, repo, outside } = await criarSandbox("sema-iniciar-junction-contratos-");
 
