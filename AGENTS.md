@@ -68,7 +68,7 @@ Sinal e evidência:
 - Score composto, `achados[]` e `decisaoAgente` orientam a ação; abaixo de 80 bloqueia, alvo evolui 0.5 ponto até 100, e nada substitui evidência concreta.
 - Palavra-chave ou regex passando não prova governança se contrato, código e comportamento não batem.
 - `resumo` e `inspecionar` usam `--drift none` por padrão; campos derivados nulos significam não avaliados, nunca zero.
-- `sema drift --cache fresh --json` com `payload.sucesso:false`, `payload.vinculos_quebrados`, `payload.rotas_divergentes` ou `payload.impls_quebrados` bloqueia fechamento. Cache persistente é aceleração, não prova final.
+- `sema drift --cache fresh --json` com `payload.sucesso:false`, `payload.vinculos_quebrados`, `payload.rotas_divergentes` ou `payload.impls_quebrados` bloqueia fechamento. `payload.vinculos_fora_do_escopo` é informativo com `diretorioSugerido` para os `diretoriosCodigo`; não bloqueia. Cache persistente é aceleração, não prova final.
 - Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
 Acabamento visual e terminal:

@@ -19,7 +19,7 @@ Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use o
 15. Payload inline acima de 262144 caracteres não é lentidão: divida por responsabilidade; não aumente timeout para tentar passar limite de transporte.
 16. Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.
 17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. Não trate isso como falha do Sema.
-18. Para fechamento, rode `sema drift --cache fresh --json`; cache persistente só acelera navegação e não é prova final. Se o `payload` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou `impls_quebrados`, não conclua. Na 3.0.0, não procure campos de domínio no topo do envelope `sema.cli.result/v1` nem use `ok` como substituto do veredito do payload.
+18. Para fechamento, rode `sema drift --cache fresh --json`; cache persistente só acelera navegação e não é prova final. Se o `payload` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou `impls_quebrados`, não conclua. `vinculos_fora_do_escopo` é informativo com `diretorioSugerido` para o `sema.config.json`; não bloqueia fechamento. Na 3.0.0, não procure campos de domínio no topo do envelope `sema.cli.result/v1` nem use `ok` como substituto do veredito do payload.
 19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonômico, com hierarquia clara, estados e evidência. Em UI, valide mobile/desktop e prove `scrollWidth <= clientWidth` em viewport estreito como 390px.
 20. Não substitua o contexto Sema por AGENTS.md, README.md, busca local, inferência por nome ou bom senso.
 

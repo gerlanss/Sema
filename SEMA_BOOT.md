@@ -59,7 +59,7 @@ Score composto, `achados[]` e `decisaoAgente` são sinais para guiar a próxima 
 - Consultas honestas: `resumo` e `inspecionar` usam `--drift none` por padrão; score, confiança, implementação, rotas e superfícies não observadas ficam nulos/não avaliados.
 - Se uma consulta executar drift explicitamente, `payload.analiseDrift.sucesso` expõe o resultado e uma falha solicitada retorna exit code diferente de zero.
 - Cache: `sema drift` usa `fresh` por padrão. `--cache none` ainda executa sem persistência; `cache` acelera extrações validadas, mas não é prova final.
-- Fechamento governado: se o `payload` de `sema drift --cache fresh --json` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou `impls_quebrados`, não diga que passou limpo. Corrija e rode drift de novo.
+- Fechamento governado: se o `payload` de `sema drift --cache fresh --json` retornar `sucesso:false`, `vinculos_quebrados`, `rotas_divergentes` ou `impls_quebrados`, não diga que passou limpo. Corrija e rode drift de novo. `vinculos_fora_do_escopo` é informativo: o arquivo existe no workspace fora dos `diretoriosCodigo`; siga o `diretorioSugerido` do registro para incluir o diretório no `sema.config.json` — não bloqueia fechamento.
 - Experiência governada: se a tarefa cria ou altera site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, prove acabamento moderno, contextual e não genérico. Em UI estreita (ex. 390px), `document.documentElement.scrollWidth <= document.documentElement.clientWidth` precisa ser verdadeiro.
 - Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
 
