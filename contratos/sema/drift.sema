@@ -100,6 +100,7 @@ module sema.drift {
       impls_quebrados: Inteiro
       vinculos_validos: Inteiro
       vinculos_quebrados: Inteiro
+      vinculos_fora_do_escopo: Inteiro
       score: Inteiro
       piso_operacional: Decimal
       alvo_atual: Decimal
@@ -117,6 +118,7 @@ module sema.drift {
     guarantees {
       impls_validos >= 0
       impls_quebrados >= 0
+      vinculos_fora_do_escopo >= 0
       score >= 0
       piso_operacional >= 80
       alvo_atual >= piso_operacional

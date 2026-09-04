@@ -1,7 +1,7 @@
 // SEMA-GOVERNED: sema.governanca_ia_contexto
 // Descricao: analisa modulos selecionados no drift; consulte contratos/sema/governanca_ia_contexto.sema antes de editar.
 import path from "node:path";
-import type { IrFlow, IrRoute, IrSuperficie, IrTask } from "@sema/nucleo";
+import type { IrFlow, IrRoute, IrSuperficie, IrTask, IrVinculo } from "@sema/nucleo";
 import type { ContextoProjetoCarregado } from "./projeto.js";
 import type {
   DiagnosticoDrift,
@@ -16,7 +16,7 @@ import type {
   SimboloResolvido,
 } from "./drift.part01.js";
 import { escolherArquivoPorVinculo, escolherSimboloPorVinculo } from "./drift.part03.js";
-import { calcularRiscoOperacional, encontrarAncoraSuperficie } from "./drift.part04.js";
+import { calcularRiscoOperacional, chaveCaminhoCanonicoDrift, encontrarAncoraSuperficie } from "./drift.part04.js";
 import { resolverPersistenciaLocalPorTask } from "./drift.part08.js";
 import { escolherRotasEsperadas, normalizarCaminhoRota, ordenarCandidatos, sugerirCandidatosParaImpl, sugerirCandidatosParaTaskSemImpl } from "./drift.part09.js";
 import { coletarVinculosIr, extrairRecursosEsperados, resolverRecursoEsperado } from "./drift.part10.js";
@@ -67,6 +67,64 @@ function redigirCaminhoDeclaradoExterno(baseProjeto: string, valor: string): str
   const nome = path.basename(path.normalize(valor)) || "arquivo";
   return `[fora_do_workspace]/${nome}`;
 }
+
+function caminhoDeclaradoTentadoVinculo(vinculo: IrVinculo): string | undefined {
+  const arquivoDeclarado = vinculo.arquivo ?? (vinculo.tipo === "arquivo" ? vinculo.valor : undefined);
+  if (arquivoDeclarado) {
+    return arquivoDeclarado;
+  }
+  const recursoDeclarado = vinculo.recurso ?? (["recurso", "tabela", "fila", "cache", "storage"].includes(vinculo.tipo) ? vinculo.valor : undefined);
+  if (recursoDeclarado) {
+    return undefined;
+  }
+  const superficieDeclarada = vinculo.superficie ?? (["superficie", "rota", "worker", "cron", "webhook", "evento", "policy", "fila", "cache", "storage"].includes(vinculo.tipo) ? vinculo.valor : undefined);
+  return superficieDeclarada ?? vinculo.valor;
+}
+
+function sugerirDiretorioCodigoDrift(baseProjeto: string, caminhoAbsoluto: string): string {
+  const diretorioRelativo = path.relative(path.resolve(baseProjeto), path.dirname(path.resolve(caminhoAbsoluto))).replace(/\\/g, "/");
+  return `./${diretorioRelativo || "."}`;
+}
+
+function arquivoDentroDoEscopoCodigo(contexto: ContextoProjetoCarregado, caminhoAbsoluto: string): boolean {
+  return contexto.diretoriosCodigo.some((diretorio) => {
+    const relativo = path.relative(path.resolve(diretorio), path.resolve(caminhoAbsoluto));
+    return relativo === "" || (!relativo.startsWith("..") && !path.isAbsolute(relativo));
+  });
+}
+
+// Simbolo declarado cujo dono ancora codigo em arquivo existente fora dos
+// diretoriosCodigo: casa o caminho do simbolo com o diretorio do arquivo.
+function escolherAncoraForaDoEscopoPorSimbolo(caminhos: readonly string[], baseProjeto: string, simbolo: string): string | undefined {
+  const simboloComoCaminho = simbolo.toLowerCase().replaceAll(".", "/");
+  const porPrefixo = caminhos.find((caminho) => {
+    const diretorioRelativo = path.relative(path.resolve(baseProjeto), path.dirname(path.resolve(caminho))).replace(/\\/g, "/").toLowerCase();
+    return diretorioRelativo !== "" && simboloComoCaminho.startsWith(`${diretorioRelativo}/`);
+  });
+  if (porPrefixo) {
+    return porPrefixo;
+  }
+  return caminhos.length === 1 ? caminhos[0] : undefined;
+}
+
+// O analisador de modulos e sincrono: a existencia em disco dos caminhos
+// declarados em vinculos e sondada antes, pelo chamador, e injetada no estado.
+export function coletarCaminhosDeclaradosVinculosDrift(contexto: ContextoProjetoCarregado): string[] {
+  const caminhos: string[] = [];
+  for (const item of contexto.modulosSelecionados) {
+    const ir = item.resultado.ir;
+    if (!ir) {
+      continue;
+    }
+    for (const itemVinculo of coletarVinculosIr(ir)) {
+      const declarado = caminhoDeclaradoTentadoVinculo(itemVinculo.vinculo);
+      if (declarado) {
+        caminhos.push(path.resolve(contexto.baseProjeto, declarado));
+      }
+    }
+  }
+  return caminhos;
+}
 export interface ResumoVinculosTaskDrift {
   validos: number;
   quebrados: number;
@@ -84,6 +142,8 @@ export interface EstadoAnaliseModulosDrift {
   implsQuebrados: RegistroImplDrift[];
   vinculosValidos: RegistroVinculoDrift[];
   vinculosQuebrados: RegistroVinculoDrift[];
+  vinculosForaDoEscopo: RegistroVinculoDrift[];
+  arquivosDeclaradosExistentes: ReadonlyMap<string, boolean>;
   rotasDivergentes: RegistroRotaDivergente[];
   recursosValidos: RegistroRecursoDrift[];
   recursosDivergentes: RegistroRecursoDrift[];
@@ -107,6 +167,8 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
     implsQuebrados,
     vinculosValidos,
     vinculosQuebrados,
+    vinculosForaDoEscopo,
+    arquivosDeclaradosExistentes,
     rotasDivergentes,
     recursosValidos,
     recursosDivergentes,
@@ -414,6 +476,23 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
         });
       }
     }
+    const arquivosForaDoEscopoPorDono = new Map<string, string[]>();
+    for (const itemVinculoDono of coletarVinculosIr(ir)) {
+      const declarado = itemVinculoDono.vinculo.arquivo
+        ?? (itemVinculoDono.vinculo.tipo === "arquivo" ? itemVinculoDono.vinculo.valor : undefined);
+      if (!declarado) {
+        continue;
+      }
+      const absoluto = path.resolve(contexto.baseProjeto, declarado);
+      if (arquivosDeclaradosExistentes.get(chaveCaminhoCanonicoDrift(absoluto)) !== true
+        || arquivoDentroDoEscopoCodigo(contexto, absoluto)) {
+        continue;
+      }
+      const chaveDono = `${itemVinculoDono.donoTipo}:${itemVinculoDono.dono}`;
+      const lista = arquivosForaDoEscopoPorDono.get(chaveDono) ?? [];
+      lista.push(absoluto);
+      arquivosForaDoEscopoPorDono.set(chaveDono, lista);
+    }
     for (const itemVinculo of coletarVinculosIr(ir)) {
       const registro: RegistroVinculoDrift = {
         modulo: ir.nome,
@@ -486,13 +565,44 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
         }
       }
       if (registro.status === "nao_encontrado") {
-        vinculosQuebrados.push(registro);
-        diagnosticos.push({
-          tipo: "vinculo_quebrado",
-          modulo: ir.nome,
-          mensagem: `Vinculo ${registro.tipo}="${registro.valor}" de ${registro.donoTipo} "${registro.dono}" nao foi resolvido no codigo vivo.`,
-          ...(itemVinculo.donoTipo === "task" ? { task: itemVinculo.dono } : itemVinculo.donoTipo === "route" ? { route: itemVinculo.dono } : {}),
-        });
+        const caminhoTentado = caminhoDeclaradoTentadoVinculo(itemVinculo.vinculo);
+        const caminhoAbsoluto = caminhoTentado ? path.resolve(contexto.baseProjeto, caminhoTentado) : undefined;
+        const existeNoDisco = caminhoAbsoluto !== undefined
+          && arquivosDeclaradosExistentes.get(chaveCaminhoCanonicoDrift(caminhoAbsoluto)) === true;
+        // Arquivo proprio declarado fora do escopo, ou simbolo que herda a ancora
+        // de arquivo declarado do mesmo dono existente fora dos diretoriosCodigo.
+        const alvoForaDoEscopo = existeNoDisco && caminhoAbsoluto !== undefined && !arquivoDentroDoEscopoCodigo(contexto, caminhoAbsoluto)
+          ? caminhoAbsoluto
+          : simboloDeclarado
+            ? escolherAncoraForaDoEscopoPorSimbolo(
+              arquivosForaDoEscopoPorDono.get(`${itemVinculo.donoTipo}:${itemVinculo.dono}`) ?? [],
+              contexto.baseProjeto,
+              simboloDeclarado,
+            )
+            : undefined;
+        if (alvoForaDoEscopo) {
+          const diretorioSugerido = sugerirDiretorioCodigoDrift(contexto.baseProjeto, alvoForaDoEscopo);
+          registro.status = "fora_do_escopo";
+          registro.confianca = "baixa";
+          registro.arquivo = alvoForaDoEscopo;
+          registro.diretorioSugerido = diretorioSugerido;
+          vinculosForaDoEscopo.push(registro);
+          diagnosticos.push({
+            tipo: "vinculo_fora_do_escopo",
+            modulo: ir.nome,
+            severidade: "aviso",
+            mensagem: `Vinculo ${registro.tipo}="${registro.valor}" de ${itemVinculo.donoTipo} "${itemVinculo.dono}": o codigo existe no workspace mas esta fora dos diretoriosCodigo do sema.config.json; adicione "${diretorioSugerido}" a diretoriosCodigo para o drift verificar este vinculo.`,
+            ...(itemVinculo.donoTipo === "task" ? { task: itemVinculo.dono } : itemVinculo.donoTipo === "route" ? { route: itemVinculo.dono } : {}),
+          });
+        } else {
+          vinculosQuebrados.push(registro);
+          diagnosticos.push({
+            tipo: "vinculo_quebrado",
+            modulo: ir.nome,
+            mensagem: `Vinculo ${registro.tipo}="${registro.valor}" de ${itemVinculo.donoTipo} "${itemVinculo.dono}" nao foi resolvido no codigo vivo.`,
+            ...(itemVinculo.donoTipo === "task" ? { task: itemVinculo.dono } : itemVinculo.donoTipo === "route" ? { route: itemVinculo.dono } : {}),
+          });
+        }
       } else {
         vinculosValidos.push(registro);
         if (itemVinculo.donoTipo === "modulo") {
@@ -525,7 +635,7 @@ export function analisarModulosSelecionadosDrift(estado: EstadoAnaliseModulosDri
         };
         if (registro.status === "nao_encontrado") {
           resumo.quebrados += 1;
-        } else {
+        } else if (registro.status !== "fora_do_escopo") {
           resumo.validos += 1;
         }
         if (registro.arquivo) {

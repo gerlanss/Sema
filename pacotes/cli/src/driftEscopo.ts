@@ -144,6 +144,16 @@ async function sondarArquivosRegularesContidos(
   return new Map(resultados);
 }
 
+// Sonda arquivos declarados em vinculos contra o workspace real: alimenta a
+// distincao entre "arquivo nao existe" e "existe fora dos diretoriosCodigo".
+export async function sondarCaminhosDeclaradosExistentes(
+  caminhos: readonly string[],
+  baseProjeto: string,
+): Promise<Map<string, boolean>> {
+  const raizReal = await realpath(baseProjeto);
+  return sondarArquivosRegularesContidos(caminhos, raizReal);
+}
+
 function vinculosModulo(ir: IrModulo): IrVinculo[] {
   return [
     ...ir.vinculos,

@@ -75,6 +75,7 @@ export interface DiagnosticoDrift {
     | "rota_divergente"
     | "recurso_divergente"
     | "vinculo_quebrado"
+    | "vinculo_fora_do_escopo"
     | "seguranca_frouxa"
     | "pontuacao_semantica_insuficiente"
     | "contrato_monolitico"
@@ -192,8 +193,9 @@ export interface RegistroVinculoDrift {
   valor: string;
   arquivo?: string;
   simbolo?: string;
-  status: "resolvido" | "parcial" | "nao_encontrado";
+  status: "resolvido" | "parcial" | "nao_encontrado" | "fora_do_escopo";
   confianca: NivelConfiancaSemantica;
+  diretorioSugerido?: string;
 }
 export interface RegistroPersistenciaRealDrift {
   modulo: string;
@@ -299,6 +301,7 @@ export interface ResultadoDrift {
   impls_quebrados: RegistroImplDrift[];
   vinculos_validos: RegistroVinculoDrift[];
   vinculos_quebrados: RegistroVinculoDrift[];
+  vinculos_fora_do_escopo: RegistroVinculoDrift[];
   rotas_divergentes: RegistroRotaDivergente[];
   recursos_validos: RegistroRecursoDrift[];
   recursos_divergentes: RegistroRecursoDrift[];

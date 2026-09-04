@@ -273,6 +273,7 @@ export async function comandoDrift(entrada: string | undefined, args: string[], 
   console.log(`- Impl quebrados: ${resultado.impls_quebrados.length}`);
   console.log(`- Vinculos validos: ${resultado.vinculos_validos.length}`);
   console.log(`- Vinculos quebrados: ${resultado.vinculos_quebrados.length}`);
+  console.log(`- Vinculos fora do escopo (informativo): ${resultado.vinculos_fora_do_escopo.length}`);
   console.log(`- Rotas divergentes: ${resultado.rotas_divergentes.length}`);
   console.log(`- Recursos vivos validos: ${resultado.recursos_validos.length}`);
   console.log(`- Recursos vivos divergentes: ${resultado.recursos_divergentes.length}`);
@@ -327,6 +328,12 @@ export async function comandoDrift(entrada: string | undefined, args: string[], 
     console.log("- Vinculos quebrados:");
     for (const vinculo of resultado.vinculos_quebrados) {
       console.log(`  - ${vinculo.modulo}.${vinculo.dono} :: ${vinculo.tipo}=${vinculo.valor}`);
+    }
+  }
+  if (resultado.vinculos_fora_do_escopo.length > 0) {
+    console.log("- Vinculos fora do escopo (arquivo existe fora dos diretoriosCodigo; informativo):");
+    for (const vinculo of resultado.vinculos_fora_do_escopo) {
+      console.log(`  - ${vinculo.modulo}.${vinculo.dono} :: ${vinculo.tipo}=${vinculo.valor} :: adicione "${vinculo.diretorioSugerido ?? "./"}" a diretoriosCodigo`);
     }
   }
   if (resultado.resumo_operacional.oQueTocar.length > 0) {

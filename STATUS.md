@@ -7,7 +7,7 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `3.12.2`
+- Version: `3.13.0`
 - Package: `@semacode/cli`
 - Last updated: 2026-08-22
 - Reference commit: `9a1baef`

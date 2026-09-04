@@ -47,7 +47,8 @@ import { analisarPersistenciaReal, escolherRotasEsperadas, normalizarCaminhoRota
 import { escolherArquivoPorVinculo, escolherSimboloPorVinculo } from "./drift.part03.js";
 import { simboloEhBridgeConsumer } from "./drift.part05.js";
 import { prepararIndicesDrift } from "./drift.part13.js";
-import { analisarModulosSelecionadosDrift } from "./drift.part14.js";
+import { sondarCaminhosDeclaradosExistentes } from "./driftEscopo.js";
+import { analisarModulosSelecionadosDrift, coletarCaminhosDeclaradosVinculosDrift } from "./drift.part14.js";
 import { resolverPoliticaPontuacaoSemantica } from "./driftScore.js";
 
 interface UsoImplementacaoDrift {
@@ -269,6 +270,7 @@ export async function analisarDriftLegado(
   const implsQuebrados: RegistroImplDrift[] = [];
   const vinculosValidos: RegistroVinculoDrift[] = [];
   const vinculosQuebrados: RegistroVinculoDrift[] = [];
+  const vinculosForaDoEscopo: RegistroVinculoDrift[] = [];
   const rotasDivergentes: RegistroRotaDivergente[] = [];
   const recursosValidos: RegistroRecursoDrift[] = [];
   const recursosDivergentes: RegistroRecursoDrift[] = [];
@@ -332,6 +334,12 @@ export async function analisarDriftLegado(
   for (const substituicao of substituicoesCaminho) {
     substituicao.implementacao.caminho = substituicao.temporario;
   }
+  // Sonda previa: distingue vinculo apontando para arquivo inexistente de
+  // arquivo existente fora dos diretoriosCodigo (informativo, nao bloqueante).
+  const caminhosDeclaradosVinculos = coletarCaminhosDeclaradosVinculosDrift(contexto);
+  const arquivosDeclaradosExistentes = caminhosDeclaradosVinculos.length > 0
+    ? await sondarCaminhosDeclaradosExistentes(caminhosDeclaradosVinculos, contexto.baseProjeto)
+    : new Map<string, boolean>();
   try {
     analisarModulosSelecionadosDrift({
       contexto,
@@ -345,6 +353,8 @@ export async function analisarDriftLegado(
       implsQuebrados,
       vinculosValidos,
       vinculosQuebrados,
+      vinculosForaDoEscopo,
+      arquivosDeclaradosExistentes,
       rotasDivergentes,
       recursosValidos,
       recursosDivergentes,
@@ -716,6 +726,7 @@ export async function analisarDriftLegado(
     impls_quebrados: implsQuebrados,
     vinculos_validos: vinculosValidos,
     vinculos_quebrados: vinculosQuebrados,
+    vinculos_fora_do_escopo: vinculosForaDoEscopo,
     rotas_divergentes: rotasDivergentes,
     recursos_validos: recursosValidos,
     recursos_divergentes: recursosDivergentes,

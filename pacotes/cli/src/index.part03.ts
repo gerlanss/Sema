@@ -217,6 +217,9 @@ export function resumirDriftPorModulo(
   const vinculosQuebrados = modulo
     ? resultadoDrift.vinculos_quebrados.filter((vinculo) => vinculo.modulo === modulo)
     : [];
+  const vinculosForaDoEscopo = modulo
+    ? resultadoDrift.vinculos_fora_do_escopo.filter((vinculo) => vinculo.modulo === modulo)
+    : [];
   const rotasDivergentes = modulo
     ? resultadoDrift.rotas_divergentes.filter((rota) => rota.modulo === modulo)
     : [];
@@ -243,6 +246,7 @@ export function resumirDriftPorModulo(
     ...implsValidos.map((impl) => impl.arquivo).filter((item): item is string => Boolean(item)),
     ...implsQuebrados.flatMap((impl) => impl.candidatos?.map((candidato) => candidato.arquivo) ?? []),
     ...vinculosValidos.map((vinculo) => vinculo.arquivo).filter((item): item is string => Boolean(item)),
+    ...vinculosForaDoEscopo.map((vinculo) => vinculo.arquivo).filter((item): item is string => Boolean(item)),
     ...recursosValidos.map((recurso) => recurso.arquivo).filter(Boolean),
     ...recursosDivergentes.map((recurso) => recurso.arquivo).filter(Boolean),
   ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -285,6 +289,7 @@ export function resumirDriftPorModulo(
     implsQuebrados: implsQuebrados.length,
     vinculosValidos: vinculosValidos.length,
     vinculosQuebrados: vinculosQuebrados.length,
+    vinculosForaDoEscopo: vinculosForaDoEscopo.length,
     recursosValidos: recursosValidos.length,
     recursosDivergentesCount: recursosDivergentes.length,
     tasksSemImplementacao: tasks.filter((task) => task.semImplementacao).length,
@@ -307,6 +312,7 @@ export function resumirDriftPorModulo(
     rotasDivergentes,
     recursosDivergentes,
     vinculosQuebradosDetalhes: vinculosQuebrados,
+    vinculosForaDoEscopoDetalhes: vinculosForaDoEscopo,
   };
 }
 export function criarBriefingAgente(

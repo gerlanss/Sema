@@ -44,6 +44,7 @@ export function executarDriftCheck(
   impls_quebrados: number;
   vinculos_validos: number;
   vinculos_quebrados: number;
+  vinculos_fora_do_escopo: number;
   score: number;
   piso_operacional: number;
   alvo_atual: number;
@@ -63,6 +64,7 @@ export function executarDriftCheck(
     impls_quebrados: implsQuebrados,
     vinculos_validos: vinculosValidos,
     vinculos_quebrados: vinculosQuebrados,
+    vinculos_fora_do_escopo: 0,
     score,
     piso_operacional: avaliacao.pontuacaoMinimaOperacional,
     alvo_atual: avaliacao.pontuacaoAlvoAtual,

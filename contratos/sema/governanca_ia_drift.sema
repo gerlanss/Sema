@@ -34,6 +34,7 @@ module sema.produto.governanca_ia.drift {
       simbolos_sql_resolvidos: Booleano
       arquivos_documentais_resolvidos: Booleano
       superficies_publicas_resolvidas: Booleano
+      vinculos_fora_do_escopo_informativos: Booleano
       planejamento_antes_catalogo: Booleano
       catalogo_compartilhado: Booleano
       metricas_operacionais_expostas: Booleano
@@ -78,6 +79,7 @@ module sema.produto.governanca_ia.drift {
         simbolos_sql_resolvidos: interno
         arquivos_documentais_resolvidos: interno
         superficies_publicas_resolvidas: interno
+        vinculos_fora_do_escopo_informativos: interno
         planejamento_antes_catalogo: interno
         catalogo_compartilhado: interno
         metricas_operacionais_expostas: interno
@@ -145,6 +147,7 @@ module sema.produto.governanca_ia.drift {
       arquivo: "testes/unidade/drift-catalogo.test.ts"
       arquivo: "testes/unidade/drift-escopo-dependencias.test.ts"
       arquivo: "testes/unidade/drift-escopo-referencias.test.ts"
+      arquivo: "testes/unidade/drift-vinculo-fora-do-escopo.test.ts"
       arquivo: "testes/unidade/drift-leitura-compartilhada.test.ts"
       arquivo: "testes/unidade/drift-rotas-express-fastify.test.ts"
       arquivo: "testes/unidade/projeto-carregamento-escopo.test.ts"
@@ -171,6 +174,7 @@ module sema.produto.governanca_ia.drift {
       simbolos_sql_resolvidos existe
       arquivos_documentais_resolvidos existe
       superficies_publicas_resolvidas existe
+      vinculos_fora_do_escopo_informativos == verdadeiro
       planejamento_antes_catalogo existe
       catalogo_compartilhado existe
       metricas_operacionais_expostas existe
@@ -257,6 +261,23 @@ module sema.produto.governanca_ia.drift {
         expect {
           sucesso: falso
           escopo_estreito_sem_alvo_bloqueado: verdadeiro
+        }
+      }
+      caso "vinculo fisico fora dos diretoriosCodigo e informativo" {
+        given {
+          contrato_alvo: "contratos/sema/governanca_ia_drift.sema"
+          codigo_vivo: "app_consumer/lib/ponte.dart"
+          escopo_real: "projeto"
+          alvo_explicito: falso
+          ignorar_worktrees: verdadeiro
+          ignorar_consumidores_laterais: verdadeiro
+          modo_cache: "fresh"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          vinculos_fora_do_escopo_informativos: verdadeiro
+          resultado_equivalente_sem_cache: verdadeiro
         }
       }
     }
