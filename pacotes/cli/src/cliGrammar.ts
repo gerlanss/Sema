@@ -35,7 +35,7 @@ export interface ResultadoSintaxeInvocacaoPublica {
 const FLAGS_VERSAO = new Set(["--version", "--versao", "-v"]);
 const FLAGS_JSON = ["--json"] as const;
 const COMANDOS_PUBLICOS = new Set([
-  "ajuda-ia", "analisar", "author", "capabilities", "compilar", "conteudo", "contexto-ia", "ciclo-local", "executar-plano", "observar", "planejar",
+  "ajuda-ia", "author", "capabilities", "compilar", "conteudo", "contexto-ia",
   "descobrir", "dev", "diagnosticos", "docs-impacto", "doctor", "drift",
   "exemplos-prompt-ia", "finalizar-mudanca", "formatar", "gerar", "guard",
   "impacto", "importar", "iniciar", "init", "inspecionar", "instalar-exemplos",
@@ -65,7 +65,6 @@ const ALVOS_GERACAO = new Set([
 const FRAMEWORKS = new Set(["base", "nestjs", "fastapi"]);
 const ESTRUTURAS = new Set(["flat", "modulos", "backend"]);
 const ESCOPOS = new Set(["arquivo", "modulo", "projeto"]);
-const DISPOSITIVOS_ANALISADOR = new Set(["auto", "cuda", "cpu"]);
 const MODOS_CACHE = new Set(["none", "cache", "fresh", "off", "auto", "refresh"]);
 const MODOS_RESUMO = new Set(["resumo", "onboarding", "review", "mudanca", "bug", "arquitetura"]);
 const CAPACIDADES_IA = new Set(["fraca", "media", "forte"]);
@@ -249,49 +248,6 @@ function validarGuard(args: readonly string[]): boolean {
   const parsed = parsearArgumentos(args, { maxPosicionais: 1 });
   return parsed !== null && (parsed.posicionais.length === 0
     || new Set(["on", "off", "status"]).has(parsed.posicionais[0]!));
-}
-
-function validarAnalisar(args: readonly string[]): boolean {
-  const parsed = parsearArgumentos(args, {
-    opcoes: ["--modelo", "--checkpoint", "--dispositivo", "--comprimento-maximo", "--python"],
-    minPosicionais: 1,
-    maxPosicionais: 1,
-  });
-  if (!parsed) return false;
-  const dispositivo = valorOpcao(parsed, "--dispositivo");
-  if (dispositivo && !DISPOSITIVOS_ANALISADOR.has(dispositivo)) return false;
-  const comprimento = valorOpcao(parsed, "--comprimento-maximo");
-  return comprimento === undefined || /^(?:[1-9]\d*)$/u.test(comprimento);
-}
-
-function validarPlanejar(args: readonly string[]): boolean {
-  const parsed = parsearArgumentos(args, {
-    opcoes: ["--modelo", "--checkpoint", "--dispositivo", "--comprimento-maximo"],
-    minPosicionais: 1,
-    maxPosicionais: 1,
-  });
-  if (!parsed) return false;
-  const dispositivo = valorOpcao(parsed, "--dispositivo");
-  if (dispositivo && !DISPOSITIVOS_ANALISADOR.has(dispositivo)) return false;
-  const comprimento = valorOpcao(parsed, "--comprimento-maximo");
-  return comprimento === undefined || /^(?:[1-9]\d*)$/u.test(comprimento);
-}
-
-function validarExecutarPlano(args: readonly string[]): boolean {
-  const parsed = parsearArgumentos(args, { minPosicionais: 1, maxPosicionais: 1 });
-  return parsed !== null;
-}
-
-function validarCicloLocal(args: readonly string[]): boolean {
-  return validarPlanejar(args);
-}
-
-function validarObservar(args: readonly string[]): boolean {
-  const parsed = parsearArgumentos(args, { opcoes: ["--porta", "--host"] });
-  if (!parsed) return false;
-  const porta = valorOpcao(parsed, "--porta");
-  const host = valorOpcao(parsed, "--host");
-  return (!porta || /^(?:[1-9]\d{3,4})$/u.test(porta)) && (!host || host === "127.0.0.1");
 }
 
 const OPCOES_PROFILE = [
@@ -584,11 +540,6 @@ function sintaxeValida(comando: string, args: readonly string[]): boolean {
     return validarSemArgumentos(args);
   }
   switch (comando) {
-    case "analisar": return validarAnalisar(args);
-    case "planejar": return validarPlanejar(args);
-    case "executar-plano": return validarExecutarPlano(args);
-    case "ciclo-local": return validarCicloLocal(args);
-    case "observar": return validarObservar(args);
     case "iniciar": return validarIniciar(args);
     case "init": return validarInit(args);
     case "dev": return validarDev(args);
