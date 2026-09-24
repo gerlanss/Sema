@@ -920,7 +920,24 @@ test("invocações válidas usam result/v1 e preservam os payloads dos handlers"
     assert.equal(payloadResumo.tamanho, "micro");
     assert.equal(exigirObjeto(payloadResumo.analiseDrift).modo, "none");
     assert.equal(exigirObjeto(payloadResumo.analiseDrift).executada, false);
+    const pacoteAutomatico = exigirObjeto(payloadResumo.contextPack);
+    assert.equal(exigirObjeto(pacoteAutomatico.pack).schema, "sema.ai.context-pack/v1");
+    assert.equal(exigirObjeto(exigirObjeto(pacoteAutomatico.pack).source).size, "micro");
+    assert.equal(payloadResumo.resumo, undefined);
+    assert.equal(payloadResumo.texto, undefined);
     exigirSemEnvelopeControle(payloadResumo);
+
+    for (const tamanho of ["curto", "medio"] as const) {
+      const resumoTamanhoArgs = ["resumo", ambiente.contrato, `--${tamanho}`, "--drift", "none", "--json"] as const;
+      const resumoTamanho = executarCli(ambiente, resumoTamanhoArgs, 15_000);
+      exigirExecucao(resumoTamanhoArgs, resumoTamanho, 0);
+      const payloadResumoTamanho = exigirObjeto(extrairPayloadExecucao(resumoTamanhoArgs, resumoTamanho));
+      const pacoteTamanho = exigirObjeto(payloadResumoTamanho.contextPack);
+      assert.equal(exigirObjeto(pacoteTamanho.pack).schema, "sema.ai.context-pack/v1");
+      assert.equal(exigirObjeto(exigirObjeto(pacoteTamanho.pack).source).size, tamanho);
+      assert.equal(payloadResumoTamanho.resumo, undefined);
+      assert.equal(payloadResumoTamanho.texto, undefined);
+    }
 
     const pacoteArgs = ["resumo", ambiente.contrato, "--micro", "--para", "mudanca", "--drift", "none", "--pacote", "--pedido", "planejar execução local", "--json"] as const;
     const pacote = executarCli(ambiente, pacoteArgs, 15_000);

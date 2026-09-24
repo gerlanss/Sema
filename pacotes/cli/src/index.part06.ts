@@ -327,8 +327,8 @@ export async function comandoAjudaIa(): Promise<number> {
   ]));
   console.log("");
   console.log(renderizarSecaoAscii("Capacidade de IA", [
-    "fraca: `sema resumo <arquivo> --micro --drift none --json` usa stdout compacto sem inventar evidência de implementação",
-    "média: `sema resumo <arquivo> --curto --drift none --json` + `sema drift <arquivo> --cache fresh --json`",
+    "fraca: `sema resumo <arquivo> --micro --drift none --json` já devolve o context-pack compacto sem inventar evidência de implementação",
+    "média: `sema resumo <arquivo> --curto --drift none --json` já compacta o resumo; use `sema drift <arquivo> --cache fresh --json` quando precisar de evidência do código",
     "forte: `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` materializa o pacote completo",
   ]));
   console.log("");
@@ -339,7 +339,7 @@ export async function comandoAjudaIa(): Promise<number> {
     "Use `sema interativo pipelines --json` para jogos, simulações e híbridos 3D, 2D, retro, texto, XR ou headless.",
     "Use `sema sync-codex` para regenerar o contexto governado do Codex na raiz.",
     "Use `sema instalar-exemplos` para materializar `exemplos/` oficiais sem sobrescrever arquivos locais.",
-    "Use `sema resumo <arquivo> --micro --para onboarding --drift none --json` para IA fraca; o resumo contratual vem no stdout e campos derivados ficam não avaliados.",
+    "Use `sema resumo <arquivo> --micro --para onboarding --drift none --json` para IA fraca; o context-pack é automático e campos derivados ficam não avaliados.",
     "Se `sema resumo` ou outro gate estourar timeout local, aumente o timeout e tente de novo; timeout do agente nao e falha do Sema.",
     "Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.",
     "Use `sema prompt-ia`, `sema prompt-ia-ui`, `sema prompt-ia-react` e `sema prompt-ia-sema-primeiro` conforme a tarefa.",
@@ -425,8 +425,8 @@ export async function comandoResumo(
   const tamanho = normalizarTamanhoResumo(args);
   const modo = normalizarModoResumo(obterOpcao(args, "--para"));
   const pedido = obterOpcao(args, "--pedido");
-  const pacoteSolicitado = possuiFlag(args, "--pacote");
   const somentePacote = possuiFlag(args, "--somente-pacote");
+  const pedidoExplícito = obterOpcao(args, "--pedido")?.trim();
   const pastaSaida = obterOpcao(args, "--saida");
   const escreverNaRaiz = possuiFlag(args, "--raiz");
   const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
@@ -440,10 +440,9 @@ export async function comandoResumo(
     const texto = tamanho === "medio"
       ? renderizarResumoModuloMarkdown(resumoSemantico, modo, guiaPorCapacidade)
       : renderizarResumoModuloTexto(resumoSemantico, tamanho, modo);
-    const contextPack = pacoteSolicitado && pedido
-      ? criarContextPackAPartirDoResumo({
+    const contextPack = criarContextPackAPartirDoResumo({
         resumo: resumoSemantico,
-        pedido,
+        pedido: pedidoExplícito,
         modo,
         tamanho,
         analiseDrift: {
@@ -454,8 +453,7 @@ export async function comandoResumo(
           },
         guiaPorCapacidade,
         texto,
-      })
-      : null;
+      });
 
     let pastaResumo: string | undefined;
     let artefatosCompactos: string[] = [];
@@ -468,6 +466,10 @@ export async function comandoResumo(
 
     if (emJson) {
       if (somentePacote && contextPack) {
+        console.log(JSON.stringify(contextPack, null, 2));
+        return contexto.drift.sucesso === false ? 1 : 0;
+      }
+      if (somentePacote) {
         console.log(JSON.stringify(contextPack, null, 2));
         return contexto.drift.sucesso === false ? 1 : 0;
       }
@@ -488,10 +490,7 @@ export async function comandoResumo(
           avisos: analiseDrift.avisos,
           cache: contexto.drift.drift?.escopo_aplicado.cache ?? null,
         },
-        guiaPorCapacidade,
-        resumo: resumoSemantico,
-        texto,
-        ...(contextPack ? { contextPack } : {}),
+        contextPack,
       }, null, 2));
       return contexto.drift.sucesso === false ? 1 : 0;
     }
@@ -500,36 +499,24 @@ export async function comandoResumo(
       console.log(`Resumo IA-first gerado em ${pastaResumo}`);
       console.log("");
     }
-    if (contextPack) {
-      console.log(JSON.stringify(contextPack, null, 2));
-      return contexto.drift.sucesso === false ? 1 : 0;
-    }
-    console.log(texto);
+    console.log(JSON.stringify(contextPack, null, 2));
     return contexto.drift.sucesso === false ? 1 : 0;
   }
 
   const resumoProjeto = await gerarResumoProjetoIa(alvo, pastaSaida, escreverNaRaiz, analiseDrift);
-  const arquivoResumo = tamanho === "micro"
-    ? "SEMA_BRIEF.micro.txt"
-    : tamanho === "curto"
-      ? "SEMA_BRIEF.curto.txt"
-      : "SEMA_BRIEF.md";
-  const texto = await readFile(path.join(resumoProjeto.pastaSaida, arquivoResumo), "utf8");
   const indexTexto = await readFile(path.join(resumoProjeto.pastaSaida, "SEMA_INDEX.json"), "utf8").catch(() => "");
-  const indexPack = pacoteSolicitado && pedido
-    ? selecionarIndiceContexto({
+  const indexPack = selecionarIndiceContexto({
       modulos: resumoProjeto.modulos,
-      request: pedido,
+      request: pedidoExplícito ?? `resumo:${tamanho}`,
       baseProject: resumoProjeto.baseProjeto,
       generatedAt: resumoProjeto.geradoEm,
       mode: modo,
       drift: resumoProjeto.analiseDrift.modo,
       sourceIndexChars: indexTexto.length,
-    })
-    : null;
+    });
 
   if (emJson) {
-    if (somentePacote && indexPack) {
+    if (somentePacote) {
       console.log(JSON.stringify(indexPack, null, 2));
       return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
     }
@@ -545,20 +532,13 @@ export async function comandoResumo(
         ...resumoProjeto.analiseDrift,
         avisos: analiseDrift.avisos,
       },
-      guiaPorCapacidade: resumoProjeto.guiaPorCapacidade,
-      modulos: resumoProjeto.modulos,
-      texto,
-      ...(indexPack ? { indexPack } : {}),
+      indexPack,
     }, null, 2));
     return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
   }
 
   console.log(`Resumo IA-first do projeto gerado em ${resumoProjeto.pastaSaida}`);
   console.log("");
-  if (indexPack) {
-    console.log(JSON.stringify(indexPack, null, 2));
-    return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
-  }
-  console.log(texto);
+  console.log(JSON.stringify(indexPack, null, 2));
   return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
 }

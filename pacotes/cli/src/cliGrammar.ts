@@ -464,11 +464,10 @@ function validarResumo(args: readonly string[], promptCurto: boolean): boolean {
   const pacote = parsed.flags.has("--pacote");
   const somentePacote = parsed.flags.has("--somente-pacote");
   const pedido = valorOpcao(parsed, "--pedido");
-  const combinacaoPacoteValida = pacote === Boolean(pedido);
   return tamanhos.length <= 1
     && (!modo || MODOS_RESUMO.has(modo))
     && (promptCurto || validarModoCache(parsed, "--drift"))
-    && (promptCurto ? !pacote && !pedido && !somentePacote : combinacaoPacoteValida && (!somentePacote || pacote));
+    && (promptCurto ? !pacote && !pedido && !somentePacote : true);
 }
 
 function validarComandoBasico(comando: string, args: readonly string[]): boolean {

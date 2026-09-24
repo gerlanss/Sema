@@ -112,9 +112,7 @@ test("resumo de modulo emite exatamente o payload contratado", () => {
     "pastaSaida",
     "artefatosCompactos",
     "analiseDrift",
-    "guiaPorCapacidade",
-    "resumo",
-    "texto",
+    "contextPack",
   ]);
   assert.equal(payload.comando, "resumo");
   assert.equal(payload.modo, "resumo");
@@ -127,17 +125,10 @@ test("resumo de modulo emite exatamente o payload contratado", () => {
   assert.equal(payload.analiseDrift.executada, false);
   assert.equal(payload.analiseDrift.sucesso, null);
   assert.equal(payload.analiseDrift.cache, null);
-  assert.equal(typeof payload.guiaPorCapacidade, "object");
-  assert.equal(typeof payload.resumo, "object");
-  assert.equal(payload.resumo.modoVerificacaoCodigo, "contratos_apenas");
-  assert.equal(payload.resumo.scoreSemantico, null);
-  assert.equal(payload.resumo.confiancaGeral, null);
-  assert.equal(payload.resumo.consumerFramework, null);
-  assert.equal(payload.resumo.appRoutes, null);
-  assert.equal(payload.resumo.consumerSurfaces, null);
-  assert.equal(payload.resumo.consumerBridges, null);
-  assert.equal(payload.resumo.ancoragensVinculo, null);
-  assert.equal(typeof payload.texto, "string");
+  assert.equal(payload.contextPack.pack.schema, "sema.ai.context-pack/v1");
+  assert.equal(payload.contextPack.pack.authority.rawSummaryForwarded, false);
+  assert.equal(payload.resumo, undefined);
+  assert.equal(payload.texto, undefined);
 });
 
 test("resumo de projeto emite exatamente o payload contratado", () => {
@@ -167,9 +158,7 @@ test("resumo de projeto emite exatamente o payload contratado", () => {
     "pastaSaida",
     "artefatos",
     "analiseDrift",
-    "guiaPorCapacidade",
-    "modulos",
-    "texto",
+    "indexPack",
   ]);
   assert.equal(payload.comando, "resumo");
   assert.equal(payload.modo, "resumo");
@@ -183,19 +172,11 @@ test("resumo de projeto emite exatamente o payload contratado", () => {
   assert.equal(payload.analiseDrift.executada, false);
   assert.equal(payload.analiseDrift.sucesso, null);
   assert.equal(payload.analiseDrift.cache, null);
-  assert.equal(typeof payload.guiaPorCapacidade, "object");
-  assert.ok(Array.isArray(payload.modulos));
-  assert.ok(payload.modulos.length > 0);
-  assert.equal(payload.modulos.every((modulo: Record<string, unknown>) =>
-    modulo.modoVerificacaoCodigo === "contratos_apenas" &&
-    modulo.scoreSemantico === null &&
-    modulo.confiancaGeral === null &&
-    modulo.consumerFramework === null &&
-    modulo.appRoutes === null &&
-    modulo.consumerSurfaces === null &&
-    modulo.consumerBridges === null &&
-    modulo.ancoragensVinculo === null), true);
-  assert.equal(typeof payload.texto, "string");
+  assert.equal(payload.indexPack.schema, "sema.ai.index-pack/v1");
+  assert.equal(payload.indexPack.selection, "deterministic_summary_projection");
+  assert.ok(payload.indexPack.matches.length > 0);
+  assert.equal(payload.modulos, undefined);
+  assert.equal(payload.texto, undefined);
 });
 
 test("inspecionar não fabrica evidência de código por padrão", () => {

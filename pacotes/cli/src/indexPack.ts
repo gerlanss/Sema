@@ -19,7 +19,7 @@ type EntradaIndice = Pick<ResumoSemanticoModuloIa,
 
 export type IndexPack = {
   schema: "sema.ai.index-pack/v1";
-  selection: "deterministic_weighted_match";
+  selection: "deterministic_weighted_match" | "deterministic_summary_projection";
   request: string;
   source: {
     command: "resumo-projeto";
@@ -83,7 +83,8 @@ function correspondeToken(campo: string, pedido: Set<string>): boolean {
   return tokens(campo).some((token) => [...pedido].some((alvo) => token.startsWith(alvo) || alvo.startsWith(token)));
 }
 
-function selecionarValores(values: string[], requestTokens: Set<string>, maximo: number): string[] {
+function selecionarValores(values: string[], requestTokens: Set<string>, maximo: number, projetarResumoInteiro: boolean): string[] {
+  if (projetarResumoInteiro) return values.slice(0, maximo);
   return values
     .map((value, index) => ({
       value,
@@ -100,7 +101,7 @@ function estimarTokens(chars: number): number {
   return Math.ceil(chars / 4);
 }
 
-function compactarModulo(modulo: EntradaIndice, requestTokens: Set<string>) {
+function compactarModulo(modulo: EntradaIndice, requestTokens: Set<string>, projetarResumoInteiro: boolean) {
   const tarefas = lista(modulo.tarefasPrincipais);
   const regras = lista(modulo.regrasCriticas);
   const efeitos = lista(modulo.efeitos);
@@ -120,25 +121,25 @@ function compactarModulo(modulo: EntradaIndice, requestTokens: Set<string>) {
     ["lacunas", lacunas, 1],
     ["arquivos", [...arquivos, ...arquivosEditar], 1],
   ];
-  const relevanceScore = camposComPeso.reduce((total, [, values, weight]) => total + values.reduce(
+  const relevanceScore = projetarResumoInteiro ? 1 : camposComPeso.reduce((total, [, values, weight]) => total + values.reduce(
     (subtotal, value) => subtotal + (correspondeToken(value, requestTokens) ? weight : 0),
     0,
   ), 0);
-  if (relevanceScore === 0) return null;
+  if (!projetarResumoInteiro && relevanceScore === 0) return null;
   return {
     module: texto(modulo.modulo),
     contract: texto(modulo.arquivo),
     relevanceScore,
     purpose: texto(modulo.faz),
-    relevantTasks: selecionarValores(tarefas, requestTokens, 8),
-    criticalRules: selecionarValores(regras, requestTokens, 8),
-    effects: selecionarValores(efeitos, requestTokens, 6),
-    risks: selecionarValores(riscos, requestTokens, 6),
-    knownGaps: selecionarValores(lacunas, requestTokens, 6),
-    likelyFiles: selecionarValores(arquivos, requestTokens, 8),
-    filesToEdit: selecionarValores(arquivosEditar, requestTokens, 8),
-    requiredChecks: selecionarValores(checks, requestTokens, 6),
-    minimumTests: selecionarValores(testes, requestTokens, 6),
+    relevantTasks: selecionarValores(tarefas, requestTokens, 8, projetarResumoInteiro),
+    criticalRules: selecionarValores(regras, requestTokens, 8, projetarResumoInteiro),
+    effects: selecionarValores(efeitos, requestTokens, 6, projetarResumoInteiro),
+    risks: selecionarValores(riscos, requestTokens, 6, projetarResumoInteiro),
+    knownGaps: selecionarValores(lacunas, requestTokens, 6, projetarResumoInteiro),
+    likelyFiles: selecionarValores(arquivos, requestTokens, 8, projetarResumoInteiro),
+    filesToEdit: selecionarValores(arquivosEditar, requestTokens, 8, projetarResumoInteiro),
+    requiredChecks: selecionarValores(checks, requestTokens, 6, projetarResumoInteiro),
+    minimumTests: selecionarValores(testes, requestTokens, 6, projetarResumoInteiro),
   };
 }
 
@@ -153,14 +154,18 @@ export function selecionarIndiceContexto(input: {
 }): IndexPack {
   const request = input.request.trim();
   const requestTokens = new Set(tokens(request));
+  const projetarResumoInteiro = request.length === 0 || request.startsWith("resumo:");
+  const selection: IndexPack["selection"] = projetarResumoInteiro
+    ? "deterministic_summary_projection"
+    : "deterministic_weighted_match";
   const matches = input.modulos
-    .map((modulo) => compactarModulo(modulo, requestTokens))
+    .map((modulo) => compactarModulo(modulo, requestTokens, projetarResumoInteiro))
     .filter((item): item is NonNullable<typeof item> => item !== null)
     .sort((a, b) => b.relevanceScore - a.relevanceScore || a.module.localeCompare(b.module, "pt-BR"))
-    .slice(0, 8);
+    .slice(0, projetarResumoInteiro ? input.modulos.length : 8);
   const base = {
     schema: "sema.ai.index-pack/v1" as const,
-    selection: "deterministic_weighted_match" as const,
+    selection,
     request,
     source: {
       command: "resumo-projeto" as const,
@@ -178,7 +183,7 @@ export function selecionarIndiceContexto(input: {
       omitted: [
         "SEMA_INDEX.json completo",
         "agentContextPack duplicado",
-        "módulos sem correspondência literal ou estrutural no pedido",
+        "módulos e campos fora do orçamento da projeção compacta",
         "catálogo e arquivos não relacionados ao pedido",
       ],
     },

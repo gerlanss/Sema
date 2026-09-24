@@ -43,8 +43,6 @@ const CASOS_INVALIDOS: readonly CasoInvalido[] = [
   { nome: "guard subcomando inválido", args: ["guard", "banana", "--json"] },
   { nome: "rule packs profile inválido", args: ["rule-packs", "--profile", "banana", "--json"] },
   { nome: "prompt curto drift não suportado", args: ["prompt-curto", ".", "--drift", "banana", "--json"] },
-  { nome: "context-pack sem pedido", args: ["resumo", "contrato.sema", "--pacote", "--json"] },
-  { nome: "pedido sem context-pack", args: ["resumo", "contrato.sema", "--pedido", "planejar", "--json"] },
   { nome: "skill subcomando inválido", args: ["skill", "banana", "--json"] },
   { nome: "conteúdo subcomando inválido", args: ["conteudo", "banana", "--json"] },
   { nome: "descobrir subcomando inválido", args: ["descobrir", "banana", "--json"] },

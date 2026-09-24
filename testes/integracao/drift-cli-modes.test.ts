@@ -35,7 +35,13 @@ interface AnaliseDriftPublica {
 interface PayloadResumoCli {
   comando: "resumo";
   analiseDrift: AnaliseDriftPublica;
-  resumo: ResumoModuloPublico;
+  contextPack: {
+    pack: {
+      schema: string;
+      authority: { rawSummaryForwarded: boolean };
+      context?: { risks?: string[] };
+    };
+  };
 }
 
 interface ResumoModuloPublico {
@@ -52,8 +58,11 @@ interface ResumoModuloPublico {
 interface PayloadResumoProjetoCli {
   comando: "resumo";
   analiseDrift: AnaliseDriftPublica;
-  modulos: ResumoModuloPublico[];
-  texto: string;
+  indexPack: {
+    schema: string;
+    selection: string;
+    matches: unknown[];
+  };
 }
 
 interface PayloadInspecionarCli {
@@ -250,14 +259,8 @@ function assertConsultaSemDrift(
   assert.equal(analise.cache, null);
 
   if (payload.comando === "resumo") {
-    assert.equal(payload.resumo.modoVerificacaoCodigo, "contratos_apenas");
-    assert.equal(payload.resumo.scoreSemantico, null);
-    assert.equal(payload.resumo.confiancaGeral, null);
-    assert.equal(payload.resumo.consumerFramework, null);
-    assert.equal(payload.resumo.appRoutes, null);
-    assert.equal(payload.resumo.consumerSurfaces, null);
-    assert.equal(payload.resumo.consumerBridges, null);
-    assert.equal(payload.resumo.ancoragensVinculo, null);
+    assert.equal(payload.contextPack.pack.schema, "sema.ai.context-pack/v1");
+    assert.equal(payload.contextPack.pack.authority.rawSummaryForwarded, false);
     return;
   }
 
@@ -302,11 +305,8 @@ test("resumo e inspecionar não analisam nem criam cache por padrão ou com --dr
       "none",
     ], path.join(base, "cache-ausente-texto"));
     assert.equal(resumoHumano.codigo, 0, resumoHumano.stderr);
-    assert.match(resumoHumano.stdout, /CONSUMER_FRAMEWORK: não avaliado/);
-    assert.match(resumoHumano.stdout, /APP_ROUTES: não avaliado/);
-    assert.match(resumoHumano.stdout, /CONSUMER_SURFACES: não avaliado/);
-    assert.match(resumoHumano.stdout, /CONSUMER_BRIDGES: não avaliado/);
-    assert.doesNotMatch(resumoHumano.stdout, /CONSUMER_FRAMEWORK: nenhum/);
+    assert.match(resumoHumano.stdout, /sema\.ai\.context-pack\/v1/u);
+    assert.match(resumoHumano.stdout, /texto_bruto_do_resumo/u);
     await assertCaminhoAusente(path.join(base, "cache-ausente-texto"));
 
     const resumoHumanoCurto = await executarCli(sandbox, [
@@ -317,8 +317,7 @@ test("resumo e inspecionar não analisam nem criam cache por padrão ou com --dr
       "none",
     ], path.join(base, "cache-ausente-curto"));
     assert.equal(resumoHumanoCurto.codigo, 0, resumoHumanoCurto.stderr);
-    assert.match(resumoHumanoCurto.stdout, /CONFIANCA: não avaliada/);
-    assert.match(resumoHumanoCurto.stdout, /SCORE: não avaliado/);
+    assert.match(resumoHumanoCurto.stdout, /sema\.ai\.context-pack\/v1/u);
     await assertCaminhoAusente(path.join(base, "cache-ausente-curto"));
 
     const inspecaoHumana = await executarCli(sandbox, [
@@ -357,12 +356,10 @@ test("consultas none com alvo projeto não caminham nem leem código", async () 
     assert.equal(resumoNone.analiseDrift.executada, false);
     assert.equal(resumoNone.analiseDrift.sucesso, null);
     assert.equal(resumoNone.analiseDrift.cache, null);
-    assert.equal(resumoNone.modulos.length > 0, true);
-    assert.equal(resumoNone.modulos.every((modulo) => modulo.modoVerificacaoCodigo === "contratos_apenas"), true);
-    assert.equal(resumoNone.modulos.every((modulo) => modulo.scoreSemantico === null), true);
-    assert.equal(resumoNone.modulos.every((modulo) => modulo.confiancaGeral === null), true);
-    assert.match(resumoNone.texto, /RESULTADO_DRIFT: não avaliado/u);
-    assert.equal(resumoNone.texto.includes(sentinela), false);
+    assert.equal(resumoNone.indexPack.schema, "sema.ai.index-pack/v1");
+    assert.equal(resumoNone.indexPack.selection, "deterministic_summary_projection");
+    assert.equal(resumoNone.indexPack.matches.length > 0, true);
+    assert.equal(JSON.stringify(resumoNone).includes(sentinela), false);
     await assertCaminhoAusente(eventosResumoNone);
     await assertCaminhoAusente(path.join(base, "cache-resumo-projeto-none"));
 
@@ -491,8 +488,8 @@ test("diretório com sufixo .sema continua sendo projeto e usa descoberta comple
       await criarObservadorIoCodigo(base, path.join(sandbox.raiz, "src"), eventosNone),
     );
     assert.equal(resumo.analiseDrift.executada, false);
-    assert.equal(resumo.modulos.length, 1);
-    assert.match(resumo.texto, /RESULTADO_DRIFT: não avaliado/u);
+    assert.equal(resumo.indexPack.schema, "sema.ai.index-pack/v1");
+    assert.equal(resumo.indexPack.matches.length, 1);
     await assertCaminhoAusente(eventosNone);
     await assertCaminhoAusente(path.join(base, "cache-diretorio-sufixo-none"));
 
@@ -527,8 +524,8 @@ test("--drift fresh publica e --drift cache reaproveita entre consultas pública
     assert.equal(fresco.analiseDrift.cache?.origem, "calculado");
     assert.equal(fresco.analiseDrift.cache?.schema, "sema.drift-cache/v3");
     assert.equal(fresco.analiseDrift.cache?.metricas.gravacoes, 1);
-    assert.equal(typeof fresco.resumo.scoreSemantico, "number");
-    assert.equal(typeof fresco.resumo.confiancaGeral, "string");
+    assert.equal(fresco.contextPack.pack.schema, "sema.ai.context-pack/v1");
+    assert.equal(fresco.contextPack.pack.authority.rawSummaryForwarded, false);
     assert.equal((await stat(raizCache)).isDirectory(), true);
     assert.equal(
       (await readdir(raizCache, { recursive: true })).some((arquivo) => arquivo.endsWith(".json")),

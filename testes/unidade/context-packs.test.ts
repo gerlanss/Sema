@@ -52,6 +52,47 @@ test("index-pack seleciona módulos relacionados e não envia o índice bruto", 
   assert.ok(pacote.telemetry.reductionPercent > 0);
 });
 
+test("index-pack projeta o resumo inteiro quando não existe pedido explícito", () => {
+  const pacote = selecionarIndiceContexto({
+    request: "resumo:micro",
+    baseProject: "C:/projeto",
+    sourceIndexChars: 40_000,
+    modulos: [
+      {
+        arquivo: "agenda.sema",
+        modulo: "app.agenda",
+        faz: "gerencia agendamentos",
+        tarefasPrincipais: ["criar_agendamento"],
+        regrasCriticas: [],
+        efeitos: [],
+        riscosPrincipais: [],
+        lacunas: [],
+        arquivosProvaveis: [],
+        arquivosProvaveisEditar: [],
+        checksSugeridos: [],
+        testesMinimos: [],
+      },
+      {
+        arquivo: "financeiro.sema",
+        modulo: "app.financeiro",
+        faz: "concilia pagamentos",
+        tarefasPrincipais: ["conciliar_pagamento"],
+        regrasCriticas: [],
+        efeitos: [],
+        riscosPrincipais: [],
+        lacunas: [],
+        arquivosProvaveis: [],
+        arquivosProvaveisEditar: [],
+        checksSugeridos: [],
+        testesMinimos: [],
+      },
+    ],
+  });
+  assert.equal(pacote.selection, "deterministic_summary_projection");
+  assert.equal(pacote.matches.length, 2);
+  assert.deepEqual(pacote.matches.map((item) => item.module).sort(), ["app.agenda", "app.financeiro"]);
+});
+
 test("drift-pack preserva trava e divergência, omitindo somente detalhes válidos", () => {
   const resultado = {
     sucesso: false,
@@ -94,10 +135,13 @@ test("entrypoint-pack preserva a política da capacidade escolhida sem duplicar 
   assert.ok(pacote.telemetry.reductionPercent > 0);
 });
 
-test("flags compactas são aceitas somente nas combinações governadas", () => {
+test("resumo sempre aceita a compactação automática e mantém os modos focados", () => {
+  assert.equal(validarSintaxeInvocacaoPublica(["resumo", ".", "--micro", "--json"]).dispatchPermitido, true);
+  assert.equal(validarSintaxeInvocacaoPublica(["resumo", ".", "--curto", "--json"]).dispatchPermitido, true);
+  assert.equal(validarSintaxeInvocacaoPublica(["resumo", ".", "--medio", "--pedido", "cancelar", "--json"]).dispatchPermitido, true);
   assert.equal(validarSintaxeInvocacaoPublica(["resumo", ".", "--pacote", "--somente-pacote", "--pedido", "cancelar", "--json"]).dispatchPermitido, true);
+  assert.equal(validarSintaxeInvocacaoPublica(["resumo", ".", "--somente-pacote", "--json"]).dispatchPermitido, true);
   assert.equal(validarSintaxeInvocacaoPublica(["drift", ".", "--pacote", "--json"]).dispatchPermitido, true);
   assert.equal(validarSintaxeInvocacaoPublica(["contexto-ia", "x.sema", "--pacote", "--capacidade", "media", "--json"]).dispatchPermitido, true);
-  assert.throws(() => validarSintaxeInvocacaoPublica(["resumo", ".", "--somente-pacote", "--json"]));
   assert.throws(() => validarSintaxeInvocacaoPublica(["contexto-ia", "x.sema", "--capacidade", "inventada", "--json"]));
 });

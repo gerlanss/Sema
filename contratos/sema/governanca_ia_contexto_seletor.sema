@@ -1,6 +1,6 @@
 module sema.produto.governanca_ia.contexto.seletor {
   docs {
-    resumo: "Selecao deterministica de contexto relevante para IA a partir do resumo semantico Sema, preservando a autoridade do contrato e reduzindo contexto bruto desnecessario."
+    resumo: "Selecao deterministica de contexto para IA a partir de todo sema resumo solicitado, preservando a autoridade do contrato e reduzindo contexto bruto desnecessario; pedido explicito apenas estreita a selecao."
   }
 
   task selecionar_contexto_relevante {
@@ -88,6 +88,7 @@ module sema.produto.governanca_ia.contexto.seletor {
       pacote deve_ser declarar_sema_como_autoridade
       pacote deve_ser exigir_validacao_fresca_antes_de_execucao
       pacote deve_ser omitir_texto_bruto_e_guia_completo
+      pacote deve_ser emitir_sempre_que_resumo_for_solicitado
     }
     tests {
       caso "seleciona somente o contexto relevante do pedido" {

@@ -89,6 +89,7 @@ function normalizedTokens(value: string): string[] {
 }
 
 function selectRelevantTasks(tasks: string[], request: string): string[] {
+  if (request.startsWith("resumo:")) return tasks.slice(0, 8);
   const requestTokens = new Set(normalizedTokens(request));
   const intentRoots = ["cancel", "notific", "export", "reagend", "registr", "consult"];
   const rootedMatches = intentRoots
@@ -193,13 +194,14 @@ export function selecionarContexto(payload: ContextPackPayload, request: string)
 
 export function criarContextPackAPartirDoResumo(input: {
   resumo: ResumoSemanticoModuloIa;
-  pedido: string;
+  pedido?: string;
   modo: string;
   tamanho: TamanhoResumoIa;
   analiseDrift: ContextPackPayload["analiseDrift"];
   guiaPorCapacidade: unknown;
   texto: string;
 }): ContextPackResult {
+  const pedido = input.pedido?.trim() || `resumo:${input.tamanho}`;
   return selecionarContexto({
     geradoEm: input.resumo.geradoEm,
     arquivo: input.resumo.arquivo,
@@ -210,5 +212,5 @@ export function criarContextPackAPartirDoResumo(input: {
     guiaPorCapacidade: input.guiaPorCapacidade,
     texto: input.texto,
     resumo: input.resumo,
-  }, input.pedido);
+  }, pedido);
 }

@@ -464,16 +464,12 @@ function validarConsultaSemDrift(payload, comando) {
 
   if (comando === "resumo") {
     if (
-      payload.resumo?.modoVerificacaoCodigo !== "contratos_apenas" ||
-      payload.resumo.scoreSemantico !== null ||
-      payload.resumo.confiancaGeral !== null ||
-      payload.resumo.consumerFramework !== null ||
-      payload.resumo.appRoutes !== null ||
-      payload.resumo.consumerSurfaces !== null ||
-      payload.resumo.consumerBridges !== null ||
-      payload.resumo.ancoragensVinculo !== null
+      payload.contextPack?.pack?.schema !== "sema.ai.context-pack/v1" ||
+      payload.contextPack.pack.authority?.rawSummaryForwarded !== false ||
+      payload.resumo !== undefined ||
+      payload.texto !== undefined
     ) {
-      throw new Error("The installed public CLI fabricated code evidence in the default resumo response.");
+      throw new Error("The installed public CLI did not emit an automatic compact context pack for resumo.");
     }
     return;
   }

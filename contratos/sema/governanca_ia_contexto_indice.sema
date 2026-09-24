@@ -1,6 +1,6 @@
 module sema.produto.governanca_ia.contexto.indice {
   docs {
-    resumo: "Compactacao deterministica do SEMA_INDEX para enviar somente modulos semanticamente relacionados ao pedido da IA."
+    resumo: "Compactacao deterministica do SEMA_INDEX para enviar uma projecao compacta do resumo solicitado; pedido explicito estreita os modulos e ausencia de pedido preserva a visao geral sem encaminhar o indice bruto."
   }
 
   task selecionar_indice_relevante {
@@ -62,7 +62,7 @@ module sema.produto.governanca_ia.contexto.indice {
       indice_bruto_encaminhado == falso
       pacote deve_ser declarar_sema_como_autoridade
       pacote deve_ser exigir_validacao_fresca_antes_de_execucao
-      correspondencias deve_ser conter_somente_modulos_com_match
+      correspondencias deve_ser conter_somente_modulos_com_match_ou_projecao_geral_do_resumo
       caracteres_pacote existe
     }
     tests {

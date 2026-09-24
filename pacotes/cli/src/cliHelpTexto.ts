@@ -105,7 +105,7 @@ export function criarAjudaRaiz(versao: string): string {
       "fraca: sema resumo <arquivo> --micro --drift none --json (contrato compacto; implementação não avaliada)",
       "média: sema resumo <arquivo> --curto --drift none --json + sema drift <arquivo> --cache fresh --json",
       "forte: sema contexto-ia <arquivo.sema> --saida <diretorio> --json",
-      "context-pack: sema resumo <arquivo.sema> --micro --para mudanca --drift none --pacote --pedido \"<intenção>\" --json (seleção determinística para a IA)",
+      "context-pack: sema resumo <arquivo.sema> --micro --para mudanca --drift none --json (compactação determinística automática; use --pedido para focar a seleção)",
     ]),
     "",
     renderizarSecaoAscii("Comandos principais", [
@@ -137,7 +137,7 @@ export function criarAjudaRaiz(versao: string): string {
     renderizarSecaoAscii("Ajuda IA-first", [
       "sema ajuda-ia",
       "sema starter-ia",
-      "sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--drift <none|cache|fresh>] [--saida <diretorio>] [--raiz] [--pacote --somente-pacote --pedido <intencao>] [--json]",
+      "sema resumo <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--drift <none|cache|fresh>] [--saida <diretorio>] [--raiz] [--pedido <intencao>] [--somente-pacote] [--json]",
       "sema prompt-curto <arquivo-ou-pasta> [--micro|--curto|--medio] [--para <resumo|onboarding|review|mudanca|bug|arquitetura>] [--json]",
       "sema prompt-ia",
       "sema prompt-ia-ui",
