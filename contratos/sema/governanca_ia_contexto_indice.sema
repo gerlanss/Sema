@@ -1,0 +1,84 @@
+module sema.produto.governanca_ia.contexto.indice {
+  docs {
+    resumo: "Compactacao deterministica do SEMA_INDEX para enviar somente modulos semanticamente relacionados ao pedido da IA."
+  }
+
+  task selecionar_indice_relevante {
+    input {
+      modulos: Lista required
+      pedido: Texto required
+      base_projeto: Texto required
+    }
+    output {
+      pacote: Objeto
+      correspondencias: Lista
+      caracteres_indice: Numero
+      caracteres_pacote: Numero
+      tokens_estimados_indice: Numero
+      tokens_estimados_pacote: Numero
+      reducao_percentual: Numero
+      indice_bruto_encaminhado: Booleano
+    }
+    rules {
+      modulos deve_ser preenchido
+      pedido deve_ser preenchido
+      base_projeto deve_ser preenchido
+    }
+    effects {
+      auditoria index_pack_selecionado criticidade = baixa
+    }
+    authz {
+      escopo: sema.contexto.index_pack
+      tenant: opcional
+    }
+    forbidden {
+      encaminhar_sema_index_completo_para_ia
+      inferir_modulo_sem_correspondencia
+      inventar_regra_ausente_do_indice
+      usar_llm_ou_rede_na_selecao
+      substituir_validacao_fresca_do_sema
+      remover_autoridade_do_contrato_sema
+      incluir_segredo_no_pacote
+    }
+    impl {
+      ts: cli.src.index_pack.selecionarIndiceContexto
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/indexPack.ts"
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "testes/unidade/context-packs.test.ts"
+      simbolo: cli.src.index_pack.selecionarIndiceContexto
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      pacote existe
+      pacote deve_ser usar_schema_sema_ai_index_pack_v1
+      correspondencias existe
+      indice_bruto_encaminhado == falso
+      pacote deve_ser declarar_sema_como_autoridade
+      pacote deve_ser exigir_validacao_fresca_antes_de_execucao
+      correspondencias deve_ser conter_somente_modulos_com_match
+      caracteres_pacote existe
+    }
+    tests {
+      caso "seleciona somente modulo relacionado ao pedido" {
+        given {
+          modulos: "agenda e financeiro"
+          pedido: "cancelar agendamento"
+          base_projeto: "."
+        }
+
+        expect {
+          sucesso: verdadeiro
+          indice_bruto_encaminhado: falso
+          reducao_percentual: "maior_que_zero"
+        }
+      }
+    }
+  }
+}

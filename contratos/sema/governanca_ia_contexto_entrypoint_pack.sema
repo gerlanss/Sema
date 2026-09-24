@@ -1,0 +1,80 @@
+module sema.produto.governanca_ia.contexto.entrypoint_pack {
+  docs {
+    resumo: "Compactacao por capacidade do Agent Context Pack, mantendo regras operacionais e politicas essenciais para a IA."
+  }
+
+  task selecionar_politica_de_capacidade {
+    input {
+      agent_context_pack: Objeto required
+      capacidade: Texto required
+    }
+    output {
+      pacote: Objeto
+      capacidade_selecionada: Texto
+      caracteres_agent_context: Numero
+      caracteres_pacote: Numero
+      tokens_estimados_agent_context: Numero
+      tokens_estimados_pacote: Numero
+      reducao_percentual: Numero
+      agent_context_bruto_encaminhado: Booleano
+    }
+    rules {
+      agent_context_pack deve_ser preenchido
+      capacidade deve_ser em [fraca, media, forte]
+    }
+    effects {
+      auditoria entrypoint_pack_selecionado criticidade = media
+    }
+    authz {
+      escopo: sema.contexto.entrypoint_pack
+      tenant: opcional
+    }
+    forbidden {
+      misturar_guias_de_capacidades
+      remover_regra_fail_closed
+      omitir_politica_de_codigo_governado
+      omitir_politica_de_plataforma
+      usar_llm_ou_rede_na_compactacao
+      substituir_validacao_fresca_do_sema
+      remover_autoridade_do_contrato_sema
+    }
+    impl {
+      ts: cli.src.entrypoint_pack.criarEntrypointPack
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/entrypointPack.ts"
+      arquivo: "pacotes/cli/src/index.part07.ts"
+      arquivo: "testes/unidade/context-packs.test.ts"
+      simbolo: cli.src.entrypoint_pack.criarEntrypointPack
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      pacote existe
+      pacote deve_ser usar_schema_sema_ai_entrypoint_pack_v1
+      capacidade_selecionada existe
+      agent_context_bruto_encaminhado == falso
+      pacote deve_ser preservar_regras_proibicoes_prioridades_e_fail_closed
+      pacote deve_ser declarar_sema_como_autoridade
+      pacote deve_ser exigir_validacao_fresca_antes_de_execucao
+    }
+    tests {
+      caso "seleciona somente a capacidade solicitada" {
+        given {
+          agent_context_pack: "pack completo com fraca media e forte"
+          capacidade: "media"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          capacidade_selecionada: "media"
+          agent_context_bruto_encaminhado: falso
+        }
+      }
+    }
+  }
+}

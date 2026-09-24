@@ -1,0 +1,80 @@
+module sema.produto.governanca_ia.contexto.drift_pack {
+  docs {
+    resumo: "Compactacao de drift que preserva travas, divergencias e orientacoes operacionais sem transportar catalogos validos inteiros."
+  }
+
+  task compactar_evidencia_drift {
+    input {
+      resultado_drift: Objeto required
+      modulo_alvo: Texto
+    }
+    output {
+      pacote: Objeto
+      bloqueios: Lista
+      contagens: Objeto
+      caracteres_drift: Numero
+      caracteres_pacote: Numero
+      tokens_estimados_drift: Numero
+      tokens_estimados_pacote: Numero
+      reducao_percentual: Numero
+      drift_bruto_encaminhado: Booleano
+    }
+    rules {
+      resultado_drift deve_ser preenchido
+    }
+    effects {
+      auditoria drift_pack_selecionado criticidade = media
+    }
+    authz {
+      escopo: sema.contexto.drift_pack
+      tenant: opcional
+    }
+    forbidden {
+      esconder_impl_quebrado
+      esconder_vinculo_quebrado
+      esconder_rota_divergente
+      converter_inferencia_em_prova
+      converter_aviso_em_bloqueio
+      substituir_drift_fresh
+      usar_llm_ou_rede_na_compactacao
+      remover_autoridade_do_sema
+    }
+    impl {
+      ts: cli.src.drift_pack.criarDriftPack
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/driftPack.ts"
+      arquivo: "pacotes/cli/src/index.part05.ts"
+      arquivo: "testes/unidade/context-packs.test.ts"
+      simbolo: cli.src.drift_pack.criarDriftPack
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      pacote existe
+      pacote deve_ser usar_schema_sema_ai_drift_pack_v1
+      bloqueios existe
+      contagens existe
+      drift_bruto_encaminhado == falso
+      pacote deve_ser preservar_travas_e_divergencias
+      pacote deve_ser declarar_sema_como_autoridade
+      pacote deve_ser exigir_validacao_fresca_antes_de_execucao
+    }
+    tests {
+      caso "preserva implementacao quebrada no pacote" {
+        given {
+          resultado_drift: "sucesso falso com impl_quebrado"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          drift_bruto_encaminhado: falso
+        }
+      }
+    }
+  }
+}

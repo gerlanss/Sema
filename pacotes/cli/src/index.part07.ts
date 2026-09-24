@@ -125,6 +125,7 @@ import {
   type GuiaCapacidadeIaMap,
 } from './agentContextTipos.js';
 import { criarAgentContextPack, criarGuiaCapacidadeIa } from './agentContextPack.js';
+import { criarEntrypointPack } from './entrypointPack.js';
 import { criarEntradaCanonicaProjeto } from './agentContext.js';
 import {
   renderizarDocumentoAgentesPorCapacidade,
@@ -265,8 +266,20 @@ ${contextoProjeto.trim()}
   return 0;
 }
 
-export async function comandoContextoIa(arquivo: string, pastaSaida: string | undefined, emJson: boolean): Promise<number> {
+export async function comandoContextoIa(arquivo: string, pastaSaida: string | undefined, emJson: boolean, args: string[] = []): Promise<number> {
   const resultado = await gerarContextoIa(arquivo, pastaSaida);
+  const capacidadeValor = obterOpcao(args, "--capacidade") ?? "media";
+  const capacidade: CapacidadeIa = capacidadeValor === "fraca" || capacidadeValor === "forte" ? capacidadeValor : "media";
+  if (possuiFlag(args, "--pacote")) {
+    const agentContextPack = criarAgentContextPack(resultado.guiaPorCapacidade);
+    const pacote = criarEntrypointPack({
+      agentContextPack,
+      capacity: capacidade,
+      rawAgentContextChars: JSON.stringify(agentContextPack).length,
+    });
+    console.log(JSON.stringify(pacote, null, 2));
+    return resultado.sucesso ? 0 : 1;
+  }
 
   if (emJson) {
     console.log(JSON.stringify(resultado, null, 2));

@@ -1,0 +1,110 @@
+module sema.produto.governanca_ia.contexto.seletor {
+  docs {
+    resumo: "Selecao deterministica de contexto relevante para IA a partir do resumo semantico Sema, preservando a autoridade do contrato e reduzindo contexto bruto desnecessario."
+  }
+
+  task selecionar_contexto_relevante {
+    input {
+      resumo: Objeto required
+      pedido: Texto required
+      tamanho: Texto required
+    }
+    output {
+      pacote: Objeto
+      campos_selecionados: Lista
+      caracteres_resumo: Numero
+      caracteres_pacote: Numero
+      tokens_estimados_resumo: Numero
+      tokens_estimados_pacote: Numero
+      reducao_percentual: Numero
+      resumo_bruto_encaminhado: Booleano
+    }
+    rules {
+      resumo deve_ser preenchido
+      pedido deve_ser preenchido
+      tamanho deve_ser em [micro, curto, medio]
+    }
+    effects {
+      auditoria context_pack_selecionado criticidade = baixa
+    }
+    authz {
+      escopo: sema.contexto.context_pack
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+      input {
+        resumo: interno
+        pedido: interno
+        tamanho: publico
+      }
+      output {
+        pacote: interno
+        campos_selecionados: publico
+        caracteres_resumo: publico
+        caracteres_pacote: publico
+        tokens_estimados_resumo: publico
+        tokens_estimados_pacote: publico
+        reducao_percentual: publico
+        resumo_bruto_encaminhado: publico
+      }
+    }
+    forbidden {
+      encaminhar_resumo_bruto_para_llm
+      inventar_regra_ausente_do_resumo
+      substituir_validacao_fresca_do_sema
+      usar_rede_ou_llm_na_selecao
+      tratar_estimativa_de_tokens_como_tokenizacao_exata
+      remover_autoridade_do_contrato_sema
+      incluir_segredo_no_pacote
+      remover_cabecalho_sema_governado_de_codigo
+    }
+    impl {
+      ts: cli.src.context_pack.criarContextPackAPartirDoResumo
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/contextPack.ts"
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "pacotes/cli/src/cliGrammar.ts"
+      arquivo: "testes/unidade/barbearia-sema.test.ts"
+      arquivo: "testes/unidade/lembretes-sema.test.ts"
+      simbolo: cli.src.context_pack.criarContextPackAPartirDoResumo
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "10s"
+      retry: "nenhum"
+      criticidade_operacional: baixa
+    }
+    guarantees {
+      pacote existe
+      pacote deve_ser usar_schema_sema_ai_context_pack_v1
+      campos_selecionados existe
+      caracteres_resumo existe
+      caracteres_pacote existe
+      tokens_estimados_resumo existe
+      tokens_estimados_pacote existe
+      reducao_percentual existe
+      resumo_bruto_encaminhado == falso
+      pacote deve_ser declarar_sema_como_autoridade
+      pacote deve_ser exigir_validacao_fresca_antes_de_execucao
+      pacote deve_ser omitir_texto_bruto_e_guia_completo
+    }
+    tests {
+      caso "seleciona somente o contexto relevante do pedido" {
+        given {
+          resumo: "modulo com tarefas cancelar_agenda e exportar_dados"
+          pedido: "cancele os agendamentos"
+          tamanho: "micro"
+        }
+
+        expect {
+          sucesso: verdadeiro
+          resumo_bruto_encaminhado: falso
+          reducao_percentual: "maior_que_zero"
+        }
+      }
+    }
+  }
+}

@@ -622,11 +622,11 @@ test("sentinela de pureza bloqueia leitura, subprocesso e rede de verdade", asyn
   }
 });
 
-test("todos os 44 comandos públicos encerram --help e -h sem dispatch, PATH ou mutação", async () => {
+test("todos os 49 comandos públicos encerram --help e -h sem dispatch, PATH ou mutação", async () => {
   const ambiente = await criarAmbienteIsolado("sema-cli-help-matriz-");
   try {
     const comandos = comandosPublicos();
-    assert.equal(comandos.length, 44, JSON.stringify(comandos));
+    assert.equal(comandos.length, 49, JSON.stringify(comandos));
     assert.equal(new Set(comandos).size, comandos.length);
     for (const registrado of Object.keys(REGISTRO_COMANDOS)) {
       assert.ok(comandos.includes(registrado), `handler público ausente da matriz: ${registrado}`);
@@ -921,6 +921,19 @@ test("invocações válidas usam result/v1 e preservam os payloads dos handlers"
     assert.equal(exigirObjeto(payloadResumo.analiseDrift).modo, "none");
     assert.equal(exigirObjeto(payloadResumo.analiseDrift).executada, false);
     exigirSemEnvelopeControle(payloadResumo);
+
+    const pacoteArgs = ["resumo", ambiente.contrato, "--micro", "--para", "mudanca", "--drift", "none", "--pacote", "--pedido", "planejar execução local", "--json"] as const;
+    const pacote = executarCli(ambiente, pacoteArgs, 15_000);
+    exigirExecucao(pacoteArgs, pacote, 0);
+    assert.equal(pacote.stderr, "");
+    const payloadPacote = exigirObjeto(extrairPayloadExecucao(pacoteArgs, pacote));
+    const contextPack = exigirObjeto(payloadPacote.contextPack);
+    assert.equal(contextPack.pack.schema, "sema.ai.context-pack/v1");
+    assert.equal(exigirObjeto(contextPack.pack.authority).rawSummaryForwarded, false);
+    assert.equal(exigirObjeto(contextPack.pack.authority).semaRemainsAuthority, true);
+    assert.equal(exigirObjeto(contextPack.pack.telemetry).estimateMethod, "chars_div_4");
+    assert.equal(contextPack.reductionPercent > 0, true);
+    exigirSemEnvelopeControle(payloadPacote);
 
     const conteudoArgs = ["conteudo", "capabilities", "--json"] as const;
     const conteudo = executarCli(ambiente, conteudoArgs, 10_000);

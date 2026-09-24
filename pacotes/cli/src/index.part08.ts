@@ -111,6 +111,11 @@ import { comandoDocsImpacto, comandoFinalizarMudanca, comandoValidar, comandoVal
 import { comandoAst, comandoAstJson, comandoDrift, comandoImpacto, comandoImportar, comandoInspecionar, comandoIr, comandoIrJson, comandoRenomearSemantico } from "./index.part05.js";
 import { comandoAjudaIa, comandoCompilar, comandoDiagnosticos, comandoExemplosPromptIa, comandoFormatar, comandoPromptIa, comandoPromptIaReact, comandoPromptIaSemaPrimeiro, comandoPromptIaUi, comandoResumo, comandoStarterIa, comandoSyncCodex } from "./index.part06.js";
 import { comandoContextoIa, comandoPromptCurto, comandoTestar, comandoVerificar, comandoVerificarJson } from "./index.part07.js";
+import { comandoAnalisar } from "./analisadorLocal.js";
+import { comandoPlanejar } from "./frontDoorLocal.js";
+import { comandoExecutarPlano } from "./executorPlanoLocal.js";
+import { comandoCicloLocal } from "./cicloLocal.js";
+import { comandoObservar } from "./observabilidade.js";
 
 export async function principal(): Promise<number> {
   const argvPublico = process.argv.slice(2);
@@ -133,6 +138,21 @@ export async function principal(): Promise<number> {
   let codigoSaida = 0;
 
   switch (comando) {
+    case "analisar":
+      codigoSaida = await comandoAnalisar(posicionais, resto, possuiFlag(resto, "--json"), cwd);
+      break;
+    case "planejar":
+      codigoSaida = await comandoPlanejar(posicionais, resto, possuiFlag(resto, "--json"), cwd);
+      break;
+    case "executar-plano":
+      codigoSaida = await comandoExecutarPlano(posicionais, resto, possuiFlag(resto, "--json"), cwd);
+      break;
+    case "ciclo-local":
+      codigoSaida = await comandoCicloLocal(posicionais, resto, possuiFlag(resto, "--json"), cwd);
+      break;
+    case "observar":
+      codigoSaida = await comandoObservar(posicionais, resto, possuiFlag(resto, "--json"), cwd);
+      break;
     case "iniciar":
       codigoSaida = await comandoIniciar(
         cwd,
@@ -322,6 +342,7 @@ export async function principal(): Promise<number> {
         posicionais[0] ?? "",
         obterOpcao(resto, "--saida"),
         possuiFlag(resto, "--json"),
+        resto,
       );
       break;
     default:

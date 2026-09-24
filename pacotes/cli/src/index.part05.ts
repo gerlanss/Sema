@@ -108,6 +108,7 @@ import {
 } from './geracaoCore.js';
 import { resumirDriftPorModulo } from "./index.part03.js";
 import { resolverAnaliseDriftConsultaCli, resolverOpcoesDriftCli } from "./index.part01.js";
+import { criarDriftPack } from "./driftPack.js";
 export async function comandoInspecionar(
   entrada: string | undefined,
   emJson: boolean,
@@ -235,6 +236,11 @@ export async function comandoDrift(entrada: string | undefined, args: string[], 
     adiarDescobertaCodigo: opcoes.escopo !== "projeto",
   });
   const resultado = await analisarDriftLegado(contextoProjeto, opcoes);
+  if (possuiFlag(args, "--pacote")) {
+    const pacote = criarDriftPack(resultado, { rawDriftChars: JSON.stringify(resultado).length });
+    console.log(JSON.stringify(pacote, null, 2));
+    return resultado.sucesso ? 0 : 1;
+  }
   if (emJson) {
     console.log(JSON.stringify(resultado, null, 2));
     return resultado.sucesso ? 0 : 1;

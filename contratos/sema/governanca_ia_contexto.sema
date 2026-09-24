@@ -4,6 +4,10 @@ module sema.produto.governanca_ia.contexto {
     arquivo: "contratos/sema/governanca_ia_contexto_projeto.sema"
     arquivo: "contratos/sema/governanca_ia_contexto_agent_pack.sema"
     arquivo: "contratos/sema/governanca_ia_contexto_entrypoints.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_seletor.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_indice.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_drift_pack.sema"
+    arquivo: "contratos/sema/governanca_ia_contexto_entrypoint_pack.sema"
   }
 
   use sema.produto.governanca_ia.contexto.projeto
@@ -11,6 +15,14 @@ module sema.produto.governanca_ia.contexto {
   use sema.produto.governanca_ia.contexto.agent_pack
 
   use sema.produto.governanca_ia.contexto.entrypoints
+
+  use sema.produto.governanca_ia.contexto.seletor
+
+  use sema.produto.governanca_ia.contexto.indice
+
+  use sema.produto.governanca_ia.contexto.drift_pack
+
+  use sema.produto.governanca_ia.contexto.entrypoint_pack
 
   task manter_mapa_contexto_ia {
     input {
