@@ -67,8 +67,6 @@ module sema.produto.governanca_ia.contexto.seletor {
       arquivo: "pacotes/cli/src/contextPack.ts"
       arquivo: "pacotes/cli/src/index.part06.ts"
       arquivo: "pacotes/cli/src/cliGrammar.ts"
-      arquivo: "testes/unidade/barbearia-sema.test.ts"
-      arquivo: "testes/unidade/lembretes-sema.test.ts"
       simbolo: cli.src.context_pack.criarContextPackAPartirDoResumo
     }
     execucao {
