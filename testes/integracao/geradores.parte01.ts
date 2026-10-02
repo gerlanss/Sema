@@ -123,10 +123,13 @@ async function executarTestesTypeScriptGeradosTemporario(
       }
     }
 
+    const ambiente = { ...process.env };
+    delete ambiente.NODE_TEST_CONTEXT;
+
     return spawnSync(
       process.execPath,
       ["--import", "tsx", "--test", ...testes],
-      { stdio: "pipe", encoding: "utf8", cwd: path.resolve(".") },
+      { stdio: "pipe", encoding: "utf8", cwd: path.resolve("."), env: ambiente },
     );
   } finally {
     await rm(base, { recursive: true, force: true });
@@ -436,6 +439,68 @@ module exemplo.inline.payload {
   assert.ok(arquivoTeste?.conteudo.includes('"cod_colaborador": "101"'));
   assert.ok(arquivoTeste?.conteudo.includes('"whatsapp_number": "+5592999999999"'));
   assert.ok(arquivoTeste?.conteudo.includes('"ativo": true'));
+});
+
+test("gerador typescript sintetiza saidas compativeis com garantias estritas e aninhadas", async () => {
+  const codigo = `
+module exemplos.typescript_verificacao {
+  entity Metadados {
+    fields {
+      codigo: Texto
+    }
+  }
+  entity Registro {
+    fields {
+      total: Inteiro
+      metadados: Metadados
+    }
+  }
+  task preparar {
+    input {
+      codigo: Id required
+    }
+    output {
+      poolSize: Inteiro
+      quantidade: Inteiro
+      faixa: Inteiro
+      negativo: Inteiro
+      codigo: Inteiro
+      registro: Registro
+    }
+    guarantees {
+      poolSize > 0
+      quantidade >= 3
+      quantidade <= 4
+      faixa > 2
+      faixa < 5
+      negativo < 0
+      codigo != 1
+      registro.total > 1
+      registro.total < 3
+      registro.metadados.codigo existe
+    }
+    tests {
+      caso "prepara uma saida que respeita todas as garantias" {
+        given {
+          codigo: "demo"
+        }
+        expect {
+          sucesso: verdadeiro
+        }
+      }
+    }
+  }
+}
+`;
+  const resultado = compilarCodigo(codigo, "typescript_verificacao.sema");
+  assert.equal(temErros(resultado.diagnosticos), false);
+  assert.ok(resultado.ir);
+
+  const arquivosTs = gerarTypeScript(resultado.ir!);
+  const execucao = await executarTestesTypeScriptGeradosTemporario(arquivosTs);
+
+  assert.doesNotMatch(execucao.stderr, /skipping running files/);
+  assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
 });
 
 test("geradores refletem estruturas semanticas mais ricas no exemplo de pagamento", async () => {

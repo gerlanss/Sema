@@ -71,7 +71,7 @@ export function gerarLiteralErrosTypeScript(erros: Record<string, string>): stri
   return `{\n${entradas.map(([nome, mensagem]) => `  ${JSON.stringify(nome)}: ${JSON.stringify(mensagem)},`).join("\n")}\n}`;
 }
 
-export function formatarValorTypeScript(valor: string, camposConhecidos: Set<string>, variavel: string): string {
+export function formatarValorTypeScript(valor: string, camposConhecidos: Set<string>, variavel: string, literal = false): string {
   const texto = valor.trim();
   if (/^-?\d+(?:\.\d+)?$/.test(texto)) {
     return texto;
@@ -85,7 +85,7 @@ export function formatarValorTypeScript(valor: string, camposConhecidos: Set<str
   if (texto === "nulo") {
     return "null";
   }
-  if (camposConhecidos.has(texto.split(".")[0] ?? texto)) {
+  if (!literal && camposConhecidos.has(texto.split(".")[0] ?? texto)) {
     return `${variavel}.${texto}`;
   }
   return JSON.stringify(texto);
@@ -310,7 +310,27 @@ export function converterBlocoTesteParaValorTypeScript(
   return literal;
 }
 
-export function gerarPreparacaoSaida(task: IrTask): string {
+function achatarGarantiasConjuntivasTypeScript(expressao: ExpressaoSemantica): ExpressaoSemantica[] {
+  return expressao.tipo === "composta" && expressao.operadorLogico === "e"
+    ? expressao.termos.flatMap(achatarGarantiasConjuntivasTypeScript)
+    : [expressao];
+}
+
+function sugerirValoresTypeScript(tipo: string, tiposDeclarados: Map<string, Map<string, string>>): string {
+  if (["Numero", "Inteiro", "Decimal"].includes(tipo)) return "[1, 0, -1]";
+  if (tipo === "Booleano") return "[false, true]";
+  if (["Texto", "Id", "Email", "Url", "Data", "DataHora", "Timestamp"].includes(tipo)) {
+    return '["valor_garantido", "outro_valor"]';
+  }
+  if (/^Lista</u.test(tipo) || /\[\]$/u.test(tipo)) return "[[]]";
+  if (/^Mapa</u.test(tipo) || ["Json", "Objeto"].includes(tipo) || tiposDeclarados.has(tipo)) return "[{}]";
+  return "[1, 0, -1, true, false, \"valor_garantido\", \"outro_valor\", {}]";
+}
+
+export function gerarPreparacaoSaida(
+  task: IrTask,
+  tiposDeclarados: Map<string, Map<string, string>> = new Map(),
+): string {
   const camposSaida = new Set(task.output.map((campo) => campo.nome));
   const linhas: string[] = [];
 
@@ -318,24 +338,113 @@ export function gerarPreparacaoSaida(task: IrTask): string {
     linhas.push(`    ${campo.nome}: ${valorPadraoTypeScript(campo.tipo, campo.nome)},`);
   }
 
-  const ajustes: string[] = [];
-  for (const garantia of task.garantiasEstruturadas) {
-    if (garantia.tipo === "pertencimento" && garantia.valores && camposSaida.has(garantia.alvo)) {
-      ajustes.push(`  saida.${garantia.alvo} = ${formatarValorTypeScript(garantia.valores[0] ?? "", camposSaida, "saida")} as any;`);
-    }
-    if (garantia.tipo === "comparacao" && garantia.valor && camposSaida.has(garantia.alvo.split(".")[0] ?? garantia.alvo)) {
-      ajustes.push(`  ${resolverReferenciaTypeScript(garantia.alvo, "saida")} = ${formatarValorTypeScript(garantia.valor, camposSaida, "saida")} as any;`);
-    }
-    if (garantia.tipo === "existe" && garantia.alvo.includes(".")) {
-      const [raiz, filho] = garantia.alvo.split(".", 2);
-      if (raiz && filho && camposSaida.has(raiz)) {
-        ajustes.push(`  saida.${raiz} = (saida.${raiz} ?? {}) as any;`);
-        ajustes.push(`  (saida.${raiz} as any).${filho} = (saida.${raiz} as any).${filho} ?? "valor_garantido";`);
-      }
+  const grupos = new Map<string, ExpressaoSemantica[]>();
+  for (const garantia of task.garantiasEstruturadas.flatMap(achatarGarantiasConjuntivasTypeScript)) {
+    if (!("alvo" in garantia) || !camposSaida.has(garantia.alvo.split(".")[0] ?? garantia.alvo)) continue;
+    if (garantia.tipo === "comparacao" || garantia.tipo === "pertencimento" || garantia.tipo === "existe") {
+      grupos.set(garantia.alvo, [...(grupos.get(garantia.alvo) ?? []), garantia]);
     }
   }
 
-  return `  const saida = {\n${linhas.join("\n")}\n  } as ${task.nome}Saida;\n${ajustes.join("\n")}`;
+  const referencias = new Set<string>();
+  for (const regras of grupos.values()) {
+    for (const regra of regras) {
+      if (regra.tipo === "comparacao" && !regra.valorLiteral && camposSaida.has(regra.valor.split(".")[0] ?? regra.valor)) {
+        referencias.add(regra.valor);
+      }
+    }
+  }
+  for (const referencia of referencias) {
+    if (!grupos.has(referencia)) {
+      grupos.set(referencia, [{ tipo: "existe", alvo: referencia, textoOriginal: `${referencia} existe` }]);
+    }
+  }
+
+  const caminhos = [...grupos.keys()].sort((a, b) =>
+    Number(referencias.has(b)) - Number(referencias.has(a)) || a.split(".").length - b.split(".").length,
+  );
+  const ajustes: string[] = [];
+  for (const caminho of caminhos) {
+    const regras = grupos.get(caminho)!;
+    let tipo = task.output.find((campo) => campo.nome === caminho.split(".")[0])?.tipo ?? "Json";
+    for (const segmento of caminho.split(".").slice(1)) {
+      tipo = tiposDeclarados.get(tipo)?.get(segmento) ?? "Json";
+    }
+    const restricoes = regras.map((regra) => {
+      if (regra.tipo === "comparacao") {
+        return `[${JSON.stringify(regra.operador)}, ${formatarValorTypeScript(regra.valor, camposSaida, "saida", regra.valorLiteral)}]`;
+      }
+      if (regra.tipo === "pertencimento") {
+        const valores = (regra.valores ?? []).map((valor) => formatarValorTypeScript(valor, camposSaida, "saida", true));
+        return `["in", [${valores.join(", ")}]]`;
+      }
+      return '["existe", null]';
+    });
+    const caminhoLiteral = JSON.stringify(caminho.split("."));
+    const somenteExistencia = regras.every((regra) => regra.tipo === "existe");
+    const temDescendente = caminhos.some((outro) => outro.startsWith(`${caminho}.`));
+    if (somenteExistencia && temDescendente) {
+      ajustes.push(`  if (semaLerSaida(saida, ${caminhoLiteral}) == null) semaDefinirSaida(saida, ${caminhoLiteral}, {});`);
+      continue;
+    }
+    const inteiro = tipo === "Inteiro" ? "true" : "false";
+    ajustes.push(
+      `  semaDefinirSaida(saida, ${caminhoLiteral}, semaSintetizarSaida(semaLerSaida(saida, ${caminhoLiteral}), [${restricoes.join(", ")}], ${inteiro}, ${sugerirValoresTypeScript(tipo, tiposDeclarados)}));`,
+    );
+  }
+
+  const helpers = grupos.size === 0 ? "" : `
+  const semaLerSaida = (objeto: any, caminho: string[]): any => caminho.reduce((atual, campo) => atual == null ? undefined : atual[campo], objeto);
+  const semaDefinirSaida = (objeto: any, caminho: string[], valor: any): void => {
+    let atual = objeto;
+    for (const campo of caminho.slice(0, -1)) {
+      if (atual[campo] === null || typeof atual[campo] !== "object") atual[campo] = {};
+      atual = atual[campo];
+    }
+    const ultimo = caminho[caminho.length - 1];
+    if (ultimo !== undefined) atual[ultimo] = valor;
+  };
+  const semaSintetizarSaida = (atual: any, restricoes: Array<[string, any]>, inteiro: boolean, sementes: any[]): any => {
+    const aceita = (valor: any): boolean => restricoes.every(([operador, limite]) => {
+      if (operador === "existe") return valor !== undefined && valor !== null;
+      if (operador === "in") return Array.isArray(limite) && limite.some((item: any) => Object.is(item, valor));
+      if (operador === "==") return valor === limite;
+      if (operador === "!=") return valor !== limite;
+      const esquerda: any = valor;
+      const direita: any = limite;
+      if (operador === ">") return esquerda > direita;
+      if (operador === ">=") return esquerda >= direita;
+      if (operador === "<") return esquerda < direita;
+      if (operador === "<=") return esquerda <= direita;
+      return false;
+    });
+    const candidatos: any[] = [atual, ...sementes];
+    const numeros: number[] = [];
+    for (const [operador, limite] of restricoes) {
+      if (operador === "in" && Array.isArray(limite)) candidatos.push(...limite);
+      else if (operador !== "existe") {
+        candidatos.push(limite);
+        if (typeof limite === "number" && Number.isFinite(limite)) {
+          numeros.push(limite);
+          candidatos.push(limite - 1, limite + 1, Math.floor(limite), Math.ceil(limite));
+        } else if (typeof limite === "string") {
+          candidatos.push(limite + "\\u0000", limite.slice(0, -1), "");
+        }
+      }
+    }
+    numeros.sort((a, b) => a - b);
+    for (let indice = 0; indice < numeros.length - 1; indice += 1) {
+      candidatos.push((numeros[indice]! + numeros[indice + 1]!) / 2);
+    }
+    for (const candidato of candidatos) {
+      if (inteiro && (typeof candidato !== "number" || !Number.isInteger(candidato))) continue;
+      if (aceita(candidato)) return candidato;
+    }
+    throw new Error("Nao foi possivel sintetizar uma saida demonstrativa compativel com as garantias.");
+  };
+`;
+
+  return `  const saida = {\n${linhas.join("\n")}\n  } as ${task.nome}Saida;${helpers}\n${ajustes.join("\n")}`;
 }
 
 export function gerarValidacoes(task: IrTask): string {

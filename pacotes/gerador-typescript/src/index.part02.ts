@@ -85,7 +85,7 @@ ${verificacoesErro || "    throw erro;"}
   }).join("\n");
 }
 
-export function gerarTask(task: IrTask): string {
+export function gerarTask(task: IrTask, tiposDeclarados: Map<string, Map<string, string>> = new Map()): string {
   const nomeSimbolo = normalizarNomeParaSimbolo(task.nome);
   const entradaNome = `${nomeSimbolo}_entrada`;
   const saidaNome = `${nomeSimbolo}_saida`;
@@ -147,7 +147,7 @@ ${task.stateContract ? `  // Vinculo de estado: ${task.stateContract.nomeEstado 
 ${task.implementacoesExternas.length > 0 ? `  // Implementacoes externas vinculadas:\n${task.implementacoesExternas.map((impl) => `  // - ${impl.origem}: ${impl.caminho} [${impl.statusImpl ?? "nao_verificado"}]`).join("\n")}` : ""}
   // Efeitos declarados:
 ${task.efeitosEstruturados.map((efeito) => `  // - categoria=${efeito.categoria} alvo=${efeito.alvo}${efeito.detalhe ? ` detalhe=${efeito.detalhe}` : ""}${efeito.criticidade ? ` criticidade=${efeito.criticidade}` : ""}`).join("\n") || task.effects.map((efeito) => `  // - ${efeito}`).join("\n") || "  // - Nenhum efeito declarado."}
-${gerarPreparacaoSaida(task)}
+${gerarPreparacaoSaida(task, tiposDeclarados)}
 ${gerarGarantias(task)}
 }
 
@@ -237,6 +237,13 @@ export function gerarCabecalhoSemaTypeScript(
 
 export function gerarTypeScriptBase(modulo: IrModulo): ArquivoGerado[] {
   const nomeBase = normalizarNomeModulo(modulo.nome).replace(/\./g, "_");
+  const mapaTiposDeclarados = new Map<string, Map<string, string>>();
+  for (const entidade of modulo.entities) {
+    mapaTiposDeclarados.set(entidade.nome, new Map(entidade.campos.map((campo) => [campo.nome, campo.tipo])));
+  }
+  for (const tipo of modulo.types) {
+    mapaTiposDeclarados.set(tipo.nome, new Map(tipo.definicao.campos.map((campo) => [campo.nome, campo.tipo])));
+  }
   const interoperabilidades = modulo.interoperabilidades
     .map((interop) => `// Interop externo ${interop.origem}: ${interop.caminho}`)
     .join("\n");
@@ -261,7 +268,7 @@ export function gerarTypeScriptBase(modulo: IrModulo): ArquivoGerado[] {
   const routes = modulo.routes
     .map((route) => `// Route ${route.nome}: metodo=${route.metodo ?? "nao_definido"} caminho=${route.caminho ?? "nao_definido"} task=${route.task ?? "nao_definida"} input_publico=${route.inputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} output_publico=${route.outputPublico.map((campo) => campo.nome).join(", ") || "padrao_task"} erros_publicos=${route.errosPublicos.map((erro) => erro.nome).join(", ") || "padrao_task"} effects_publicos=${route.efeitosPublicos.map((efeito) => `${efeito.categoria}:${efeito.alvo}`).join(", ") || "nenhum"} garantias_publicas=${route.garantiasPublicasMinimas.length}`)
     .join("\n");
-  const tasks = modulo.tasks.map(gerarTask).join("\n");
+  const tasks = modulo.tasks.map((task) => gerarTask(task, mapaTiposDeclarados)).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
   const codigo = `${gerarCabecalhoSemaTypeScript(modulo)}${interoperabilidades ? `${interoperabilidades}\n` : ""}\n${tiposExternos}\n${tipos}\n${entidades}\n${enums}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
