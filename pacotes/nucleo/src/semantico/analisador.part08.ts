@@ -64,6 +64,7 @@ import { validarFlow, validarInvariantesDeCampos, validarState } from "./analisa
 import { validarStatusTextoComState, validarTask } from "./analisador.part07.js";
 import { validarGuardrailsSeguranca, validarRoute } from "./analisador.part06.js";
 import { validarDatabase } from "./analisador.part02.js";
+import { validarTiposEstruturadosTestes } from "./testesTipos.js";
 
 export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemantica = {}): ResultadoSemantico {
   const diagnosticos: Diagnostico[] = [];
@@ -271,6 +272,7 @@ export function analisarSemantica(modulo: ModuloAst, opcoes: OpcoesAnaliseSemant
   for (const task of modulo.tasks) {
     validarTask(task, tiposConhecidos, statesConhecidos, diagnosticos);
   }
+  validarTiposEstruturadosTestes(modulo, diagnosticos);
 
   for (const flow of modulo.flows) {
     validarFlow(flow, tasksConhecidas, tarefasDetalhadas, diagnosticos);

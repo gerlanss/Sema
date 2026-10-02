@@ -2,6 +2,7 @@
 // Descricao: modulo particionado; consulte contratos/sema/geradores_codigo_governado.sema antes de editar.
 
 import path from "node:path";
+import { acessoPython, prepararSaidaPython } from "./valores.js";
 import type { ExpressaoSemantica, IrBlocoDeclarativo, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import {
   descreverEstruturaModulo,
@@ -103,7 +104,7 @@ export function gerarMapaErrosPython(erros: Record<string, string>): string {
 }
 
 export function formatarValorPython(valor: string, camposConhecidos: Set<string>, variavel: string): string {
-  const texto = valor.trim();
+  const texto = valor.trim().replace(/^-\s+(?=\d)/u, "-").replace(/^(-?\d+)\s*\.\s*(\d+)$/u, "$1.$2");
   if (/^-?\d+(?:\.\d+)?$/.test(texto)) {
     return texto;
   }
@@ -117,7 +118,7 @@ export function formatarValorPython(valor: string, camposConhecidos: Set<string>
     return "None";
   }
   if (camposConhecidos.has(texto.split(".")[0] ?? texto)) {
-    return `${variavel}.${texto}`;
+    return acessoPython(variavel, texto);
   }
   return JSON.stringify(texto);
 }
@@ -133,25 +134,20 @@ export function extrairReferenciaCampoConhecido(valor: string, camposConhecidos:
 }
 
 export function gerarInicializacaoReferenciaSaida(partes: string[]): string[] {
-  const [raiz, filho] = partes;
-  if (!raiz || !filho) {
-    return [];
-  }
-
+  if (partes.length === 0) return [];
   return [
-    `    if saida.${raiz} is None:\n        saida.${raiz} = SimpleNamespace()`,
-    `    if getattr(saida.${raiz}, "${filho}", None) is None:\n        saida.${raiz}.${filho} = "valor_garantido"`,
+    `    if ${acessoPython("saida", partes.join("."))} is None:\n        sema_set(saida, ${JSON.stringify(partes)}, "valor_garantido")`,
   ];
 }
 
 export function resolverExpressaoPython(expressao: ExpressaoSemantica, camposConhecidos: Set<string>, variavel: string): string {
   switch (expressao.tipo) {
     case "existe":
-      return `${variavel}.${expressao.alvo} is not None`;
+      return `${acessoPython(variavel, expressao.alvo)} is not None`;
     case "comparacao":
-      return `${variavel}.${expressao.alvo} ${expressao.operador} ${formatarValorPython(expressao.valor, camposConhecidos, variavel)}`;
+      return `${acessoPython(variavel, expressao.alvo)} ${expressao.operador} ${formatarValorPython(expressao.valor, camposConhecidos, variavel)}`;
     case "pertencimento":
-      return `${variavel}.${expressao.alvo} in [${(expressao.valores ?? []).map((valor) => formatarValorPython(valor, camposConhecidos, variavel)).join(", ")}]`;
+      return `${acessoPython(variavel, expressao.alvo)} in [${(expressao.valores ?? []).map((valor) => formatarValorPython(valor, camposConhecidos, variavel)).join(", ")}]`;
     case "predicado":
       return "True";
     case "composta":
@@ -298,7 +294,7 @@ export function resolverTipoItemTeste(tipoDeclarado?: string): string | undefine
 }
 
 export function formatarLiteralTestePython(valor: string, tipoDeclarado?: string): string {
-  const bruto = valor.trim();
+  const bruto = valor.trim().replace(/^-\s+(?=\d)/u, "-").replace(/^(-?\d+)\s*\.\s*(\d+)$/u, "$1.$2");
   if (bruto.startsWith("[") && bruto.endsWith("]")) {
     const interior = bruto.slice(1, -1).trim();
     const tipoItem = resolverTipoItemTeste(tipoDeclarado);
@@ -411,37 +407,6 @@ export function paraPascalCase(valor: string): string {
     .join("");
 }
 
-export function gerarPreparacaoSaida(task: IrTask): string {
-  const camposSaida = new Set(task.output.map((campo) => campo.nome));
-  const argumentos = task.output.map((campo) => `${campo.nome}=${valorPadraoPython(campo)}`).join(", ");
-  const ajustes: string[] = [];
-
-  for (const garantia of task.garantiasEstruturadas) {
-    if (garantia.tipo === "pertencimento" && garantia.valores && camposSaida.has(garantia.alvo)) {
-      ajustes.push(`    saida.${garantia.alvo} = ${formatarValorPython(garantia.valores[0] ?? "", camposSaida, "saida")}`);
-    }
-    if (garantia.tipo === "comparacao" && garantia.valor && camposSaida.has(garantia.alvo.split(".")[0] ?? garantia.alvo) && !garantia.alvo.includes(".")) {
-      ajustes.push(`    saida.${garantia.alvo} = ${formatarValorPython(garantia.valor, camposSaida, "saida")}`);
-    }
-    if (garantia.tipo === "comparacao" && garantia.valor && garantia.alvo.includes(".")) {
-      const [raiz, filho] = garantia.alvo.split(".", 2);
-      if (raiz && filho && camposSaida.has(raiz)) {
-        const referenciaValor = extrairReferenciaCampoConhecido(garantia.valor, camposSaida);
-        if (referenciaValor) {
-          ajustes.push(...gerarInicializacaoReferenciaSaida(referenciaValor));
-        }
-        ajustes.push(`    if saida.${raiz} is None:\n        saida.${raiz} = SimpleNamespace()`);
-        ajustes.push(`    saida.${raiz}.${filho} = ${formatarValorPython(garantia.valor, camposSaida, "saida")}`);
-      }
-    }
-    if (garantia.tipo === "existe" && garantia.alvo.includes(".")) {
-      const [raiz, filho] = garantia.alvo.split(".", 2);
-      if (raiz && filho && camposSaida.has(raiz)) {
-        ajustes.push(`    if saida.${raiz} is None:\n        saida.${raiz} = SimpleNamespace()`);
-        ajustes.push(`    if getattr(saida.${raiz}, "${filho}", None) is None:\n        saida.${raiz}.${filho} = "valor_garantido"`);
-      }
-    }
-  }
-
-  return `    saida = ${task.nome}Saida(${argumentos})\n${ajustes.join("\n")}`;
+export function gerarPreparacaoSaida(task: IrTask, tipos = new Map<string, Map<string, string>>()): string {
+  return prepararSaidaPython(task, tipos);
 }

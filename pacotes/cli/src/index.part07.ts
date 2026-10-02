@@ -374,6 +374,11 @@ export async function comandoVerificar(
   const alvos = opcoes.alvo
     ? [opcoes.alvo as AlvoGeracao]
     : resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const testesNaoExecutaveis = diagnosticos.filter(item => item.codigo === "SEM125");
+  if (alvos.includes("python") && testesNaoExecutaveis.length > 0) {
+    console.error(formatarDiagnosticos(testesNaoExecutaveis));
+    return 1;
+  }
   const avisoEscopo = avisoEscopoStackVerificacao(
     contextoProjeto.configCarregada?.config.fontesLegado,
     alvos,
@@ -432,6 +437,7 @@ export async function comandoVerificar(
           estrutura,
           testesExecutados: false,
           origem: "cache",
+          ...(alvo === "python" ? { tipoEvidencia: "andaime_demonstrativo" as const, implementacaoExternaExecutada: false } : {}),
         });
         if (!emCache.sucesso) {
           imprimirResumoVerificacao([...resumos, resumoModulo]);
@@ -466,6 +472,7 @@ export async function comandoVerificar(
         estrutura,
         testesExecutados,
         origem: "executado",
+        ...(alvo === "python" ? { tipoEvidencia: "andaime_demonstrativo" as const, implementacaoExternaExecutada: false } : {}),
       });
       if (execucao.codigoSaida !== 0) {
         imprimirResumoVerificacao([...resumos, resumoModulo]);
@@ -508,6 +515,18 @@ export async function comandoVerificarJson(
   const alvos = opcoes.alvo
     ? [opcoes.alvo as AlvoGeracao]
     : resolverAlvosVerificacao(contextoProjeto.configCarregada);
+  const testesNaoExecutaveis = diagnosticos.filter(item => item.codigo === "SEM125");
+  if (alvos.includes("python") && testesNaoExecutaveis.length > 0) {
+    console.log(JSON.stringify({
+      comando: "verificar",
+      sucesso: false,
+      erro: "Casos de teste não executáveis em Python: substitua texto descritivo por entidades estruturadas.",
+      diagnosticos: testesNaoExecutaveis,
+      modulos: [],
+      totais: { modulos: 0, alvos: 0, arquivos: 0, testes: 0 },
+    }, null, 2));
+    return 1;
+  }
   const avisoEscopo = avisoEscopoStackVerificacao(
     contextoProjeto.configCarregada?.config.fontesLegado,
     alvos,
@@ -579,6 +598,7 @@ export async function comandoVerificarJson(
           estrutura,
           testesExecutados: false,
           origem: "cache",
+          ...(alvo === "python" ? { tipoEvidencia: "andaime_demonstrativo" as const, implementacaoExternaExecutada: false } : {}),
         });
         resumoModulo.saidaTestes.push({ alvo, stdout: "", stderr: `resultado reutilizado do cache de verificacao (chave ${chave.slice(0, 12)})` });
         if (!emCache.sucesso) {
@@ -612,6 +632,7 @@ export async function comandoVerificarJson(
         estrutura,
         testesExecutados,
         origem: "executado",
+        ...(alvo === "python" ? { tipoEvidencia: "andaime_demonstrativo" as const, implementacaoExternaExecutada: false } : {}),
       });
       resumoModulo.saidaTestes.push({ alvo, stdout: execucao.saidaPadrao, stderr: execucao.saidaErro });
       if (execucao.codigoSaida !== 0) {

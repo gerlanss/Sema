@@ -228,10 +228,10 @@ module exemplo.operacao {
   assert.match(arquivoPy.conteudo, /Invariante: id existe/);
 });
 
-test("cli verifica o projeto inteiro em lote", () => {
+test("cli verifica o projeto inteiro em lote na stack TypeScript", () => {
   const execucao = spawnSync(
     process.execPath,
-    ["pacotes/cli/dist/bin.js", "verificar", ".", "--saida", "./.tmp/verificacao-integracao"],
+    ["pacotes/cli/dist/bin.js", "verificar", ".", "--alvo", "typescript", "--saida", "./.tmp/verificacao-integracao"],
     { stdio: "pipe", encoding: "utf8" },
   );
 
@@ -239,6 +239,33 @@ test("cli verifica o projeto inteiro em lote", () => {
   assert.match(execucao.stdout, /Resumo da verificacao:/);
   assert.match(execucao.stdout, /Totais: modulos=\d+ alvos=\d+ arquivos=\d+ testes=\d+/);
   assert.match(execucao.stdout, /Verificacao completa concluida com sucesso\./);
+});
+
+test("cli verifica todos os alvos em lote com contratos executáveis isolados", async () => {
+  const temporario = await mkdtemp(path.join(os.tmpdir(), "sema-lote-alvos-"));
+  try {
+    const contratos = path.join(temporario, "contratos");
+    await mkdir(contratos);
+    const calculadora = await readFile("exemplos/calculadora.sema", "utf8");
+    await writeFile(path.join(contratos, "calculadora.sema"), calculadora);
+    await writeFile(path.join(contratos, "calculadora_extra.sema"), calculadora.replace("module exemplos.calculadora", "module exemplos.calculadora_extra"));
+    await writeFile(path.join(temporario, "sema.config.json"), JSON.stringify({
+      origens: ["./contratos"],
+      alvos: ["typescript", "python", "dart", "lua", "javascript", "html", "css", "php"],
+      alvoPadrao: "typescript", estruturaSaida: "modulos", framework: "base",
+    }));
+    const execucao = spawnSync(process.execPath, ["pacotes/cli/dist/bin.js", "verificar", temporario, "--sem-cache", "--saida", path.join(temporario, "saida"), "--json"], { encoding: "utf8" });
+    assert.equal(execucao.status, 0, execucao.stderr || execucao.stdout);
+    const resultado = JSON.parse(execucao.stdout).payload;
+    assert.equal(resultado.sucesso, true);
+    assert.equal(resultado.totais.modulos, 2);
+    assert.equal(resultado.totais.alvos, 16);
+    for (const modulo of resultado.modulos) {
+      assert.equal(modulo.alvos.find((alvo: { alvo: string }) => alvo.alvo === "python").testesExecutados, true);
+    }
+  } finally {
+    await rm(temporario, { recursive: true, force: true });
+  }
 });
 
 test("cli compila arquivo com use usando modulos vizinhos como contexto do projeto", async () => {

@@ -148,3 +148,24 @@ Native generator evidence is mandatory when changing C#/.NET or C++ support.
 The `dotnet` smoke must compile and execute through the local .NET SDK. The
 `cpp` smoke must compile and execute through GCC, Clang, or MSVC; checking only
 for generated files is not sufficient.
+
+Python verification must execute the generated code and inspect every declared
+output expectation, including nested fields. A mismatching `expect` must fail;
+the generator must never initialize an output from that expectation. Numeric
+demonstration values respect comparison operators and simultaneous bounds.
+Contradictory guarantees fail explicitly instead of being removed. Nested
+paths preserve every segment and work with both JSON dictionaries and entities.
+
+`SEM125` identifies descriptive scalar fixtures used where an entity or
+structured type is declared. Contract analysis emits a compatibility warning
+for historical declarative examples; executable Python generation rejects
+them before running tests. Replace the scalar with a structured `given` block.
+The regression suite is `testes/integracao/gerador-python-verificacao.test.ts`.
+
+Generated Python functions are demonstration scaffolds. Their metadata declares
+`origem_execucao: andaime_demonstrativo` and
+`implementacao_externa_executada: false`. A linked `impl` is not executed by
+this scaffold: its tests and guarantees cannot establish production behavior.
+Use the application's real tests and drift evidence for that claim. Generated
+failure cases currently retain the explicit synthetic error context and are
+not evidence that the real implementation produces those errors.

@@ -423,8 +423,8 @@ module exemplo.geracao.python_referencia_saida {
   const arquivosPy = gerarPython(resultado.ir!);
   const arquivoPy = arquivosPy.find((arquivo) => arquivo.caminhoRelativo === "exemplo_geracao_python_referencia_saida.py");
   assert.ok(arquivoPy);
-  assert.match(arquivoPy.conteudo, /getattr\(saida\.assinatura, "periodo_inicio", None\)/);
-  assert.match(arquivoPy.conteudo, /saida\.saldo\.periodo_inicio = saida\.assinatura\.periodo_inicio/);
+  assert.match(arquivoPy.conteudo, /sema_get\(saida, \["assinatura",\s*"periodo_inicio"\]\)/);
+  assert.match(arquivoPy.conteudo, /sema_set\(saida, \["saldo",\s*"periodo_inicio"\]/);
 
   const baseTemporaria = await mkdtemp(path.join(os.tmpdir(), "sema-gerador-python-ref-saida-"));
   try {

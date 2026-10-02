@@ -42,6 +42,8 @@ export interface ResumoAlvoVerificacao {
   estrutura: EstruturaSaida;
   testesExecutados: boolean;
   origem?: "executado" | "cache";
+  tipoEvidencia?: "andaime_demonstrativo";
+  implementacaoExternaExecutada?: boolean;
 }
 
 export interface ResumoModuloVerificacao {

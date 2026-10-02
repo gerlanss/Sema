@@ -1,0 +1,68 @@
+module exemplos.python_verificacao {
+  docs {
+    resumo: "Regressao executavel Python para garantias numericas, formulario tipado, status e metadados aninhados."
+  }
+  entity FormularioEntrega {
+    fields {
+      tipo: Texto
+    }
+  }
+  entity MetaTemplate {
+    fields {
+      original_campaign_id: Texto
+    }
+  }
+  entity Template {
+    fields {
+      _template_meta: MetaTemplate
+    }
+  }
+  entity Status {
+    fields {
+      desired_action: Texto
+    }
+  }
+  task preparar {
+    input {
+      formulario: FormularioEntrega required
+    }
+    output {
+      poolSize: Inteiro
+      workersAplicados: Inteiro
+      template: Template
+      status: Status
+    }
+    rules {
+      formulario.tipo existe
+    }
+    guarantees {
+      poolSize > 0
+      workersAplicados >= 2
+      template._template_meta existe
+      template._template_meta.original_campaign_id em ["campanha_1"]
+      status.desired_action em ["iniciar", "parar"]
+    }
+    tests {
+      caso "verifica cada saida" {
+        given {
+          formulario {
+            tipo: "entrega"
+          }
+        }
+        expect {
+          sucesso: verdadeiro
+          poolSize: 1
+          workersAplicados: 2
+          template {
+            _template_meta {
+              original_campaign_id: "campanha_1"
+            }
+          }
+          status {
+            desired_action: "iniciar"
+          }
+        }
+      }
+    }
+  }
+}

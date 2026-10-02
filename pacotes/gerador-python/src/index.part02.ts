@@ -2,6 +2,9 @@
 // Descricao: modulo particionado; consulte contratos/sema/geradores_codigo_governado.sema antes de editar.
 
 import path from "node:path";
+import { prepararSaidaPython } from "./valores.js";
+import { RUNTIME_PYTHON } from "./runtime.js";
+import { gerarExpectativasPython, validarEntradasTestePython } from "./expectativas.js";
 import type { ExpressaoSemantica, IrBlocoDeclarativo, IrCampo, IrModulo, IrTask } from "@sema/nucleo";
 import {
   descreverEstruturaModulo,
@@ -67,6 +70,8 @@ export function gerarMetadadosTask(task: IrTask): string {
     "impl": ${implementacoes},
     "errors": ${gerarMapaErrosPython(task.errors)},
     "guarantees": ${JSON.stringify(task.guarantees, null, 2)},
+    "origem_execucao": "andaime_demonstrativo",
+    "implementacao_externa_executada": False,
 }
 `;
 }
@@ -220,7 +225,7 @@ ${erroAutorizacao ? `    if contexto_execucao["erro_esperado"] == "${erroAutoriz
 ${task.stateContract ? `    # Vinculo de estado: ${task.stateContract.nomeEstado ?? "nao_definido"}\n    # Transicoes declaradas pela task: ${task.stateContract.transicoes.map((transicao) => `${transicao.origem}->${transicao.destino}`).join(", ") || "nenhuma"}` : ""}
 ${implementacoes}
 ${efeitos}
-${gerarPreparacaoSaida(task)}
+${prepararSaidaPython(task, tiposCompostos)}
 ${garantias}
 `;
 }
@@ -232,6 +237,7 @@ export function gerarTestes(modulo: IrModulo): string {
     const nomeFuncao = `executar_${normalizarNomeParaSimbolo(task.nome)}`;
     const tiposEntrada = new Map(task.input.map((campo) => [campo.nome, campo.tipo]));
     for (const caso of task.tests) {
+      validarEntradasTestePython(caso.given, tiposEntrada, tiposCompostos, `given da task ${task.nome}, caso ${caso.nome}`);
       const argumentos = [
         ...caso.given.campos
           .filter((campo) => tiposEntrada.has(campo.nome))
@@ -251,7 +257,8 @@ export function gerarTestes(modulo: IrModulo): string {
         linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    contexto = { ${contextoLinhas.join(", ")} }\n    with pytest.raises(${task.nome}_${tipoErro}Erro):\n        ${nomeFuncao}(entrada, contexto)\n`);
         continue;
       }
-      linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    resultado = ${nomeFuncao}(entrada)\n    assert resultado is not None\n`);
+      const expectativas = gerarExpectativasPython(task, caso.expect, tiposCompostos);
+      linhas.push(`def test_${normalizarNomeParaSimbolo(task.nome)}_${normalizarNomeParaSimbolo(caso.nome)}() -> None:\n    entrada = ${task.nome}Entrada(${argumentos})\n    resultado = ${nomeFuncao}(entrada)\n${expectativas.length ? expectativas.join("\n") : "    assert resultado is not None"}\n`);
     }
   }
   return linhas.join("\n");
@@ -264,7 +271,7 @@ export function gerarCabecalhoSemaPython(
   tipo: TipoCabecalhoSemaPython = "contrato",
 ): string {
   const descricoes: Record<TipoCabecalhoSemaPython, string> = {
-    contrato: "artefato Python gerado para executar e revisar as regras declaradas no contrato Sema.",
+    contrato: "andaime Python demonstrativo para revisar regras; não constitui prova de execução da implementação externa.",
     teste: "testes Python gerados a partir dos casos do contrato Sema.",
     schemas: "schemas FastAPI derivados do contrato Sema para entrada e saída públicas.",
     service: "service FastAPI que conecta o scaffold do framework às tasks governadas pelo contrato Sema.",
@@ -299,7 +306,7 @@ export function gerarPythonBase(modulo: IrModulo): ArquivoGerado[] {
   const tasks = modulo.tasks.map((task) => gerarTask(task, tiposCompostos)).join("\n");
   const contratosPublicos = gerarRotas(modulo);
 
-  const codigo = `${gerarCabecalhoSemaPython(modulo)}from __future__ import annotations\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n\n${tiposExternos}\n${tipos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
+  const codigo = `${gerarCabecalhoSemaPython(modulo)}from __future__ import annotations\n${interoperabilidades ? `${interoperabilidades}\n` : ""}\nfrom dataclasses import dataclass\nfrom types import SimpleNamespace\n${RUNTIME_PYTHON}\n${tiposExternos}\n${tipos}\n${enums}\n${entidades}\n${states}\n${flows}\n${routes}\n${tasks}\n${contratosPublicos}\n`;
   const testes = `${gerarCabecalhoSemaPython(modulo, "teste")}${gerarTestes(modulo)}`;
 
   return [

@@ -1,0 +1,80 @@
+module sema.produto.gerador_python_verificacao {
+  docs {
+    resumo: "Geracao Python com caminhos completos, valores demonstrativos coerentes, entradas de entidade tipadas e expectativas verificadas sem usar expect como implementacao."
+  }
+  vinculos {
+    arquivo: "pacotes/gerador-python/src/index.part01.ts"
+    arquivo: "pacotes/gerador-python/src/index.part02.ts"
+    arquivo: "pacotes/gerador-python/src/valores.ts"
+    arquivo: "pacotes/gerador-python/src/runtime.ts"
+    arquivo: "pacotes/gerador-python/src/expectativas.ts"
+    arquivo: "pacotes/nucleo/src/semantico/testesTipos.ts"
+    arquivo: "pacotes/nucleo/src/semantico/analisador.part08.ts"
+    arquivo: "pacotes/cli/src/geracaoCore.ts"
+    arquivo: "pacotes/cli/src/index.part07.ts"
+    arquivo: "testes/integracao/gerador-python-verificacao.test.ts"
+    arquivo: "testes/integracao/geradores.parte02.ts"
+    arquivo: "exemplos/python_verificacao.sema"
+    arquivo: "docs/testing.md"
+  }
+  task verificar_geracao_python {
+    input {
+      contrato: Texto required
+    }
+    output {
+      operadores_preservados: Booleano
+      caminhos_completos: Booleano
+      tipos_testes_validados: Booleano
+      expectativas_conferidas: Booleano
+      origem_demonstrativa_explicita: Booleano
+    }
+    rules {
+      contrato deve_ser preenchido
+      contrato deve_ser rejeitar_texto_em_entrada_de_entidade
+      contrato deve_ser preservar_garantias_e_expectativas
+    }
+    effects {
+      auditoria geracao_python_verificada criticidade = media
+    }
+    forbidden {
+      copiar_expect_para_saida_demonstrativa
+      ignorar_operador_de_comparacao
+      truncar_caminho_aninhado
+      declarar_andaime_como_prova_de_producao
+    }
+    impl {
+      ts: gerador_python.src.index.gerarPython
+    }
+    vinculos {
+      arquivo: "pacotes/gerador-python/src/index.ts"
+      simbolo: gerador_python.src.index.gerarPython
+    }
+    guarantees {
+      operadores_preservados == verdadeiro
+      caminhos_completos == verdadeiro
+      tipos_testes_validados == verdadeiro
+      expectativas_conferidas == verdadeiro
+      origem_demonstrativa_explicita == verdadeiro
+    }
+    tests {
+      caso "valores e caminhos tipados" {
+        given {
+          contrato: "limites numericos e entidade com metadados aninhados"
+        }
+        expect {
+          sucesso: verdadeiro
+          caminhos_completos: verdadeiro
+        }
+      }
+      caso "expect divergente reprova" {
+        given {
+          contrato: "saida demonstrativa distinta da expectativa"
+        }
+        expect {
+          sucesso: verdadeiro
+          expectativas_conferidas: verdadeiro
+        }
+      }
+    }
+  }
+}
