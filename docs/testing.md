@@ -169,3 +169,21 @@ this scaffold: its tests and guarantees cannot establish production behavior.
 Use the application's real tests and drift evidence for that claim. Generated
 failure cases currently retain the explicit synthetic error context and are
 not evidence that the real implementation produces those errors.
+
+To execute an explicitly filled local Python implementation without overwriting
+it, use the same verification output base that contains the generated module:
+
+```bash
+sema verificar contratos/app.sema --alvo python --saida .tmp/check --preservar-implementacao --json
+```
+
+This opt-in mode supports only Python with the base framework. All expected
+implementation files must already exist as regular files, without symlinks,
+junctions or hardlinks. It preserves those files byte for byte, regenerates the
+contract tests and support artifacts, and always runs the tests without reading
+or writing the verification cache. Missing implementations fail before writes;
+new expectations and incorrect implementation results still fail. The output
+reports `tipoEvidencia: implementacao_local_preservada` and
+`implementacaoExternaExecutada: false`: it proves execution of those local files,
+not automatic execution of a linked `impl`, a remote deployment or production.
+Normal verification retains the demonstration scaffold behavior.

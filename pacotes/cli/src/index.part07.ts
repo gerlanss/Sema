@@ -58,9 +58,12 @@ import {
   gravarCacheVerificacao,
 } from "./verificacaoCache.js";
 
+import { erroModoPreservacao, prepararImplementacaoPythonLocal, evidenciaPython } from "./verificacaoPythonLocal.js";
+
 export interface OpcoesVerificar {
   alvo?: string;
   semCache?: boolean;
+  preservarImplementacao?: boolean;
 }
 
 const FONTES_POR_ALVO_SUPORTADO: Record<string, AlvoGeracao[]> = {
@@ -349,7 +352,7 @@ export function imprimirResumoVerificacao(resumos: ResumoModuloVerificacao[]): v
       totalTestes += alvo.quantidadeTestes;
       totalAlvos += 1;
       console.log(
-        `  alvo=${alvo.alvo} framework=${alvo.framework} estrutura=${alvo.estrutura} status=${alvo.sucesso ? "ok" : "falhou"} arquivos=${alvo.arquivosGerados} testes=${alvo.quantidadeTestes}${alvo.testesExecutados ? "" : " (skip)"} saida=${alvo.pastaSaida}`,
+        `  alvo=${alvo.alvo} framework=${alvo.framework} estrutura=${alvo.estrutura} status=${alvo.sucesso ? "ok" : "falhou"} arquivos=${alvo.arquivosGerados} testes=${alvo.quantidadeTestes}${alvo.testesExecutados ? "" : " (skip)"}${alvo.tipoEvidencia ? ` evidencia=${alvo.tipoEvidencia} (não comprova produção)` : ""} saida=${alvo.pastaSaida}`,
       );
     }
   }
@@ -391,6 +394,11 @@ export async function comandoVerificar(
     ...resolverConfiguracaoVerificacaoPorAlvo(alvo, contextoProjeto.configCarregada),
   }));
   const incompatibilidade = configuracoesAlvo.find((item) => item.incompatibilidade);
+  const erroPreservacao = erroModoPreservacao(opcoes.preservarImplementacao, configuracoesAlvo);
+  if (erroPreservacao) {
+    console.error(erroPreservacao);
+    return 1;
+  }
   if (incompatibilidade?.incompatibilidade) {
     console.error(incompatibilidade.incompatibilidade);
     return 1;
@@ -425,7 +433,7 @@ export async function comandoVerificar(
         estrutura,
         conteudoContrato,
       });
-      const emCache = opcoes.semCache ? undefined : await carregarCacheVerificacao(chave, pastaAlvo);
+      const emCache = opcoes.semCache || opcoes.preservarImplementacao ? undefined : await carregarCacheVerificacao(chave, pastaAlvo);
       if (emCache) {
         resumoModulo.alvos.push({
           alvo,
@@ -447,10 +455,15 @@ export async function comandoVerificar(
         continue;
       }
       const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
-      const escrita = await escreverArquivos(pastaAlvo, arquivos, { artefatoGerado: true });
+      const preparacao = opcoes.preservarImplementacao ? await prepararImplementacaoPythonLocal(pastaAlvo, arquivos) : { arquivosParaEscrita: arquivos };
+      if (preparacao.erro) {
+        console.error(preparacao.erro);
+        return 1;
+      }
+      const escrita = await escreverArquivos(pastaAlvo, preparacao.arquivosParaEscrita, { artefatoGerado: true });
       artefatosGeradosAcimaDoLimite.push(...escrita.artefatosGeradosAcimaDoLimite);
       const { execucao, testesExecutados } = executarTestesParaVerificacao(alvo, pastaAlvo, arquivos, framework);
-      await gravarCacheVerificacao({
+      if (!opcoes.preservarImplementacao) await gravarCacheVerificacao({
         schemaVersion: SCHEMA_CACHE_VERIFICACAO,
         chave,
         versaoCli: pacoteCli.version,
@@ -472,7 +485,7 @@ export async function comandoVerificar(
         estrutura,
         testesExecutados,
         origem: "executado",
-        ...(alvo === "python" ? { tipoEvidencia: "andaime_demonstrativo" as const, implementacaoExternaExecutada: false } : {}),
+        ...(alvo === "python" ? evidenciaPython(opcoes.preservarImplementacao) : {}),
       });
       if (execucao.codigoSaida !== 0) {
         imprimirResumoVerificacao([...resumos, resumoModulo]);
@@ -536,6 +549,11 @@ export async function comandoVerificarJson(
     ...resolverConfiguracaoVerificacaoPorAlvo(alvo, contextoProjeto.configCarregada),
   }));
   const incompatibilidade = configuracoesAlvo.find((item) => item.incompatibilidade);
+  const erroPreservacao = erroModoPreservacao(opcoes.preservarImplementacao, configuracoesAlvo);
+  if (erroPreservacao) {
+    console.log(JSON.stringify({ comando: "verificar", sucesso: false, erro: erroPreservacao, modulos: [], totais: { modulos: 0, alvos: 0, arquivos: 0, testes: 0 } }));
+    return 1;
+  }
   if (incompatibilidade?.incompatibilidade) {
     console.log(JSON.stringify({
       comando: "verificar",
@@ -586,7 +604,7 @@ export async function comandoVerificarJson(
         estrutura,
         conteudoContrato,
       });
-      const emCache = opcoes.semCache ? undefined : await carregarCacheVerificacao(chave, pastaAlvo);
+      const emCache = opcoes.semCache || opcoes.preservarImplementacao ? undefined : await carregarCacheVerificacao(chave, pastaAlvo);
       if (emCache) {
         resumoModulo.alvos.push({
           alvo,
@@ -607,10 +625,15 @@ export async function comandoVerificarJson(
         continue;
       }
       const arquivos = aplicarEstruturaSaida(gerarArquivosPorAlvo(ir, alvo, framework), ir, estrutura);
-      const escrita = await escreverArquivos(pastaAlvo, arquivos, { artefatoGerado: true });
+      const preparacao = opcoes.preservarImplementacao ? await prepararImplementacaoPythonLocal(pastaAlvo, arquivos) : { arquivosParaEscrita: arquivos };
+      if (preparacao.erro) {
+        console.log(JSON.stringify({ comando: "verificar", sucesso: false, erro: preparacao.erro, modulos: resumos, totais: { modulos: resumos.length, alvos: 0, arquivos: 0, testes: 0 } }));
+        return 1;
+      }
+      const escrita = await escreverArquivos(pastaAlvo, preparacao.arquivosParaEscrita, { artefatoGerado: true });
       artefatosGeradosAcimaDoLimite.push(...escrita.artefatosGeradosAcimaDoLimite);
       const { execucao, testesExecutados } = executarTestesParaVerificacao(alvo, pastaAlvo, arquivos, framework, true);
-      await gravarCacheVerificacao({
+      if (!opcoes.preservarImplementacao) await gravarCacheVerificacao({
         schemaVersion: SCHEMA_CACHE_VERIFICACAO,
         chave,
         versaoCli: pacoteCli.version,
@@ -632,7 +655,7 @@ export async function comandoVerificarJson(
         estrutura,
         testesExecutados,
         origem: "executado",
-        ...(alvo === "python" ? { tipoEvidencia: "andaime_demonstrativo" as const, implementacaoExternaExecutada: false } : {}),
+        ...(alvo === "python" ? evidenciaPython(opcoes.preservarImplementacao) : {}),
       });
       resumoModulo.saidaTestes.push({ alvo, stdout: execucao.saidaPadrao, stderr: execucao.saidaErro });
       if (execucao.codigoSaida !== 0) {

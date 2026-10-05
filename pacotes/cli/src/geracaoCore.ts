@@ -42,7 +42,7 @@ export interface ResumoAlvoVerificacao {
   estrutura: EstruturaSaida;
   testesExecutados: boolean;
   origem?: "executado" | "cache";
-  tipoEvidencia?: "andaime_demonstrativo";
+  tipoEvidencia?: "andaime_demonstrativo" | "implementacao_local_preservada";
   implementacaoExternaExecutada?: boolean;
 }
 

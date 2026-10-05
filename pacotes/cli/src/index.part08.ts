@@ -224,13 +224,13 @@ export async function principal(): Promise<number> {
           posicionais[0],
           resolverSaidaPadrao(obterOpcao(resto, "--saida", "./.tmp/sema-verificar"), "typescript", await carregarConfiguracaoProjeto(posicionais[0] ? path.resolve(cwd, posicionais[0]) : cwd)),
           cwd,
-          { alvo: obterOpcao(resto, "--alvo"), semCache: possuiFlag(resto, "--sem-cache") },
+          { alvo: obterOpcao(resto, "--alvo"), semCache: possuiFlag(resto, "--sem-cache"), preservarImplementacao: possuiFlag(resto, "--preservar-implementacao") },
         )
         : await comandoVerificar(
           posicionais[0],
           resolverSaidaPadrao(obterOpcao(resto, "--saida", "./.tmp/sema-verificar"), "typescript", await carregarConfiguracaoProjeto(posicionais[0] ? path.resolve(cwd, posicionais[0]) : cwd)),
           cwd,
-          { alvo: obterOpcao(resto, "--alvo"), semCache: possuiFlag(resto, "--sem-cache") },
+          { alvo: obterOpcao(resto, "--alvo"), semCache: possuiFlag(resto, "--sem-cache"), preservarImplementacao: possuiFlag(resto, "--preservar-implementacao") },
         );
       break;
     case "inspecionar":

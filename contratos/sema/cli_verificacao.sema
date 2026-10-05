@@ -4,6 +4,83 @@ module sema.produto.cli_verificacao {
     arquivo: "docs/commands.md"
   }
 
+  task preservar_implementacao_python_local {
+    input {
+      pasta_saida: Texto required
+      preservacao_explicita: Booleano required
+    }
+    output {
+      implementacao_preservada: Booleano
+      testes_regenerados: Booleano
+      cache_ignorado: Booleano
+      evidencia_local_explicita: Booleano
+    }
+    rules {
+      pasta_saida deve_ser preenchida
+      preservacao_explicita deve_ser restrita_ao_alvo_python_framework_base
+    }
+    effects {
+      fs.write testes_do_contrato criticidade = media
+      auditoria verificacao_python_local criticidade = media
+    }
+    authz {
+      escopo: sema.verificar.executar
+      tenant: opcional
+    }
+    dados {
+      classificacao_padrao: interno
+      redacao_log: parcial
+    }
+    audit {
+      evento: sema.verificar.python_local
+      ator: agente.sema
+      correlacao: request_id
+      retencao: "30d"
+      motivo: obrigatorio
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "120s"
+      retry: "nenhum"
+      compensacao: "manter implementacao e reprovar testes divergentes"
+      criticidade_operacional: media
+    }
+    forbidden {
+      sobrescrever_implementacao_no_modo_preservar
+      reaproveitar_cache_no_modo_preservar
+      preservar_testes_editados_em_vez_de_regenerar
+      criar_andaime_quando_implementacao_local_ausente
+      afirmar_execucao_externa_ou_producao_por_preservar_arquivo_local
+      aceitar_implementacao_por_link_simbolico
+    }
+    impl {
+      ts: cli.src.verificacao_python_local.prepararImplementacaoPythonLocal
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/verificacaoPythonLocal.ts"
+      arquivo: "pacotes/cli/src/index.part07.ts"
+      arquivo: "pacotes/cli/src/index.part08.ts"
+      arquivo: "pacotes/cli/src/cliGrammar.ts"
+      arquivo: "pacotes/cli/src/cliHelpTexto.ts"
+      arquivo: "pacotes/cli/src/geracaoCore.ts"
+      arquivo: "testes/integracao/verificacao-python-local.test.ts"
+      arquivo: "docs/testing.md"
+      simbolo: cli.src.verificacao_python_local.prepararImplementacaoPythonLocal
+    }
+    guarantees {
+      implementacao_preservada == verdadeiro
+      testes_regenerados == verdadeiro
+      cache_ignorado == verdadeiro
+      evidencia_local_explicita == verdadeiro
+    }
+    tests {
+      caso "preservacao explicita regenera testes sem cache" {
+        given { pasta_saida: ".tmp/verificar/python/demo" preservacao_explicita: verdadeiro }
+        expect { sucesso: verdadeiro implementacao_preservada: verdadeiro }
+      }
+    }
+  }
+
   task verificar_contratos_com_escopo_e_reuso {
     input {
       entrada: Texto required
