@@ -91,6 +91,19 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 
 ## Codex and Context
 
+Session freshness checks the managed `AGENTS.md` block, `SEMA_BOOT.md` and
+`SEMA_SMALL_MODEL.md` against the current CLI templates as well as contract
+hashes. Older instructions can therefore require `sync-codex` even when no
+contract changed. Synchronization preserves manual rules outside the managed
+block. The generated workflow uses `drift --cache fresh --pacote --json`; omit
+`--pacote` only when full evidence is needed. A session budget limits that
+session response, not subsequent commands, file reads or the full conversation.
+
+`validar` and `formatar` require selected `.sema` contracts. An empty scope
+returns a nonzero exit code and `SEM_CLI_SEM_CONTRATOS`; it does not validate
+an application or adopt the project. Before first-time adoption, the agent
+must obtain consent and the effective context window.
+
 - `sema ajuda-ia`: short guidance for Codex.
 - `sema starter-ia`: operational starter.
 - `sema contexto-ia <arquivo.sema> --saida <dir> --json`: AI context package.

@@ -53,12 +53,12 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
     contexto: contexto ? { ...contexto, candidatosOmitidos: 0 } : undefined,
     intencoes: { intencao, docsBloqueantes: docs?.leituraObrigatoria.map((doc) => doc.relativo) ?? [], leituraPendente: true },
     gates: {
-      drift: `sema drift ${alvo} --cache fresh --json`,
+      drift: `sema drift ${alvo} --cache fresh --pacote --json`,
       validar: `sema validar ${alvo} --json`,
       verificar: `sema verificar ${alvo} --alvo <alvo> --json`,
       finalizar: `sema finalizar-mudanca --intencao "<intenção>" --arquivo ${alvo} --doc-lida <doc> --json`,
     },
-    proximosPassos: !frescor.fresco ? ["Rode sema sync-codex --json e repita a sessão."]
+    proximosPassos: !frescor.fresco ? [frescor.sugestao, "Repita a sessão após a sincronização; não carregue o índice bruto."]
       : contrato ? [`Leia ${contrato}; consulte docs-impacto com esse --arquivo para motivos e dependências. Depois inspecione apenas o código vinculado.`, "Referências do índice são navegação. Confirme regras completas e gates antes de agir."]
       : ["Informe uma intenção específica ou --arquivo <contrato-ou-código> para resolver o escopo. Não edite enquanto houver ambiguidade."],
     orcamento: { metodo: "chars_div_4", tokensEstimadosResposta: 0, limiteTokens: perfil.orcamentoTokens, contagemExata: false, contextoDaConversaMedido: false },

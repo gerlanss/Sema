@@ -123,7 +123,6 @@ const comandosGovernancaDuplicadosNaSkill = [
   "inspecionar",
   "drift",
   "impacto",
-  "validar",
   "finalizar-mudanca",
 ];
 
@@ -412,6 +411,7 @@ async function verificarFronteiraPublica({ json = false } = {}) {
   const marketplace = JSON.parse(await readFile(path.join(raiz, ".agents", "plugins", "marketplace.json"), "utf8").catch(() => "{}"));
   const manifestPlugin = JSON.parse(await readFile(path.join(raiz, "plugins", "sema", ".codex-plugin", "plugin.json"), "utf8").catch(() => "{}"));
   const skillSema = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "SKILL.md"), "utf8").catch(() => "");
+  const skillDistribuicao = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "references", "distribution.md"), "utf8").catch(() => "");
   const openaiYaml = await readFile(path.join(raiz, "plugins", "sema", "skills", "sema", "agents", "openai.yaml"), "utf8").catch(() => "");
   const skillGlobalFonte = await readFile(path.join(raiz, "pacotes", "cli", "src", "distribuicao", "skillGlobal.ts"), "utf8").catch(() => "");
   const postinstallFonte = await readFile(path.join(raiz, "pacotes", "cli", "scripts", "postinstall.mjs"), "utf8").catch(() => "");
@@ -431,11 +431,12 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     manifestPlugin.version === manifestCli.version &&
     manifestPlugin.skills === "./skills/" &&
     pluginMarcaOficial &&
-    String(manifestPlugin.description ?? "").includes("bootstrap") &&
+    String(manifestPlugin.description ?? "").includes("creating or editing") &&
+    skillSema.includes("references/distribution.md") &&
     skillSema.includes("sema iniciar --template base") &&
     skillSema.includes("sema sync-codex --json") &&
     /^---\r?\nname: sema\r?\ndescription: .+\r?\n---/u.test(skillSema) &&
-    /^interface:\r?\n  display_name: "Sema"\r?\n  short_description: ".+"\r?\n  default_prompt: ".*\$sema.*"\r?\n?$/u.test(openaiYaml);
+    /^interface:\r?\n  display_name: "Sema"\r?\n  short_description: ".+"\r?\n  default_prompt: ".*\$sema.*"\r?\npolicy:\r?\n  allow_implicit_invocation: true\r?\n?$/u.test(openaiYaml);
   if (!skillBootstrapCodexOficial) {
     registrar(bloqueios, "plugins/sema", "skill oficial precisa cobrir o bootstrap, compartilhar a versao da CLI e delegar ao AGENTS.md");
   }
@@ -445,7 +446,10 @@ async function verificarFronteiraPublica({ json = false } = {}) {
 
   const skillDelegaAoAgentsMd =
     skillSema.includes("Read the generated `AGENTS.md`") &&
-    skillSema.includes("This skill only bridges the absence of that protocol") &&
+    skillSema.includes("Follow the local gates and selected contract") &&
+    skillSema.includes("ask whether") && skillSema.includes("wait for the answer") &&
+    skillSema.includes("effective configured context window") &&
+    skillSema.includes("`sema validar` validates those") &&
     comandosGovernancaDuplicadosNaSkill.every((comando) => !skillSema.includes(`sema ${comando}`));
   if (!skillDelegaAoAgentsMd) {
     registrar(bloqueios, "plugins/sema/skills/sema/SKILL.md", "skill deve encerrar no bootstrap e delegar a governanca ao AGENTS.md sem duplicar comandos");
@@ -455,20 +459,20 @@ async function verificarFronteiraPublica({ json = false } = {}) {
     (manifestCli.files ?? []).includes("skills") &&
     (manifestCli.files ?? []).includes("scripts/postinstall.mjs") &&
     manifestCli.scripts?.postinstall === "node scripts/postinstall.mjs" &&
-    skillSema.includes("npm install --global @semacode/cli") &&
-    skillSema.includes("sema skill sync --json");
+    skillDistribuicao.includes("npm install --global @semacode/cli") &&
+    skillDistribuicao.includes("sema skill sync --json");
   const skillAgentsCanonica =
-    skillSema.includes("~/.agents/skills/sema") &&
+    skillDistribuicao.includes("~/.agents/skills/sema") &&
     skillGlobalFonte.includes('".agents", "skills", "sema"');
   const skillClaudeEspelhoGerenciado =
-    /`~\/\.claude\/skills\/sema`[\s\S]{0,100}\bdetected\b/iu.test(skillSema) &&
+    /`~\/\.claude\/skills\/sema`[\s\S]{0,100}\bdetected\b/iu.test(skillDistribuicao) &&
     skillGlobalFonte.includes('".claude", "skills", "sema"') &&
     skillGlobalFonte.includes("NOT_DETECTED");
   const workspaceEntrypointUnicoAgentsMd =
     skillDelegaAoAgentsMd &&
-    skillSema.includes("`AGENTS.md` is the automatic, continuous workspace protocol for Codex");
+    skillDistribuicao.includes("`AGENTS.md` is the automatic, continuous workspace protocol for Codex");
   const cachePluginIntocado =
-    skillSema.includes("Never write into a host-managed plugin cache") &&
+    skillDistribuicao.includes("Never write into a host-managed plugin cache") &&
     !/\.codex[\\/]plugins[\\/]cache/iu.test(`${skillGlobalFonte}\n${postinstallFonte}`);
   if (!skillPortatilGlobalOficial || !skillAgentsCanonica || !skillClaudeEspelhoGerenciado) {
     registrar(bloqueios, "pacotes/cli", "pacote publico precisa conter e sincronizar a skill portatil nas raizes globais gerenciadas");

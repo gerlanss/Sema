@@ -82,8 +82,7 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
     .filter((task) => !targetModule || task.modulo === targetModule)
     .filter((task) => task.semImplementacao || task.implsQuebrados > 0 || task.lacunas.length > 0)
     .map((task) => compactarRegistro(task as unknown as Record<string, unknown>, [
-      "modulo", "task", "impls", "implsValidos", "implsQuebrados", "semImplementacao", "scoreSemantico",
-      "confiancaVinculo", "riscoOperacional", "lacunas", "arquivosProvaveisEditar", "checksSugeridos",
+      "modulo", "task", "implsQuebrados", "semImplementacao", "riscoOperacional", "lacunas",
     ]));
   const base = {
     schema: "sema.ai.drift-pack/v1" as const,
@@ -124,8 +123,12 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
       tasksWithoutImplementation: tarefas,
     },
     guidance: {
-      touchFirst: resultado.resumo_operacional.oQueTocar,
-      validate: resultado.resumo_operacional.oQueValidar,
+      touchFirst: [...new Set([...resultado.resumo_operacional.oQueTocar, ...resultado.tasks
+        .filter((task) => !targetModule || task.modulo === targetModule)
+        .flatMap((task) => task.arquivosProvaveisEditar)])],
+      validate: [...new Set([...resultado.resumo_operacional.oQueValidar, ...resultado.tasks
+        .filter((task) => !targetModule || task.modulo === targetModule)
+        .flatMap((task) => task.checksSugeridos)])],
       loose: resultado.resumo_operacional.oQueEstaFrouxo,
       inferred: resultado.resumo_operacional.oQueFoiInferido,
       risks: resultado.resumo_operacional.riscosPrincipais,
@@ -139,12 +142,14 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
         "vínculos válidos detalhados",
         "catálogo de arquivos e bytes lidos",
         "cache interno e candidatos não bloqueantes",
+        "caminhos e checks repetidos por task; disponíveis uma vez em guidance",
+        "detalhes completos: repetir drift no mesmo contrato sem --pacote",
       ],
     },
   };
-  const packChars = JSON.stringify(base).length;
+  const packChars = JSON.stringify(base, null, 2).length;
   const rawDriftChars = options.rawDriftChars ?? 0;
-  return {
+  const pack: DriftPack = {
     ...base,
     telemetry: {
       packChars,
@@ -162,4 +167,12 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
       ],
     },
   };
+  // Inclui a própria telemetria e a indentação do pacote; o envelope CLI é externo.
+  for (let i = 0; i < 4; i++) {
+    pack.telemetry.packChars = JSON.stringify(pack, null, 2).length;
+    pack.telemetry.packEstimatedTokens = estimarTokens(pack.telemetry.packChars);
+    pack.telemetry.reductionPercent = rawDriftChars === 0 ? 0
+      : Math.round((1 - pack.telemetry.packChars / rawDriftChars) * 10000) / 100;
+  }
+  return pack;
 }

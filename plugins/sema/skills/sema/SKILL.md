@@ -1,112 +1,74 @@
 ---
 name: sema
-description: Install, update or repair the local Sema CLI, or adopt Sema in a project. Separate distribution work from workspace adoption. In an existing Sema project, delegate to AGENTS.md and the local CLI with progressive context.
+description: Use before creating or editing software in a workspace, including small fixes, plain HTML/CSS/JavaScript apps, and empty projects. Ask about first-time Sema adoption, confirm the effective context window, then follow local contracts before implementation. Also handles Sema installation, updates and repair. The user need not mention Sema.
 ---
 
-# Sema Bootstrap
+# Sema
 
-The local CLI is the source of truth for Codex and compatible coding agents,
-including Harness, OpenCode and Bionic. In an existing Sema workspace, read
-`AGENTS.md` and `SEMA_BOOT.md`, then use its session navigation. Do not preload
-`SEMA_INDEX.json`, `AGENT_CONTEXT_PACK.json`, all contracts or the whole project.
-This skill only bridges the absence of that protocol during first contact;
-installation and repair use the separate flows below.
+Load this skill before the first project write for creation or editing tasks.
+Sema applies to simple static apps as well as larger systems. A request to
+create an app, fix a bug or change a feature enters this workflow even when
+it does not name Sema. Loading the skill is not consent to adopt it.
 
-## Choose the authorized scope
+## Create or edit a project
 
-Never treat a request to install, update, or repair the global distribution as
-permission to adopt the current workspace. Informational use does not mutate
-it. Explicit adoption already authorizes bootstrap; do not ask again. Clarify
-only an unresolved scope. Preserve existing files and never add `--force`
-without an explicit human overwrite decision.
+1. In the current workspace, run `sema --version`. If PATH fails, use the
+   fallback below. Look for `AGENTS.md`, `SEMA_BOOT.md` and applicable contracts
+   without reading the whole project.
+2. **First use in a project without Sema:** before implementation, ask whether
+   the user wants to adopt Sema in this project and wait for the answer. This
+   applies both to an empty project and to editing existing ungoverned code.
+   Do not infer consent from installation, automatic skill activation or a
+   generic request to create/edit software. An explicit adoption request or
+   previous acceptance for this same project already answers the question;
+   do not ask again. If declined, do not initialize Sema or claim its validation;
+   follow the remaining user and project instructions.
+3. **After acceptance, or in an existing Sema project:** obtain the model's
+   effective configured context window in tokens from the client or user.
+   If unknown, ask and wait before loading project context or implementing.
+   Parameter count (4B, 9B), advertised maximum and output-token limit are not
+   the configured context window. Recheck when the model/configuration changes.
+4. **Adopting this project:** preserve existing files and run:
 
-## Install or update globally
+   ```text
+   sema descobrir explicar flow.project-adoption --json
+   sema iniciar --template base --janela-contexto <confirmed-tokens>
+   sema sync-codex --json
+   ```
 
-1. Accept an exact SemVer, or resolve an omitted version / `latest` once:
-   `npm view @semacode/cli@latest version --json`.
-   Require one exact SemVer JSON string; stop on failure, range or malformed
-   output. Freeze that version before installing:
-   `npm install --global @semacode/cli@<resolved-exact-semver>`.
-   Substitute the validated version; never pass the placeholder literally.
-2. Run that `npm install --global` even when an older `sema --version` already
-   works. Synchronizing a skill does not upgrade the package.
-3. Probe both CLI candidates below. Require the selected candidate to report
-   the exact installed version and support the skill status command.
-4. Run `sema skill status --json`. If a managed component is not `READY`, run
-   `sema skill sync --json`, then status again. Require the final `READY`
-   state and version match; npm exit code alone is insufficient proof.
-5. Report the installed version. Existing chats may need a skill reload or
-   a new chat. Do not initialize a workspace unless adoption was also requested.
+   Read the generated `AGENTS.md` and `SEMA_BOOT.md`. Model the requested
+   behavior in an applicable contract before implementing. Never add `--force`
+   without an explicit overwrite decision.
+5. **Existing Sema project:** read its `AGENTS.md` and `SEMA_BOOT.md`, then run
+   `sema sessao "<task intention>" --janela-contexto <confirmed-tokens> --json`.
+   Follow the local gates and selected contract through implementation/testing.
+   Save a context profile only with `--salvar-perfil` as requested.
 
-## Resolve the CLI and its results
+`sema formatar` formats .sema contracts and `sema validar` validates those
+contracts. Neither adopts a project or proves that HTML, CSS, JavaScript or
+the application works. Report what was actually checked, including no contracts
+found. If the user corrects a missed Sema workflow, resume it before more writes.
 
-Probe `sema --version` and `sema skill status --json` from the workspace root.
-Also probe the PATH-independent fallback with the same two arguments.
-Windows PowerShell fallback:
+Read only the selected contract, declared dependencies and blocking docs.
+`SEMA_INDEX.json` and `AGENT_CONTEXT_PACK.json` are internal CLI databases,
+not files to preload. Resolve stale indexes or ambiguous targets before editing.
+The session budget estimates its response, not the whole chat.
+
+## CLI fallback and results
+
+On Windows PowerShell, use this directly if PATH fails:
 
 ```powershell
 & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version
 ```
 
-On macOS/Linux: `"$HOME/.sema/bin/sema" --version`.
-Windows PATH uses `sema.ps1` in PowerShell and `sema.cmd` in cmd.exe. Do not
-invoke the batch shim as the absolute PowerShell fallback.
+On macOS/Linux: `"$HOME/.sema/bin/sema" --version`. Do not declare the CLI
+unavailable before trying the managed fallback. If both fail, stop governed
+edits. JSON results nest domain state in `payload`; `ok` alone is not proof
+of success. Respect `payload.sucesso`, `valido`, blockers and scope.
 
-If valid candidates disagree, prefer the managed candidate. Use it when PATH
-is stale, fails, or does not support `sema skill status --json`. During an
-update, any selected candidate must match the installed exact version.
-Do not declare Sema unavailable until both candidates have failed validation.
-If unavailable, stop before governed edits; install only within an authorized
-global install/update request. Repair alone does not authorize a new version.
+## Install, update or repair Sema
 
-`--version` is plain SemVer. JSON help/control failures use the six-field
-`sema.cli.control/v1` envelope. Valid commands use the eight-field
-`sema.cli.result/v1`: schemaVersion, ok, kind, command, code, message, exitCode,
-payload. Read domain state inside `payload`; `data` is not an alias and `ok`
-does not replace `payload.sucesso` or another domain verdict.
-
-## Repair without upgrading
-
-Resolve the current CLI, inspect status, and synchronize only non-READY
-managed components. Prove the result with status again. Repair may synchronize the current
-launcher and skill, but must not run `npm install`, choose a new version or
-mutate the workspace.
-
-## Adopt a workspace with a bounded context
-
-If no contract/protocol exists, obtain explicit adoption authorization before
-implementation. A request to adopt or initialize this project already grants
-it. After authorization, inspect the official flow:
-
-`sema descobrir explicar flow.project-adoption --json`
-
-Before creating files, obtain the model's **effective configured context
-window in tokens** from the client or user. Model size, advertised capacity
-and names such as 9B do not prove that value. Do not invent a default.
-Initialize with the confirmed value:
-
-`sema iniciar --template base --janela-contexto <tokens>`
-
-Then run `sema sync-codex --json`. Read the generated `AGENTS.md` and
-`SEMA_BOOT.md`, and delegate the governed workflow to them. For an existing
-workspace, the session requests a missing profile; persist it only when
-requested with `--salvar-perfil`, and reconfigure after changing models.
-The context budget estimates a session response, not the entire conversation
-or exact tokenizer usage. Expand through the selected contract and declared
-links, leaving recommended documents available on demand. A stale index or
-ambiguous target requires correction or refinement before acting.
-
-## Distribution boundaries
-
-- `AGENTS.md` is the automatic, continuous workspace protocol for Codex.
-  Compatible clients follow the same local protocol; do not duplicate it here.
-- Launchers are managed at `~/.sema/bin`. The canonical skill is managed at
-  `~/.agents/skills/sema`; the mirror at `~/.claude/skills/sema` is managed
-  when Claude is detected. Client-specific copies require an explicit request
-  and the client's supported discovery location; preserve unrelated skills.
-- Never write into a host-managed plugin cache or overwrite an unmanaged or
-  modified skill silently. Preserve files and stop on symlink/junction escapes.
-- Do not introduce runtime access gates: no Sema login, activation key,
-  license check, tokens, credits, billing or remote workspace mirror. This
-  does not waive explicit human
-  authorization for workspace adoption or overwrite.
+Only for distribution work, read [references/distribution.md](references/distribution.md).
+Do not load it for ordinary project creation or editing. Informational requests
+do not mutate a workspace. Installation and repair remain separate from adoption.

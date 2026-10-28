@@ -2,6 +2,8 @@
 // Descrição: gera contexto local e grava artefatos somente dentro da base validada.
 
 import { mkdir, readFile, readdir, stat } from "node:fs/promises";
+import { diagnosticarEntradaContratos } from "./entradaContratos.js";
+import { arquivosProtocoloDesatualizados } from "./agentProtocol.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -175,6 +177,8 @@ export async function verificarFrescorArtefatos(baseProjeto: string): Promise<{
   hashArtefato: string | null;
   hashAtual: string;
   contratosMudaram: boolean;
+  protocoloAtualizado: boolean;
+  arquivosProtocoloDesatualizados: string[];
   sugestao: string;
 }> {
   const caminhoIndex = path.join(baseProjeto, "SEMA_INDEX.json");
@@ -191,13 +195,17 @@ export async function verificarFrescorArtefatos(baseProjeto: string): Promise<{
   const contratos = await listarArquivosDeOrigens(origens);
   const hashAtual = await calcularHashContratos(contratos, baseProjeto);
 
-  const fresco = hashArtefato === hashAtual;
+  const protocoloPendente = await arquivosProtocoloDesatualizados(baseProjeto);
+  const contratosMudaram = hashArtefato !== hashAtual;
+  const fresco = !contratosMudaram && protocoloPendente.length === 0;
   return {
     fresco,
     hashArtefato,
     hashAtual,
-    contratosMudaram: !fresco,
-    sugestao: fresco ? "" : "Artefatos de contexto estao desatualizados; rode sema sync-codex --json para regenerar.",
+    contratosMudaram,
+    protocoloAtualizado: protocoloPendente.length === 0,
+    arquivosProtocoloDesatualizados: protocoloPendente,
+    sugestao: fresco ? "" : "Índice ou protocolo de entrada desatualizado; rode sema sync-codex --json para atualizar o bloco gerenciado e preservar as regras manuais.",
   };
 }
 
@@ -664,14 +672,16 @@ export async function comandoFinalizarMudanca(posicionais: string[], args: strin
 
 export async function comandoValidar(entrada?: string): Promise<number> {
   const modulos = await carregarModulos(entrada);
-  const diagnosticos = modulos.flatMap((item) => item.resultado.diagnosticos);
+  const diagnosticos = [...diagnosticarEntradaContratos(modulos.map((item) => item.caminho)),
+    ...modulos.flatMap((item) => item.resultado.diagnosticos)];
   console.log(formatarDiagnosticos(diagnosticos));
   return temErros(diagnosticos) ? 1 : 0;
 }
 
 export async function comandoValidarJson(entrada?: string): Promise<number> {
   const modulos = await carregarModulos(entrada);
-  const diagnosticos = modulos.flatMap((item) => item.resultado.diagnosticos);
+  const diagnosticos = [...diagnosticarEntradaContratos(modulos.map((item) => item.caminho)),
+    ...modulos.flatMap((item) => item.resultado.diagnosticos)];
   const resultado = gerarRespostaValidacao(diagnosticos);
   console.log(JSON.stringify(resultado, null, 2));
   return resultado.valido ? 0 : 1;

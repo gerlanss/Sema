@@ -230,9 +230,14 @@ The CLI is the local engine and source of truth. `AGENTS.md` is the
 cross-agent workspace protocol Sema generates; agent tools that read it —
 Claude, Codex, zCode (GLM) and Kimi among them — operate under the same
 governance. The bundled skill handles first contact in projects that do not
-have Sema yet: it locates the CLI, requests adoption authorization, generates
-`AGENTS.md`, then delegates to it. Installing the CLI never authorizes
-adoption by itself.
+have Sema yet. Load it before creating or editing software, even for a small
+static app and without naming Sema in the request. On first use in a project,
+it asks whether the user wants adoption and waits. After acceptance it confirms
+the effective context window, generates `AGENTS.md`, then delegates to it.
+Existing Sema projects do not need adoption again. Installing the CLI never
+authorizes adoption by itself. `formatar` and `validar` operate on contracts;
+they do not adopt the workspace or test the application. Automatic skill
+selection still depends on client discovery and model behavior.
 
 ```bash
 sema iniciar --template base --janela-contexto 32768

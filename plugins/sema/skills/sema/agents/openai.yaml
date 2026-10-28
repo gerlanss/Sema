@@ -1,4 +1,6 @@
 interface:
   display_name: "Sema"
-  short_description: "Separate Sema install, repair, and adoption"
-  default_prompt: "Use $sema to classify global install or update, distribution repair, informational use, and explicit workspace adoption before running the correct isolated flow."
+  short_description: "Use Sema before creating or editing software"
+  default_prompt: "Use $sema before creating or editing this project: ask about first-time adoption, confirm the effective context window, and follow local contracts; route install, update or repair separately."
+policy:
+  allow_implicit_invocation: true

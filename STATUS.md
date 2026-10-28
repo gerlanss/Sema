@@ -7,10 +7,10 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `4.2.0`
+- Version: `4.2.1`
 - Package: `@semacode/cli`
 - Last updated: 2026-10-28
-- Reference commit: `c066f55`
+- Reference commit: `e6dfec5`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -32,6 +32,12 @@ Every public publication must pass:
 - `npm run release:verificar-drift`
 
 ## Maintenance Focus
+
+- Load the skill before software creation or editing; ask for first-time
+  project adoption consent and the effective context window before implementation.
+- Detect obsolete managed protocols even when contracts have not changed;
+  preserve manual rules and prefer compact fresh drift with visible blockers.
+- Reject validation or formatting when no contracts were actually selected.
 
 - Start agents with a bounded session, explicit effective context window and
   exact contract navigation; keep the raw index internal to the CLI.

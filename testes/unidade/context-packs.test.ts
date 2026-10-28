@@ -121,6 +121,11 @@ test("drift-pack preserva trava e divergência, omitindo somente detalhes válid
   assert.equal(pacote.counts.brokenImplementations, 1);
   assert.equal(pacote.blockers.implementations[0]?.task, "salvar");
   assert.equal(pacote.blockers.links[0]?.status, "nao_encontrado");
+  assert.equal(pacote.blockers.diagnostics[0]?.mensagem, "símbolo ausente");
+  assert.deepEqual(pacote.blockers.tasksWithoutImplementation[0]?.lacunas, ["impl quebrada"]);
+  assert.deepEqual(pacote.guidance.touchFirst, ["src/x.ts"]);
+  assert.ok(pacote.guidance.validate.includes("verificar"));
+  assert.equal(pacote.telemetry.packChars, JSON.stringify(pacote, null, 2).length);
   assert.ok(pacote.telemetry.reductionPercent > 0);
 });
 

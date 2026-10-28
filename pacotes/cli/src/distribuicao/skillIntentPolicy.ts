@@ -28,6 +28,7 @@ export type AcaoIntencaoSkillSema =
   | "responder_sem_mutar"
   | "pedir_autorizacao_adocao"
   | "descobrir_explicar_flow_project_adoption"
+  | "confirmar_janela_contexto_efetiva"
   | "iniciar_template_base"
   | "sync_codex"
   | "ler_agents_e_boot";
@@ -146,6 +147,7 @@ export function planejarIntencaoSkillSema(
       acoes_ordenadas: autorizado
         ? [
             "descobrir_explicar_flow_project_adoption",
+            "confirmar_janela_contexto_efetiva",
             "iniciar_template_base",
             "sync_codex",
             "ler_agents_e_boot",

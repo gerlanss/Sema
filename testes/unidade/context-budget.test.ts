@@ -59,6 +59,10 @@ test("sessao consulta índice grande internamente e cabe no orçamento da saída
     await mkdir(path.join(base, "contratos"));
     await writeFile(path.join(base, "sema.config.json"), JSON.stringify({ origens: ["./contratos"] }));
     await writeFile(path.join(base, "contratos/whatsapp.sema"), 'module app.whatsapp { docs { resumo: "Conexão WhatsApp e identificação do telefone conectado." } }');
+    const pack = criarAgentContextPack(criarGuiaCapacidadeIa());
+    await writeFile(path.join(base, "AGENTS.md"), `<!-- sema:agent-entrypoint:start -->\n${renderizarInstrucaoCodexSema(pack)}<!-- sema:agent-entrypoint:end -->\n`);
+    await writeFile(path.join(base, "SEMA_BOOT.md"), renderizarSemaBoot(pack));
+    await writeFile(path.join(base, "SEMA_SMALL_MODEL.md"), renderizarSemaSmallModel(pack));
     const hash = (await verificarFrescorArtefatos(base)).hashAtual;
     const modulo = { arquivo: "contratos/whatsapp.sema", modulo: "app.whatsapp", faz: "Conexão WhatsApp", tarefasPrincipais: ["conectar_whatsapp"], arquivosProvaveis: ["src/whatsapp.ts"] };
     await writeFile(path.join(base, "SEMA_INDEX.json"), JSON.stringify({ hashContratos: hash, modulos: [modulo], catalogoInterno: "X".repeat(626189) }));

@@ -2,6 +2,7 @@
 // Descrição: resume contrato ou projeto com política explícita de análise de drift.
 
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { diagnosticarEntradaContratos } from "./entradaContratos.js";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -170,6 +171,19 @@ export async function comandoFormatar(entrada: string | undefined, verificarApen
   const arquivos = estatisticas.isFile()
     ? [entradaResolvida]
     : contextoProjeto.arquivosProjeto.filter((arquivo) => arquivo.startsWith(path.resolve(entradaResolvida)));
+  const errosEntrada = diagnosticarEntradaContratos(arquivos);
+  if (errosEntrada.length > 0) {
+    if (emJson) {
+      console.log(JSON.stringify({
+        comando: "formatar", sucesso: false, modo: verificarApenas ? "check" : "write",
+        arquivos: [], totais: { arquivos: 0, alterados: 0, erros: errosEntrada.length },
+        diagnosticos: errosEntrada,
+      }, null, 2));
+    } else {
+      console.error(formatarDiagnosticos(errosEntrada));
+    }
+    return 1;
+  }
   const resultados: ResultadoFormatacaoArquivo[] = [];
 
   for (const arquivo of arquivos) {

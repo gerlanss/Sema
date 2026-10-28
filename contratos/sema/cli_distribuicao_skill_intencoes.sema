@@ -1,6 +1,6 @@
 module sema.produto.distribuicao_global.skill.intencoes {
   docs {
-    resumo: "Separa instalacao ou atualizacao global, reparo da distribuicao, uso informativo e adocao explicita do workspace. Latest e resolvida e validada como SemVer exata antes do install; PATH e launcher gerenciado sao provados antes de escolher a CLI ou declarar indisponibilidade."
+    resumo: "Aciona a skill antes de criar ou editar software, inclusive apps estaticos, sem exigir mencao a Sema. Pergunta sobre adocao na primeira vez no projeto, confirma contexto antes da implementacao e separa esse fluxo de instalacao, atualizacao, reparo e informacao."
     arquivo: "contratos/sema/cli_distribuicao_skill.sema"
     arquivo: "docs/security.md"
     arquivo: "docs/testing.md"
@@ -94,6 +94,7 @@ module sema.produto.distribuicao_global.skill.intencoes {
     vinculos {
       arquivo: "pacotes/cli/src/distribuicao/skillIntentPolicy.ts"
       arquivo: "plugins/sema/skills/sema/SKILL.md"
+      arquivo: "plugins/sema/skills/sema/references/distribution.md"
       arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
       arquivo: "testes/unidade/skill-intencoes.test.ts"
       simbolo: cli.src.distribuicao.skill_intent_policy.planejarIntencaoSkillSema
@@ -106,6 +107,9 @@ module sema.produto.distribuicao_global.skill.intencoes {
       criticidade_operacional: alta
     }
     guarantees {
+      acoes_ordenadas deve_ser confirmar_janela_efetiva_antes_de_iniciar
+      acoes_ordenadas deve_ser carregar_skill_antes_de_criar_ou_editar_software
+      acoes_ordenadas deve_ser perguntar_adocao_na_primeira_vez_no_projeto
       instalar_pacote_global deve_ser verdadeiro quando intencao em [INSTALAR_GLOBAL, ATUALIZAR_GLOBAL]
       resolver_latest_para_semver_exata deve_ser verdadeiro quando versao_solicitada == latest
       provar_path_e_launcher_gerenciado deve_ser verdadeiro quando intencao em [INSTALAR_GLOBAL, ATUALIZAR_GLOBAL, REPARAR_GLOBAL]

@@ -6,7 +6,10 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { verificarFrescorArtefatos } from "../../pacotes/cli/src/index.part04.js";
+import { criarAgentContextPack, criarGuiaCapacidadeIa } from "../../pacotes/cli/src/agentContextPack.js";
+import { renderizarInstrucaoCodexSema, renderizarSemaBoot, renderizarSemaSmallModel } from "../../pacotes/cli/src/agentBootstrap.js";
 
 async function criarWorkspace(): Promise<string> {
   const base = await mkdtemp(path.join(tmpdir(), "sema-sessao-"));
@@ -15,7 +18,10 @@ async function criarWorkspace(): Promise<string> {
   await writeFile(path.join(base, "sema.config.json"), JSON.stringify({
     origens: ["./contratos"],
   }, null, 2), "utf8");
-  await writeFile(path.join(base, "AGENTS.md"), "Documento de agente suficientemente longo para passar o gate de substancia.\n", "utf8");
+  const pack = criarAgentContextPack(criarGuiaCapacidadeIa());
+  await writeFile(path.join(base, "AGENTS.md"), `<!-- sema:agent-entrypoint:start -->\n${renderizarInstrucaoCodexSema(pack)}<!-- sema:agent-entrypoint:end -->\n`);
+  await writeFile(path.join(base, "SEMA_BOOT.md"), renderizarSemaBoot(pack));
+  await writeFile(path.join(base, "SEMA_SMALL_MODEL.md"), renderizarSemaSmallModel(pack));
   await writeFile(path.join(base, "README.md"), "Readme suficientemente longo para passar o gate de substancia.\n", "utf8");
   await mkdir(path.join(base, "docs"), { recursive: true });
   await writeFile(path.join(base, "docs", "README.md"), "Indice de docs suficientemente longo.\n", "utf8");
@@ -49,6 +55,36 @@ test("freshness: fresco quando INDEX tem hash atual, stale apos mudanca", async 
   } finally {
     await rm(base, { recursive: true, force: true });
   }
+});
+
+test("protocolo antigo bloqueia mesmo com hash igual; sync preserva regras manuais", async () => {
+  const base = await criarWorkspace();
+  const cli = path.resolve("pacotes/cli/dist/bin.js");
+  try {
+    const antes = await verificarFrescorArtefatos(base);
+    await writeFile(path.join(base, "SEMA_INDEX.json"), JSON.stringify({ hashContratos: antes.hashAtual }));
+    const manual = "## Regras próprias\nPreserve os dados locais dos usuários.\n";
+    await writeFile(path.join(base, "AGENTS.md"), `<!-- sema:agent-entrypoint:start -->\nLeia o SEMA_INDEX.json inteiro.\n<!-- sema:agent-entrypoint:end -->\n${manual}`);
+    const stale = await verificarFrescorArtefatos(base);
+    assert.equal(stale.contratosMudaram, false);
+    assert.equal(stale.fresco, false);
+    assert.deepEqual(stale.arquivosProtocoloDesatualizados, ["AGENTS.md"]);
+    const session = spawnSync(process.execPath, [cli, "sessao", "Editar aplicação", "--janela-contexto", "32768", "--json"], { cwd: base, encoding: "utf8", timeout: 30_000 });
+    const payload = JSON.parse(session.stdout).payload;
+    assert.equal(payload.contexto, undefined);
+    assert.equal(payload.execucaoAutorizada, false);
+    assert.match(payload.proximosPassos.join(" "), /sync-codex/);
+    const sync = spawnSync(process.execPath, [cli, "sync-codex", "--json"], { cwd: base, encoding: "utf8", timeout: 30_000 });
+    assert.equal(sync.status, 0, sync.stdout + sync.stderr);
+    const agents = await readFile(path.join(base, "AGENTS.md"), "utf8");
+    assert.ok(agents.includes(manual.trim()));
+    assert.ok(!agents.includes("Leia o SEMA_INDEX.json inteiro."));
+    assert.equal((await verificarFrescorArtefatos(base)).fresco, true);
+    await writeFile(path.join(base, "SEMA_BOOT.md"), "Protocolo antigo");
+    assert.deepEqual((await verificarFrescorArtefatos(base)).arquivosProtocoloDesatualizados, ["SEMA_BOOT.md"]);
+    await rm(path.join(base, "SEMA_SMALL_MODEL.md"));
+    assert.deepEqual((await verificarFrescorArtefatos(base)).arquivosProtocoloDesatualizados, ["SEMA_BOOT.md", "SEMA_SMALL_MODEL.md"]);
+  } finally { await rm(base, { recursive: true, force: true }); }
 });
 
 test("freshness: hash muda quando contrato muda", async () => {

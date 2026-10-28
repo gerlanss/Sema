@@ -1,7 +1,7 @@
 {
   "name": "sema",
-  "version": "4.2.0",
-  "description": "Codex bootstrap for discovering @semacode/cli and initializing Sema before a workspace has its AGENTS.md protocol.",
+  "version": "4.2.1",
+  "description": "Use Sema before creating or editing software: ask about first-time adoption, confirm context, and follow local contracts.",
   "author": {
     "name": "OtimiTare",
     "email": "suporte@otimitare.online",
@@ -21,8 +21,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sema",
-    "shortDescription": "Required bootstrap before AGENTS.md exists",
-    "longDescription": "Provides the required first-contact instructions for Codex to find the local @semacode/cli, initialize Sema, and generate AGENTS.md. Once AGENTS.md exists, the skill delegates all workspace governance to that protocol and the local CLI.",
+    "shortDescription": "Contract workflow before creating or editing",
+    "longDescription": "Loads Sema for software creation and editing, including static apps. Asks about first-time adoption, confirms the configured context window, then delegates to the local AGENTS.md protocol. Installation and repair remain separate.",
     "developerName": "OtimiTare",
     "category": "Coding",
     "capabilities": [

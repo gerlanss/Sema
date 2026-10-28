@@ -237,7 +237,7 @@ export async function comandoDrift(entrada: string | undefined, args: string[], 
   });
   const resultado = await analisarDriftLegado(contextoProjeto, opcoes);
   if (possuiFlag(args, "--pacote")) {
-    const pacote = criarDriftPack(resultado, { rawDriftChars: JSON.stringify(resultado).length });
+    const pacote = criarDriftPack(resultado, { rawDriftChars: JSON.stringify(resultado, null, 2).length });
     console.log(JSON.stringify(pacote, null, 2));
     return resultado.sucesso ? 0 : 1;
   }

@@ -124,6 +124,7 @@ test("informação não muta e adoção exige autorização explícita", () => {
   assert.equal(autorizado.mutar_workspace, true);
   assert.deepEqual(autorizado.acoes_ordenadas, [
     "descobrir_explicar_flow_project_adoption",
+    "confirmar_janela_contexto_efetiva",
     "iniciar_template_base",
     "sync_codex",
     "ler_agents_e_boot",
@@ -131,10 +132,12 @@ test("informação não muta e adoção exige autorização explícita", () => {
 });
 
 test("skill publicada contém comandos e fronteiras da matriz de intenção", async () => {
-  const [skill, openAi] = await Promise.all([
+  const [entrypoint, distribution, openAi] = await Promise.all([
     readFile(caminhoSkill, "utf8"),
+    readFile(path.join(path.dirname(caminhoSkill), "references", "distribution.md"), "utf8"),
     readFile(caminhoOpenAi, "utf8"),
   ]);
+  const skill = `${entrypoint}\n${distribution}`;
 
   const resolverLatest = skill.indexOf("npm view @semacode/cli@latest version --json");
   const install = skill.indexOf("npm install --global @semacode/cli@<resolved-exact-semver>");

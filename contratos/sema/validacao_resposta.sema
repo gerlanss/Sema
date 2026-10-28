@@ -98,4 +98,43 @@ module sema.validacao_resposta {
       bloqueia_acao existe
     }
   }
+  task conferir_entrada_contratos_cli {
+    input {
+      arquivos: Lista required
+      entrada: Texto required
+    }
+    output {
+      diagnosticos: Lista
+    }
+    rules {
+      arquivos deve_ser nao_vazio_para_aprovar
+      arquivos deve_ser somente_contratos_sema
+    }
+    forbidden {
+      declarar_sucesso_de_validar_ou_formatar_sem_contrato
+      confundir_validacao_de_contrato_com_teste_da_aplicacao
+      inicializar_workspace_automaticamente_por_falta_de_contrato
+    }
+    impl {
+      ts: cli.src.entrada_contratos.diagnosticarEntradaContratos
+    }
+    vinculos {
+      arquivo: "pacotes/cli/src/entradaContratos.ts"
+      arquivo: "pacotes/cli/src/index.part04.ts"
+      arquivo: "pacotes/cli/src/index.part06.ts"
+      arquivo: "testes/integracao/cli-sem-contratos.test.ts"
+      simbolo: cli.src.entrada_contratos.diagnosticarEntradaContratos
+    }
+    execucao {
+      idempotencia: verdadeiro
+      timeout: "1s"
+      retry: "nenhum"
+      criticidade_operacional: media
+    }
+    guarantees {
+      diagnosticos deve_ser conter_erro_quando_arquivos_vazio
+      diagnosticos deve_ser conter_erro_quando_entrada_nao_sema
+      diagnosticos deve_ser vazio_quando_contratos_presentes
+    }
+  }
 }

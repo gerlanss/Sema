@@ -139,6 +139,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       agents_md deve_ser curto_e_independente_do_total_de_modulos
       agents_md deve_ser orientar_indice_completo_como_uso_interno_da_cli
       agents_md deve_ser pedir_janela_contexto_antes_de_carregar_contexto
+      agents_md deve_ser priorizar_drift_pacote_com_bloqueios_preservados
       sema_boot existe
       sema_boot deve_ser primeiro_entrypoint
       sema_small_model existe

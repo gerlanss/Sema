@@ -76,6 +76,7 @@ export async function validarArtefatosDistribuicaoContraFonte(caminhoTarball, ra
   const artefatos = [
     ["package/scripts/postinstall.mjs", "pacotes/cli/scripts/postinstall.mjs"],
     ["package/skills/sema/SKILL.md", "plugins/sema/skills/sema/SKILL.md"],
+    ["package/skills/sema/references/distribution.md", "plugins/sema/skills/sema/references/distribution.md"],
     ["package/skills/sema/agents/openai.yaml", "plugins/sema/skills/sema/agents/openai.yaml"],
   ];
   for (const [arquivoEmpacotado, arquivoFonte] of artefatos) {
@@ -138,6 +139,7 @@ export function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperad
   const lifecycleCas = arquivos.find((arquivo) => /package\/scripts\/(?:prepack|postpack|bloquear-pack-workspace)/iu.test(arquivo));
   if (lifecycleCas) throw new Error(`The public package contains workspace lifecycle code: ${lifecycleCas}.`);
   if (!arquivos.includes("package/skills/sema/SKILL.md")
+    || !arquivos.includes("package/skills/sema/references/distribution.md")
     || !arquivos.includes("package/skills/sema/agents/openai.yaml")
     || !arquivos.some((arquivo) => /^package\/exemplos\/.+\.sema$/iu.test(arquivo))) {
     throw new Error("The public package is missing the bundled skill or official examples.");

@@ -15,6 +15,13 @@ Use `--cache none` when a direct analysis must leave no persistent cache access.
 Use `--drift none` when a summary or inspection should not perform drift at all.
 The two forms are not interchangeable.
 
+For agent workflows, use `sema drift <contract> --cache fresh --pacote --json`.
+The compact packet preserves blockers, diagnostics and task gaps, while
+consolidating repeated file paths and suggested checks under `guidance`.
+Remove `--pacote` for the complete evidence. Packet telemetry estimates the
+pretty-printed packet, including its own telemetry, using characters/4; the
+outer CLI envelope and other conversation content are not part of that count.
+
 ## Honest Query Evidence
 
 `sema resumo` and `sema inspecionar` default to `--drift none`. Their JSON
