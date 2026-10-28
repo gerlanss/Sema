@@ -131,52 +131,15 @@ test("resumo de modulo emite exatamente o payload contratado", () => {
   assert.equal(payload.texto, undefined);
 });
 
-test("resumo de projeto emite exatamente o payload contratado", () => {
-  const execucao = spawnSync(process.execPath, [
-    CLI,
-    "resumo",
-    ".",
-    "--micro",
-    "--json",
-  ], {
-    cwd: path.resolve("."),
-    encoding: "utf8",
-    stdio: "pipe",
-  });
-
-  assert.equal(execucao.status, 0, execucao.stderr);
-  const payload = extrairPayloadResultadoCliV1(execucao.stdout, {
-    command: "resumo",
-    exitCode: execucao.status,
-  });
-  assert.deepEqual(Object.keys(payload), [
-    "comando",
-    "modo",
-    "tamanho",
-    "geradoEm",
-    "baseProjeto",
-    "pastaSaida",
-    "artefatos",
-    "analiseDrift",
-    "indexPack",
-  ]);
-  assert.equal(payload.comando, "resumo");
-  assert.equal(payload.modo, "resumo");
-  assert.equal(payload.tamanho, "micro");
-  assert.equal(payload.baseProjeto, path.resolve("."));
-  assert.equal(typeof payload.pastaSaida, "string");
-  assert.ok(payload.pastaSaida.startsWith(path.resolve(".")));
-  assert.ok(Array.isArray(payload.artefatos));
-  assert.ok(payload.artefatos.length > 0);
-  assert.equal(payload.analiseDrift.modo, "none");
-  assert.equal(payload.analiseDrift.executada, false);
-  assert.equal(payload.analiseDrift.sucesso, null);
-  assert.equal(payload.analiseDrift.cache, null);
-  assert.equal(payload.indexPack.schema, "sema.ai.index-pack/v1");
-  assert.equal(payload.indexPack.selection, "deterministic_summary_projection");
-  assert.ok(payload.indexPack.matches.length > 0);
-  assert.equal(payload.modulos, undefined);
-  assert.equal(payload.texto, undefined);
+test("resumo de projeto amplo não despeja um pacote acima do orçamento", () => {
+  const execucao = spawnSync(process.execPath, [CLI, "resumo", ".", "--micro", "--json"], { cwd: path.resolve("."), encoding: "utf8" });
+  assert.equal(execucao.status, 1, execucao.stderr);
+  const payload = extrairPayloadResultadoCliV1(execucao.stdout, { command: "resumo", exitCode: execucao.status });
+  assert.equal(payload.status, "orcamento_insuficiente");
+  assert.equal(payload.execucaoAutorizada, false);
+  assert.equal(payload.indexPack, undefined);
+  assert.match(payload.proximoPasso, /Refine/);
+  assert.ok(execucao.stdout.length < 4096 * 4);
 });
 
 test("inspecionar não fabrica evidência de código por padrão", () => {

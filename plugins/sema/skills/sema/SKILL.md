@@ -52,7 +52,9 @@ found. If the user corrects a missed Sema workflow, resume it before more writes
 Read only the selected contract, declared dependencies and blocking docs.
 `SEMA_INDEX.json` and `AGENT_CONTEXT_PACK.json` are internal CLI databases,
 not files to preload. Resolve stale indexes or ambiguous targets before editing.
-The session budget estimates its response, not the whole chat.
+The profile-selected summary is optional: skip it when the session already supplies the needed context.
+The budget counts local entry instructions plus the current delivery, not the whole chat.
+Do not load multiple summaries or choose context size from labels such as small/strong.
 
 ## CLI fallback and results
 

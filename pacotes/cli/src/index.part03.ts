@@ -1,5 +1,6 @@
 // SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace, sema.produto.governanca_ia.drift.cache.modos
 // Descricao: CLI particionada com saidas de contexto escritas por lote validado e troca atomica.
+import { selecionarContextoAtivo, arquivarResumosLegados, ARQUIVOS_CONTEXTO_MODULO } from "./contextDelivery.js";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -535,16 +536,7 @@ export async function carregarContextoModuloIa(
     briefing,
   };
 }
-export const ARQUIVOS_RESUMO_MODULO_IA = [
-  ARQUIVO_SEMA_BOOT,
-  ARQUIVO_SEMA_SMALL_MODEL,
-  "agent-context-pack.json",
-  "resumo.micro.txt",
-  "resumo.curto.txt",
-  "resumo.md",
-  "briefing.min.json",
-  "prompt-curto.txt",
-] as const;
+export const ARQUIVOS_RESUMO_MODULO_IA = [...ARQUIVOS_CONTEXTO_MODULO] as const;
 
 export async function gerarArquivosResumoModuloIa(
   contexto: PacoteContextoModuloIa,
@@ -555,28 +547,20 @@ export async function gerarArquivosResumoModuloIa(
 }> {
   const guiaPorCapacidade = criarGuiaCapacidadeIa();
   const resumoSemantico = coletarResumoSemanticoModulo(contexto);
-  const resumoMicro = renderizarResumoModuloTexto(resumoSemantico, "micro", "resumo");
-  const resumoCurto = renderizarResumoModuloTexto(resumoSemantico, "curto", "resumo");
-  const resumoMarkdown = renderizarResumoModuloMarkdown(resumoSemantico, "resumo", guiaPorCapacidade);
-  const briefingMinimo = criarBriefingMinimo(resumoSemantico, "resumo", "curto");
-  const promptCurto = criarPromptCurtoModulo(resumoSemantico, "mudanca", "curto", "fraca");
-  const agentContextPack = criarAgentContextPack(guiaPorCapacidade);
-  const semaBoot = renderizarSemaBoot(agentContextPack);
-  const semaSmallModel = renderizarSemaSmallModel(agentContextPack);
-  const artefatos = [
-    { caminhoRelativo: ARQUIVO_SEMA_BOOT, conteudo: semaBoot },
-    { caminhoRelativo: ARQUIVO_SEMA_SMALL_MODEL, conteudo: semaSmallModel },
-    { caminhoRelativo: "agent-context-pack.json", conteudo: `${JSON.stringify(agentContextPack, null, 2)}\n` },
-    { caminhoRelativo: "resumo.micro.txt", conteudo: resumoMicro },
-    { caminhoRelativo: "resumo.curto.txt", conteudo: resumoCurto },
-    { caminhoRelativo: "resumo.md", conteudo: resumoMarkdown },
-    { caminhoRelativo: "briefing.min.json", conteudo: `${JSON.stringify(briefingMinimo, null, 2)}\n` },
-    { caminhoRelativo: "prompt-curto.txt", conteudo: promptCurto },
-  ];
+
+  const configuracao = await carregarConfiguracaoProjeto(contexto.arquivo);
+  const baseProjeto = configuracao?.baseDiretorio ?? process.cwd();
+  const selecionado = await selecionarContextoAtivo(baseProjeto, {
+    micro: renderizarResumoModuloTexto(resumoSemantico, "micro", "resumo"),
+    curto: renderizarResumoModuloTexto(resumoSemantico, "curto", "resumo"),
+    medio: renderizarResumoModuloTexto(resumoSemantico, "medio", "resumo"),
+  }, "modulo");
+  const artefatos = selecionado ? [selecionado] : [];
   await validarDestinosEscritaWorkspace(
     pastaBase,
     artefatos.map((artefato) => artefato.caminhoRelativo),
   );
+  await arquivarResumosLegados(pastaBase);
   for (const artefato of artefatos) {
     await escreverArquivoWorkspaceSeguro(
       pastaBase,
@@ -586,7 +570,7 @@ export async function gerarArquivosResumoModuloIa(
     );
   }
   return {
-    artefatosCompactos: [...ARQUIVOS_RESUMO_MODULO_IA],
+    artefatosCompactos: artefatos.map(item => item.caminhoRelativo),
     guiaPorCapacidade,
   };
 }

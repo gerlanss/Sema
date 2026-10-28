@@ -1,7 +1,7 @@
 // SEMA-GOVERNED: sema.produto.fronteira_repositorios.empacotamento.smoke
 // Descrição: prova instalação global isolada sem contaminar HOME, caches de plugins ou workspace real.
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, readdir, readlink } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, readlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -476,6 +476,11 @@ export async function validarInstalacaoGlobalIsolada({
     ) {
       throw new Error("The installed `sema skill sync` command was not idempotent after postinstall.");
     }
+    // This fixture explicitly configures its context before requesting an AI summary.
+    await mkdir(path.join(basePacoteGlobal, ".sema"), { recursive: true });
+    await writeFile(path.join(basePacoteGlobal, ".sema/contexto-ia.json"), JSON.stringify({
+      schema: "sema.agent-context-profile/v1", janelaTokens: 32768, orcamentoTokens: 4096, reservaSaidaTokens: 4096,
+    }));
     const resumo = extrairPayloadResultadoCliV1(executarLauncherAbsoluto(
       launcher,
       [

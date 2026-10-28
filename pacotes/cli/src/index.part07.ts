@@ -1,3 +1,4 @@
+import { emitirContextoLimitado, ARQUIVOS_CONTEXTO_PROJETO } from "./contextDelivery.js";
 // SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: preserva modos explícitos nas superfícies auxiliares de contexto.
 
@@ -188,6 +189,7 @@ export async function comandoPromptCurto(
   const tamanho = normalizarTamanhoResumo(args);
   const modo = normalizarModoResumo(obterOpcao(args, "--para"));
   const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
+  const baseEntrega = (await carregarConfiguracaoProjeto(alvo))?.baseDiretorio ?? process.cwd();
 
   if (entrada && entrada.toLowerCase().endsWith(".sema")) {
     const contexto = await carregarContextoModuloIa(alvo, {
@@ -200,7 +202,7 @@ export async function comandoPromptCurto(
     const prompt = criarPromptCurtoModulo(resumoSemantico, modo, tamanho, capacidade);
 
     if (emJson) {
-      console.log(JSON.stringify({
+      if (!(await emitirContextoLimitado(baseEntrega, {
         comando: "prompt-curto",
         modo,
         tamanho,
@@ -209,50 +211,22 @@ export async function comandoPromptCurto(
         arquivo: contexto.arquivo,
         modulo: contexto.modulo,
         prompt,
-      }, null, 2));
+      }))) return 1;
       return 0;
     }
 
-    console.log(prompt);
+    if (!(await emitirContextoLimitado(baseEntrega, { prompt }))) return 1;
     return 0;
   }
 
   const resumoProjeto = await gerarResumoProjetoIa(alvo);
-  const arquivoResumo = tamanho === "micro"
-    ? "SEMA_BRIEF.micro.txt"
-    : tamanho === "curto"
-      ? "SEMA_BRIEF.curto.txt"
-      : "SEMA_BRIEF.md";
-  const contextoProjeto = await readFile(path.join(resumoProjeto.pastaSaida, arquivoResumo), "utf8");
+  const arquivoResumo = resumoProjeto.artefatos.find(nome => (ARQUIVOS_CONTEXTO_PROJETO as readonly string[]).includes(nome));
+  const contextoProjeto = arquivoResumo ? await readFile(path.join(resumoProjeto.pastaSaida, arquivoResumo), "utf8") : "Resumo não gerado: confirme o perfil e o orçamento na sessão.";
   const capacidade: CapacidadeIa = tamanho === "micro" ? "fraca" : tamanho === "curto" ? "media" : "forte";
-  const prompt = `⚠️ REGRA OBRIGATÓRIA DE GOVERNANÇA:
-
-ANTES DE QUALQUER AÇÃO (editar, criar, deletar, executar, consultar ou modificar):
-1. Rode \`sema docs-impacto --intencao "<ação>" --json\` com sua intenção declarada.
-2. Aguarde a resposta com as docs obrigatórias.
-3. Leia as docs antes de agir.
-4. Antes de concluir, rode \`sema finalizar-mudanca --intencao "<ação>" --doc-lida <arquivo> --json\` com todas as docs lidas.
-
-Você está operando Sema em modo IA-first.
-
-Isto é contexto comprimido para IA operar contrato semântico antes de tocar código vivo.
-
-Capacidade alvo: ${capacidade}
-Modo da tarefa: ${modo}
-
-Regras:
-- ANTES DE TUDO: rode \`sema docs-impacto --intencao "<ação>" --json\`.
-- Comece pelo resumo compacto abaixo.
-- Se a tarefa pedir mais contexto, abra \`AGENT_CONTEXT_PACK.json\` e depois \`SEMA_INDEX.json\`.
-- Não tente ler o repositório inteiro se o resumo já disser onde tocar.
-- Preserve contrato, risco, lacuna e checks sugeridos.
-
-Contexto do projeto:
-${contextoProjeto.trim()}
-`;
+  const prompt = contextoProjeto.trim();
 
   if (emJson) {
-    console.log(JSON.stringify({
+    if (!(await emitirContextoLimitado(baseEntrega, {
       comando: "prompt-curto",
       modo,
       tamanho,
@@ -261,39 +235,25 @@ ${contextoProjeto.trim()}
       baseProjeto: resumoProjeto.baseProjeto,
       pastaSaida: resumoProjeto.pastaSaida,
       prompt,
-    }, null, 2));
+    }))) return 1;
     return 0;
   }
 
-  console.log(prompt);
+  if (!(await emitirContextoLimitado(baseEntrega, { prompt }))) return 1;
   return 0;
 }
 
 export async function comandoContextoIa(arquivo: string, pastaSaida: string | undefined, emJson: boolean, args: string[] = []): Promise<number> {
   const resultado = await gerarContextoIa(arquivo, pastaSaida);
-  const capacidadeValor = obterOpcao(args, "--capacidade") ?? "media";
-  const capacidade: CapacidadeIa = capacidadeValor === "fraca" || capacidadeValor === "forte" ? capacidadeValor : "media";
-  if (possuiFlag(args, "--pacote")) {
-    const agentContextPack = criarAgentContextPack(resultado.guiaPorCapacidade);
-    const pacote = criarEntrypointPack({
-      agentContextPack,
-      capacity: capacidade,
-      rawAgentContextChars: JSON.stringify(agentContextPack).length,
-    });
-    console.log(JSON.stringify(pacote, null, 2));
-    return resultado.sucesso ? 0 : 1;
-  }
-
-  if (emJson) {
-    console.log(JSON.stringify(resultado, null, 2));
-    return 0;
-  }
-
-  const resumoGerado = await readFile(path.join(resultado.pastaSaida, "README.md"), "utf8");
-  console.log(`Pacote de contexto gerado em ${resultado.pastaSaida}`);
-  console.log("");
-  console.log(resumoGerado);
-  return 0;
+  const base = (await carregarConfiguracaoProjeto(arquivo))?.baseDiretorio ?? process.cwd();
+  const resumo = resultado.artefatosCompactos[0];
+  const contexto = resumo ? await readFile(path.join(resultado.pastaSaida, resumo), "utf8") : "Resumo não gerado: confirme o perfil e o orçamento na sessão.";
+  const entregue = await emitirContextoLimitado(base, {
+    comando: "contexto-ia", sucesso: resultado.sucesso, arquivo: resultado.arquivo,
+    pastaSaida: resultado.pastaSaida, arquivoContexto: resumo ?? null, contexto,
+    evidenciasSobDemanda: ["validar", "diagnosticos", "drift --pacote", "ast", "ir"],
+  });
+  return entregue && resultado.sucesso ? 0 : 1;
 }
 
 export async function comandoTestar(

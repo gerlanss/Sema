@@ -38,7 +38,7 @@ test("entrada inteira fica abaixo de 2000 tokens estimados e nenhum perfil exige
   for (const ordem of Object.values(pack.guiaPorCapacidade)) {
     assert.deepEqual(ordem, ["AGENTS.md", "SEMA_BOOT.md"]);
   }
-  for (const caminho of ["SEMA_INDEX.json", "AGENT_CONTEXT_PACK.json", "SEMA_BRIEF.micro.txt", "SEMA_BRIEF.curto.txt", "docs/commands.md"]) {
+  for (const caminho of ["SEMA_INDEX.json", "AGENT_CONTEXT_PACK.json", "docs/commands.md"]) {
     assert.equal(pack.fontes.find((fonte) => fonte.caminho === caminho)?.obrigatorio, false, caminho);
   }
 });

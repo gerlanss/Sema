@@ -82,8 +82,7 @@ test("protocolo antigo bloqueia mesmo com hash igual; sync preserva regras manua
     assert.equal((await verificarFrescorArtefatos(base)).fresco, true);
     await writeFile(path.join(base, "SEMA_BOOT.md"), "Protocolo antigo");
     assert.deepEqual((await verificarFrescorArtefatos(base)).arquivosProtocoloDesatualizados, ["SEMA_BOOT.md"]);
-    await rm(path.join(base, "SEMA_SMALL_MODEL.md"));
-    assert.deepEqual((await verificarFrescorArtefatos(base)).arquivosProtocoloDesatualizados, ["SEMA_BOOT.md", "SEMA_SMALL_MODEL.md"]);
+    assert.deepEqual((await verificarFrescorArtefatos(base)).arquivosProtocoloDesatualizados, ["SEMA_BOOT.md"]);
   } finally { await rm(base, { recursive: true, force: true }); }
 });
 

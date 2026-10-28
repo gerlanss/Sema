@@ -73,6 +73,7 @@ const arquivosSuperficieLocalDireta = [
   "README.md",
   "SEMA_BOOT.md",
   "SEMA_SMALL_MODEL.md",
+  "SEMA_CONTEXT.md",
   "CONTRIBUTING.md",
   "docs/README.md",
   "docs/ai-integration.md",

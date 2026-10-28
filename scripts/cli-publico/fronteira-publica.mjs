@@ -97,7 +97,7 @@ export function validarManifestSemDependenciasFile(caminhoTarball, versaoEsperad
   if (dependencias.some((valor) => typeof valor === "string" && valor.startsWith("file:"))) {
     throw new Error("The npm package still contains file: dependencies.");
   }
-  for (const artifact of ["AGENTS.md", "AGENT_CONTEXT_PACK.json", "SEMA_INDEX.json", "SEMA_BRIEF.md"]) {
+  for (const artifact of ["AGENTS.md", "AGENT_CONTEXT_PACK.json", "SEMA_INDEX.json", "SEMA_BRIEF.md", "SEMA_BRIEF.curto.txt", "SEMA_BRIEF.micro.txt", "SEMA_CONTEXT.md"]) {
     if ((json.files ?? []).includes(artifact)) {
       throw new Error(`The public package manifest must not include private workspace artifact ${artifact}.`);
     }

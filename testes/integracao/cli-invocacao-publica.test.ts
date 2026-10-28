@@ -875,6 +875,10 @@ test("bin real rejeita dev watch JSON antes do watcher e conclui promoção JSON
 test("invocações válidas usam result/v1 e preservam os payloads dos handlers", async () => {
   const ambiente = await criarAmbienteIsolado("sema-cli-json-legado-");
   try {
+    await mkdir(path.join(ambiente.workspace, ".sema"), { recursive: true });
+    await writeFile(path.join(ambiente.workspace, ".sema/contexto-ia.json"), JSON.stringify({
+      schema: "sema.agent-context-profile/v1", janelaTokens: 32768, orcamentoTokens: 4096, reservaSaidaTokens: 4096,
+    }));
     const antes = await fingerprintDiretorio(ambiente.base);
 
     const validarArgs = ["validar", ambiente.contrato, "--json"] as const;

@@ -1,3 +1,5 @@
+import { lerPerfilContexto } from "./contextBudget.js";
+import { selecionarContextoAtivo, arquivarResumosLegados, ARQUIVOS_CONTEXTO_PROJETO } from "./contextDelivery.js";
 // SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: gera contexto local e grava artefatos somente dentro da base validada.
 
@@ -119,10 +121,7 @@ import type { ResolucaoModoCacheDrift } from "./driftCacheModes.js";
 
 export const ARQUIVOS_RESUMO_PROJETO_IA = [
   ARQUIVO_SEMA_BOOT,
-  ARQUIVO_SEMA_SMALL_MODEL,
-  "SEMA_BRIEF.md",
-  "SEMA_BRIEF.micro.txt",
-  "SEMA_BRIEF.curto.txt",
+  ...ARQUIVOS_CONTEXTO_PROJETO,
   "SEMA_INDEX.json",
   ARQUIVO_AGENT_CONTEXT_PACK,
   ARQUIVO_DOC_AGENTES_CAPACIDADE,
@@ -183,8 +182,10 @@ export async function verificarFrescorArtefatos(baseProjeto: string): Promise<{
 }> {
   const caminhoIndex = path.join(baseProjeto, "SEMA_INDEX.json");
   let hashArtefato: string | null = null;
+  let perfilArtefato: unknown = undefined;
   try {
-    const index = JSON.parse(await readFile(caminhoIndex, "utf8")) as { hashContratos?: string };
+    const index = JSON.parse(await readFile(caminhoIndex, "utf8")) as { hashContratos?: string; perfilContexto?: unknown };
+    perfilArtefato = index.perfilContexto;
     hashArtefato = index.hashContratos ?? null;
   } catch {
     hashArtefato = null;
@@ -197,6 +198,8 @@ export async function verificarFrescorArtefatos(baseProjeto: string): Promise<{
 
   const protocoloPendente = await arquivosProtocoloDesatualizados(baseProjeto);
   const contratosMudaram = hashArtefato !== hashAtual;
+  const perfilMudou = perfilArtefato !== undefined && JSON.stringify(perfilArtefato) !== JSON.stringify(await lerPerfilContexto(baseProjeto) ?? null);
+  if (perfilMudou) protocoloPendente.push(".sema/contexto-ia.json");
   const fresco = !contratosMudaram && protocoloPendente.length === 0;
   return {
     fresco,
@@ -299,9 +302,7 @@ export async function gerarResumoProjetoIa(
 
   await mkdir(pastaSaida, { recursive: true });
 
-  const semaBrief = renderizarResumoProjetoMarkdown(geradoEm, modulos, guiaPorCapacidade);
   const semaBoot = renderizarSemaBoot(agentContextPack);
-  const semaSmallModel = renderizarSemaSmallModel(agentContextPack);
   const docAgentesCapacidade = renderizarDocumentoAgentesPorCapacidade(agentContextPack);
   const caminhosContratos = contextoProjeto.modulosSelecionados.map((item) => item.caminho);
   const hashContratos = await calcularHashContratos(caminhosContratos, contextoProjeto.baseProjeto);
@@ -309,6 +310,7 @@ export async function gerarResumoProjetoIa(
     comando: "resumo-projeto",
     geradoEm,
     cliVersao: VERSAO_CLI,
+    perfilContexto: await lerPerfilContexto(baseProjeto) ?? null,
     hashContratos,
     baseProjeto,
     modoVerificacaoCodigo,
@@ -353,40 +355,17 @@ export async function gerarResumoProjetoIa(
     `GERADO_EM: ${geradoEm}`,
     "",
   ].join("\n");
-  const curto = [
-    `PROJETO: ${path.basename(baseProjeto)}`,
-    `BASE: ${baseProjeto}`,
-    `MODULOS: ${modulos.length}`,
-    `MODO_CODIGO: ${modoVerificacaoCodigo}`,
-    `RESULTADO_DRIFT: ${resultadoDrift ? (resultadoDrift.sucesso ? "sucesso" : "falha") : "não avaliado"}`,
-    ...(modoVerificacaoCodigo === "contratos_apenas"
-      ? ["AVISO_CODIGO: somente contratos enviados; implementacao nao verificada neste modo"]
-      : modoVerificacaoCodigo === "codigo_selecionado"
-        ? ["AVISO_CODIGO: codigo selecionado enviado; conclusoes valem apenas para o snapshot"]
-        : []),
-    `FONTES_CONCLUSAO: ${resumirListaTexto(fontesConclusao, 6)}`,
-    `ENTRADA_IA: ${entradaCanonica.porCapacidade.media.join(" -> ")}`,
-    `POLITICA_PLATAFORMA: ${agentContextPack.politicaPlataforma.regra} ${agentContextPack.politicaPlataforma.quandoHouverBloqueio}`,
-    `TIMEOUT_SEMA: ${agentContextPack.politicaTimeoutResumo.regra} Escale ${agentContextPack.politicaTimeoutResumo.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")} antes de declarar bloqueio.`,
-    `CODIGO_GOVERNADO: ${agentContextPack.politicaCodigoGovernado.marcador} -> docs-impacto e drift antes de alterar comportamento`,
-    `ORCAMENTO_SEMANTICO: codigo governado acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} linhas exige refatoracao e acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} bloqueia; .sema acima de ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} diagnostica e acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} bloqueia criacao, edicao, drift, geracao e snapshot; varios .sema podem governar o mesmo arquivo via vinculos`,
-    `PAYLOAD_INLINE: conteudo inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres deve virar arquivos logicos, anexo, caminho de servidor autorizado ou manifesto; nao aumente timeout para empurrar o mesmo payload`,
-    `DESIGN_VISUAL: ${agentContextPack.politicaDesignVisual.regra} Fraca=${agentContextPack.politicaDesignVisual.porCapacidade.fraca} Media=${agentContextPack.politicaDesignVisual.porCapacidade.media} Forte=${agentContextPack.politicaDesignVisual.porCapacidade.forte}`,
-    `TOP_MODULOS: ${resumirListaTexto(modulos.map((modulo) => modulo.modulo), 6)}`,
-    `TOP_RISCOS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.riscosPrincipais)), 6)}`,
-    `TOP_LACUNAS: ${resumirListaTexto(unicosOrdenados(modulos.flatMap((modulo) => modulo.lacunas)), 6)}`,
-    `TOP_ARQUIVOS: ${resumirListaTexto(topArquivosResumo.arquivos, 6)}`,
-    `TOP_ARQUIVOS_FONTE: ${topArquivosResumo.fonte}`,
-    `GERADO_EM: ${geradoEm}`,
-    "",
-  ].join("\n");
 
+  const descreverModulo = (modulo: ResumoSemanticoModuloIa) => `${modulo.modulo}: ${modulo.faz}\nContrato: ${modulo.arquivo}`;
+  const selecionado = await selecionarContextoAtivo(baseProjeto, {
+    micro,
+    curto: micro + "\nCONTRATOS (até 6):\n" + modulos.slice(0, 6).map(descreverModulo).join("\n"),
+    medio: micro + "\nCONTRATOS:\n" + modulos.map(descreverModulo).join("\n"),
+  });
+  Object.assign(indexJson, { contextoSelecionado: selecionado ? { arquivo: selecionado.caminhoRelativo, nivel: selecionado.nivel } : null });
   const artefatosResumo = [
-    { caminhoRelativo: "SEMA_BRIEF.md", conteudo: semaBrief },
+    ...(selecionado ? [selecionado] : []),
     { caminhoRelativo: ARQUIVO_SEMA_BOOT, conteudo: semaBoot },
-    { caminhoRelativo: ARQUIVO_SEMA_SMALL_MODEL, conteudo: semaSmallModel },
-    { caminhoRelativo: "SEMA_BRIEF.micro.txt", conteudo: micro },
-    { caminhoRelativo: "SEMA_BRIEF.curto.txt", conteudo: curto },
     { caminhoRelativo: "SEMA_INDEX.json", conteudo: `${JSON.stringify(indexJson, null, 2)}\n` },
     { caminhoRelativo: ARQUIVO_AGENT_CONTEXT_PACK, conteudo: `${JSON.stringify(agentContextPack, null, 2)}\n` },
     { caminhoRelativo: ARQUIVO_DOC_AGENTES_CAPACIDADE, conteudo: docAgentesCapacidade },
@@ -395,6 +374,7 @@ export async function gerarResumoProjetoIa(
     pastaSaida,
     artefatosResumo.map((artefato) => artefato.caminhoRelativo),
   );
+  await arquivarResumosLegados(pastaSaida);
   for (const artefato of artefatosResumo) {
     await escreverArquivoWorkspaceSeguro(
       pastaSaida,
@@ -409,7 +389,7 @@ export async function gerarResumoProjetoIa(
     baseProjeto,
     pastaSaida,
     modoVerificacaoCodigo,
-    artefatos: [...ARQUIVOS_RESUMO_PROJETO_IA],
+    artefatos: artefatosResumo.map(item => item.caminhoRelativo),
     modulos,
     guiaPorCapacidade,
     analiseDrift: indexJson.analiseDrift,
@@ -424,129 +404,18 @@ export async function gerarContextoIa(arquivoEntrada: string, pastaSaidaOpcional
 
   await mkdir(pastaBase, { recursive: true });
 
-  const artefatosContexto = [
-    { caminhoRelativo: "validar.json", conteudo: `${JSON.stringify(contexto.validar, null, 2)}\n` },
-    { caminhoRelativo: "diagnosticos.json", conteudo: `${JSON.stringify(contexto.diagnosticosJson, null, 2)}\n` },
-    { caminhoRelativo: "ast.json", conteudo: `${JSON.stringify(contexto.ast, null, 2)}\n` },
-    { caminhoRelativo: "ir.json", conteudo: `${JSON.stringify(contexto.irJson, null, 2)}\n` },
-    { caminhoRelativo: "drift.json", conteudo: `${JSON.stringify(contexto.drift, null, 2)}\n` },
-    { caminhoRelativo: "briefing.json", conteudo: `${JSON.stringify(contexto.briefing, null, 2)}\n` },
-  ];
-  await validarDestinosEscritaWorkspace(
-    pastaBase,
-    [
-      ...artefatosContexto.map((artefato) => artefato.caminhoRelativo),
-      ...ARQUIVOS_RESUMO_MODULO_IA,
-      "README.md",
-    ],
-  );
-  for (const artefato of artefatosContexto) {
-    await escreverArquivoWorkspaceSeguro(
-      pastaBase,
-      artefato.caminhoRelativo,
-      artefato.conteudo,
-      { sobrescrever: true },
-    );
-  }
+  await validarDestinosEscritaWorkspace(pastaBase, [...ARQUIVOS_RESUMO_MODULO_IA, "README.md"]);
   const resumoGerado = await gerarArquivosResumoModuloIa(contexto, pastaBase);
 
   const resumo = `# Contexto de IA para ${contexto.modulo}
 
-- Arquivo alvo: \`${contexto.arquivo}\`
-- Modulo: \`${contexto.modulo}\`
-- Sucesso em validar: \`${contexto.sucesso}\`
-- Quantidade de diagnosticos: \`${contexto.diagnosticos.length}\`
-- Gerado em: \`${contexto.geradoEm}\`
-
-## Arquivos gerados neste pacote
-
-- \`agent-context-pack.json\`
-- \`${ARQUIVO_SEMA_BOOT}\`
-- \`${ARQUIVO_SEMA_SMALL_MODEL}\`
-- \`resumo.micro.txt\`
-- \`resumo.curto.txt\`
-- \`resumo.md\`
-- \`briefing.min.json\`
-- \`prompt-curto.txt\`
-- \`validar.json\`
-- \`diagnosticos.json\`
-- \`ast.json\`
-- \`ir.json\`
-- \`drift.json\`
-- \`briefing.json\`
-
-## Fluxo recomendado para o agente
-
-Antes de escolher arquivo de código, leia \`${ARQUIVO_SEMA_BOOT}\` e \`agent-context-pack.json\`. Eles declaram regras obrigatórias, proibições, prioridades, idioma humano e quando abrir texto bruto como \`AGENTS.md\`, \`exemplos/\`, docs e contratos.
-
-## Políticas da plataforma
-
-- Sema governa contrato, escopo, drift, evidência e qualidade; não contorna políticas, termos, permissões, segurança ou leis.
-- Se houver alerta externo, trate como bloqueio da plataforma ou falso positivo possível, explique de forma neutra e não tente burlar filtro.
-
-### IA fraca, gratuita ou com pouca disciplina
-
-1. Ler \`${ARQUIVO_SEMA_BOOT}\`.
-2. Ler \`${ARQUIVO_SEMA_SMALL_MODEL}\`.
-3. Ler \`agent-context-pack.json\`.
-4. Ler \`resumo.micro.txt\`.
-5. Ler \`briefing.min.json\`.
-6. Se ainda couber contexto, ler \`resumo.curto.txt\`.
-
-### IA média
-
-1. Ler \`${ARQUIVO_SEMA_BOOT}\`.
-2. Ler \`agent-context-pack.json\`.
-3. Ler \`resumo.curto.txt\`.
-4. Ler \`briefing.min.json\`.
-5. Ler \`drift.json\`.
-6. Se precisar, subir para \`resumo.md\`.
-
-### IA forte ou com tool use
-
-1. Ler \`${ARQUIVO_SEMA_BOOT}\`.
-2. Ler \`agent-context-pack.json\`.
-3. Ler \`README.md\`.
-4. Ler \`resumo.md\`.
-5. Ler \`briefing.json\`.
-6. Ler \`drift.json\`.
-7. Só depois abrir \`ir.json\` e \`ast.json\`.
-
-## Idioma humano
-
-- Responda no idioma do usuário.
-- Em PT-BR, use acentos, cedilha, pontuação e símbolos normais.
-- A DSL \`.sema\` pode ser ASCII; texto humano não precisa ser.
-
-## Texto bruto sob demanda
-
-- Abra \`AGENTS.md\` antes de editar código, contrato, docs operacionais, release ou deploy.
-- Abra \`exemplos/\` antes de criar ou corrigir sintaxe \`.sema\`.
-- Abra \`docs/syntax.md\` quando exemplos não bastarem para resolver a gramática.
-- Abra \`contratos/\` antes de qualquer implementação ou mudança de comportamento.
-
-## Timeout e retry
-
-- Timeout local do agente não é falha do Sema.
-- Se uma chamada Sema estourar, aumente o timeout e tente de novo.
-- Se o projeto inteiro for lento, escopar para \`sema resumo "${contexto.arquivo}" --micro --para mudanca --drift none\`.
-- Se o ambiente impedir continuar, pare bloqueado e não avance com código sem Sema.
-
-## Fechamento
-
-1. Editar o arquivo \`.sema\`.
-2. Rodar \`sema formatar "${contexto.arquivo}"\`.
-3. Rodar \`sema validar "${contexto.arquivo}" --json\`.
-4. Rodar \`sema drift "${contexto.arquivo}" --cache fresh --json\`.
-5. Fechar com \`sema verificar <arquivo-ou-pasta> --json --saida ./.tmp/verificacao-ia\`.
-
-## Textos base para onboarding do agente
-
-- \`sema starter-ia\`
-- \`sema resumo "${contexto.arquivo}" --micro --para onboarding --drift none\`
-- \`sema prompt-curto "${contexto.arquivo}" --para mudanca\`
-- \`sema prompt-ia\`
+Contrato: ${contexto.arquivo}. Validação: ${contexto.sucesso}.
+Resumo selecionado: ${resumoGerado.artefatosCompactos.join(", ") || "nenhum: configure o perfil ou refine o orçamento"}. Consulte-o somente se a sessão ainda não entregou o contexto necessário.
+Para evidências específicas, consulte validar, diagnosticos, drift --pacote, ast ou ir pela CLI. Não carregue todos os resultados de uma vez.
+Use sema sessao com intenção e --arquivo para obter o recorte da tarefa.
+Preserve os gates do AGENTS.md e SEMA_BOOT.md do projeto, sem relê-los quando já estiverem no contexto.
 `;
+
 
   await escreverArquivoWorkspaceSeguro(pastaBase, "README.md", resumo, {
     sobrescrever: true,
@@ -558,12 +427,6 @@ Antes de escolher arquivo de código, leia \`${ARQUIVO_SEMA_BOOT}\` e \`agent-co
     modulo: contexto.modulo,
     pastaSaida: pastaBase,
     artefatos: [
-      "validar.json",
-      "diagnosticos.json",
-      "ast.json",
-      "ir.json",
-      "drift.json",
-      "briefing.json",
       "README.md",
       ...resumoGerado.artefatosCompactos,
     ],

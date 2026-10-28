@@ -860,6 +860,7 @@ async function main() {
       "llms.txt",
       "llms-full.txt",
       "AGENT_CONTEXT_PACK.json",
+      "SEMA_CONTEXT.md",
       "SEMA_BRIEF.md",
       "SEMA_BRIEF.micro.txt",
       "SEMA_BRIEF.curto.txt",

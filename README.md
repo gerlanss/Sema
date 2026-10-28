@@ -309,3 +309,22 @@ sema importar fastify src --json
 
 See [LICENSE](./LICENSE). The license allows public non-commercial use and
 prohibits commercial resale or commercial replicas without written permission.
+
+### Context delivery
+
+The CLI selects context artifacts before writing them. Windows up to 32,768 tokens
+select micro summaries; up to 131,072 select short summaries; larger windows can
+select expanded summaries. These are generation thresholds, not model intelligence
+ratings. The configured budget can reduce the selected level further. Only the selected
+file is materialized, and unrelated modules are not added to a task session.
+
+`AGENTS.md` and `SEMA_BOOT.md` are counted once alongside the current delivery.
+This estimate uses characters / 4, not the model tokenizer, and does not measure host
+instructions, chat history, subsequent code reads or cumulative tool output.
+A task session does not require another summary when it already supplied the necessary context.
+Oversized requests fail with a refinement instruction instead of silently discarding blocking rules.
+
+When the profile changes, synchronization replaces the selected summary and removes
+inactive generated variants from the entry files. A byte-preserving backup under
+`.sema/contexto-legado/` protects existing edits; unrelated manual files remain untouched.
+Internal indexes remain CLI databases, not agent reading lists.

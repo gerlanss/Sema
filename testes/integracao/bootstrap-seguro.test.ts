@@ -454,8 +454,8 @@ test("resumo e contexto-ia substituem hardlink local sem alterar o arquivo exter
 
   try {
     for (const caso of [
-      { comando: "resumo", arquivo: "resumo.curto.txt" },
-      { comando: "contexto-ia", arquivo: "agent-context-pack.json" },
+      { comando: "resumo", arquivo: "resumo.md" },
+      { comando: "contexto-ia", arquivo: "resumo.md" },
     ]) {
       const pastaSaida = path.join(repo, caso.comando);
       const externo = path.join(outside, `${caso.comando}.txt`);
@@ -488,7 +488,7 @@ test("contexto-ia recusa junction tardia antes de escrever qualquer artefato", a
 
   try {
     await mkdir(pastaSaida, { recursive: true });
-    await criarJunction(outside, path.join(pastaSaida, "agent-context-pack.json"));
+    await criarJunction(outside, path.join(pastaSaida, "resumo.md"));
     const resultado = executarCli(process.cwd(), [
       "contexto-ia",
       contrato,
@@ -498,7 +498,7 @@ test("contexto-ia recusa junction tardia antes de escrever qualquer artefato", a
     ], base);
 
     exigirFalhaFatalJson(resultado);
-    assert.deepEqual(await readdir(pastaSaida), ["agent-context-pack.json"]);
+    assert.deepEqual(await readdir(pastaSaida), ["resumo.md"]);
     assert.deepEqual(await readdir(outside), []);
   } finally {
     await limparSandbox(base);

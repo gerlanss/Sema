@@ -149,9 +149,9 @@ The project can also generate TypeScript, Python, PHP, Dart, Lua, HTML, CSS, C#/
 
 - `AGENTS.md`: official Codex repository rules, loaded automatically.
 - `SEMA_BOOT.md`: first Sema read for Codex.
-- `SEMA_SMALL_MODEL.md`: compact guidance for a small context budget.
-- `AGENT_CONTEXT_PACK.json`: structured Codex context pack.
-- `SEMA_INDEX.json`: project index.
+- Profile-selected summary: the CLI materializes only the matching file within the configured budget. Skip it if the session already supplied the needed context.
+- `AGENT_CONTEXT_PACK.json`: internal CLI policy database, not an initial read.
+- `SEMA_INDEX.json`: internal CLI project index, not an initial read.
 - `docs/commands.md`: command catalog, gates, and `--saida` rule.
 - `exemplos/`: official DSL examples.
 

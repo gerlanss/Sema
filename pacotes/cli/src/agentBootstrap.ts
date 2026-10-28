@@ -25,8 +25,9 @@ export function renderizarSemaBoot(_pack: AgentContextPack): string {
   return `# SEMA_BOOT
 
 Comece por \`sema --version\` e \`sema sessao "<intenção>" --json\`. O retorno é navegação, não autorização de execução. A skill é acionada ao criar ou editar; num projeto já adotado, delega a este protocolo.
-Declare a janela real com \`--janela-contexto <tokens>\`. Use \`--salvar-perfil\` para lembrar neste workspace; \`--orcamento-contexto\` limita a resposta estimada e \`--reserva-saida\` reserva geração. A estimativa por caracteres não é tokenização exata e não mede o contexto já usado pela conversa.
+Declare a janela real com \`--janela-contexto <tokens>\`. Use \`--salvar-perfil\` para lembrar neste workspace; \`--orcamento-contexto\` limita instruções locais mais a entrega estimada e \`--reserva-saida\` reserva geração. A estimativa por caracteres não é tokenização exata e não mede o contexto já usado pela conversa.
 
+O resumo selecionado pela CLI é opcional: não leia se a sessão já entregou o contexto necessário. Não repita leituras já presentes e atualizadas.
 Leia somente o contrato selecionado, suas dependências declaradas e as docs bloqueantes da mudança. Referências recomendadas ficam disponíveis sob demanda. SEMA_INDEX.json e AGENT_CONTEXT_PACK.json são consultados internamente; não os carregue integralmente. Para aprofundar: \`sema resumo <contrato> --micro --para mudanca --drift none --json\`. Uma consulta com --drift none não comprova código; valores nulos são não avaliados.
 
 Drift: use --pacote para receber estado, bloqueios e avisos compactos; sem --pacote o JSON completo continua disponível para aprofundar.

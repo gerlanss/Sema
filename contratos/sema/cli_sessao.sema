@@ -83,6 +83,8 @@ module sema.produto.cli_sessao {
       criticidade_operacional: media
     }
     guarantees {
+      proximos_passos_emitidos deve_ser contar_instrucoes_locais_e_entrega_no_mesmo_orcamento
+      frescor_avaliado deve_ser detectar_troca_do_perfil_materializado
       proximos_passos_emitidos deve_ser limitar_contexto_por_orcamento_de_caracteres_estimados
       proximos_passos_emitidos deve_ser perguntar_janela_ausente_antes_de_contexto
       frescor_avaliado deve_ser exigir_indice_atual_para_navegacao

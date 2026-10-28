@@ -12,7 +12,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
     }
     output {
       sema_boot: Texto
-      sema_small_model: Texto
+      contexto_opcional: Texto
       agents_md: Texto
       docs_sintaxe: Texto
       docs_fluxo_pratico: Texto
@@ -56,7 +56,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       }
       output {
         sema_boot: publico
-        sema_small_model: publico
+        contexto_opcional: publico
         agents_md: publico
         docs_sintaxe: publico
         docs_fluxo_pratico: publico
@@ -119,6 +119,8 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       ts: cli.src.index_part06.comandoSyncCodex
     }
     vinculos {
+      arquivo: "pacotes/cli/src/contextDelivery.ts"
+      arquivo: "testes/unidade/context-delivery.test.ts"
       arquivo: "pacotes/cli/src/agentBootstrap.ts"
       arquivo: "pacotes/cli/src/agentEntryPoints.ts"
       arquivo: "pacotes/cli/src/index.part06.ts"
@@ -136,14 +138,17 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       criticidade_operacional: media
     }
     guarantees {
+      agents_md deve_ser orientar_contexto_unico_limitado_pelo_perfil
       agents_md deve_ser curto_e_independente_do_total_de_modulos
       agents_md deve_ser orientar_indice_completo_como_uso_interno_da_cli
       agents_md deve_ser pedir_janela_contexto_antes_de_carregar_contexto
       agents_md deve_ser priorizar_drift_pacote_com_bloqueios_preservados
       sema_boot existe
       sema_boot deve_ser primeiro_entrypoint
-      sema_small_model existe
-      sema_small_model deve_ser compacto_para_ia_fraca
+      contexto_opcional deve_ser gerado_somente_quando_perfil_e_orcamento_permitirem
+      contexto_opcional deve_ser selecionar_arquivo_antes_da_geracao
+      contexto_opcional deve_ser retirar_variantes_inativas_preservando_customizacoes
+      contexto_opcional deve_ser limitado_pelo_perfil
       agents_md existe
       docs_sintaxe existe
       docs_fluxo_pratico existe
@@ -170,7 +175,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       sema_boot deve_ser usar_comandos_cli_locais
       agents_md deve_ser distinguir_consulta_none_de_drift_fresh
       sema_boot deve_ser distinguir_consulta_none_de_drift_fresh
-      sema_small_model deve_ser distinguir_consulta_none_de_drift_fresh
+      contexto_opcional deve_ser nao_repetir_governanca_de_entrada
       docs_comandos deve_ser distinguir_consulta_none_de_drift_fresh
     }
     tests {

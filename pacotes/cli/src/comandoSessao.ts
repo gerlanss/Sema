@@ -1,5 +1,6 @@
 // SEMA-GOVERNED: sema.produto.cli_sessao
 // Descrição: abertura progressiva com perfil explícito, frescor e navegação limitada por orçamento.
+import { tokensEntradaLocal } from "./contextDelivery.js";
 import path from "node:path";
 import { verificarFrescorArtefatos } from "./index.part04.js";
 import { carregarProjeto } from "./projetoCarregar.js";
@@ -43,6 +44,7 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
   const contrato = contexto?.candidatos.length === 1 ? contexto.candidatos[0]!.contrato : undefined;
   const docs = contrato ? await resolverDocumentacaoObrigatoria({ baseProjeto: projeto.baseProjeto, intencao, arquivosAlvo: [contrato], criarAusentes: false }) : undefined;
   const alvo = contrato ? JSON.stringify(contrato) : "<contrato>";
+  const tokensEntrada = await tokensEntradaLocal(base);
   const payload = {
     comando: "sessao", sucesso: true,
     status: !frescor.fresco ? "indice_desatualizado" : contexto?.status ?? "intencao_necessaria",
@@ -61,9 +63,9 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
     proximosPassos: !frescor.fresco ? [frescor.sugestao, "Repita a sessão após a sincronização; não carregue o índice bruto."]
       : contrato ? [`Leia ${contrato}; consulte docs-impacto com esse --arquivo para motivos e dependências. Depois inspecione apenas o código vinculado.`, "Referências do índice são navegação. Confirme regras completas e gates antes de agir."]
       : ["Informe uma intenção específica ou --arquivo <contrato-ou-código> para resolver o escopo. Não edite enquanto houver ambiguidade."],
-    orcamento: { metodo: "chars_div_4", tokensEstimadosResposta: 0, limiteTokens: perfil.orcamentoTokens, contagemExata: false, contextoDaConversaMedido: false },
+    orcamento: { metodo: "chars_div_4", tokensEstimadosResposta: 0, tokensEntrada, tokensEstimadosTotal: 0, limiteTokens: perfil.orcamentoTokens, contagemExata: false, contextoDaConversaMedido: false },
   };
-  while (estimarRespostaTokens(payload) > perfil.orcamentoTokens && payload.contexto?.candidatos.length) {
+  while (tokensEntrada + estimarRespostaTokens(payload) > perfil.orcamentoTokens && payload.contexto?.candidatos.length) {
     payload.contexto.candidatos.pop();
     payload.contexto.candidatosOmitidos++;
   }
@@ -71,10 +73,13 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
     payload.status = "refinar_escopo";
     payload.proximosPassos = ["Há candidatos omitidos pelo orçamento. Refine a intenção ou informe --arquivo; não interprete omissão como ausência de dependência."];
   }
-  for (let i = 0; i < 3; i++) payload.orcamento.tokensEstimadosResposta = estimarRespostaTokens(payload);
-  if (payload.orcamento.tokensEstimadosResposta > perfil.orcamentoTokens) return emitir({
+  for (let i = 0; i < 3; i++) {
+    payload.orcamento.tokensEstimadosResposta = estimarRespostaTokens(payload);
+    payload.orcamento.tokensEstimadosTotal = tokensEntrada + payload.orcamento.tokensEstimadosResposta;
+  }
+  if (payload.orcamento.tokensEstimadosTotal > perfil.orcamentoTokens) return emitir({
     comando: "sessao", sucesso: false, status: "orcamento_insuficiente", execucaoAutorizada: false,
-    proximosPassos: ["Metadados e leituras bloqueantes excedem o orçamento. Refine --arquivo ou ajuste --orcamento-contexto; nenhuma leitura foi dispensada."],
+    proximosPassos: ["Instruções locais, metadados e leituras bloqueantes excedem o orçamento. Refine --arquivo ou ajuste --orcamento-contexto; nenhuma leitura foi dispensada."],
   }, 1);
   return emitir(payload);
 }

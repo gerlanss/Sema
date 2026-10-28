@@ -1,6 +1,7 @@
 // SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: resume contrato ou projeto com política explícita de análise de drift.
 
+import { emitirContextoLimitado } from "./contextDelivery.js";
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { diagnosticarEntradaContratos } from "./entradaContratos.js";
 import path from "node:path";
@@ -281,7 +282,6 @@ export async function comandoSyncCodex(emJson: boolean): Promise<number> {
     indexJson.agentContextPack as AgentContextPack,
   );
   const artefatos = [...new Set([
-    ...ARQUIVOS_CANONICOS_IA_RAIZ,
     ...resumoProjeto.artefatos,
     ...resultadosCodex.arquivos.map((item) => item.caminho),
     "exemplos",
@@ -296,9 +296,10 @@ export async function comandoSyncCodex(emJson: boolean): Promise<number> {
       baseProjeto: resumoProjeto.baseProjeto,
       pastaSaida: resumoProjeto.pastaSaida,
       artefatos,
-      entradaCanonica: indexJson.entradaCanonica,
+      entradaCanonica: ["AGENTS.md", "SEMA_BOOT.md", "sema sessao"],
+      contextoSelecionado: indexJson.contextoSelecionado,
       resultadosCodex,
-      exemplos,
+      exemplos: { destino: exemplos.destino, criados: exemplos.criados.length, preservados: exemplos.preservados.length },
     }, null, 2));
     return sucesso ? 0 : 1;
   }
@@ -315,9 +316,6 @@ export async function comandoSyncCodex(emJson: boolean): Promise<number> {
   console.log("");
   console.log(`Base do projeto: ${resumoProjeto.baseProjeto}`);
   console.log(`Ordem canônica: ${indexJson.entradaCanonica.ordemLeitura.join(" -> ")}`);
-  console.log(`IA fraca: ${indexJson.entradaCanonica.porCapacidade.fraca.join(" -> ")}`);
-  console.log(`IA média: ${indexJson.entradaCanonica.porCapacidade.media.join(" -> ")}`);
-  console.log(`IA forte: ${indexJson.entradaCanonica.porCapacidade.forte.join(" -> ")}`);
   console.log(`Codex: ${resultadosCodex.criados.length} criados, ${resultadosCodex.atualizados.length} atualizados, ${resultadosCodex.preservados.length} preservados`);
   console.log(`Exemplos oficiais: ${exemplos.criados.length} criados, ${exemplos.preservados.length} preservados em ${exemplos.destino}`);
   return 0;
@@ -362,7 +360,7 @@ export async function comandoAjudaIa(): Promise<number> {
     "Use `sema drift --cache fresh` para medir impls, vínculos, rotas, score e lacunas no fechamento; cache é aceleração, não prova final.",
     "Use `sema docs-impacto --intencao <acao>` para ler ou criar docs obrigatorias antes de agir.",
     "Use `sema finalizar-mudanca --intencao <acao>` para bloquear conclusao sem leitura documental comprovada.",
-    "Use `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` para gerar AST, IR, drift, `briefing.json` e `briefing.min.json`.",
+    "Use `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` para gerar somente o resumo selecionado pelo perfil. Consulte AST, IR ou drift pela CLI quando necessário.",
     "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
   ]));
   console.log("");
@@ -375,7 +373,7 @@ export async function comandoAjudaIa(): Promise<number> {
     "Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.",
     "IA fraca comeca no menor artefato que resolve a tarefa; nao enfie `ast.json` inteiro nela de bobeira.",
     "Timeout local e so limite do agente: escale e tente de novo antes de chamar Sema de inativo.",
-    "Antes de editar software vivo, rode os gates locais; se precisar do pacote materializado, gere-o com `sema contexto-ia ... --saida <diretorio>` antes de ler `briefing.min.json` ou `briefing.json`.",
+    "Antes de editar software vivo, rode os gates locais e consulte somente o contrato selecionado e suas dependências. A CLI materializa apenas os arquivos do perfil ativo.",
     "Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.",
   ]));
   return 0;
@@ -446,6 +444,7 @@ export async function comandoResumo(
   const alvo = entrada ? path.resolve(process.cwd(), entrada) : process.cwd();
   const analiseDrift = resolverAnaliseDriftConsultaCli(args, "resumo");
   const alvoEhArquivo = (await stat(alvo).catch(() => undefined))?.isFile() ?? false;
+  const baseEntrega = (await carregarConfiguracaoProjeto(alvo))?.baseDiretorio ?? (alvoEhArquivo ? process.cwd() : alvo);
 
   if (alvoEhArquivo) {
     const contexto = await carregarContextoModuloIa(alvo, analiseDrift);
@@ -480,14 +479,14 @@ export async function comandoResumo(
 
     if (emJson) {
       if (somentePacote && contextPack) {
-        console.log(JSON.stringify(contextPack, null, 2));
+        if (!(await emitirContextoLimitado(baseEntrega, contextPack))) return 1;
         return contexto.drift.sucesso === false ? 1 : 0;
       }
       if (somentePacote) {
-        console.log(JSON.stringify(contextPack, null, 2));
+        if (!(await emitirContextoLimitado(baseEntrega, contextPack))) return 1;
         return contexto.drift.sucesso === false ? 1 : 0;
       }
-      console.log(JSON.stringify({
+      if (!(await emitirContextoLimitado(baseEntrega, {
         comando: "resumo",
         modo,
         tamanho,
@@ -505,7 +504,7 @@ export async function comandoResumo(
           cache: contexto.drift.drift?.escopo_aplicado.cache ?? null,
         },
         contextPack,
-      }, null, 2));
+      }))) return 1;
       return contexto.drift.sucesso === false ? 1 : 0;
     }
 
@@ -513,7 +512,7 @@ export async function comandoResumo(
       console.log(`Resumo IA-first gerado em ${pastaResumo}`);
       console.log("");
     }
-    console.log(JSON.stringify(contextPack, null, 2));
+    if (!(await emitirContextoLimitado(baseEntrega, contextPack))) return 1;
     return contexto.drift.sucesso === false ? 1 : 0;
   }
 
@@ -531,10 +530,10 @@ export async function comandoResumo(
 
   if (emJson) {
     if (somentePacote) {
-      console.log(JSON.stringify(indexPack, null, 2));
+      if (!(await emitirContextoLimitado(baseEntrega, indexPack))) return 1;
       return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
     }
-    console.log(JSON.stringify({
+    if (!(await emitirContextoLimitado(baseEntrega, {
       comando: "resumo",
       modo,
       tamanho,
@@ -547,12 +546,12 @@ export async function comandoResumo(
         avisos: analiseDrift.avisos,
       },
       indexPack,
-    }, null, 2));
+    }))) return 1;
     return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
   }
 
   console.log(`Resumo IA-first do projeto gerado em ${resumoProjeto.pastaSaida}`);
   console.log("");
-  console.log(JSON.stringify(indexPack, null, 2));
+  if (!(await emitirContextoLimitado(baseEntrega, indexPack))) return 1;
   return resumoProjeto.analiseDrift.sucesso === false ? 1 : 0;
 }

@@ -32,6 +32,7 @@ Thumbs.db
 !.env.example
 .sema/
 AGENT_CONTEXT_PACK.json
+SEMA_CONTEXT.md
 SEMA_BRIEF*.txt
 SEMA_BRIEF.md
 SEMA_INDEX.json

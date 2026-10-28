@@ -487,7 +487,7 @@ Regras:
 - não invente sintaxe nem bloco fora da gramática oficial
 - preserve a intenção do contrato
 - use este resumo como fonte compacta inicial
-- se a tarefa pedir mais contexto, rode \`sema contexto-ia <arquivo.sema> --saida <diretorio> --json\` e então abra \`briefing.min.json\`, \`drift.json\` e \`ir.json\` nessa saída
+- se faltar contexto, use sema sessao com intenção e --arquivo; a CLI seleciona o recorte pelo perfil. Consulte drift --pacote ou ir apenas quando a tarefa precisar dessa evidência
 - não saia editando software vivo sem olhar risco, lacuna e checks sugeridos
 - se abrir código com \`SEMA-GOVERNED\`, volte ao contrato e chame Sema antes de editar
 - não crie nem conclua código governado acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas; acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO}, planeje divisão; documentação Markdown não entra nesse limite de código

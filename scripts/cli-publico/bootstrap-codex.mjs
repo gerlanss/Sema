@@ -41,7 +41,6 @@ async function validarHandshakeCodexMaterializado(projetoCodex, agents, packCode
   const artefatosPoliticaDrift = new Set([
     "AGENTS.md",
     "SEMA_BOOT.md",
-    "SEMA_SMALL_MODEL.md",
     "docs/ai-integration.md",
     "docs/commands.md",
     "docs/ai-workflow.md",

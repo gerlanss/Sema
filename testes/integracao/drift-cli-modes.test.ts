@@ -108,6 +108,10 @@ const CLI_COMPILADA = fileURLToPath(new URL("../../pacotes/cli/dist/bin.js", imp
 
 async function criarSandboxCli(base: string, opcoes: OpcoesSandboxCli = {}): Promise<SandboxCli> {
   const raiz = path.join(base, "workspace");
+  await mkdir(path.join(raiz, ".sema"), { recursive: true });
+  await writeFile(path.join(raiz, ".sema/contexto-ia.json"), JSON.stringify({
+    schema: "sema.agent-context-profile/v1", janelaTokens: 32768, orcamentoTokens: 8192, reservaSaidaTokens: 4096,
+  }));
   await mkdir(path.join(raiz, "contratos"), { recursive: true });
   await mkdir(path.join(raiz, "src"), { recursive: true });
   const descobertaDeclarada = opcoes.declararDescobertaCodigo !== false;

@@ -18,7 +18,7 @@ Then read every required doc returned by `docs-impacto`.
 
 ## Session Opening
 
-- `sema sessao "<intencao>" [--arquivo <contrato-ou-codigo>] [--janela-contexto <tokens>] [--orcamento-contexto <tokens>] [--reserva-saida <tokens>] [--salvar-perfil] --json`: asks for the effective window when absent and stores the profile only on explicit request. The compact response contains workspace identity, artifact freshness, matching contracts and linked files, mandatory document paths, scoped gates and next steps. The index stays inside the CLI. The budget estimates the public JSON size using characters/4; it does not measure the conversation or the model's exact tokenizer. Omitted candidates are counted and require scope refinement; mandatory readings are never silently waived. Treat `frescor.fresco:false` as a pre-action blocker and run the suggested `sema sync-codex --json`. Navigation never authorizes execution.
+- `sema sessao "<intencao>" [--arquivo <contrato-ou-codigo>] [--janela-contexto <tokens>] [--orcamento-contexto <tokens>] [--reserva-saida <tokens>] [--salvar-perfil] --json`: asks for the effective window when absent and stores the profile only on explicit request. The compact response contains workspace identity, artifact freshness, matching contracts and linked files, mandatory document paths, scoped gates and next steps. The index stays inside the CLI. The budget estimates local entry instructions plus the current delivery using characters/4; it does not measure the conversation or the model's exact tokenizer. Omitted candidates are counted and require scope refinement; mandatory readings are never silently waived. Treat `frescor.fresco:false` as a pre-action blocker and run the suggested `sema sync-codex --json`. Navigation never authorizes execution.
 
 ## Public JSON output
 
@@ -91,22 +91,27 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 
 ## Codex and Context
 
-Session freshness checks the managed `AGENTS.md` block, `SEMA_BOOT.md` and
-`SEMA_SMALL_MODEL.md` against the current CLI templates as well as contract
-hashes. Older instructions can therefore require `sync-codex` even when no
-contract changed. Synchronization preserves manual rules outside the managed
-block. The generated workflow uses `drift --cache fresh --pacote --json`; omit
-`--pacote` only when full evidence is needed. A session budget limits that
-session response, not subsequent commands, file reads or the full conversation.
+The CLI selects context files before generation: micro up to 32,768 tokens,
+short up to 131,072, expanded above that. The budget may lower the selected
+level further. Only the matching summary is materialized; other variants
+are removed from active entry files, with existing edits preserved in
+.sema/contexto-legado/. Internal indexes are not required readings.
+A session already supplying the needed task context does not require another summary.
 
-`validar` and `formatar` require selected `.sema` contracts. An empty scope
-returns a nonzero exit code and `SEM_CLI_SEM_CONTRATOS`; it does not validate
-an application or adopt the project. Before first-time adoption, the agent
-must obtain consent and the effective context window.
+Freshness checks managed instructions, contract hashes and changes to the
+materialized context profile. Synchronization preserves manual AGENTS rules.
+The budget counts AGENTS.md, SEMA_BOOT.md and the current delivery, using
+characters / 4. It does not measure chat history, host instructions or
+cumulative future file reads and tool results. Oversized requests must refine
+the scope; no blocking rule is silently waived.
+
+validar and formatar require selected .sema contracts. Empty scope returns
+SEM_CLI_SEM_CONTRATOS and does not validate an application or adopt a project.
+First-time adoption requires consent and the configured context window.
 
 - `sema ajuda-ia`: short guidance for Codex.
 - `sema starter-ia`: operational starter.
-- `sema contexto-ia <arquivo.sema> --saida <dir> --json`: AI context package.
+- `sema contexto-ia <arquivo.sema> --saida <dir> --json`: profile-selected context files; raw AST/IR/drift are consulted separately only when needed.
 - `sema resumo <arquivo-ou-pasta> [--drift <none|cache|fresh>] --json`: compact context; drift is not executed unless requested.
 - `sema prompt-curto <arquivo-ou-pasta> --json`: compact prompt.
 - `sema sync-codex --json`: synchronizes the official Codex entrypoint and local support docs.

@@ -11,7 +11,6 @@ export async function arquivosProtocoloDesatualizados(base: string): Promise<str
   const esperados = [
     ["AGENTS.md", renderizarInstrucaoCodexSema(pack)],
     ["SEMA_BOOT.md", renderizarSemaBoot(pack)],
-    ["SEMA_SMALL_MODEL.md", renderizarSemaSmallModel(pack)],
   ];
   const desatualizados: string[] = [];
   for (const [arquivo, esperado] of esperados) {

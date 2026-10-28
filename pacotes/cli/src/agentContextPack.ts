@@ -37,7 +37,7 @@ export function criarGuiaCapacidadeIa(): GuiaCapacidadeIaMap {
     evitar: ["ast.json", "ir.json", "diagnosticos.json"],
   };
   const media: GuiaCapacidadeIa = {
-    descricao: "IA média. Aguenta boot, resumo expandido, briefing mínimo, drift e documentação curta.",
+    descricao: "Alias legado; use o orçamento real e o recorte da tarefa, sem ampliar leituras pelo nome do nível.",
     artefatos: ["AGENTS.md", ARQUIVO_SEMA_BOOT],
     ordemLeitura: ["AGENTS.md", ARQUIVO_SEMA_BOOT],
     evitar: ["ast.json"],
@@ -73,7 +73,7 @@ function criarPoliticaCodigoGovernadoAgentContext(): PoliticaCodigoGovernadoAgen
     regra: `Arquivos de codigo gerados ou governados pela Sema devem manter cabecalho curto com modulo de origem, contrato .sema aplicavel e descricao humana. Validacao inline prova apenas o payload enviado; o arquivo fisico ainda precisa de SEMA-GOVERNED para orientar a proxima IA. Codigo governado avisa acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} linhas e bloqueia acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO}. Contrato .sema avisa acima de ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} linhas e bloqueia criacao, edicao, drift, finalizacao, geracao e snapshot acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}. O split de .sema deve ser por dominio/capacidade, nunca parte_1/parte_2; varios contratos podem governar o mesmo arquivo de codigo via vinculos. Sema Codigo deve preservar essa rastreabilidade em cabecalhos e saidas geradas. Documentacao Markdown nao entra nesse limite de codigo; continua governada por docs-impacto, limite de bytes e verificacao de segredos. Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres nao e caso de aumentar timeout: divida por responsabilidade ou use anexo/caminho de servidor autorizado.`,
     descricaoHumana: "O comentário deve orientar humanos e IAs sem duplicar o contrato inteiro dentro do código: diga o que o arquivo implementa, qual contrato governa e onde a próxima IA deve olhar.",
     porCapacidade: {
-      fraca: `Se abrir codigo com SEMA-GOVERNED, pare, leia SEMA_SMALL_MODEL.md e chame Sema antes de editar. Nao crie codigo acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas nem contrato .sema acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}; divida .sema por capacidade, nunca em parte_1/parte_2.`,
+      fraca: `Se abrir codigo com SEMA-GOVERNED, pare, consulte AGENTS.md e chame Sema antes de editar. Nao crie codigo acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas nem contrato .sema acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}; divida .sema por capacidade, nunca em parte_1/parte_2.`,
       media: `Se abrir codigo com SEMA-GOVERNED, rode docs-impacto e drift antes de alterar comportamento. Trate codigo ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO}+ e contrato .sema ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA}+ como refatoracao provavel; se o payload inline passar de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres, separe HTML, estilos, estado, renderizacao, calculo e dados antes de sincronizar.`,
       forte: `Se abrir codigo com SEMA-GOVERNED, pode inspecionar AST/IR e codigo completo, mas mantem contrato primeiro, drift, codigo ate ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO}, .sema ate ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} e finalizar-mudanca. Contexto grande nao autoriza monolito nem payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres.`,
     },
@@ -231,36 +231,12 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       incluirTextoBrutoQuando: "a IA precisa de um boot curto, fail-closed e independente do tamanho de contexto",
     },
     {
-      caminho: ARQUIVO_SEMA_SMALL_MODEL,
-      tipo: "entrypoint",
-      prioridade: 2,
-      obrigatorio: false,
-      quandoUsar: "Codex operando com pouco contexto, tarefa curta ou necessidade de instrução compacta",
-      incluirTextoBrutoQuando: "a IA tende a ignorar instruções longas ou copiar a estética ASCII da DSL",
-    },
-    {
       caminho: ARQUIVO_AGENT_CONTEXT_PACK,
       tipo: "entrypoint",
       prioridade: 3,
       obrigatorio: false,
       quandoUsar: "consulta interna da CLI; auditoria direcionada das políticas quando necessária",
       incluirTextoBrutoQuando: "somente trechos pertinentes solicitados; não carregar integralmente na abertura",
-    },
-    {
-      caminho: "SEMA_BRIEF.micro.txt",
-      tipo: "resumo",
-      prioridade: 4,
-      obrigatorio: false,
-      quandoUsar: "IA fraca, onboarding, chat remoto ou primeiro triage",
-      incluirTextoBrutoQuando: "a tarefa cabe em contexto curto",
-    },
-    {
-      caminho: "SEMA_BRIEF.curto.txt",
-      tipo: "resumo",
-      prioridade: 5,
-      obrigatorio: false,
-      quandoUsar: "IA média, mudança pequena ou review rápido",
-      incluirTextoBrutoQuando: "o módulo alvo ainda não está claro pelo micro",
     },
     {
       caminho: "SEMA_INDEX.json",
