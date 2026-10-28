@@ -123,10 +123,31 @@ test("drift-pack preserva trava e divergência, omitindo somente detalhes válid
   assert.equal(pacote.blockers.links[0]?.status, "nao_encontrado");
   assert.equal(pacote.blockers.diagnostics[0]?.mensagem, "símbolo ausente");
   assert.deepEqual(pacote.blockers.tasksWithoutImplementation[0]?.lacunas, ["impl quebrada"]);
+  assert.deepEqual(pacote.blockers.tasksWithGaps, pacote.blockers.tasksWithoutImplementation);
   assert.deepEqual(pacote.guidance.touchFirst, ["src/x.ts"]);
   assert.ok(pacote.guidance.validate.includes("verificar"));
   assert.equal(pacote.telemetry.packChars, JSON.stringify(pacote, null, 2).length);
   assert.ok(pacote.telemetry.reductionPercent > 0);
+  // Exercise the consumer-visible JSON, including evidence-only gaps and scope.
+  const baseTask = resultado.tasks[0]!;
+  const variantes = [
+    { task: "sem_impl", semImplementacao: true, implsQuebrados: 0, lacunas: [] },
+    { task: "sem_prova", semImplementacao: false, implsQuebrados: 0, lacunas: ["sem_evidencia_verificada"] },
+    { task: "quebrada", semImplementacao: false, implsQuebrados: 1, lacunas: [] },
+    { task: "saudavel", semImplementacao: false, implsQuebrados: 0, lacunas: [] },
+    { task: "outro_modulo", modulo: "app.y", semImplementacao: true, implsQuebrados: 0, lacunas: [] },
+  ];
+  const entrada = { ...resultado, tasks: variantes.map((item) => ({ ...baseTask, ...item })) };
+  const scoped = criarDriftPack(entrada, { targetModule: "app.x" });
+  const json = JSON.parse(JSON.stringify(scoped));
+  assert.deepEqual(json.blockers.tasksWithGaps.map((item: { task: string }) => item.task), ["sem_impl", "sem_prova", "quebrada"]);
+  assert.deepEqual(json.blockers.tasksWithoutImplementation, json.blockers.tasksWithGaps);
+  assert.equal(json.blockers.tasksWithGaps[1].semImplementacao, false);
+  assert.deepEqual(json.blockers.tasksWithGaps[1].lacunas, ["sem_evidencia_verificada"]);
+  assert.equal(scoped.telemetry.packChars, JSON.stringify(scoped, null, 2).length);
+  const vazio = criarDriftPack({ ...resultado, tasks: [] });
+  assert.deepEqual(vazio.blockers.tasksWithGaps, []);
+  assert.deepEqual(vazio.blockers.tasksWithoutImplementation, []);
 });
 
 test("entrypoint-pack preserva a política da capacidade escolhida sem duplicar o pack inteiro", () => {

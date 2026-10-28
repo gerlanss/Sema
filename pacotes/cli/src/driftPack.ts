@@ -38,6 +38,8 @@ export type DriftPack = {
     routes: Array<Record<string, unknown>>;
     resources: Array<Record<string, unknown>>;
     diagnostics: Array<Record<string, unknown>>;
+    tasksWithGaps: Array<Record<string, unknown>>;
+    /** @deprecated Use tasksWithGaps. Legacy alias includes all task gaps. */
     tasksWithoutImplementation: Array<Record<string, unknown>>;
   };
   guidance: {
@@ -120,6 +122,7 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
       routes: resultado.rotas_divergentes.map((item) => compactarRegistro(item as unknown as Record<string, unknown>, ["modulo", "route", "metodo", "caminho", "motivo"])),
       resources: resultado.recursos_divergentes.map((item) => compactarRegistro(item as unknown as Record<string, unknown>, ["modulo", "task", "categoria", "alvo", "arquivo", "origem", "tipo", "status"])),
       diagnostics: resultado.diagnosticos.map((item) => compactarRegistro(item as unknown as Record<string, unknown>, ["tipo", "modulo", "task", "route", "arquivo", "severidade", "mensagem"])),
+      tasksWithGaps: tarefas,
       tasksWithoutImplementation: tarefas,
     },
     guidance: {
