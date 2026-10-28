@@ -59,6 +59,8 @@ async function criarPacoteCompleto(
   const raiz = path.join(base, "pacote");
   await mkdir(path.join(raiz, "dist"), { recursive: true });
   await mkdir(path.join(raiz, "skills", "sema", "agents"), { recursive: true });
+  await mkdir(path.join(raiz, "skills", "sema", "references"), { recursive: true });
+  await writeFile(path.join(raiz, "skills", "sema", "references", "distribution.md"), "distribution-v1\n", "utf8");
   await writeFile(path.join(raiz, "package.json"), JSON.stringify({
     name: "@semacode/cli",
     version: versao,

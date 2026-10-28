@@ -416,11 +416,13 @@ test("gate do tarball compara postinstall e skill byte a byte com a fonte", asyn
     await Promise.all([
       mkdir(path.join(pacote, "scripts"), { recursive: true }),
       mkdir(path.join(pacote, "skills", "sema", "agents"), { recursive: true }),
+      mkdir(path.join(pacote, "skills", "sema", "references"), { recursive: true }),
     ]);
     const pares = [
       ["pacotes/cli/scripts/postinstall.mjs", "scripts/postinstall.mjs"],
       ["plugins/sema/skills/sema/SKILL.md", "skills/sema/SKILL.md"],
       ["plugins/sema/skills/sema/agents/openai.yaml", "skills/sema/agents/openai.yaml"],
+      ["plugins/sema/skills/sema/references/distribution.md", "skills/sema/references/distribution.md"],
     ];
     for (const [fonte, destino] of pares) {
       await copyFile(path.join(raiz, fonte), path.join(pacote, destino));

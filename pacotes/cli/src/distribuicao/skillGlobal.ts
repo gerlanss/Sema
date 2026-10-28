@@ -39,6 +39,7 @@ import { versaoSemanticaValida } from "./versaoSemantica.js";
 export const ARQUIVOS_SKILL_SEMA_GERENCIADOS = [
   "SKILL.md",
   "agents/openai.yaml",
+  "references/distribution.md",
 ] as const;
 export const NOME_RECIBO_SKILL_SEMA = ".sema-managed.json";
 
@@ -245,6 +246,7 @@ async function carregarSnapshot(
     await statDiretorioSeguro(path.join(raizPacote, "skills"));
     await statDiretorioSeguro(origem);
     await statDiretorioSeguro(path.join(origem, "agents"));
+    await statDiretorioSeguro(path.join(origem, "references"));
     const pacoteJson = JSON.parse((await lerArquivoSeguro(
       path.join(raizPacote, "package.json"),
       LIMITE_RECIBO,
@@ -316,10 +318,10 @@ function reciboValido(valor: unknown): valor is ReciboSkill {
     return false;
   }
   if (!candidato.files || typeof candidato.files !== "object" || Array.isArray(candidato.files)
-    || !chavesExatas(candidato.files, [...ARQUIVOS_SKILL_SEMA_GERENCIADOS])) return false;
-  return ARQUIVOS_SKILL_SEMA_GERENCIADOS.every((arquivo) => (
-    typeof candidato.files?.[arquivo] === "string"
-    && /^[a-f0-9]{64}$/u.test(candidato.files[arquivo])
+    || !(chavesExatas(candidato.files, [...ARQUIVOS_SKILL_SEMA_GERENCIADOS])
+      || chavesExatas(candidato.files, ["SKILL.md", "agents/openai.yaml"]))) return false;
+  return Object.values(candidato.files).every((hash) => (
+    typeof hash === "string" && /^[a-f0-9]{64}$/u.test(hash)
   ));
 }
 
@@ -328,7 +330,8 @@ async function estruturaDestinoPermitida(destino: string): Promise<boolean> {
   if (topo.length === 0) return true;
   if (!chavesExatas(
     Object.fromEntries(topo.map((entrada) => [entrada.name, true])),
-    ["SKILL.md", "agents", NOME_RECIBO_SKILL_SEMA],
+    ["SKILL.md", "agents", NOME_RECIBO_SKILL_SEMA,
+      ...(topo.some((entrada) => entrada.name === "references") ? ["references"] : [])],
   )) return false;
   const agents = path.join(destino, "agents");
   await statDiretorioSeguro(agents);
@@ -337,6 +340,13 @@ async function estruturaDestinoPermitida(destino: string): Promise<boolean> {
   await validarArquivoRegular(path.join(destino, "SKILL.md"), destino);
   await validarArquivoRegular(path.join(agents, "openai.yaml"), destino);
   await validarArquivoRegular(path.join(destino, NOME_RECIBO_SKILL_SEMA), destino);
+  if (topo.some((entrada) => entrada.name === "references")) {
+    const referencias = path.join(destino, "references");
+    await statDiretorioSeguro(referencias);
+    const entradas = await readdir(referencias);
+    if (entradas.length !== 1 || entradas[0] !== "distribution.md") return false;
+    await validarArquivoRegular(path.join(referencias, "distribution.md"), destino);
+  }
   return true;
 }
 
@@ -392,7 +402,12 @@ async function diagnosticarDestino(
         identidade,
       };
     }
-    for (const relativo of ARQUIVOS_SKILL_SEMA_GERENCIADOS) {
+    const temReferencia = await lstatOuNull(path.join(destino.caminho, "references")) !== null;
+    if (temReferencia !== Object.hasOwn(reciboDesconhecido.files, "references/distribution.md")) {
+      return { resultado: resultadoDestino(destino, "BROKEN_TARGET", "CONTEUDO_NAO_GERENCIADO"), identidade };
+    }
+    // Recibos anteriores a 4.2.2 possuem dois arquivos; validar ownership antes do upgrade.
+    for (const relativo of Object.keys(reciboDesconhecido.files) as Array<keyof ReciboSkill["files"]>) {
       const absoluto = path.resolve(destino.caminho, ...relativo.split("/"));
       const bytes = await lerArquivoSeguro(absoluto, LIMITE_ARQUIVO_SKILL, ambiente.homeReal);
       if (sha256(bytes) !== reciboDesconhecido.files[relativo]) {
@@ -442,8 +457,10 @@ async function criarStage(
       throw new FalhaDistribuicaoGlobal("BROKEN_TARGET", "DESTINO_ALTERADO");
     }
     await garantirDiretoriosSeguros(ambiente.homeReal, path.join(caminho, "agents"));
-    for (const relativo of ARQUIVOS_SKILL_SEMA_GERENCIADOS) {
-      const bytes = arquivos.get(relativo);
+    if (arquivos.has("references/distribution.md")) {
+      await garantirDiretoriosSeguros(ambiente.homeReal, path.join(caminho, "references"));
+    }
+    for (const [relativo, bytes] of arquivos) {
       if (!bytes) throw new FalhaDistribuicaoGlobal("BROKEN_TARGET", "PACOTE_INVALIDO");
       await escreverArquivoAtomico(
         ambiente.homeReal,
@@ -756,8 +773,11 @@ export async function capturarSnapshotSkillGlobalTransacao(
       destinos.push({ destino, existente: true, vazio: true });
       continue;
     }
+    const recibo = await lerArquivoSeguro(path.join(destino.caminho, NOME_RECIBO_SKILL_SEMA), LIMITE_RECIBO, ambiente.homeReal);
+    const receipt: unknown = JSON.parse(recibo.toString("utf8"));
+    if (!reciboValido(receipt)) throw new FalhaDistribuicaoGlobal("BROKEN_TARGET", "RECIBO_INVALIDO");
     const arquivos = new Map<(typeof ARQUIVOS_SKILL_SEMA_GERENCIADOS)[number], Buffer>();
-    for (const relativo of ARQUIVOS_SKILL_SEMA_GERENCIADOS) {
+    for (const relativo of Object.keys(receipt.files) as Array<keyof ReciboSkill["files"]>) {
       arquivos.set(relativo, await lerArquivoSeguro(
         path.resolve(destino.caminho, ...relativo.split("/")),
         LIMITE_ARQUIVO_SKILL,
@@ -769,11 +789,7 @@ export async function capturarSnapshotSkillGlobalTransacao(
       existente: true,
       vazio: false,
       arquivos,
-      recibo: await lerArquivoSeguro(
-        path.join(destino.caminho, NOME_RECIBO_SKILL_SEMA),
-        LIMITE_RECIBO,
-        ambiente.homeReal,
-      ),
+      recibo,
     });
   }
   return { ambiente, destinos };
@@ -790,7 +806,7 @@ async function destinoIgualSnapshot(
   if (snapshot.vazio) return (await readdir(snapshot.destino.caminho)).length === 0;
   if (!snapshot.arquivos || !snapshot.recibo
     || !await estruturaDestinoPermitida(snapshot.destino.caminho)) return false;
-  for (const relativo of ARQUIVOS_SKILL_SEMA_GERENCIADOS) {
+  for (const relativo of snapshot.arquivos.keys()) {
     const atual = await lerArquivoSeguro(
       path.resolve(snapshot.destino.caminho, ...relativo.split("/")),
       LIMITE_ARQUIVO_SKILL,

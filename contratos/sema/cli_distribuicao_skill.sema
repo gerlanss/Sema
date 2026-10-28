@@ -112,6 +112,7 @@ module sema.produto.distribuicao_global.skill {
       arquivo: "pacotes/cli/src/distribuicao/filesystemGlobal.ts"
       arquivo: "plugins/sema/skills/sema/SKILL.md"
       arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
+      arquivo: "plugins/sema/skills/sema/references/distribution.md"
       arquivo: "testes/unidade/distribuicao-skill-global.test.ts"
       simbolo: cli.src.distribuicao.skill_global.statusSkillGlobal
     }
@@ -133,6 +134,8 @@ module sema.produto.distribuicao_global.skill {
       cache_plugin_intocado == verdadeiro
       destinos deve_ser conter_destino_agents
       destinos deve_ser conter_apenas_agents_e_claude
+      digest_alinhado deve_ser incluir_referencia_de_distribuicao
+      ownership_valido deve_ser aceitar_upgrade_de_recibo_legado_de_dois_arquivos
     }
   }
 
@@ -230,6 +233,7 @@ module sema.produto.distribuicao_global.skill {
       arquivo: "pacotes/cli/scripts/postinstall.mjs"
       arquivo: "plugins/sema/skills/sema/SKILL.md"
       arquivo: "plugins/sema/skills/sema/agents/openai.yaml"
+      arquivo: "plugins/sema/skills/sema/references/distribution.md"
       arquivo: "testes/unidade/distribuicao-skill-global.test.ts"
       arquivo: "testes/unidade/distribuicao-global.test.ts"
       simbolo: cli.src.distribuicao.skill_global.sincronizarSkillGlobal
@@ -252,6 +256,8 @@ module sema.produto.distribuicao_global.skill {
       cache_plugin_intocado == verdadeiro
       destinos deve_ser conter_destino_agents
       destinos deve_ser conter_apenas_agents_e_claude
+      digest_alinhado deve_ser incluir_referencia_de_distribuicao
+      ownership_valido deve_ser aceitar_upgrade_de_recibo_legado_de_dois_arquivos
       estado deve_ser refletir_estado_fisico_apos_compensacao
       destinos deve_ser refletir_bytes_fisicos_apos_compensacao
       destinos deve_ser refletir_rollback_independente_de_agents_e_claude

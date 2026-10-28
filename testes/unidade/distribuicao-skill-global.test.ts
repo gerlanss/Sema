@@ -90,6 +90,8 @@ async function criarPacote(
 ): Promise<string> {
   const raiz = path.join(base, "pacote CLI üni");
   await mkdir(path.join(raiz, "skills", "sema", "agents"), { recursive: true });
+  await mkdir(path.join(raiz, "skills", "sema", "references"), { recursive: true });
+  await writeFile(path.join(raiz, "skills", "sema", "references", "distribution.md"), "distribution-v1\n", "utf8");
   await writeFile(path.join(raiz, "package.json"), JSON.stringify({
     name: "@semacode/cli",
     version: versao,
@@ -141,6 +143,7 @@ test("skill instala allowlist com receipt, é idempotente e não toca caches/plu
       NOME_RECIBO_SKILL_SEMA,
       "SKILL.md",
       "agents",
+      "references",
     ].sort());
     assert.deepEqual(await readdir(path.join(destino, "agents")), ["openai.yaml"]);
     assert.equal(await readFile(path.join(destino, "SKILL.md"), "utf8"), "skill-v1\n");
@@ -151,7 +154,7 @@ test("skill instala allowlist com receipt, é idempotente e não toca caches/plu
     };
     assert.equal(recibo.schema, "sema.skill-install-receipt/v1");
     assert.equal(recibo.manager, "@semacode/cli");
-    assert.deepEqual(Object.keys(recibo.files), ["SKILL.md", "agents/openai.yaml"]);
+    assert.deepEqual(Object.keys(recibo.files), ["SKILL.md", "agents/openai.yaml", "references/distribution.md"]);
     assert.match(recibo.files["SKILL.md"] ?? "", /^[a-f0-9]{64}$/u);
     assert.equal(await readFile(cachePlugin, "utf8"), "cache-intocado");
     assert.equal(await readFile(workspace, "utf8"), "workspace-intocado");
@@ -589,4 +592,77 @@ test("falha no cleanup do backup não dispara segundo rollback nem retorna READY
     observador?.close();
     await rm(base, { recursive: true, force: true });
   }
+});
+
+
+test("skill migra recibo de dois arquivos, restaura rollback e protege referencia editada", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-skill-references-"));
+  try {
+    const home = path.join(base, "home");
+    await mkdir(home);
+    const raizPacote = await criarPacote(base);
+    const opcoes = { diretorioUsuario: home, raizPacote };
+    const destino = path.join(home, ".agents", "skills", "sema");
+    assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "READY");
+    const referencia = path.join(destino, "references", "distribution.md");
+    assert.equal(await readFile(referencia, "utf8"), "distribution-v1\n");
+    const receiptPath = path.join(destino, NOME_RECIBO_SKILL_SEMA);
+    const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+    delete receipt.files["references/distribution.md"];
+    await rm(path.join(destino, "references"), { recursive: true });
+    await writeFile(receiptPath, JSON.stringify(receipt));
+    assert.equal((await statusSkillGlobal(opcoes)).estado, "STALE");
+    const snapshot = await capturarSnapshotSkillGlobalTransacao(opcoes);
+    assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "READY");
+    assert.equal(await readFile(referencia, "utf8"), "distribution-v1\n");
+    await restaurarSnapshotSkillGlobalTransacao(snapshot);
+    assert.equal((await statusSkillGlobal(opcoes)).estado, "STALE");
+    assert.equal((await readdir(destino)).includes("references"), false);
+    assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "READY");
+    await writeFile(referencia, "regra humana preservada");
+    assert.equal((await statusSkillGlobal(opcoes)).estado, "BROKEN_TARGET");
+    assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "BROKEN_TARGET");
+    assert.equal(await readFile(referencia, "utf8"), "regra humana preservada");
+  } finally { await rm(base, { recursive: true, force: true }); }
+});
+
+test("skill rejeita referencia sem ownership e pacote sem referencia obrigatoria", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-skill-reference-ownership-"));
+  try {
+    const home = path.join(base, "home");
+    await mkdir(home);
+    const raizPacote = await criarPacote(base);
+    const opcoes = { diretorioUsuario: home, raizPacote };
+    assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "READY");
+    const destino = path.join(home, ".agents", "skills", "sema");
+    const receiptPath = path.join(destino, NOME_RECIBO_SKILL_SEMA);
+    const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
+    delete receipt.files["references/distribution.md"];
+    await writeFile(receiptPath, JSON.stringify(receipt));
+    assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "BROKEN_TARGET");
+    assert.equal(await readFile(path.join(destino, "references", "distribution.md"), "utf8"), "distribution-v1\n");
+    await rm(path.join(raizPacote, "skills", "sema", "references", "distribution.md"));
+    assert.equal((await statusSkillGlobal(opcoes)).estado, "BROKEN_TARGET");
+  } finally { await rm(base, { recursive: true, force: true }); }
+});
+
+test("skill rejeita junction ou symlink no diretorio de referencias", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "sema-skill-reference-escape-"));
+  try {
+    const home = path.join(base, "home");
+    const fora = path.join(base, "fora");
+    await mkdir(home); await mkdir(fora);
+    await writeFile(path.join(fora, "distribution.md"), "externo intacto");
+    const raizPacote = await criarPacote(base);
+    const opcoes = { diretorioUsuario: home, raizPacote };
+    assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "READY");
+    for (const pasta of [path.join(home, ".agents", "skills", "sema", "references"), path.join(raizPacote, "skills", "sema", "references")]) {
+      await rm(pasta, { recursive: true });
+      await symlink(fora, pasta, process.platform === "win32" ? "junction" : "dir");
+      assert.equal((await sincronizarSkillGlobal(opcoes)).estado, "BROKEN_TARGET");
+      assert.equal(await readFile(path.join(fora, "distribution.md"), "utf8"), "externo intacto");
+      await rm(pasta);
+      await mkdir(pasta); await writeFile(path.join(pasta, "distribution.md"), "distribution-v1\n");
+    }
+  } finally { await rm(base, { recursive: true, force: true }); }
 });

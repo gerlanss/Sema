@@ -374,8 +374,10 @@ export async function validarInstalacaoGlobalIsolada({
       path.join(basePacoteGlobal, "scripts", "postinstall.mjs"),
       path.join(skillEmpacotada, "SKILL.md"),
       path.join(skillEmpacotada, "agents", "openai.yaml"),
+      path.join(skillEmpacotada, "references", "distribution.md"),
       path.join(skillSincronizada, "SKILL.md"),
       path.join(skillSincronizada, "agents", "openai.yaml"),
+      path.join(skillSincronizada, "references", "distribution.md"),
       launcher,
       fallbackPowerShell,
     ]) {
@@ -386,9 +388,11 @@ export async function validarInstalacaoGlobalIsolada({
     if (await fingerprintCaminhos([
       path.join(skillEmpacotada, "SKILL.md"),
       path.join(skillEmpacotada, "agents", "openai.yaml"),
+      path.join(skillEmpacotada, "references", "distribution.md"),
     ]) !== await fingerprintCaminhos([
       path.join(skillSincronizada, "SKILL.md"),
       path.join(skillSincronizada, "agents", "openai.yaml"),
+      path.join(skillSincronizada, "references", "distribution.md"),
     ])) {
       throw new Error("The globally synchronized Sema skill differs from the packaged source.");
     }
