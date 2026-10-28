@@ -136,15 +136,21 @@ retroactively. On Windows, PowerShell resolves `sema.ps1` and cmd.exe resolves
 absolute fallback. The CLI needs no login, license check, activation key,
 token or credits — commands run locally against your workspace.
 
+Initialization creates configuration and agent rules, with demonstrations only
+under `exemplos/`. It does not invent an order, ranking, or other business domain.
+Create the contract for the actual request before implementing. Existing contracts
+remain untouched; `sema init` remains the separate, explicit contract-template command.
+
 The governed loop in a project:
 
 ```bash
 sema iniciar --template base --janela-contexto 32768 # example: confirmed 32K window
-sema sessao "describe the change" --json            # identity, freshness, blocking docs, gates
+sema sessao "describe the requested application" --json
+# Model that request in contratos/app.sema before the implementation or checks below.
 sema docs-impacto --intencao "describe the change" --json
-sema validar contratos/app/pedidos.sema --json
-sema drift contratos/app/pedidos.sema --escopo modulo --cache fresh --json
-sema compilar contratos/app/pedidos.sema --alvo typescript --saida .tmp/scaffold
+sema validar contratos/app.sema --json
+sema drift contratos/app.sema --escopo modulo --cache fresh --json
+sema compilar contratos/app.sema --alvo typescript --saida .tmp/scaffold
 sema verificar contratos --alvo typescript --json   # executes the contract tests
 sema finalizar-mudanca --intencao "describe the change" --doc-lida AGENTS.md --json
 ```
@@ -184,7 +190,7 @@ it, generate the scaffold, fill the real implementation while keeping
 `impl`/`vinculos` wired, and close with executed evidence.
 
 ```bash
-sema compilar contratos/app/pedidos.sema --alvo typescript --saida .tmp/scaffold --estrutura modulos
+sema compilar contratos/app.sema --alvo typescript --saida .tmp/scaffold --estrutura modulos
 sema importar express src --json
 ```
 
@@ -299,8 +305,8 @@ Commercial licensing: [suporte@otimitare.com](mailto:suporte@otimitare.com).
 ```bash
 sema ajuda-ia
 sema starter-ia
-sema prompt-curto contratos/app/pedidos.sema --json
-sema contexto-ia contratos/app/pedidos.sema --saida .tmp/contexto --json
+sema prompt-curto contratos/app.sema --json
+sema contexto-ia contratos/app.sema --saida .tmp/contexto --json
 sema verificar contratos --alvo typescript --saida .tmp/verificacao --json
 sema importar fastify src --json
 ```

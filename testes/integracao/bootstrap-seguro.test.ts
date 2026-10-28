@@ -218,7 +218,7 @@ async function provarSyncCodexFalhaFechado(conteudoOriginal: Buffer): Promise<vo
     assert.deepEqual(await readFile(sentinelaCache), conteudoSentinela);
     assert.equal(
       existsSync(path.join(ambiente.raizCacheEsperada, "drift", "v3", "workspaces")),
-      true,
+      false,
     );
   } finally {
     await limparSandbox(base);
@@ -255,8 +255,7 @@ test("sema iniciar --force sobrescreve explicitamente os destinos do template", 
     assert.match(readme, /^# Projeto Sema/m);
     assert.doesNotMatch(readme, /conteúdo deve permanecer/);
     assert.equal((JSON.parse(config) as { saida: string }).saida, "./generated");
-    assert.match(contrato, /module app\.pedidos/);
-    assert.doesNotMatch(contrato, /module existente\.pedidos/);
+    assert.equal(contrato, CONTRATO_EXISTENTE.toString("utf8"), "--force não transforma contratos reais em exemplos");
   } finally {
     await limparSandbox(base);
   }
@@ -276,7 +275,7 @@ test("sema iniciar em subpasta de workspace governado registra a subpasta no con
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     assert.equal(existsSync(path.join(subpasta, "sema.config.json")), false, "subpasta governada pelo pai nao ganha config proprio");
-    assert.match(await readFile(path.join(subpasta, "pubspec.yaml"), "utf8"), /sema_flutter_consumer/);
+    assert.match(await readFile(path.join(subpasta, "exemplos/templates/flutter-consumer/pubspec.yaml"), "utf8"), /sema_flutter_consumer/);
     const configPai = JSON.parse(await readFile(path.join(repo, "sema.config.json"), "utf8")) as { diretoriosCodigo: string[] };
     assert.deepEqual(configPai.diretoriosCodigo, ["./backend", "./app_consumer"]);
     assert.match(resultado.stdout, /registrada em diretoriosCodigo/);

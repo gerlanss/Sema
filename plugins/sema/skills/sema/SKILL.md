@@ -36,8 +36,9 @@ it does not name Sema. Loading the skill is not consent to adopt it.
    sema sync-codex --json
    ```
 
-   Read the generated `AGENTS.md` and `SEMA_BOOT.md`. Model the requested
-   behavior in an applicable contract before implementing. Never add `--force`
+   Read the generated `AGENTS.md` and `SEMA_BOOT.md`. Initialization does not
+   invent a business contract: examples stay under `exemplos/`. Model the actual
+   requested behavior in `contratos/` before implementing; preserve existing contracts. Never add `--force`
    without an explicit overwrite decision.
 5. **Existing Sema project:** read its `AGENTS.md` and `SEMA_BOOT.md`, then run
    `sema sessao "<task intention>" --janela-contexto <confirmed-tokens> --json`.

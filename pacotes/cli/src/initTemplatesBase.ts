@@ -2,6 +2,7 @@
 // Descrição: contrato base e dispatcher dos templates multi-agente de inicialização.
 
 
+import { separarDemonstracoesTemplate } from "./initProjectPlan.js";
 import type { FrameworkGeracao } from "@sema/padroes";
 import { arquivosInitTemplatesBackend } from "./initTemplatesBackend.js";
 import { arquivosInitTemplatesWeb } from "./initTemplatesWeb.js";
@@ -25,60 +26,7 @@ export type TemplateIniciar =
   | "cpp-service-bridge";
 
 export function arquivosBaseIniciar(): ArquivosTemplateIniciar {
-  return [
-    {
-      caminhoRelativo: "contratos/pedidos.sema",
-      conteudo: `module app.pedidos {
-  entity Pedido {
-    fields {
-      id: Id
-      status: Texto
-      total: Decimal
-    }
-  }
-
-  task criar_pedido {
-    input {
-      cliente_id: Id required
-      total: Decimal required
-    }
-    output {
-      pedido_id: Id
-      status: Texto
-    }
-    rules {
-      total > 0
-    }
-    effects {
-      persistencia Pedido criticidade=alta
-      auditoria pedidos
-    }
-    guarantees {
-      pedido_id existe
-      status existe
-    }
-    tests {
-      caso "pedido valido" {
-        given {
-          cliente_id: "cli-1"
-          total: 10
-        }
-        expect {
-          sucesso: verdadeiro
-        }
-      }
-    }
-  }
-
-  route criar_pedido_publico {
-    metodo: POST
-    caminho: /pedidos
-    task: criar_pedido
-  }
-}
-`,
-    },
-  ];
+  return [{ caminhoRelativo: "contratos/.gitkeep", conteudo: "" }];
 }
 
 function arquivosApoioIaIniciar(): ArquivosTemplateIniciar {
@@ -87,40 +35,25 @@ function arquivosApoioIaIniciar(): ArquivosTemplateIniciar {
       caminhoRelativo: "README.md",
       conteudo: `# Projeto Sema
 
-Este projeto foi inicializado com Sema.
+Sema foi adotado neste projeto. A inicialização prepara configuração, protocolo e exemplos; o contrato de negócio deve representar o pedido do usuário.
 
-## Entrada oficial do Codex
+1. Use AGENTS.md, SEMA_BOOT.md e sema sessao "<intenção>" --json.
+2. Se ainda não houver contrato aplicável, modele o comportamento solicitado em contratos/ antes de implementar. Consulte somente exemplos pertinentes em exemplos/ para sintaxe.
+3. Valide o contrato e siga os gates locais antes de alterar o código da aplicação.
 
-Antes de alterar codigo, contrato ou documentacao:
+Contratos já existentes são preservados. Não trate exemplos como funcionalidades solicitadas nem como evidência de implementação.
 
-1. leia \`AGENTS.md\`;
-2. rode \`sema --version\`; se o shell não localizar o comando, use \`$HOME/.sema/bin/sema\` no macOS/Linux; no Windows, PowerShell usa \`sema.ps1\` no PATH, cmd.exe usa \`sema.cmd\`, e o fallback absoluto é \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`;
-3. rode \`sema resumo --drift none\` para contexto contratual; score, confiança e implementação ficam não avaliados;
-4. rode \`sema docs-impacto --intencao "<acao>" --json\`;
-5. leia \`docs/commands.md\` antes de escolher comando ou interpretar \`--saida\`;
-6. use \`sema descobrir recomendar --intencao "<objetivo>" --json\` quando não souber qual capacidade ou pipeline aplicar;
-7. use \`exemplos/\` e \`docs/syntax.md\` antes de criar ou corrigir \`.sema\`.
+## Estrutura
 
-Quando precisar comprovar o código vivo, rode \`sema drift <contrato.sema> --escopo modulo --cache fresh --json\`. Cache acelera navegação, mas não é prova final de fechamento.
+- contratos/: contratos reais do projeto; a inicialização não inventa um domínio.
+- exemplos/: referências da DSL e demonstrações de templates. Não são origens de contratos ativos.
+- AGENTS.md e SEMA_BOOT.md: protocolo de operação.
+- sema.config.json: configuração do projeto.
+- SEMA_INDEX.json e AGENT_CONTEXT_PACK.json: bases internas da CLI, sem leitura integral obrigatória.
+- docs/: referências sob demanda.
 
-## Estrutura criada
+Depois de modelar e validar o contrato solicitado, gere o suporte necessário com sema compilar <contrato.sema> --alvo <alvo-configurado> --saida <diretório> e implemente o comportamento real.
 
-- \`contratos/\`: contratos semanticamente governados.
-- \`AGENTS.md\`: entrypoint oficial do Codex.
-- \`exemplos/\`: exemplos oficiais da DSL Sema.
-- \`docs/commands.md\`: catalogo de comandos, pipelines, gates e regra de \`--saida\`.
-- \`docs/syntax.md\`: referencia curta para escrever \`.sema\`.
-- \`docs/ai-workflow.md\`: fluxo minimo para agentes.
-- \`SEMA_BOOT.md\`: regras de operação. A CLI gera somente o resumo correspondente ao perfil e ao orçamento.
-- \`AGENT_CONTEXT_PACK.json\` e \`SEMA_INDEX.json\`: bases internas da CLI, não carregar no contexto da IA.
-
-## Geracao
-
-O template base ja declara alvo JavaScript. Exemplo:
-
-\`\`\`bash
-sema compilar contratos/pedidos.sema --alvo javascript --saida ./generated/javascript
-\`\`\`
 `,
     },
   ];
@@ -148,5 +81,5 @@ export function arquivosTemplateIniciar(template: TemplateIniciar): ArquivosTemp
       ...arquivosBase,
     ];
 
-  return anexarApoioIaSemDuplicar(arquivosTemplate);
+  return anexarApoioIaSemDuplicar(separarDemonstracoesTemplate(template, arquivosTemplate));
 }

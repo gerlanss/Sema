@@ -7,10 +7,10 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `4.2.4`
+- Version: `4.2.5`
 - Package: `@semacode/cli`
 - Last updated: 2026-10-28
-- Reference commit: `1054fce`
+- Reference commit: `84ad149`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -32,6 +32,9 @@ Every public publication must pass:
 - `npm run release:verificar-drift`
 
 ## Maintenance Focus
+
+- Initialize configuration and agent rules without inventing business contracts;
+  isolate template demonstrations under exemplos and model the requested domain first.
 
 - Select context artifacts before writing them; materialize only the active
   profile and count entry instructions together with the current delivery.

@@ -1,6 +1,6 @@
 module sema.produto.cli_init_templates {
   docs {
-    resumo: "Superficies distintas da CLI: sema init gera um contrato a partir de template e sema iniciar prepara um projeto Sema Codex-native com contratos, exemplos e AGENTS.md, sem gate de autorizacao local ou matriz de outros clientes."
+    resumo: "Superficies distintas da CLI: sema init gera um contrato a partir de template e sema iniciar prepara um projeto Sema Codex-native com configuração, exemplos e AGENTS.md, preservando contratos reais existentes e sem inventar um contrato de negócio, sem gate de autorizacao local ou matriz de outros clientes."
     versao: "1.0.0"
     status: "MODELADA"
   }
@@ -76,7 +76,6 @@ module sema.produto.cli_init_templates {
     }
     effects {
       persistencia arquivo_config criticidade = media
-      persistencia contrato_inicial criticidade = media
       persistencia kit_ia criticidade = media
       persistencia exemplos_oficiais criticidade = baixa
       auditoria projeto_iniciado criticidade = baixa
@@ -118,6 +117,9 @@ module sema.produto.cli_init_templates {
       motivo: obrigatorio
     }
     forbidden {
+      criar_contrato_de_negocio_demonstrativo_em_contratos
+      usar_showroom_ou_pedidos_como_requisito_inferido
+      indexar_exemplos_como_contratos_ativos
       iniciar_sem_exemplos
       iniciar_sem_agents_md
       iniciar_sem_docs_comandos
@@ -139,6 +141,8 @@ module sema.produto.cli_init_templates {
     vinculos {
       arquivo: "pacotes/cli/src/initCommand.ts"
       arquivo: "pacotes/cli/src/initTemplatesBase.ts"
+      arquivo: "pacotes/cli/src/initProjectPlan.ts"
+      arquivo: "testes/integracao/init-sem-dominio.test.ts"
       arquivo: "pacotes/cli/src/agentEntryPoints.ts"
       arquivo: "pacotes/cli/src/exemplosOficiais.ts"
       arquivo: "testes/integracao/bootstrap-seguro.test.ts"
@@ -151,7 +155,9 @@ module sema.produto.cli_init_templates {
       criticidade_operacional: media
     }
     guarantees {
-      contrato_inicial existe
+      contrato_inicial == falso
+      exemplos_oficiais deve_ser ficar_somente_em_exemplos
+      arquivos_preservados deve_ser incluir_contratos_reais_existentes
       exemplos_oficiais existe
       starter_exemplos_por_padrao existe
       agents_md existe
@@ -178,6 +184,7 @@ module sema.produto.cli_init_templates {
 
         expect {
           sucesso: verdadeiro
+          contrato_inicial: falso
           exemplos_oficiais: verdadeiro
           docs_comandos: verdadeiro
           agents_md: verdadeiro

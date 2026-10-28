@@ -26,6 +26,10 @@ test("novos projetos materializam somente o nível selecionado em 32K, 65K e 1M"
       const resumo = await readFile(path.join(base, escolhido), "utf8");
       assert.match(resumo, /Consulta opcional/);
       assert.ok(await tokensEntradaLocal(base) + Math.ceil(resumo.length / 4) <= criarPerfilContexto(janela).orcamentoTokens);
+      assert.deepEqual((await readdir(path.join(base, "contratos"))).filter(n => n.endsWith(".sema")), []);
+      await writeFile(path.join(base, "contratos/compras.sema"), 'module app.compras { docs { resumo: "Lista de compras solicitada pelo usuário." } }');
+      const sync = executar(base, ["sync-codex", "--json"]);
+      assert.equal(sync.status, 0, sync.stdout + sync.stderr);
       const contratos = (await readdir(path.join(base, "contratos"))).filter(n => n.endsWith(".sema"));
       const contrato = `contratos/${contratos[0]}`;
       const sessao = executar(base, ["sessao", "Revisar contrato", "--arquivo", contrato, "--json"]);

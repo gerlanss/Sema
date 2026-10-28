@@ -759,8 +759,8 @@ async function main() {
       : process.platform === "darwin"
         ? path.join(raizCacheBootstrap, "Library", "Caches", "Sema")
         : path.join(raizCacheBootstrap, "sema");
-    if (!(await existe(cacheBootstrapEsperado))) {
-      throw new Error("Installed sync-codex did not publish fresh drift into the isolated bootstrap cache.");
+    if (await existe(cacheBootstrapEsperado)) {
+      throw new Error("Empty bootstrap published a misleading drift cache without an actual contract.");
     }
 
     const contratoCache = await prepararFixtureDriftPublico(projetoCodex);

@@ -91,6 +91,10 @@ Ready UI rule: if the task generates an app, site, dashboard, form, or static HT
 
 ## Codex and Context
 
+Project initialization creates configuration and agent rules without inventing a business contract.
+Demonstrations stay under exemplos/; active contracts are authored in contratos/ for the actual request.
+An adopted workspace with no contracts returns contrato_necessario and does not validate an application.
+
 The CLI selects context files before generation: micro up to 32,768 tokens,
 short up to 131,072, expanded above that. The budget may lower the selected
 level further. Only the matching summary is materialized; other variants

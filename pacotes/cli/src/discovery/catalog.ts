@@ -187,7 +187,7 @@ function entradasGovernanca(): DiscoveryEntry[] {
       kind: "GOVERNANCE_FLOW",
       domains: ["governanca", "adocao"],
       label: "Adoção do Sema",
-      summary: "Inicializa a governança local e materializa o entrypoint oficial para agentes.",
+      summary: "Inicializa configuração e protocolo sem inventar um contrato de negócio; demonstrações ficam em exemplos/ e o agente modela o pedido real em contratos/.",
       useWhen: ["o projeto ainda não possui contrato Sema ou AGENTS.md gerado"],
       avoidWhen: ["o workspace já está governado e a tarefa é uma mudança comum"],
       intentSignals: ["iniciar sema", "semantizar projeto", "sync codex", "criar primeiro contrato"],

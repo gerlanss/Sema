@@ -33,7 +33,7 @@ export async function navegarContextoSessao(base: string, pedido: string, arquiv
       resumo: m.purpose,
       arquivos: (m.likelyFiles ?? []).map(relativo),
     })),
-    status: encontrados.length === 0 ? "sem_correspondencia" : encontrados.length === 1 ? "contrato_localizado" : "selecionar_contrato",
+    status: indice.modulos.length === 0 ? "contrato_necessario" : encontrados.length === 0 ? "sem_correspondencia" : encontrados.length === 1 ? "contrato_localizado" : "selecionar_contrato",
     execucaoAutorizada: false,
   };
 }

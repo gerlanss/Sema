@@ -61,6 +61,7 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
       finalizar: `sema finalizar-mudanca --intencao "<intenção>" --arquivo ${alvo} --doc-lida <doc> --json`,
     },
     proximosPassos: !frescor.fresco ? [frescor.sugestao, "Repita a sessão após a sincronização; não carregue o índice bruto."]
+      : contexto?.status === "contrato_necessario" ? ["Projeto adotado sem contratos ativos. Modele em contratos/ o comportamento solicitado pelo usuário e valide antes de implementar. Exemplos em exemplos/ são referências de sintaxe, não funcionalidades do projeto."]
       : contrato ? [`Leia ${contrato}; consulte docs-impacto com esse --arquivo para motivos e dependências. Depois inspecione apenas o código vinculado.`, "Referências do índice são navegação. Confirme regras completas e gates antes de agir."]
       : ["Informe uma intenção específica ou --arquivo <contrato-ou-código> para resolver o escopo. Não edite enquanto houver ambiguidade."],
     orcamento: { metodo: "chars_div_4", tokensEstimadosResposta: 0, tokensEntrada, tokensEstimadosTotal: 0, limiteTokens: perfil.orcamentoTokens, contagemExata: false, contextoDaConversaMedido: false },

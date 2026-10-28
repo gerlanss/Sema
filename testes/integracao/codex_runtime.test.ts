@@ -392,7 +392,7 @@ test("sema iniciar propaga pendência de AGENTS e retorna falha", async () => {
       : process.platform === "darwin"
         ? path.join(cacheUsuario, "Library", "Caches", "Sema")
         : path.join(cacheUsuario, "sema");
-    assert.equal(existsSync(raizCacheEsperada), true);
+    assert.equal(existsSync(raizCacheEsperada), false, "sem contratos não se publica uma análise vazia no cache");
   } finally {
     await rm(base, { recursive: true, force: true });
     await rm(cacheUsuario, { recursive: true, force: true });

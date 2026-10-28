@@ -1,7 +1,7 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.contexto.agent_pack, sema.produto.fronteira_repositorios
 // Consulte contratos/sema/governanca_ia_contexto_agent_pack.sema antes de editar.
 // Descricao: prova o bootstrap Codex materializado e suas barreiras de escrita no pacote instalado.
-import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { validarTextoHandshakePublico } from "./fronteira-publica.mjs";
@@ -86,6 +86,14 @@ export async function validarBootstrapCodexInstalado({
   const readmeOriginal = "# README original do projeto\n\nNao sobrescrever.\n";
   await writeFile(path.join(projetoCodex, "README.md"), readmeOriginal, "utf8");
   executarCliInstalada(["iniciar", "--janela-contexto", "32768", "--template", "base"], projetoCodex);
+  const contratosIniciais = (await readdir(path.join(projetoCodex, "contratos"))).filter(nome => nome.endsWith(".sema"));
+  if (contratosIniciais.length) throw new Error("Initialization invented business contracts in the installed workspace.");
+  const sessaoInicial = extrairPayloadResultadoCliV1(executarCliInstalada(["sessao", "Criar lista de compras", "--json"], projetoCodex).stdout, {
+    command: "sessao", exitCode: 0, kind: "SUCCESS",
+  });
+  if (sessaoInicial.status !== "contrato_necessario" || sessaoInicial.execucaoAutorizada !== false || sessaoInicial.contexto?.candidatos.length !== 0) {
+    throw new Error("An adopted workspace must ask for the requested contract without selecting an example.");
+  }
   if (await readFile(path.join(projetoCodex, "README.md"), "utf8") !== readmeOriginal) {
     throw new Error("The installed CLI overwrote an existing README during Codex bootstrap.");
   }

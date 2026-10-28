@@ -154,6 +154,7 @@ export async function comandoIniciar(
     return 1;
   }
   console.log(`Projeto Sema inicializado com template ${template}.`);
+  console.log("A inicialização não cria contratos de negócio. Modele o pedido do usuário em contratos/ antes de implementar; demonstrações ficam em exemplos/.");
   console.log(`Arquivos do projeto: ${arquivosParaEscrever.length} escritos, ${opcoes.force ? 0 : existentes.size} preservados.`);
   console.log(`Exemplos oficiais sincronizados em ${exemplos.destino} (${exemplos.criados.length} criados, ${exemplos.preservados.length} preservados).`);
   if (!opcoes.exemplosCompletos) {

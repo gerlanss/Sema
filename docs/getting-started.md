@@ -48,11 +48,19 @@ depend on `PATH`.
 
 ```bash
 sema descobrir explicar flow.project-adoption --json
-sema iniciar --template base
+sema iniciar --template base --janela-contexto 32768 # example: confirmed window
 sema sync-codex --json
-sema validar contratos/*.sema --json
+sema sessao "describe the requested application" --json
+# Model the actual request in contratos/app.sema before implementation.
+sema validar contratos/app.sema --json
 sema resumo --drift none
 ```
+
+Initialization creates no business contracts. Examples and template demonstrations
+stay under `exemplos/`, outside the active contract origins. Existing contracts are
+preserved. An empty adopted project asks for the actual requested contract and
+does not claim that an application has been validated. Confirm the configured
+context window; 32,768 above is only an example.
 
 Run this sequence only after explicit project-adoption authorization. The
 `sema iniciar` command preserves existing project files and refuses symlink or

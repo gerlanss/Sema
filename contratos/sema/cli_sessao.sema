@@ -83,6 +83,8 @@ module sema.produto.cli_sessao {
       criticidade_operacional: media
     }
     guarantees {
+      proximos_passos_emitidos deve_ser pedir_contrato_do_usuario_quando_projeto_adotado_nao_tem_contratos
+      proximos_passos_emitidos deve_ser nao_selecionar_exemplos_como_dominio_inferido
       proximos_passos_emitidos deve_ser contar_instrucoes_locais_e_entrega_no_mesmo_orcamento
       frescor_avaliado deve_ser detectar_troca_do_perfil_materializado
       proximos_passos_emitidos deve_ser limitar_contexto_por_orcamento_de_caracteres_estimados

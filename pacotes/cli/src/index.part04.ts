@@ -237,20 +237,21 @@ export async function gerarResumoProjetoIa(
     escopo: "projeto",
     adiarDescobertaCodigo: !analiseDrift.executar,
   });
+  const executarDrift = analiseDrift.executar && contextoProjeto.modulosSelecionados.length > 0;
   const geradoEm = new Date().toISOString();
   const guiaPorCapacidade = criarGuiaCapacidadeIa();
   const entradaCanonica = criarEntradaCanonicaProjeto(guiaPorCapacidade);
   const agentContextPack = entradaCanonica.agentContextPack;
-  const modoVerificacaoCodigo = analiseDrift.executar
+  const modoVerificacaoCodigo = executarDrift
     ? await detectarModoVerificacaoCodigo(
       contextoProjeto.baseProjeto,
       contextoProjeto.diretoriosCodigo,
     )
     : "contratos_apenas";
-  const fontesConclusao = analiseDrift.executar
+  const fontesConclusao = executarDrift
     ? await detectarFontesConclusaoSnapshot(contextoProjeto.baseProjeto)
-    : ["contrato"];
-  const resultadoDrift = analiseDrift.executar
+    : contextoProjeto.modulosSelecionados.length > 0 ? ["contrato"] : [];
+  const resultadoDrift = executarDrift
     ? await analisarDriftLegado(contextoProjeto, {
       escopo: "projeto",
       modoCache: analiseDrift.modo,
@@ -276,9 +277,9 @@ export async function gerarResumoProjetoIa(
         caminho: item.caminho,
         modulo,
         modo: analiseDrift.modo,
-        executada: analiseDrift.executar,
+        executada: executarDrift,
         sucesso: resultadoDrift?.sucesso ?? null,
-        aviso: analiseDrift.executar
+        aviso: executarDrift
           ? null
           : "Análise de drift não executada; implementação, vínculos e rotas não foram verificados.",
         resumo: driftResumo,
@@ -288,7 +289,7 @@ export async function gerarResumoProjetoIa(
       fontesConclusao,
     });
   });
-  const arquivosCodigoDetectados = analiseDrift.executar && modoVerificacaoCodigo === "codigo_completo"
+  const arquivosCodigoDetectados = executarDrift && modoVerificacaoCodigo === "codigo_completo"
     ? await listarTopArquivosCodigoDetectados(contextoProjeto.diretoriosCodigo)
     : [];
   const topArquivosResumo = escolherTopArquivosResumo(modulos, arquivosCodigoDetectados);
@@ -316,9 +317,9 @@ export async function gerarResumoProjetoIa(
     modoVerificacaoCodigo,
     analiseDrift: {
       modo: analiseDrift.modo,
-      executada: analiseDrift.executar,
+      executada: executarDrift,
       sucesso: resultadoDrift?.sucesso ?? null,
-      aviso: analiseDrift.executar
+      aviso: executarDrift
         ? null
         : "Análise de drift não executada; o resumo contém somente evidência contratual.",
       cache: resultadoDrift?.escopo_aplicado.cache ?? null,

@@ -30,6 +30,8 @@ export const DIRETORIOS_CODIGO_IGNORADOS = new Set([
   "generated",
   "node_modules",
   "ephemeral",
+  "exemplos",
+  "examples",
   ".vscode",
   ".windsurf",
   "test",
