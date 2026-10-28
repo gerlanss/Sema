@@ -151,6 +151,7 @@ export function selecionarIndiceContexto(input: {
   mode?: string;
   drift?: string;
   sourceIndexChars?: number;
+  maximoModulos?: number;
 }): IndexPack {
   const request = input.request.trim();
   const requestTokens = new Set(tokens(request));
@@ -162,7 +163,7 @@ export function selecionarIndiceContexto(input: {
     .map((modulo) => compactarModulo(modulo, requestTokens, projetarResumoInteiro))
     .filter((item): item is NonNullable<typeof item> => item !== null)
     .sort((a, b) => b.relevanceScore - a.relevanceScore || a.module.localeCompare(b.module, "pt-BR"))
-    .slice(0, projetarResumoInteiro ? input.modulos.length : 8);
+    .slice(0, input.maximoModulos ?? (projetarResumoInteiro ? input.modulos.length : 8));
   const base = {
     schema: "sema.ai.index-pack/v1" as const,
     selection,

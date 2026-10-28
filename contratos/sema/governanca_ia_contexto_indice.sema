@@ -44,6 +44,7 @@ module sema.produto.governanca_ia.contexto.indice {
       ts: cli.src.index_pack.selecionarIndiceContexto
     }
     vinculos {
+      arquivo: "pacotes/cli/src/sessionContext.ts"
       arquivo: "pacotes/cli/src/indexPack.ts"
       arquivo: "pacotes/cli/src/index.part06.ts"
       arquivo: "testes/unidade/context-packs.test.ts"

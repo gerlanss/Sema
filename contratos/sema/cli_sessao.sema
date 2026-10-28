@@ -8,6 +8,9 @@ module sema.produto.cli_sessao {
     input {
       intencao: Texto
       entrada: Texto
+      janela_contexto: Numero
+      orcamento_contexto: Numero
+      reserva_saida: Numero
     }
     output {
       workspace_identificado: Booleano
@@ -48,6 +51,12 @@ module sema.produto.cli_sessao {
       motivo: obrigatorio
     }
     forbidden {
+      exigir_indice_bruto_na_abertura
+      adivinhar_janela_do_modelo
+      persistir_perfil_sem_opcao_explicita
+      ocultar_candidatos_omitidos_pelo_orcamento
+      tratar_estimativa_de_tokens_como_contagem_exata
+      usar_indice_desatualizado_para_direcionar_edicao
       emitir_dados_de_codigo_vivo
       esconder_stale_do_agente
       listar_docs_que_nao_sao_bloqueantes_como_bloqueantes
@@ -56,6 +65,10 @@ module sema.produto.cli_sessao {
       ts: cli.src.comando_sessao.comandoSessao
     }
     vinculos {
+      arquivo: "pacotes/cli/src/cliArgs.ts"
+      arquivo: "pacotes/cli/src/contextBudget.ts"
+      arquivo: "pacotes/cli/src/sessionContext.ts"
+      arquivo: "testes/unidade/context-budget.test.ts"
       arquivo: "pacotes/cli/src/comandoSessao.ts"
       arquivo: "pacotes/cli/src/index.part04.ts"
       arquivo: "testes/unidade/comando-sessao.test.ts"
@@ -69,6 +82,10 @@ module sema.produto.cli_sessao {
       criticidade_operacional: media
     }
     guarantees {
+      proximos_passos_emitidos deve_ser limitar_contexto_por_orcamento_de_caracteres_estimados
+      proximos_passos_emitidos deve_ser perguntar_janela_ausente_antes_de_contexto
+      frescor_avaliado deve_ser exigir_indice_atual_para_navegacao
+      proximos_passos_emitidos deve_ser declarar_omissoes_e_nao_autorizar_execucao
       workspace_identificado == verdadeiro
       hash_contratos_calculado == verdadeiro
       frescor_avaliado == verdadeiro

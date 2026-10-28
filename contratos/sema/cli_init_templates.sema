@@ -47,6 +47,7 @@ module sema.produto.cli_init_templates {
 
   task iniciar_projeto_com_kit_ia {
     input {
+      janela_contexto: Numero optional
       template_nome: Texto required
       base_projeto: Texto required
       sobrescrever_existentes: Booleano optional
@@ -69,6 +70,7 @@ module sema.produto.cli_init_templates {
       subpasta_governada_registrada_no_pai: Booleano
     }
     rules {
+      janela_contexto deve_ser declarada_ou_perfil_existente_antes_de_gravar
       template_nome deve_ser preenchido
       base_projeto deve_ser preenchido
     }

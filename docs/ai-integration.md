@@ -60,19 +60,11 @@ while contract-only queries keep unobserved implementation fields null inside th
 
 ## Codex Context Tiers
 
-Codex with a small context budget should start with `SEMA_BOOT.md`,
-`SEMA_SMALL_MODEL.md`, `SEMA_BRIEF.micro.txt`,
-`AGENT_CONTEXT_PACK.json`, and `SEMA_INDEX.json`. They should stop early
-when a gate is unclear.
-
-Codex with a medium context budget should start with `SEMA_BOOT.md`,
-`AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.curto.txt`,
-`SEMA_INDEX.json`, and `AGENTS.md`. They must run docs-impact, drift, and
-impact before edits.
-
-Codex with a large context budget may consume `AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.md`,
-`SEMA_INDEX.json`, AST, IR, drift, and impact outputs, but larger context does
-not remove the contract-first rule.
+All context capacities start with AGENTS.md, SEMA_BOOT.md and sema sessao.
+The first session asks for the effective window in tokens. Declare --janela-contexto
+and use --salvar-perfil to remember it; --orcamento-contexto and --reserva-saida are adjustable.
+SEMA_INDEX.json and AGENT_CONTEXT_PACK.json are internal CLI data, never mandatory full reads.
+Read the selected contract and its declared dependencies, then the linked code. Ambiguity requires refinement.
 
 ## Governed Code
 

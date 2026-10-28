@@ -230,7 +230,7 @@ test("sema iniciar preserva README, configuração e contrato existentes por pad
 
   try {
     await prepararArquivosExistentes(repo);
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
+    const resultado = executarCli(repo, ["iniciar", "--janela-contexto", "32768", "--template", "base"], base);
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     assert.deepEqual(await readFile(path.join(repo, "README.md")), README_EXISTENTE);
@@ -246,7 +246,7 @@ test("sema iniciar --force sobrescreve explicitamente os destinos do template", 
 
   try {
     await prepararArquivosExistentes(repo);
-    const resultado = executarCli(repo, ["iniciar", "--template", "base", "--force"], base);
+    const resultado = executarCli(repo, ["iniciar", "--janela-contexto", "32768", "--template", "base", "--force"], base);
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     const readme = await readFile(path.join(repo, "README.md"), "utf8");
@@ -272,7 +272,7 @@ test("sema iniciar em subpasta de workspace governado registra a subpasta no con
       origens: ["./contratos"],
       diretoriosCodigo: ["./backend"],
     }, null, 2)}\n`, "utf8");
-    const resultado = executarCli(subpasta, ["iniciar", "--template", "flutter-consumer"], base);
+    const resultado = executarCli(subpasta, ["iniciar", "--janela-contexto", "32768", "--template", "flutter-consumer"], base);
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     assert.equal(existsSync(path.join(subpasta, "sema.config.json")), false, "subpasta governada pelo pai nao ganha config proprio");
@@ -296,7 +296,7 @@ test("sema iniciar em subpasta ja registrada preserva o config do pai byte a byt
       diretoriosCodigo: ["./backend", "./app_consumer"],
     }, null, 2)}\n`;
     await writeFile(path.join(repo, "sema.config.json"), configOriginal, "utf8");
-    const resultado = executarCli(subpasta, ["iniciar", "--template", "flutter-consumer"], base);
+    const resultado = executarCli(subpasta, ["iniciar", "--janela-contexto", "32768", "--template", "flutter-consumer"], base);
 
     assert.equal(resultado.status, 0, diagnosticoCli(resultado));
     assert.equal(await readFile(path.join(repo, "sema.config.json"), "utf8"), configOriginal);
@@ -311,7 +311,7 @@ test("sema iniciar recusa junction em contratos sem criar pedidos.sema fora do r
 
   try {
     await criarJunction(outside, path.join(repo, "contratos"));
-    const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
+    const resultado = executarCli(repo, ["iniciar", "--janela-contexto", "32768", "--template", "base"], base);
 
     exigirFalhaFatalTexto(resultado);
     assert.equal(existsSync(path.join(outside, "pedidos.sema")), false);
@@ -328,7 +328,7 @@ test("sema iniciar prevalida exemplos e docs antes de criar qualquer arquivo", a
 
     try {
       await criarJunction(outside, path.join(repo, diretorio));
-      const resultado = executarCli(repo, ["iniciar", "--template", "base"], base);
+      const resultado = executarCli(repo, ["iniciar", "--janela-contexto", "32768", "--template", "base"], base);
 
       exigirFalhaFatalTexto(resultado);
       assert.equal(existsSync(path.join(repo, "README.md")), false);
@@ -370,7 +370,7 @@ test("sema iniciar materializa starter por padrao e exemplos aninhados com --com
   try {
     await mkdir(path.dirname(preservado), { recursive: true });
     await writeFile(preservado, sentinela);
-    const starter = executarCli(repo, ["iniciar", "--template", "base"], base);
+    const starter = executarCli(repo, ["iniciar", "--janela-contexto", "32768", "--template", "base"], base);
 
     assert.equal(starter.status, 0, diagnosticoCli(starter));
     assert.equal(existsSync(path.join(repo, "exemplos", "crud_simples.sema")), true);
@@ -379,7 +379,7 @@ test("sema iniciar materializa starter por padrao e exemplos aninhados com --com
       false,
     );
 
-    const completo = executarCli(repo, ["iniciar", "--template", "base", "--com-exemplos"], base);
+    const completo = executarCli(repo, ["iniciar", "--janela-contexto", "32768", "--template", "base", "--com-exemplos"], base);
 
     assert.equal(completo.status, 0, diagnosticoCli(completo));
     assert.deepEqual(await readFile(preservado), sentinela);
@@ -407,7 +407,7 @@ test("sema iniciar recusa junction aninhada em exemplos sem escrita externa", as
   try {
     await mkdir(path.join(repo, "exemplos"), { recursive: true });
     await criarJunction(outside, path.join(repo, "exemplos", "sistemas-interativos"));
-    const resultado = executarCli(repo, ["iniciar", "--template", "base", "--com-exemplos"], base);
+    const resultado = executarCli(repo, ["iniciar", "--janela-contexto", "32768", "--template", "base", "--com-exemplos"], base);
 
     exigirFalhaFatalTexto(resultado);
     assert.deepEqual(await readdir(outside), []);

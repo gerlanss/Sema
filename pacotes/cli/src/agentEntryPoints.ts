@@ -19,6 +19,8 @@ import {
   ARQUIVO_SEMA_SMALL_MODEL,
   type AgentContextPack,
 } from './agentContextTipos.js';
+import { renderizarInstrucaoCodexSema } from './agentBootstrap.js';
+export { renderizarSemaBoot, renderizarSemaSmallModel } from './agentBootstrap.js';
 import { LIMITE_CARACTERES_PAYLOAD_INLINE } from './agentContextPack.js';
 
 const MARCADOR_SEMA_AGENT_ENTRYPOINT_INICIO = '<!-- sema:agent-entrypoint:start -->';
@@ -187,177 +189,6 @@ async function limparEntrypointLegadoNaoCodex(
   return contemVestigioSemaLegado(conteudoManual) ? "pendente" : "atualizado";
 }
 
-export function renderizarSemaBoot(agentContextPack: AgentContextPack): string {
-  const politica = agentContextPack.politicaIdioma;
-  const politicaCodigo = agentContextPack.politicaCodigoGovernado;
-  const politicaTimeout = agentContextPack.politicaTimeoutResumo;
-  const politicaDesign = agentContextPack.politicaDesignVisual;
-  const politicaPlataforma = agentContextPack.politicaPlataforma;
-  return `# SEMA_BOOT
-
-Você está em um projeto governado por Sema. O contrato semântico vem antes de qualquer ação.
-
-## Primeira ação
-
-1. Confirme \`AGENTS.md\` na raiz e rode \`sema --version\`. Se o shell não localizar o comando, use \`$HOME/.sema/bin/sema\` no macOS/Linux; no Windows, PowerShell usa \`sema.ps1\` no PATH, cmd.exe usa \`sema.cmd\`, e o fallback absoluto é \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`. Só então declare a CLI indisponível.
-2. Use a CLI local diretamente para ler o workspace: \`sema sessao "<intencao>" --json\` na abertura (identidade, frescor, docs bloqueantes e gates em um envelope), depois \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`. Na 3.0.0, \`sema --version\` continua texto SemVer exato; com \`--json\`, help e falhas de controle usam \`sema.cli.control/v1\`, enquanto comandos sintaticamente válidos usam o envelope exato de oito campos \`sema.cli.result/v1\`, com o resultado aninhado em \`payload\` e \`ok\` separado do veredito de domínio desse payload.
-3. Se não estiver claro qual profile, workflow, pipeline, gerador ou adapter usar, rode \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não execute automaticamente uma recomendação ambígua.
-4. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
-5. Este boot é para workspace local em disco; se não houver workspace local, pare bloqueado em vez de inventar caminho.
-6. Antes de criar módulo, rota, task ou contrato, inspecione o contrato \`.sema\` aplicável.
-7. Antes de editar código existente, rode \`sema drift --cache fresh\` e impacto pela CLI local.
-8. Para módulo novo com contrato validado, gere o andaime com \`sema compilar\` no alvo padrão, preencha a implementação real mantendo \`impl\`/\`vinculos\` e feche com \`sema verificar\`.
-9. Antes de criar ou corrigir \`.sema\`, use os exemplos oficiais na CLI local.
-10. Se qualquer etapa falhar, pare e diga que está bloqueado.
-
-Não substitua esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local, inferência pelo nome do projeto, bom senso ou ferramenta não citada aqui.
-
-## Políticas da plataforma
-
-${politicaPlataforma.regra}
-
-- Escopo: ${politicaPlataforma.escopoGovernanca}
-- Se houver alerta externo: ${politicaPlataforma.quandoHouverBloqueio}
-- IA fraca: ${politicaPlataforma.porCapacidade.fraca}
-- IA média: ${politicaPlataforma.porCapacidade.media}
-- IA forte: ${politicaPlataforma.porCapacidade.forte}
-
-## Capacidade do agente
-
-- Fraca: leia \`${ARQUIVO_SEMA_SMALL_MODEL}\`, \`SEMA_BRIEF.micro.txt\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\` e só suba contexto se necessário.
-- Média: leia este boot, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.curto.txt\`, \`SEMA_INDEX.json\` e a doc indicada pelo Sema.
-- Forte: leia este boot, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.md\`, \`SEMA_INDEX.json\`, \`AGENTS.md\` e rode os gates completos.
-
-## Código governado
-
-${politicaCodigo.regra}
-
-- Marcador: \`${politicaCodigo.marcador}\`.
-- Orçamento de código: arquivo governado acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} linhas gera diagnóstico; acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} bloqueia conclusão, geração e snapshot. Documentação Markdown não entra nesse limite de código.
-- Orçamento de contrato .sema: até ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} linhas é saudável; ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA + 1}-${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} é diagnóstico; acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} bloqueia criação, edição, drift, finalização, geração e snapshot.
-- Divida .sema por domínio/capacidade, nunca parte_1/parte_2. Um mesmo arquivo de código pode ter vários contratos governando via vinculos; preserve essa rastreabilidade no Sema Código.
-- Payload inline: acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres em \`arquivos_codigo.conteudo\` ou \`conteudo\` não é timeout; divida por responsabilidade ou use anexo/caminho de servidor autorizado.
-- Validação inline com score alto não substitui cabeçalho no arquivo físico: ela prova o payload enviado, não prepara a próxima IA que vai abrir o arquivo depois.
-- Divisão correta é por responsabilidade real. Exemplo web: \`index.html\` para estrutura, \`styles/*.css\` para estilos, \`js/state.js\`, \`js/calc.js\`, \`js/render/*.js\` para comportamento, e \`data/*.json\` para dados.
-- Proibido fatiar arquivo em \`index_p1.html\`, \`index_p2.html\` ou similares sem fronteira semântica só para passar no limite.
-- IA fraca: ${politicaCodigo.porCapacidade.fraca}
-- IA média: ${politicaCodigo.porCapacidade.media}
-- IA forte: ${politicaCodigo.porCapacidade.forte}
-
-## Sinal, evidência e ritual
-
-Score composto, \`achados[]\` e \`decisaoAgente\` são sinais para guiar a próxima ação. Abaixo de 80 bloqueia; alvo evolui 0.5 ponto até 100; nada disso basta sozinho.
-
-- Fraca: se o score passou, confira se cada achado tem evidência concreta; se não souber provar, pare.
-- Média: conecte regra, arquivo, contrato e evidência antes de concluir aderência.
-- Forte: não transforme regex, palavra-chave ou score 100 em ritual vazio; valide substância, risco e comportamento.
-- Consultas honestas: \`resumo\` e \`inspecionar\` usam \`--drift none\` por padrão; score, confiança, implementação, rotas e superfícies não observadas ficam nulos/não avaliados.
-- Se uma consulta executar drift explicitamente, \`payload.analiseDrift.sucesso\` expõe o resultado e uma falha solicitada retorna exit code diferente de zero.
-- Cache: \`sema drift\` usa \`fresh\` por padrão. \`--cache none\` ainda executa sem persistência; \`cache\` acelera extrações validadas, mas não é prova final.
-- Fechamento governado: se o \`payload\` de \`sema drift --cache fresh --json\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou \`impls_quebrados\`, não diga que passou limpo. Corrija e rode drift de novo. \`vinculos_fora_do_escopo\` é informativo: o arquivo existe no workspace fora dos \`diretoriosCodigo\`; siga o \`diretorioSugerido\` do registro para incluir o diretório no \`sema.config.json\` — não bloqueia fechamento.
-- Experiência governada: se a tarefa cria ou altera site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, prove acabamento moderno, contextual e não genérico. Em UI estreita (ex. 390px), \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\` precisa ser verdadeiro.
-- Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
-
-## Acabamento visual e terminal
-
-${politicaDesign.regra}
-
-- Aplicar quando: ${politicaDesign.aplicarQuando}
-- IA fraca: ${politicaDesign.porCapacidade.fraca}
-- IA média: ${politicaDesign.porCapacidade.media}
-- IA forte: ${politicaDesign.porCapacidade.forte}
-- Proibido: ${politicaDesign.proibicoes.slice(0, 5).join(", ")}.
-
-## Timeout e retry
-
-${politicaTimeout.regra}
-
-- Timeout inicial recomendado para projeto inteiro: ${politicaTimeout.timeoutInicialSegundos}s.
-- Escalonamento: ${politicaTimeout.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")}.
-- IA fraca: ${politicaTimeout.porCapacidade.fraca}
-- IA média: ${politicaTimeout.porCapacidade.media}
-- IA forte: ${politicaTimeout.porCapacidade.forte}
-- ${politicaTimeout.ateQuandoTentar}
-
-## Idioma humano
-
-${politica.regra}
-
-- Use o idioma falado pelo usuário.
-- Em PT-BR, escreva com acentos, cedilha e pontuação normal.
-- Use vocabulário Sema canônico para conceitos de produto: pontuação, desvio semântico, trava, pré-checagem, ambiente de execução e perfil.
-- Não traduza comandos, rotas, nomes de arquivos, endpoints, variáveis, pacotes, marcas, símbolos de código nem palavras-chave da DSL.
-
-## Falha fechada
-
-${agentContextPack.failClosed.map((regra) => `- ${regra}`).join("\n")}
-`;
-}
-
-export function renderizarSemaSmallModel(agentContextPack: AgentContextPack): string {
-  const politicaTimeout = agentContextPack.politicaTimeoutResumo;
-  const politicaDesign = agentContextPack.politicaDesignVisual;
-  const politicaPlataforma = agentContextPack.politicaPlataforma;
-  return `# SEMA_SMALL_MODEL
-
-Leia isto primeiro se você tem pouco contexto, pouca memória, pouco tool use ou tendência a ignorar instruções longas.
-
-1. Não edite nada antes de chamar Sema.
-2. Em workspace local, rode \`sema --version\`; se o shell falhar, use \`$HOME/.sema/bin/sema\` no macOS/Linux. No Windows, PowerShell usa \`sema.ps1\` no PATH e cmd.exe usa \`sema.cmd\`; o fallback absoluto é \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`. Só então pare e peça instalação ou reparo.
-3. Sema não contorna políticas da plataforma: ele governa contrato, escopo, drift, evidência e qualidade.
-4. Se aparecer alerta de política: pare, explique de forma neutra e não tente burlar filtro.
-5. Se não houver workspace local em disco: pare bloqueado e peça o fluxo apropriado; não invente leitura por caminho.
-6. Se for escrever \`.sema\`: leia \`exemplos/\`; se a pasta estiver ausente, rode \`sema instalar-exemplos --json\` antes.
-7. Se não houver contrato ou vínculo semântico do arquivo: inspecione o arquivo, crie ou edite o contrato aplicável e vincule antes do código.
-8. Se não conseguir chamar Sema: pare e declare bloqueio.
-9. Responda no idioma do usuário. Em PT-BR, use vocabulário Sema: pontuação, desvio semântico, pré-checagem, ambiente de execução e perfil; preserve comandos, endpoints e identificadores.
-10. Se abrir código com \`${agentContextPack.politicaCodigoGovernado.marcador}\`: volte ao contrato, chame Sema e só então edite.
-11. Score 100, achados atendidos ou validação inline são sinais; confira evidência real no contrato e no código.
-12. Validação inline não dispensa cabeçalho \`${agentContextPack.politicaCodigoGovernado.marcador}\` no arquivo físico.
-13. Não crie código governado acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas nem contrato .sema acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}; acima de ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO} em código ou ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} em .sema, planeje divisão por responsabilidade.
-14. Divida por função real: HTML, CSS, estado, cálculo, renderização, dados. Não faça \`index_p1.html\` e \`index_p2.html\` sem sentido.
-15. Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres não é lentidão: divida por responsabilidade; não aumente timeout para tentar passar limite de transporte.
-16. Se aparecer caminho que não pertence ao workspace local aberto pelo usuário, pare e confirme a fonte antes de agir.
-17. Se Sema estourar por timeout local: aumente o timeout e tente de novo. Não trate isso como falha do Sema.
-18. Para fechamento, rode \`sema drift --cache fresh --json\`; cache persistente só acelera navegação e não é prova final. Se o \`payload\` retornar \`sucesso:false\`, \`vinculos_quebrados\`, \`rotas_divergentes\` ou \`impls_quebrados\`, não conclua. \`vinculos_fora_do_escopo\` é informativo com \`diretorioSugerido\` para o \`sema.config.json\`; não bloqueia fechamento. Na 3.0.0, não procure campos de domínio no topo do envelope \`sema.cli.result/v1\` nem use \`ok\` como substituto do veredito do payload.
-19. Se a tarefa tiver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal: aplique acabamento moderno, contextual, responsivo/ergonômico, com hierarquia clara, estados e evidência. Em UI, valide mobile/desktop e prove \`scrollWidth <= clientWidth\` em viewport estreito como 390px.
-20. Não substitua o contexto Sema por AGENTS.md, README.md, busca local, inferência por nome ou bom senso.
-
-Ordem curta:
-
-- \`${ARQUIVO_SEMA_BOOT}\`
-- \`SEMA_BRIEF.micro.txt\`
-- \`${ARQUIVO_AGENT_CONTEXT_PACK}\`
-- \`SEMA_INDEX.json\`
-- \`AGENTS.md\`
-
-Políticas da plataforma:
-
-- ${politicaPlataforma.regra}
-- IA fraca: ${politicaPlataforma.porCapacidade.fraca}
-- Se houver bloqueio externo: ${politicaPlataforma.quandoHouverBloqueio}
-
-Timeout:
-
-- Timeout local do agente não é falha do Sema.
-- Projeto inteiro: comece com ${politicaTimeout.timeoutInicialSegundos}s ou mais.
-- Escalonamento: ${politicaTimeout.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")}.
-- Se o projeto inteiro for lento, escopar para \`sema resumo <arquivo.sema> --micro --para mudanca --drift none\`.
-- ${politicaTimeout.ateQuandoTentar}
-
-Acabamento visual e terminal:
-
-- ${politicaDesign.regra}
-- IA fraca: ${politicaDesign.porCapacidade.fraca}
-- Evidência mínima: ${politicaDesign.evidencias.fraca.join(", ")}.
-- Proibido: ${politicaDesign.proibicoes.slice(0, 5).join(", ")}.
-
-Fail-closed:
-
-${agentContextPack.failClosed.map((regra) => `- ${regra}`).join("\n")}
-`;
-}
-
 export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentContextPack): string {
   const supportedCapacities = Object.keys(agentContextPack.guiaPorCapacidade).join(", ");
   return [
@@ -423,19 +254,11 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "",
     "## Codex Context Tiers",
     "",
-    "Codex with a small context budget should start with `" + ARQUIVO_SEMA_BOOT + "`,",
-    "`" + ARQUIVO_SEMA_SMALL_MODEL + "`, `SEMA_BRIEF.micro.txt`,",
-    "`" + ARQUIVO_AGENT_CONTEXT_PACK + "`, and `SEMA_INDEX.json`. They should stop early",
-    "when a gate is unclear.",
-    "",
-    "Codex with a medium context budget should start with `" + ARQUIVO_SEMA_BOOT + "`,",
-    "`" + ARQUIVO_AGENT_CONTEXT_PACK + "`, `SEMA_BRIEF.curto.txt`,",
-    "`SEMA_INDEX.json`, and `AGENTS.md`. They must run docs-impact, drift, and",
-    "impact before edits.",
-    "",
-    "Codex with a large context budget may consume `" + ARQUIVO_AGENT_CONTEXT_PACK + "`, `SEMA_BRIEF.md`,",
-    "`SEMA_INDEX.json`, AST, IR, drift, and impact outputs, but larger context does",
-    "not remove the contract-first rule.",
+    "All context capacities start with AGENTS.md, SEMA_BOOT.md and sema sessao.",
+    "The first session asks for the effective window in tokens. Declare --janela-contexto",
+    "and use --salvar-perfil to remember it; --orcamento-contexto and --reserva-saida are adjustable.",
+    "SEMA_INDEX.json and AGENT_CONTEXT_PACK.json are internal CLI data, never mandatory full reads.",
+    "Read the selected contract and its declared dependencies, then the linked code. Ambiguity requires refinement.",
     "",
     "## Governed Code",
     "",
@@ -484,80 +307,6 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "Sema governs contract, scope, drift, evidence, and quality. It does not bypass",
     "platform policies, terms of use, permissions, security controls, or laws.",
   ].join("\n") + "\n";
-}
-
-function renderizarInstrucaoCodexSema(agentContextPack: AgentContextPack): string {
-  const capacidade = "media" as const;
-  const guia = agentContextPack.guiaPorCapacidade[capacidade];
-  const politicaTimeout = agentContextPack.politicaTimeoutResumo;
-  const politicaDesign = agentContextPack.politicaDesignVisual;
-  const politicaPlataforma = agentContextPack.politicaPlataforma;
-  return `# Sema para Codex
-
-Este workspace é governado por Sema. Antes de qualquer ação em código, contrato, documentação operacional, workflow, profile ou deploy:
-
-1. Leia \`${ARQUIVO_SEMA_BOOT}\`.
-2. Rode \`sema --version\`; se o shell falhar, use \`$HOME/.sema/bin/sema\` no macOS/Linux. No Windows, PowerShell usa \`sema.ps1\` no PATH e cmd.exe usa \`sema.cmd\`; use \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\` como fallback absoluto. Só então pare e peça instalação ou reparo.
-3. Abra a sessão com \`sema sessao "<intencao>" --json\`: devolve identidade do workspace, hash dos contratos, frescor dos artefatos gerados, docs bloqueantes da intenção e os gates do ciclo. Se \`frescor.fresco\` for falso, rode o \`sync-codex\` sugerido antes de agir.
-4. Use diretamente a CLI local: \`sema resumo --drift none\`, \`sema docs-impacto\`, \`sema inspecionar --drift none\`, \`sema drift --cache fresh\` e \`sema impacto\`. Na 3.0.0, \`sema --version\` continua texto SemVer exato; com \`--json\`, help e falhas de controle usam \`sema.cli.control/v1\`, enquanto comandos sintaticamente válidos usam o envelope exato de oito campos \`sema.cli.result/v1\`, com resultado em \`payload\` e \`ok\` distinto do veredito de domínio do payload.
-5. Quando a capacidade correta não estiver clara, use \`sema descobrir recomendar --intencao "<objetivo>" --json\`; não autoexecute resultado ambíguo.
-6. Não use fonte externa de workspace para substituir a CLI local quando ela estiver operacional.
-7. Chame docs-impacto com a intenção declarada antes de agir.
-8. Chame inspecionar no contrato \`.sema\` aplicável.
-9. Para módulo novo com contrato validado, gere o andaime com \`sema compilar <contrato> --alvo <alvoPadrao>\`, preencha a implementação real mantendo \`impl\`/\`vinculos\` e feche com \`sema verificar\`.
-10. Antes de editar código existente, rode \`sema drift --cache fresh\` e impacto.
-11. Antes de criar ou editar \`.sema\`, use exemplos oficiais.
-12. Ao concluir mudança de contrato, rode validar.
-13. Antes de finalizar, use finalizar-mudanca com as docs lidas.
-
-É proibido substituir esse fluxo por leitura manual de \`AGENTS.md\`, \`README.md\`, busca local por arquivos, inferência pelo nome do projeto, bom senso ou ferramenta não citada nesta lista.
-
-Entrypoint oficial do Codex: \`${agentContextPack.entrypointCodex}\`.
-Capacidade padrão do Codex: ${capacidade}.
-Ordem de leitura: ${guia.join(" -> ")}.
-
-Políticas da plataforma:
-- ${politicaPlataforma.regra}
-- Capacidade ${capacidade}: ${politicaPlataforma.porCapacidade[capacidade]}
-- Se houver alerta externo: ${politicaPlataforma.quandoHouverBloqueio}
-
-Falha fechada:
-${agentContextPack.failClosed.map((regra) => `- ${regra}`).join("\n")}
-
-Timeout:
-- Timeout local do agente não é falha do Sema.
-- Se uma chamada Sema estourar, aumente o timeout e tente de novo antes de declarar bloqueio.
-- Para projeto inteiro, comece com ${politicaTimeout.timeoutInicialSegundos}s ou mais; se for lento, escale ${politicaTimeout.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")}.
-- Se possível, reduza escopo para \`sema resumo <arquivo.sema> --micro --para mudanca --drift none\`.
-
-Código governado:
-- Mantenha o marcador \`${agentContextPack.politicaCodigoGovernado.marcador}\` em código gerado ou governado.
-- Ao encontrar esse marcador, volte ao contrato .sema aplicável e chame Sema antes de editar.
-- Comentário de código é lembrete curto; não substitui drift, docs-impacto nem finalizar-mudanca.
-- Validação inline prova o payload enviado; não dispensa o marcador no arquivo físico sincronizado.
-- Payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres não deve virar retry de timeout: modularize por responsabilidade ou use anexo/caminho de servidor autorizado.
-- Se um arquivo crescer, divida por responsabilidade real. Em web: \`index.html\`, \`styles/*.css\`, \`js/state.js\`, \`js/calc.js\`, \`js/render/*.js\`, \`data/*.json\`. Não fatie em p1/p2 sem fronteira semântica.
-
-Sinal e evidência:
-- Score composto, \`achados[]\` e \`decisaoAgente\` orientam a ação; abaixo de 80 bloqueia, alvo evolui 0.5 ponto até 100, e nada substitui evidência concreta.
-- Palavra-chave ou regex passando não prova governança se contrato, código e comportamento não batem.
-- \`resumo\` e \`inspecionar\` usam \`--drift none\` por padrão; campos derivados nulos significam não avaliados, nunca zero.
-- \`sema drift --cache fresh --json\` com \`payload.sucesso:false\`, \`payload.vinculos_quebrados\`, \`payload.rotas_divergentes\` ou \`payload.impls_quebrados\` bloqueia fechamento. \`payload.vinculos_fora_do_escopo\` é informativo com \`diretorioSugerido\` para os \`diretoriosCodigo\`; não bloqueia. Cache persistente é aceleração, não prova final.
-- Caminho fora do workspace local aberto pelo usuário não substitui a pasta local.
-
-Acabamento visual e terminal:
-- Se houver site, sistema, app, UI, painel, jogo, CLI/TUI ou terminal, acabamento moderno, contextual e não genérico é requisito governado, não enfeite.
-- Capacidade ${capacidade}: ${politicaDesign.porCapacidade[capacidade]}
-- Evidências: ${politicaDesign.evidencias[capacidade].join(", ")}.
-- Responsividade/ergonomia real: valide desktop/mobile e, em viewport estreito como 390px, confirme \`document.documentElement.scrollWidth <= document.documentElement.clientWidth\`; em terminal/CLI/TUI, rode smoke check de saída, erro e ajuda quando aplicável.
-- Proibido: ${politicaDesign.proibicoes.slice(0, 5).join(", ")}.
-
-Idioma:
-- Responda no idioma do usuário.
-- Em PT-BR, use vocabulário Sema canônico, acentos, cedilha, pontuação e símbolos normais.
-- A DSL \`.sema\` pode ser ASCII; texto humano não precisa ser.
-- Não traduza comandos, rotas, arquivos, endpoints, variáveis, pacotes, marcas, símbolos de código nem palavras-chave da DSL.
-`;
 }
 
 function renderizarDocSintaxeSemaLocal(_agentContextPack: AgentContextPack): string {
@@ -730,10 +479,10 @@ This is the minimum workflow for Codex in a local workspace.
 
 1. Read \`${ARQUIVO_SEMA_BOOT}\`.
 2. Run \`sema --version\`. If the shell cannot find it, use \`$HOME/.sema/bin/sema\` on macOS/Linux. On Windows, PowerShell resolves \`sema.ps1\` from PATH and cmd.exe resolves \`sema.cmd\`; use \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\` as the absolute fallback. Only then declare the CLI unavailable.
-3. Run \`sema resumo --drift none\` for contract-only orientation; request \`--drift cache\` or \`--drift fresh\` only when code evidence is needed.
-4. Run \`sema docs-impacto --intencao "<change>" --json\`.
+3. Run \`sema sessao "<intenção>" --json\`; then \`sema resumo <contrato> --micro --drift none --json\` only for the selected contract.
+4. Run \`sema docs-impacto --intencao "<change>" --arquivo <contract> --json\`.
 5. Read every required document returned by the command.
-6. Read \`docs/commands.md\` before selecting a command or interpreting \`--saida\`.
+6. Consult command help or the relevant section of \`docs/commands.md\` when syntax, a gate or \`--saida\` is unclear.
 7. If the right capability is unclear, run \`sema descobrir recomendar --intencao "<goal>" --json\`; do not auto-run ambiguous recommendations.
 8. Use \`exemplos/\` and \`docs/syntax.md\` before creating or editing a contract.
 9. Run \`sema drift --cache fresh\` and \`sema impacto\` before editing existing code.
@@ -755,9 +504,11 @@ UI rule: if the task involves an interface, minimum evidence includes desktop an
 
 ## Codex Context Capacity
 
-- Small context: \`${ARQUIVO_SEMA_SMALL_MODEL}\`, \`SEMA_BRIEF.micro.txt\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_INDEX.json\`.
-- Medium context: \`${ARQUIVO_SEMA_BOOT}\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.curto.txt\`, \`SEMA_INDEX.json\`, \`AGENTS.md\`.
-- Large context: \`${ARQUIVO_SEMA_BOOT}\`, \`${ARQUIVO_AGENT_CONTEXT_PACK}\`, \`SEMA_BRIEF.md\`, \`SEMA_INDEX.json\`, AST, IR, drift, and impact.
+All capacities use AGENTS.md -> SEMA_BOOT.md -> the contract returned by \`sema sessao\`.
+The first session asks for the configured token window; declare \`--janela-contexto <tokens> --salvar-perfil\`.
+Use \`--orcamento-contexto\` and \`--reserva-saida\` to allocate space. Counts use characters / 4, not the model tokenizer.
+The CLI reads SEMA_INDEX.json internally. Do not load the full index, global pack, or unrelated modules.
+An explicit \`--arquivo\` selects its contract and declared dependencies. Word matches are optional references.
 
 ## When to Generate Code
 
@@ -798,7 +549,7 @@ Then read every required doc returned by \`docs-impacto\`.
 
 ## Session Opening
 
-- \`sema sessao "<intencao>" --json\`: opens a governed session with one compact envelope. It returns workspace identity (\`baseProjeto\`, \`hashContratos\`, CLI version), artifact freshness (\`frescor.fresco\` plus the exact recovery command when stale), the project's contract count and modules, the declared intent's categories with blocking and recommended docs, the four gate commands for the full loop, and concrete next steps. Treat \`frescor.fresco:false\` as a pre-action blocker: run the suggested \`sema sync-codex --json\` before editing, because gates protect the consistency that stale artifacts break.
+- \`sema sessao "<intencao>" [--arquivo <contrato-ou-codigo>] [--janela-contexto <tokens>] [--orcamento-contexto <tokens>] [--reserva-saida <tokens>] [--salvar-perfil] --json\`: asks for the effective window when absent and stores the profile only on explicit request. The compact response contains workspace identity, artifact freshness, matching contracts and linked files, mandatory document paths, scoped gates and next steps. The index stays inside the CLI. The budget estimates the public JSON size using characters/4; it does not measure the conversation or the model's exact tokenizer. Omitted candidates are counted and require scope refinement; mandatory readings are never silently waived. Treat \`frescor.fresco:false\` as a pre-action blocker and run the suggested \`sema sync-codex --json\`. Navigation never authorizes execution.
 
 ## Public JSON output
 

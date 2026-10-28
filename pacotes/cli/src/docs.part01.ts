@@ -420,7 +420,6 @@ export function resumoConteudo(conteudo: string): { conteudo: string; truncado: 
 export async function adicionarDocsRaizExistentes(baseProjeto: string, registrar: (doc: DocumentoPlanejado) => void): Promise<void> {
   const docsRaiz = [
     { relativo: "AGENTS.md", tipo: "raiz" as const, motivo: "regras obrigatorias do agente no projeto" },
-    { relativo: "SEMA_INDEX.json", tipo: "raiz" as const, motivo: "indice IA-first do projeto" },
     { relativo: "README.md", tipo: "raiz" as const, motivo: "visao geral publica do projeto" },
     { relativo: "docs/README.md", tipo: "documentacao" as const, motivo: "indice de documentacao" },
   ];

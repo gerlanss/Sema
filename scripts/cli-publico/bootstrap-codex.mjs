@@ -86,7 +86,7 @@ export async function validarBootstrapCodexInstalado({
   await mkdir(projetoCodex, { recursive: true });
   const readmeOriginal = "# README original do projeto\n\nNao sobrescrever.\n";
   await writeFile(path.join(projetoCodex, "README.md"), readmeOriginal, "utf8");
-  executarCliInstalada(["iniciar", "--template", "base"], projetoCodex);
+  executarCliInstalada(["iniciar", "--janela-contexto", "32768", "--template", "base"], projetoCodex);
   if (await readFile(path.join(projetoCodex, "README.md"), "utf8") !== readmeOriginal) {
     throw new Error("The installed CLI overwrote an existing README during Codex bootstrap.");
   }
@@ -98,7 +98,7 @@ export async function validarBootstrapCodexInstalado({
       throw new Error(`The installed CLI materialized the full example package without --com-exemplos: ${arquivoExemplo}.`);
     }
   }
-  executarCliInstalada(["iniciar", "--template", "base", "--com-exemplos"], projetoCodex);
+  executarCliInstalada(["iniciar", "--janela-contexto", "32768", "--template", "base", "--com-exemplos"], projetoCodex);
   for (const arquivoExemplo of exemplosInterativosPublicos) {
     if (!(await existe(path.join(projetoCodex, arquivoExemplo)))) {
       throw new Error(`The installed CLI did not materialize nested official example ${arquivoExemplo} after --com-exemplos.`);
@@ -168,7 +168,7 @@ export async function validarBootstrapCodexInstalado({
   await mkdir(foraJunction, { recursive: true });
   await symlink(foraJunction, path.join(projetoJunction, "contratos"), process.platform === "win32" ? "junction" : "dir");
   const iniciarJunction = executarCliInstalada(
-    ["iniciar", "--template", "base"],
+    ["iniciar", "--janela-contexto", "32768", "--template", "base"],
     projetoJunction,
     { aceitarFalha: true },
   );

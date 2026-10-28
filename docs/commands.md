@@ -18,7 +18,7 @@ Then read every required doc returned by `docs-impacto`.
 
 ## Session Opening
 
-- `sema sessao "<intencao>" --json`: opens a governed session with one compact envelope. It returns workspace identity (`baseProjeto`, `hashContratos`, CLI version), artifact freshness (`frescor.fresco` plus the exact recovery command when stale), the project's contract count and modules, the declared intent's categories with blocking and recommended docs, the four gate commands for the full loop, and concrete next steps. Treat `frescor.fresco:false` as a pre-action blocker: run the suggested `sema sync-codex --json` before editing, because gates protect the consistency that stale artifacts break.
+- `sema sessao "<intencao>" [--arquivo <contrato-ou-codigo>] [--janela-contexto <tokens>] [--orcamento-contexto <tokens>] [--reserva-saida <tokens>] [--salvar-perfil] --json`: asks for the effective window when absent and stores the profile only on explicit request. The compact response contains workspace identity, artifact freshness, matching contracts and linked files, mandatory document paths, scoped gates and next steps. The index stays inside the CLI. The budget estimates the public JSON size using characters/4; it does not measure the conversation or the model's exact tokenizer. Omitted candidates are counted and require scope refinement; mandatory readings are never silently waived. Treat `frescor.fresco:false` as a pre-action blocker and run the suggested `sema sync-codex --json`. Navigation never authorizes execution.
 
 ## Public JSON output
 

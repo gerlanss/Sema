@@ -119,6 +119,7 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       ts: cli.src.index_part06.comandoSyncCodex
     }
     vinculos {
+      arquivo: "pacotes/cli/src/agentBootstrap.ts"
       arquivo: "pacotes/cli/src/agentEntryPoints.ts"
       arquivo: "pacotes/cli/src/index.part06.ts"
       arquivo: "pacotes/cli/src/distribuicao/launcherGlobal.ts"
@@ -135,6 +136,9 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       criticidade_operacional: media
     }
     guarantees {
+      agents_md deve_ser curto_e_independente_do_total_de_modulos
+      agents_md deve_ser orientar_indice_completo_como_uso_interno_da_cli
+      agents_md deve_ser pedir_janela_contexto_antes_de_carregar_contexto
       sema_boot existe
       sema_boot deve_ser primeiro_entrypoint
       sema_small_model existe

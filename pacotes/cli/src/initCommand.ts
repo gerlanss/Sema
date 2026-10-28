@@ -1,6 +1,7 @@
 // SEMA-GOVERNED: sema.produto.cli_init_templates, sema.produto.escrita_segura_workspace
 // Descrição: inicializa projetos preservando arquivos existentes e bloqueando escapes do workspace.
 
+import { resolverPerfilContexto, salvarPerfilContexto, ARQUIVO_PERFIL_CONTEXTO, PERGUNTA_CONTEXTO } from "./contextBudget.js";
 import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -80,10 +81,16 @@ const EXEMPLOS_STARTER_INICIAR = new Set([
 export async function comandoIniciar(
   cwd: string,
   template: TemplateIniciar,
-  opcoes: { force?: boolean; exemplosCompletos?: boolean } = {},
+  opcoes: { force?: boolean; exemplosCompletos?: boolean; contextoArgs?: string[] } = {},
 ): Promise<number> {
-  const arquivosCompletos = arquivosTemplateIniciar(template);
   const configAncestral = await carregarConfiguracaoProjeto(cwd);
+  const basePerfil = configAncestral?.baseDiretorio ?? cwd;
+  const perfilContexto = await resolverPerfilContexto(basePerfil, opcoes.contextoArgs ?? []);
+  if (!perfilContexto) {
+    console.log(JSON.stringify({ comando: "iniciar", sucesso: false, status: "configuracao_necessaria", pergunta: PERGUNTA_CONTEXTO, proximoPasso: "Repita iniciar com --janela-contexto <tokens>; nenhum arquivo foi criado." }));
+    return 1;
+  }
+  const arquivosCompletos = arquivosTemplateIniciar(template);
   const subpastaGovernada = Boolean(configAncestral
     && path.resolve(configAncestral.baseDiretorio) !== path.resolve(cwd));
   // Em subpasta de workspace ja governado o config do template e omitido: a
@@ -111,6 +118,7 @@ export async function comandoIniciar(
   const destinos = await validarDestinosEscritaWorkspace(
     cwd,
     [
+      ...(basePerfil === cwd ? [ARQUIVO_PERFIL_CONTEXTO] : []),
       ...caminhosTemplate,
       ...exemplosIniciar.map((arquivo) => arquivo.caminhoRelativo),
       ...ARQUIVOS_RESUMO_PROJETO_IA,
@@ -126,6 +134,7 @@ export async function comandoIniciar(
     ? arquivos
     : arquivos.filter((arquivo) => !existentes.has(arquivo.caminhoRelativo));
 
+  await salvarPerfilContexto(basePerfil, perfilContexto);
   await escreverArquivos(cwd, arquivosParaEscrever, { inserirCabecalhoGovernado: true });
   const exemplos = await materializarExemplosOficiais(
     cwd,

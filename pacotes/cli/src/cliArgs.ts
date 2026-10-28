@@ -26,6 +26,7 @@ export function obterOpcoesRepetidas(args: string[], nome: string): string[] {
 }
 
 export const OPCOES_COM_VALOR = new Set([
+  "--janela-contexto", "--orcamento-contexto", "--reserva-saida",
   "--template",
   "--alvo", "-a",
   "--escopo",

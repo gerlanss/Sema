@@ -28,7 +28,7 @@ export function criarAjudaRaiz(versao: string): string {
     "",
     renderizarSecaoAscii("Fluxos rápidos", [
       "[1] Projeto novo / produção inicial",
-      "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge> [--force] [--com-exemplos]",
+      "sema iniciar --template <base|nestjs|fastapi|nextjs-api|nextjs-consumer|react-vite-consumer|angular-consumer|flutter-consumer|node-firebase-worker|aspnet-api|springboot-api|go-http-api|rust-axum-api|cpp-service-bridge> [--janela-contexto <tokens>] [--orcamento-contexto <tokens>] [--reserva-saida <tokens>] [--force] [--com-exemplos]",
       "Arquivos existentes são preservados; use --force somente para sobrescrita explícita. O starter de exemplos vem por padrão; --com-exemplos instala o pacote completo. Em subpasta de workspace já governado, a subpasta é registrada nos diretoriosCodigo do sema.config.json ancestral em vez de criar config local.",
       "sema validar contratos/<modulo>.sema --json",
       "sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>",
@@ -148,7 +148,7 @@ export function criarAjudaRaiz(versao: string): string {
       "sema contexto-ia <arquivo.sema> [--saida <diretorio>] [--capacidade <fraca|media|forte>] [--pacote] [--json]",
       "sema sync-codex [--json]",
       "sema instalar-exemplos [--json]",
-      "sema sessao [intencao] [entrada] [--json]",
+      "sema sessao [intencao] [entrada] [--arquivo <contrato-ou-codigo>] [--janela-contexto <tokens>] [--orcamento-contexto <tokens>] [--reserva-saida <tokens>] [--salvar-perfil] [--json]",
       "sema docs-impacto --intencao <acao> [--arquivo <caminho>] [--criar-ausentes] [--completo] [--json]",
       "sema finalizar-mudanca --intencao <acao> [--arquivo <caminho>] [--doc-lida <caminho>] [--json]",
       "sema author briefing <arquivo.sema> [--json]",

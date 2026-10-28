@@ -5,10 +5,10 @@ This is the minimum workflow for Codex in a local workspace.
 
 1. Read `SEMA_BOOT.md`.
 2. Run `sema --version`. If the shell cannot find it, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH and cmd.exe resolves `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` as the absolute fallback. Only then declare the CLI unavailable.
-3. Run `sema resumo --drift none` for contract-only orientation; request `--drift cache` or `--drift fresh` only when code evidence is needed.
-4. Run `sema docs-impacto --intencao "<change>" --json`.
+3. Run `sema sessao "<intenção>" --json`; then `sema resumo <contrato> --micro --drift none --json` only for the selected contract.
+4. Run `sema docs-impacto --intencao "<change>" --arquivo <contract> --json`.
 5. Read every required document returned by the command.
-6. Read `docs/commands.md` before selecting a command or interpreting `--saida`.
+6. Consult command help or the relevant section of `docs/commands.md` when syntax, a gate or `--saida` is unclear.
 7. If the right capability is unclear, run `sema descobrir recomendar --intencao "<goal>" --json`; do not auto-run ambiguous recommendations.
 8. Use `exemplos/` and `docs/syntax.md` before creating or editing a contract.
 9. Run `sema drift --cache fresh` and `sema impacto` before editing existing code.
@@ -30,9 +30,11 @@ UI rule: if the task involves an interface, minimum evidence includes desktop an
 
 ## Codex Context Capacity
 
-- Small context: `SEMA_SMALL_MODEL.md`, `SEMA_BRIEF.micro.txt`, `AGENT_CONTEXT_PACK.json`, `SEMA_INDEX.json`.
-- Medium context: `SEMA_BOOT.md`, `AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.curto.txt`, `SEMA_INDEX.json`, `AGENTS.md`.
-- Large context: `SEMA_BOOT.md`, `AGENT_CONTEXT_PACK.json`, `SEMA_BRIEF.md`, `SEMA_INDEX.json`, AST, IR, drift, and impact.
+All capacities use AGENTS.md -> SEMA_BOOT.md -> the contract returned by `sema sessao`.
+The first session asks for the configured token window; declare `--janela-contexto <tokens> --salvar-perfil`.
+Use `--orcamento-contexto` and `--reserva-saida` to allocate space. Counts use characters / 4, not the model tokenizer.
+The CLI reads SEMA_INDEX.json internally. Do not load the full index, global pack, or unrelated modules.
+An explicit `--arquivo` selects its contract and declared dependencies. Word matches are optional references.
 
 ## When to Generate Code
 

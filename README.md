@@ -139,7 +139,7 @@ token or credits — commands run locally against your workspace.
 The governed loop in a project:
 
 ```bash
-sema iniciar --template base                        # lean scaffold, preserves files
+sema iniciar --template base --janela-contexto 32768 # example: confirmed 32K window
 sema sessao "describe the change" --json            # identity, freshness, blocking docs, gates
 sema docs-impacto --intencao "describe the change" --json
 sema validar contratos/app/pedidos.sema --json
@@ -148,6 +148,14 @@ sema compilar contratos/app/pedidos.sema --alvo typescript --saida .tmp/scaffold
 sema verificar contratos --alvo typescript --json   # executes the contract tests
 sema finalizar-mudanca --intencao "describe the change" --doc-lida AGENTS.md --json
 ```
+
+Confirm the model's effective configured context window before initialization;
+32,768 above is an example, not a default. Without that value, initialization
+asks for it before creating files. Sessions apply a configurable response
+budget and expand through relevant contracts and declared dependencies.
+`SEMA_INDEX.json` and `AGENT_CONTEXT_PACK.json` are internal CLI databases,
+not mandatory full reads. The character-based estimate covers the session
+response, not the agent's entire conversation or exact tokenizer usage.
 
 `sema sessao` is the opening move for agents: one compact envelope with the
 workspace's contract hash, artifact freshness, the docs that block the declared
@@ -227,7 +235,7 @@ have Sema yet: it locates the CLI, requests adoption authorization, generates
 adoption by itself.
 
 ```bash
-sema iniciar --template base
+sema iniciar --template base --janela-contexto 32768
 sema sync-codex --json      # regenerates AGENTS.md and context artifacts
 ```
 

@@ -7,10 +7,10 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `4.1.3`
+- Version: `4.2.0`
 - Package: `@semacode/cli`
-- Last updated: 2026-10-05
-- Reference commit: `1d5b798`
+- Last updated: 2026-10-28
+- Reference commit: `c066f55`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -32,6 +32,11 @@ Every public publication must pass:
 - `npm run release:verificar-drift`
 
 ## Maintenance Focus
+
+- Start agents with a bounded session, explicit effective context window and
+  exact contract navigation; keep the raw index internal to the CLI.
+- Require only the selected contract and declared dependencies for closure;
+  keep lexical matches and documentation references optional.
 
 - Keep `--help` and `-h` side-effect-free in every argv position, before
   operational runtime import, dispatch, handler resolution, workspace access,

@@ -3,6 +3,7 @@
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { resolverRelacoesDocumentais } from "./docsRelations.js";
 import { emitirDiagnosticosArquivosOrcamento } from "./driftOrcamento.js";
 import {
   escreverArquivoWorkspaceSeguro,
@@ -17,28 +18,7 @@ export async function adicionarContratosRelacionados(
   arquivosAlvo: string[],
   registrar: (doc: DocumentoPlanejado) => void,
 ): Promise<void> {
-  const pastaContratos = path.join(baseProjeto, "contratos");
-  if (!(await caminhoExiste(pastaContratos))) {
-    return;
-  }
-
-  const termos = termosRelacionamentoContratos(intencao, arquivosAlvo);
-  const arquivos = (await listarArquivosRecursivo(pastaContratos)).filter((arquivo) => arquivo.endsWith(".sema"));
-
-  for (const arquivo of arquivos) {
-    const relativo = normalizarRelativo(path.relative(baseProjeto, arquivo));
-    const nome = normalizarTexto(relativo);
-    const relacionado = termos.some((parte) => nome.includes(parte));
-
-    if (relacionado) {
-      registrar({
-        relativo,
-        tipo: "contrato",
-        motivo: "contrato Sema relacionado a intencao declarada",
-        permitirCriacao: false,
-      });
-    }
-  }
+  await resolverRelacoesDocumentais(baseProjeto, intencao, arquivosAlvo, registrar);
 }
 
 export function criarRegistrador(baseProjeto: string): {
@@ -53,6 +33,10 @@ export function criarRegistrador(baseProjeto: string): {
     registrar(doc) {
       const relativo = normalizarRelativo(doc.relativo);
       const absoluto = path.resolve(baseProjeto, relativo);
+      if (vistos.has(relativo) && doc.obrigatoriedade !== "recomendada") {
+        const anterior = docs.find((item) => item.relativo === relativo);
+        if (anterior) Object.assign(anterior, doc, { relativo, obrigatoriedade: "bloqueante" });
+      }
       if (!caminhoEstaDentro(baseProjeto, absoluto) || vistos.has(relativo)) {
         return;
       }
@@ -126,7 +110,7 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
       existe,
       criado,
       criacaoAutomatica: doc.permitirCriacao,
-      obrigatorio: true,
+      obrigatorio: doc.obrigatoriedade !== "recomendada",
       obrigatoriedade: doc.obrigatoriedade ?? "bloqueante",
       template: existe ? undefined : template,
     };
@@ -143,7 +127,7 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
     leituraObrigatoria.push(item);
   }
 
-  const docsAusentes = leituraObrigatoria.filter((doc) => !doc.existe);
+  const docsAusentes = leituraObrigatoria.filter((doc) => !doc.existe && doc.obrigatoriedade !== "recomendada");
   const docsCriadas = leituraObrigatoria.filter((doc) => doc.criado);
   const bloqueios = docsAusentes.filter((doc) => doc.obrigatoriedade !== "recomendada").map((doc): BloqueioDocumentacaoMudanca => ({
     tipo: "documentacao_ausente",
@@ -160,7 +144,7 @@ export async function resolverDocumentacaoObrigatoria(opcoes: {
     intencao,
     categorias,
     arquivosAlvo,
-    leituraObrigatoria,
+    leituraObrigatoria: leituraObrigatoria.filter((doc) => doc.obrigatoriedade !== "recomendada"),
     docsAusentes,
     docsCriadas,
     leituraRecomendada: leituraObrigatoria

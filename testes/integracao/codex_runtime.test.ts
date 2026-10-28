@@ -408,7 +408,7 @@ test("sema iniciar propaga pendência de AGENTS e retorna falha", async () => {
 
   try {
     await writeFile(agentsPath, manual, "utf8");
-    const iniciar = spawnSync(process.execPath, [CLI, "iniciar", "--template", "base"], {
+    const iniciar = spawnSync(process.execPath, [CLI, "iniciar", "--janela-contexto", "32768", "--template", "base"], {
       cwd: base,
       encoding: "utf8",
       stdio: "pipe",

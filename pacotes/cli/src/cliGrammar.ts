@@ -67,6 +67,7 @@ const ESTRUTURAS = new Set(["flat", "modulos", "backend"]);
 const ESCOPOS = new Set(["arquivo", "modulo", "projeto"]);
 const MODOS_CACHE = new Set(["none", "cache", "fresh", "off", "auto", "refresh"]);
 const MODOS_RESUMO = new Set(["resumo", "onboarding", "review", "mudanca", "bug", "arquitetura"]);
+const OPCOES_CONTEXTO_IA = ["--janela-contexto", "--orcamento-contexto", "--reserva-saida"];
 const CAPACIDADES_IA = new Set(["fraca", "media", "forte"]);
 const MATURIDADES = new Set([
   "draft", "rascunho", "prototype", "prototipo", "production", "producao",
@@ -195,10 +196,10 @@ function validarSemArgumentos(args: readonly string[]): boolean {
 
 function validarIniciar(args: readonly string[]): boolean {
   const parsed = parsearArgumentos(args, {
-    opcoes: ["--template"], flags: ["--force", "--com-exemplos"], maxPosicionais: 0,
+    opcoes: ["--template", ...OPCOES_CONTEXTO_IA], flags: ["--force", "--com-exemplos"], maxPosicionais: 0,
   });
   const template = parsed ? valorOpcao(parsed, "--template") : undefined;
-  return parsed !== null && (template === undefined || TEMPLATES_INICIAR.has(template));
+  return parsed !== null && (template === undefined || TEMPLATES_INICIAR.has(template)) && OPCOES_CONTEXTO_IA.every((n) => valorOpcao(parsed, n) === undefined || /^[1-9]\d*$/u.test(valorOpcao(parsed, n)!));
 }
 
 function validarInit(args: readonly string[]): boolean {
@@ -497,7 +498,10 @@ function validarComandoBasico(comando: string, args: readonly string[]): boolean
       return Boolean(alvo && ALVOS_GERACAO.has(alvo)) && (!estrutura || ESTRUTURAS.has(estrutura)) && (!framework || FRAMEWORKS.has(framework));
     }
     case "verificar": return parsearArgumentos(args, { opcoes: ["--saida", "--alvo"], flags: ["--sem-cache", "--preservar-implementacao"], maxPosicionais: 1 }) !== null;
-    case "sessao": return parsearArgumentos(args, { flags: ["--json"], maxPosicionais: 2 }) !== null;
+    case "sessao": {
+      const parsed = parsearArgumentos(args, { opcoes: ["--arquivo", ...OPCOES_CONTEXTO_IA], flags: ["--salvar-perfil"], maxPosicionais: 2 });
+      return parsed !== null && OPCOES_CONTEXTO_IA.every((n) => valorOpcao(parsed, n) === undefined || /^[1-9]\d*$/u.test(valorOpcao(parsed, n)!));
+    }
     case "formatar": return parsearArgumentos(args, { flags: ["--check"], maxPosicionais: 1 }) !== null;
     case "inspecionar": {
       const parsed = parsearArgumentos(args, { opcoes: ["--drift", "--cache"], flags: ["--com-drift"], maxPosicionais: 1 });
