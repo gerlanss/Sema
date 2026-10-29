@@ -129,6 +129,35 @@ evaluate fields such as `payload.sucesso`, `payload.aprovado`,
 syntactically valid operation that returns a structured domain failure uses
 `DOMAIN_ERROR`; it does not fall back to `sema.cli.control/v1`.
 
+### Stable drift fields and session context
+
+From CLI 4.2.9, drift JSON with or without `--pacote` has identical `status` and
+`counts` blocks inside `payload`. Read `payload.status.success`,
+`payload.status.score`, and `payload.counts.validImplementations` in either form.
+Compact output uses `payload.schema: "sema.ai.drift-pack/v1"`; full output uses
+`payload.schema: "sema.drift/v1"` and preserves every legacy field, including
+`sucesso`, `resumo_operacional`, `tasks` and implementation/link arrays.
+
+```javascript
+const response = JSON.parse(stdout);
+if (response.command !== "drift" || !response.payload?.status || !response.payload?.counts) {
+  throw new Error("Unexpected drift response; inspect the CLI version and payload schema.");
+}
+const { status, counts } = response.payload;
+console.log(status.success, status.score, counts.validImplementations);
+```
+
+A `TypeError` while reading a property after `JSON.parse` succeeds is a schema
+access error. Inspect the fields instead of treating the document as invalid JSON.
+Keep stderr separate from JSON stdout and do not cut the response by line count.
+
+Session context configuration is in `payload.perfil.janelaTokens`,
+`payload.perfil.orcamentoTokens` and `payload.perfil.reservaSaidaTokens`.
+`payload.orcamento` describes delivery estimates; it is not the saved profile.
+`sem_correspondencia` means the supplied intention/file found no matching
+contract; it does not mean documentation was finalized. Resume a known change
+using `sessao --mudanca-id <id> --json`.
+
 ## Codex Setup
 
 `AGENTS.md` is the official Sema entrypoint for Codex. Create or refresh it from

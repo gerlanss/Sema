@@ -7,10 +7,10 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `4.2.8`
+- Version: `4.2.9`
 - Package: `@semacode/cli`
 - Last updated: 2026-10-29
-- Reference commit: `0fcd9d4`
+- Reference commit: `ba05854`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -32,6 +32,9 @@ Every public publication must pass:
 - `npm run release:verificar-drift`
 
 ## Maintenance Focus
+
+- Expose identical status/counts blocks in compact and complete drift JSON,
+  preserve legacy fields, and document exact session-profile paths for agents.
 
 - Preserve nested list/object fixtures and quoted text through parsing, formatting
   and IR conversion. Report malformed delimiters at the literal that caused them.

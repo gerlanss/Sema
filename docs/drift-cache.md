@@ -22,6 +22,13 @@ Remove `--pacote` for the complete evidence. Packet telemetry estimates the
 pretty-printed packet, including its own telemetry, using characters/4; the
 outer CLI envelope and other conversation content are not part of that count.
 
+Both JSON forms expose the same `payload.status` and `payload.counts`. Read
+`payload.status.success`, `payload.status.score` and `payload.counts.tasks`
+without branching on `--pacote`. Compact output identifies itself as
+`sema.ai.drift-pack/v1`; full output as `sema.drift/v1`. Full output preserves
+`sucesso`, `resumo_operacional` and the detailed arrays for existing consumers.
+Changing output form does not change the verdict or count meanings.
+
 In `sema.ai.drift-pack/v1`, `blockers.tasksWithGaps` contains tasks with a
 missing implementation, broken implementations, or other gaps such as
 `sem_evidencia_verificada`. Inspect `semImplementacao`, `implsQuebrados` and

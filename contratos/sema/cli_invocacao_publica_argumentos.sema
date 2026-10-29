@@ -44,6 +44,7 @@ module sema.produto.cli_invocacao_publica.argumentos {
       emitir_saida_antes_de_classificar_falha
       mutar_workspace_com_argumento_invalido
       orientar_cabecalho_como_substituto_de_impl_e_vinculos
+      orientar_ia_a_adivinhar_campos_de_perfil_ou_misturar_schema_de_drift
     }
     impl {
       ts: cli.src.cli_grammar.validarSintaxeInvocacaoPublica

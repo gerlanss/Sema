@@ -625,7 +625,7 @@ Then read every required doc returned by \`docs-impacto\`.
 ## Change and Closure
 
 - \`sema docs-impacto --intencao "<acao>" --arquivo <contract> --json\`: discovers required docs and returns mudancaId with next argument arrays.
-- \`sema drift <arquivo-ou-pasta> --escopo modulo [--cache <none|cache|fresh>] --json\`: plans a safe physical scope, then compares contract and implementation without a global fallback.
+- \`sema drift <arquivo-ou-pasta> --escopo modulo [--cache <none|cache|fresh>] [--pacote] --json\`: plans a safe physical scope, then compares contract and implementation without a global fallback. Both JSON forms expose \`payload.status.success\`, \`payload.status.score\` and \`payload.counts\`; full output preserves legacy fields. Session context values are in \`payload.perfil\`, not directly in \`payload\`.
 - \`sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca "<descricao>" --json\`: maps impact before changing behavior.
 - \`sema verificar <arquivo-ou-pasta> --json\`: runs aggregated final verification.
 - \`sema finalizar-mudanca --mudanca-id <id> --doc-lida <arquivo> --json\`: checks scoped reading declarations and file hashes, not comprehension or application behavior. Repeat --doc-lida for actual readings. Explicit --intencao and --arquivo remain supported.

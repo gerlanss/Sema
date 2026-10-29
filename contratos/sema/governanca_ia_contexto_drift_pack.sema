@@ -39,6 +39,8 @@ module sema.produto.governanca_ia.contexto.drift_pack {
       substituir_drift_fresh
       usar_llm_ou_rede_na_compactacao
       remover_autoridade_do_sema
+      divergir_status_ou_counts_entre_json_completo_e_pacote
+      remover_campos_legados_do_json_completo
     }
     impl {
       ts: cli.src.drift_pack.criarDriftPack
@@ -48,6 +50,8 @@ module sema.produto.governanca_ia.contexto.drift_pack {
       arquivo: "pacotes/cli/src/index.part05.ts"
       arquivo: "testes/unidade/context-packs.test.ts"
       arquivo: "testes/unidade/parser-integridade.test.ts"
+      arquivo: "testes/integracao/drift-json-estavel.test.ts"
+      simbolo: cli.src.drift_pack.criarResumoDrift
       simbolo: cli.src.drift_pack.criarDriftPack
     }
     execucao {
@@ -70,6 +74,8 @@ module sema.produto.governanca_ia.contexto.drift_pack {
       caracteres_pacote deve_ser incluir_telemetria_e_indentacao_do_pacote
       pacote deve_ser declarar_sema_como_autoridade
       pacote deve_ser exigir_validacao_fresca_antes_de_execucao
+      pacote deve_ser compartilhar_status_e_counts_com_json_completo_por_funcao_unica
+      pacote deve_ser preservar_schema_sema_ai_drift_pack_v1_e_identificar_completo_com_sema_drift_v1
     }
     tests {
       caso "preserva implementacao quebrada no pacote" {

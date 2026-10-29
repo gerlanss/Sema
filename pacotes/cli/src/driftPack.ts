@@ -79,28 +79,10 @@ function compactarRegistro(registro: Record<string, unknown>, campos: string[]):
     .map((campo) => [campo, registro[campo]]));
 }
 
-export function criarDriftPack(resultado: ResultadoDrift, options: {
-  targetModule?: string;
-  rawDriftChars?: number;
-} = {}): DriftPack {
-  const targetModule = options.targetModule ?? null;
+export function criarResumoDrift(resultado: ResultadoDrift): Pick<DriftPack, "status" | "counts"> {
   const tasksPendingEvidence = resultado.tasks.filter((t) => !t.evidenciaVerificacao?.sucesso
     || t.evidenciaVerificacao.quantidadeTestes <= 0).length;
-  const tarefas = resultado.tasks
-    .filter((task) => !targetModule || task.modulo === targetModule)
-    .filter((task) => task.semImplementacao || task.implsQuebrados > 0 || task.lacunas.length > 0)
-    .map((task) => compactarRegistro(task as unknown as Record<string, unknown>, [
-      "modulo", "task", "implsQuebrados", "semImplementacao", "riscoOperacional", "lacunas",
-    ]));
-  const base = {
-    schema: "sema.ai.drift-pack/v1" as const,
-    selection: "deterministic_evidence_compaction" as const,
-    source: {
-      command: "drift" as const,
-      scope: resultado.escopo_aplicado.escopo,
-      cache: resultado.escopo_aplicado.cache?.modo ?? "unknown",
-      targetModule,
-    },
+  return {
     status: {
       success: resultado.sucesso,
       evidenceScope: "static_references_and_recorded_evidence" as const,
@@ -126,6 +108,30 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
       divergentResources: resultado.recursos_divergentes.length,
       realPersistence: resultado.persistencia_real.length,
     },
+  };
+}
+
+export function criarDriftPack(resultado: ResultadoDrift, options: {
+  targetModule?: string;
+  rawDriftChars?: number;
+} = {}): DriftPack {
+  const targetModule = options.targetModule ?? null;
+  const tarefas = resultado.tasks
+    .filter((task) => !targetModule || task.modulo === targetModule)
+    .filter((task) => task.semImplementacao || task.implsQuebrados > 0 || task.lacunas.length > 0)
+    .map((task) => compactarRegistro(task as unknown as Record<string, unknown>, [
+      "modulo", "task", "implsQuebrados", "semImplementacao", "riscoOperacional", "lacunas",
+    ]));
+  const base = {
+    schema: "sema.ai.drift-pack/v1" as const,
+    selection: "deterministic_evidence_compaction" as const,
+    source: {
+      command: "drift" as const,
+      scope: resultado.escopo_aplicado.escopo,
+      cache: resultado.escopo_aplicado.cache?.modo ?? "unknown",
+      targetModule,
+    },
+    ...criarResumoDrift(resultado),
     blockers: {
       implementations: resultado.impls_quebrados.map((item) => compactarRegistro(item as unknown as Record<string, unknown>, ["modulo", "task", "origem", "caminho", "arquivo", "simbolo", "caminhoResolvido", "candidatos"])),
       links: resultado.vinculos_quebrados.map((item) => compactarRegistro(item as unknown as Record<string, unknown>, ["modulo", "donoTipo", "dono", "tipo", "valor", "arquivo", "simbolo", "status", "confianca"])),

@@ -86,7 +86,10 @@ On Windows PowerShell, use this directly if PATH fails:
 On macOS/Linux: `"$HOME/.sema/bin/sema" --version`. Do not declare the CLI
 unavailable before trying the managed fallback. If both fail, stop governed
 edits. JSON results nest domain state in `payload`; `ok` alone is not proof
-of success. Respect `payload.sucesso`, `valido`, blockers and scope.
+of success. Drift JSON uses `payload.status.success`, `payload.status.score` and
+`payload.counts` both with and without `--pacote`; complete output also preserves
+legacy fields. Session context is under `payload.perfil` (`janelaTokens`,
+`orcamentoTokens`, `reservaSaidaTokens`). Respect domain verdicts, blockers and scope.
 
 ## Install, update or repair Sema
 
