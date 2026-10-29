@@ -176,6 +176,8 @@ module sema.produto.governanca_ia.contexto.entrypoints {
       sema_boot deve_ser orientar_impl_e_vinculos_na_criacao_do_contrato
       sema_boot deve_ser distinguir_mapeamento_planejado_de_referencia_verificada
       docs_sintaxe deve_ser exemplificar_enum_direto_e_impl_dentro_da_task
+      docs_sintaxe deve_ser exemplificar_listas_e_objetos_em_casos_de_teste
+      sema_boot deve_ser orientar_retomada_factual_sem_reusar_conclusoes_da_compactacao
       agents_md deve_ser distinguir_consulta_none_de_drift_fresh
       sema_boot deve_ser distinguir_consulta_none_de_drift_fresh
       contexto_opcional deve_ser nao_repetir_governanca_de_entrada

@@ -1,6 +1,6 @@
 {
   "name": "sema",
-  "version": "4.2.7",
+  "version": "4.2.8",
   "description": "Use Sema before creating or editing software: ask about first-time adoption, confirm context, and follow local contracts.",
   "author": {
     "name": "OtimiTare",

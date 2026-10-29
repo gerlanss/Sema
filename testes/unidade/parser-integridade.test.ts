@@ -49,6 +49,7 @@ test("enum direto, docs e delimitadores dentro de texto preservam tarefas", () =
 test("impl no módulo e declaração desconhecida dão erro com orientação", () => {
   assert.ok(erros(modulo(`impl { js: app.cadastrar }\n${tasks}`)).some((d) => d.codigo === "PAR007" && /task/.test(d.dica ?? "")));
   assert.ok(erros(modulo(`tarefas { ${tasks} }`)).some((d) => d.codigo === "PAR007"));
+  assert.ok(erros(modulo(`persistencia { storage: localStorage }\n${tasks}`)).some((d) => d.codigo === "PAR007" && /effects/.test(d.dica ?? "") && /storage <nome>/.test(d.dica ?? "")));
 });
 
 test("declarações conhecidas sem nome não desaparecem como extras válidos", () => {

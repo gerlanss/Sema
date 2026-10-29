@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.software
+// SEMA-GOVERNED: sema.software, sema.produto.parser_integridade
 // Descricao: nucleo semantico particionado; consulte contratos/sema/software.sema antes de editar.
 
 import type {
@@ -263,6 +263,7 @@ export function eLiteralEscalar(texto: string): boolean {
 }
 
 export function deveColocarAspas(contexto: string, campo: CampoAst, combinado: string): boolean {
+  if (campo.literalComposto) return false;
   if (campo.nome === "metodo") {
     return false;
   }
@@ -288,6 +289,7 @@ export function deveColocarAspas(contexto: string, campo: CampoAst, combinado: s
 }
 
 export function normalizarValorCampo(campo: CampoAst): string {
+  if (campo.literalComposto) return campo.valor.trim();
   return [campo.valor, ...campo.modificadores]
     .filter(Boolean)
     .join(" ")

@@ -22,6 +22,7 @@ import type {
   UseAst,
 } from "../ast/tipos.js";
 import type { Token } from "../lexer/tokens.js";
+import { lerValorComposto } from "./valoresCompostos.js";
 
 import { PALAVRAS_BLOCO_NOMEADO_LIVRE, PalavraBloco, ResultadoParser, decodificarTextoLiteral } from "./parser.part01.js";
 import { parseModuloParser } from "./parser.modulo.js";
@@ -236,6 +237,8 @@ export class Parser {
         this.registrarErro("PAR007", token.valor === "impl" ? "impl só pode ser declarado dentro de uma task." : `Declaração inválida no module: ${token.valor}.`, token.intervalo, undefined,
           token.valor === "impl"
             ? 'Declare impl { js: app.acao } dentro da task e vinculos { arquivo: "app.js" }. HTML/CSS são arquivos vinculados, não símbolos impl.'
+            : token.valor === "persistencia"
+            ? 'persistencia é um efeito da task: effects { persistencia Tarefa }. Para modelar uma superfície de armazenamento, use storage <nome> { ... }; não existe bloco persistencia no module.'
             : "Use uma declaração documentada com o nome obrigatório, como task cadastrar { ... } ou enum Filtro { todas, pendentes }. Consulte docs/syntax.md.");
       }
       const inicioToken = this.avancar();
@@ -342,6 +345,12 @@ export class Parser {
       const inicio = this.atual().intervalo.inicio;
       const nome = this.avancar().valor;
       this.consumirValor(":", "Era esperado ':' depois do nome do campo.");
+      if (this.temValor("[") || this.temValor("{")) {
+        const valor = lerValorComposto(this);
+        if (contexto === "vinculos" && nome === "arquivo") this.registrarErro("PAR004", "arquivo no vínculo exige um caminho entre aspas, não uma lista ou objeto.",
+          { inicio, fim: this.anterior().intervalo.fim }, undefined, 'Repita arquivo: "app.js" para cada arquivo.');
+        return { tipo: "campo", nome, valor, modificadores: [], literalComposto: true, intervalo: { inicio, fim: this.anterior().intervalo.fim } };
+      }
       const partes: Token[] = [];
       let profundidade = 0;
       while (!["fim_arquivo", "nova_linha", "comentario"].includes(this.atual().tipo) && !this.temValor("}")) {

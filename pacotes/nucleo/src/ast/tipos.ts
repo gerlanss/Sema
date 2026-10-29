@@ -1,3 +1,5 @@
+// SEMA-GOVERNED: sema.software, sema.produto.parser_integridade
+// Descrição: tipos de AST com distinção entre texto e valor composto de um campo.
 import type { IntervaloFonte } from "../diagnosticos/index.js";
 
 export type TipoBloco =
@@ -72,6 +74,7 @@ export interface CampoAst extends NoAstBase {
   nome: string;
   valor: string;
   modificadores: string[];
+  literalComposto?: boolean;
 }
 
 export interface LinhaDeclarativaAst extends NoAstBase {

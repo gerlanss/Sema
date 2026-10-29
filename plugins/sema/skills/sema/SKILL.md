@@ -47,6 +47,9 @@ it does not name Sema. Loading the skill is not consent to adopt it.
 
 Run `docs-impacto --intencao "<intent>" --arquivo <contract> --json` and retain
 `mudancaId`. After compaction, resume `sessao --mudanca-id <id> --json`.
+Use the recompiled `estadoAtual` and returned gates instead of conclusions from
+the conversation summary. A stale protocol blocks work: run `sync-codex`, reread
+`SEMA_BOOT.md` and resume the same id. `impl`/`vinculos` belong in `.sema` contracts.
 Use the returned argument arrays for closure; repeat `--doc-lida` only for docs
 actually read. Hashes reuse declarations until a file changes. Missing scope or
 nonexistent files block closure. This gate checks declarations, not comprehension

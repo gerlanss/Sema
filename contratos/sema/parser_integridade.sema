@@ -15,6 +15,7 @@ module sema.produto.parser_integridade {
     rules {
       tokens deve_ser consumido_ate_fim_arquivo
       tokens deve_ser preservar_fronteiras_de_blocos_durante_recuperacao
+      tokens deve_ser preservar_listas_objetos_textos_e_delimitadores_aninhados
     }
     forbidden {
       aceitar_conteudo_apos_fechamento_do_modulo
@@ -35,6 +36,11 @@ module sema.produto.parser_integridade {
       arquivo: "pacotes/nucleo/src/parser/parser.modulo.ts"
       arquivo: "pacotes/nucleo/src/parser/parser.declaracoes.ts"
       arquivo: "pacotes/nucleo/src/lexer/lexer.ts"
+      arquivo: "pacotes/nucleo/src/parser/valoresCompostos.ts"
+      arquivo: "pacotes/nucleo/src/ast/tipos.ts"
+      arquivo: "pacotes/nucleo/src/ir/conversor.part01.ts"
+      arquivo: "pacotes/nucleo/src/formatador/index.part01.ts"
+      arquivo: "testes/unidade/parser-literais.test.ts"
       arquivo: "testes/unidade/parser-integridade.test.ts"
       arquivo: "testes/unidade/dsl-origens-canonicas.test.ts"
       simbolo: nucleo.src.parser.parser_part03.parsear
@@ -42,6 +48,8 @@ module sema.produto.parser_integridade {
     guarantees {
       diagnosticos deve_ser conter_erro_com_local_e_dica_quando_estrutura_invalida
       modulo deve_ser preservar_tarefas_apos_enum_invalido_recuperavel
+      diagnosticos deve_ser apontar_delimitador_invalido_no_literal_antes_de_erro_em_cascata
+      modulo deve_ser preservar_valores_compostos_apos_formatacao
     }
   }
 

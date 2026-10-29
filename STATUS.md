@@ -7,10 +7,10 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `4.2.7`
+- Version: `4.2.8`
 - Package: `@semacode/cli`
-- Last updated: 2026-10-28
-- Reference commit: `c5c548e`
+- Last updated: 2026-10-29
+- Reference commit: `0fcd9d4`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -32,6 +32,11 @@ Every public publication must pass:
 - `npm run release:verificar-drift`
 
 ## Maintenance Focus
+
+- Preserve nested list/object fixtures and quoted text through parsing, formatting
+  and IR conversion. Report malformed delimiters at the literal that caused them.
+- Recompile scoped contracts when resuming a change; return current hashes,
+  validation and task counts, and block stale protocols without inheriting chat verdicts.
 
 - Reject malformed enums, trailing declarations and invalid mapping blocks without
   silently dropping tasks. Preserve contract error codes, locations and repair hints

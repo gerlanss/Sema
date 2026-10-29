@@ -67,6 +67,29 @@ Malformed enums, trailing declarations, duplicate mapping blocks and arrow-style
 bindings are errors with a location and repair hint. Fix them before using counts
 from a recovered AST. An entity-only module may legitimately have no tasks.
 
+## Test Values
+
+Lists and objects are field values inside `given`, `when`, `expect` or `error`.
+They may span lines and contain nested objects, lists, strings and booleans:
+
+```sema
+tests {
+  caso "filters pending tasks" {
+    given {
+      tarefas: [
+        { id: "t1", concluida: falso },
+        { id: "t2", concluida: verdadeiro }
+      ]
+    }
+    expect { tarefas: [{ id: "t1", concluida: falso }] }
+  }
+}
+```
+
+Place this fragment inside a task. Keep closing delimiters balanced. `PAR009`
+points to a malformed literal; fix it before removing unrelated routes or tasks.
+Formatting preserves compound values and quoted text, including spaces.
+
 ## Common Blocks
 
 - `docs`: module summary and notes.

@@ -6,7 +6,7 @@ This is the minimum workflow for Codex in a local workspace.
 1. Read `SEMA_BOOT.md`.
 2. Run `sema --version`. If the shell cannot find it, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH and cmd.exe resolves `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` as the absolute fallback. Only then declare the CLI unavailable.
 3. Run `sema sessao "<intenção>" --json`; then `sema resumo <contrato> --micro --drift none --json` only for the selected contract.
-4. Run `sema docs-impacto --intencao "<change>" --arquivo <contract> --json` and retain mudancaId. After compaction, resume `sema sessao --mudanca-id <id> --json`.
+4. Run `sema docs-impacto --intencao "<change>" --arquivo <contract> --json` and retain mudancaId. After compaction, resume `sema sessao --mudanca-id <id> --json`: use recompiled `estadoAtual` and returned gates instead of old conclusions in the conversation summary. If the protocol is stale, synchronize it, reread SEMA_BOOT.md and resume the same id.
 5. Read every required document returned by the command.
 6. Consult command help or the relevant section of `docs/commands.md` when syntax, a gate or `--saida` is unclear.
 7. If the right capability is unclear, run `sema descobrir recomendar --intencao "<goal>" --json`; do not auto-run ambiguous recommendations.

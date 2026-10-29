@@ -60,6 +60,8 @@ module sema.produto.cli_sessao {
       usar_indice_desatualizado_para_direcionar_edicao
       emitir_dados_de_codigo_vivo
       esconder_stale_do_agente
+      reutilizar_conclusao_da_conversa_sem_recompilar_contratos_do_escopo
+      emitir_sucesso_na_retomada_com_contrato_invalido_ou_protocolo_antigo
       listar_docs_que_nao_sao_bloqueantes_como_bloqueantes
     }
     impl {
@@ -71,6 +73,7 @@ module sema.produto.cli_sessao {
       arquivo: "pacotes/cli/src/sessionContext.ts"
       arquivo: "testes/unidade/context-budget.test.ts"
       arquivo: "pacotes/cli/src/comandoSessao.ts"
+      arquivo: "pacotes/cli/src/sessionContractState.ts"
       arquivo: "pacotes/cli/src/changeScope.ts"
       arquivo: "testes/unidade/fluxo-ia-regressao.test.ts"
       arquivo: "pacotes/cli/src/agentProtocol.ts"
@@ -95,6 +98,9 @@ module sema.produto.cli_sessao {
       proximos_passos_emitidos deve_ser perguntar_janela_ausente_antes_de_contexto
       frescor_avaliado deve_ser exigir_indice_atual_para_navegacao
       frescor_avaliado deve_ser verificar_protocolo_materializado_mesmo_sem_mudanca_de_contratos
+      proximos_passos_emitidos deve_ser retomar_com_hash_validacao_e_tarefas_reconhecidas_atuais
+      proximos_passos_emitidos deve_ser distinguir_validacao_atual_de_drift_e_comportamento_nao_avaliados
+      proximos_passos_emitidos deve_ser recompilar_fechamento_de_use_sem_abrir_codigo_ou_contratos_laterais
       frescor_avaliado deve_ser preservar_regras_manuais_fora_do_bloco_gerenciado
       proximos_passos_emitidos deve_ser declarar_omissoes_e_nao_autorizar_execucao
       workspace_identificado == verdadeiro

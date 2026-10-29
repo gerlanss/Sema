@@ -9,6 +9,7 @@ import { resolverDocumentacaoObrigatoria } from "./docs.js";
 import { resolverPerfilContexto, salvarPerfilContexto, estimarRespostaTokens, PERGUNTA_CONTEXTO } from "./contextBudget.js";
 import { navegarContextoSessao } from "./sessionContext.js";
 import { carregarMudanca, normalizarEscopo, proximasChamadas } from "./changeScope.js";
+import { consultarContratosAtuais } from "./sessionContractState.js";
 
 function opcao(args: string[], nome: string): string | undefined {
   const i = args.findIndex((arg) => arg === nome || arg.startsWith(`${nome}=`));
@@ -44,17 +45,29 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
       if (intencao && intencao !== mudanca.intencao) return emitir({ sucesso: false, status: "escopo_divergente", proximosPassos: ["Retome o id sem trocar a intenção; abra docs-impacto para uma mudança distinta."] }, 1);
       const arquivoSolicitado = opcao(args, "--arquivo");
       if (arquivoSolicitado && !mudanca.arquivosAlvo.includes(normalizarEscopo(base, [arquivoSolicitado])[0]!)) return emitir({ sucesso: false, status: "escopo_divergente", proximosPassos: ["O id já fixa os arquivos da mudança."] }, 1);
-      const docs = await resolverDocumentacaoObrigatoria({ baseProjeto: base, intencao: mudanca.intencao, arquivosAlvo: mudanca.arquivosAlvo });
       const frescor = await verificarFrescorArtefatos(base);
+      const estadoInicial = await consultarContratosAtuais(base, mudanca.arquivosAlvo);
+      const docs = estadoInicial.valido === false ? undefined : await resolverDocumentacaoObrigatoria({ baseProjeto: base, intencao: mudanca.intencao, arquivosAlvo: mudanca.arquivosAlvo });
+      const estadoAtual = docs ? await consultarContratosAtuais(base, [...mudanca.arquivosAlvo,
+        ...docs.leituraObrigatoria.filter((d) => d.tipo === "contrato").map((d) => d.relativo)]) : estadoInicial;
+      const sucesso = Boolean(docs?.sucesso) && frescor.fresco && estadoAtual.valido !== false;
+      const contratos = estadoAtual.contratos.map((c) => c.arquivo);
       const retomada = {
-        comando: "sessao", sucesso: docs.sucesso, status: frescor.fresco ? "mudanca_retomada" : "indice_desatualizado", execucaoAutorizada: false,
+        comando: "sessao", sucesso, status: estadoAtual.valido === false ? "contrato_invalido" : !frescor.fresco ? "indice_desatualizado" : "mudanca_retomada", execucaoAutorizada: false,
         mudancaId, intencao: mudanca.intencao, arquivosAlvo: mudanca.arquivosAlvo, perfil, frescor,
-        leiturasObrigatorias: docs.leituraObrigatoria.map((d) => ({ arquivo: d.relativo, motivo: d.motivo })),
-        proximasChamadas: proximasChamadas(mudanca, docs.leituraObrigatoria.map((d) => d.relativo)),
-        proximosPassos: [frescor.fresco ? "Retome o mesmo escopo. Reavalie documentos alterados; declaração de leitura não comprova comportamento." : "Rode sema sync-codex --json e retome este mesmo id."],
+        estadoAtual,
+        gates: contratos.map((arquivo) => ({ arquivo, validar: ["validar", arquivo, "--json"], drift: ["drift", arquivo, "--cache", "fresh", "--pacote", "--json"] })),
+        documentacao: docs ? "escopo_resolvido" : "nao_avaliada_por_contrato_invalido",
+        leiturasObrigatorias: docs?.leituraObrigatoria.map((d) => ({ arquivo: d.relativo, motivo: d.motivo })),
+        proximasChamadas: docs ? proximasChamadas(mudanca, docs.leituraObrigatoria.map((d) => d.relativo)) : { retomar: ["sessao", "--mudanca-id", mudanca.id, "--json"] },
+        proximosPassos: [estadoAtual.valido === false
+          ? "Execute validar nos contratos indicados e corrija os erros atuais antes de editar código ou interpretar contagens parciais."
+          : frescor.fresco ? "Retome o mesmo escopo. Reavalie documentos alterados; declaração de leitura não comprova comportamento."
+          : "Rode sema sync-codex --json e retome este mesmo id; releia SEMA_BOOT.md após a sincronização.",
+          "Use estadoAtual recompilado como referência; resumos da conversa não comprovam validação, drift ou comportamento. impl/vinculos pertencem ao contrato .sema. Execute os gates retornados e consuma o JSON completo."],
       };
       if (await tokensEntradaLocal(base) + estimarRespostaTokens(retomada) > perfil.orcamentoTokens) return emitir({ sucesso: false, status: "orcamento_insuficiente", proximosPassos: ["O escopo preservado excede o orçamento; ajuste --orcamento-contexto sem omitir dependências."] }, 1);
-      return emitir(retomada, docs.sucesso ? 0 : 1);
+      return emitir(retomada, sucesso ? 0 : 1);
     } catch (erro) { return emitir({ sucesso: false, status: "mudanca_invalida", proximosPassos: [(erro as Error).message] }, 1); }
   }
   const projeto = await carregarProjeto(entrada, cwd, { escopo: "projeto", adiarDescobertaCodigo: true });
@@ -67,7 +80,7 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
   const alvo = contrato ? JSON.stringify(contrato) : "<contrato>";
   const tokensEntrada = await tokensEntradaLocal(base);
   const payload = {
-    comando: "sessao", sucesso: true,
+    comando: "sessao", sucesso: frescor.fresco,
     status: !frescor.fresco ? "indice_desatualizado" : contexto?.status ?? "intencao_necessaria",
     execucaoAutorizada: false,
     workspace: { baseProjeto: projeto.baseProjeto, nomePasta: path.basename(projeto.baseProjeto), hashContratos: frescor.hashAtual, cliVersao: pacoteCli.version },
@@ -103,5 +116,5 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
     comando: "sessao", sucesso: false, status: "orcamento_insuficiente", execucaoAutorizada: false,
     proximosPassos: ["Instruções locais, metadados e leituras bloqueantes excedem o orçamento. Refine --arquivo ou ajuste --orcamento-contexto; nenhuma leitura foi dispensada."],
   }, 1);
-  return emitir(payload);
+  return emitir(payload, frescor.fresco ? 0 : 1);
 }

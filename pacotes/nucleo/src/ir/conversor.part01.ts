@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.software
+// SEMA-GOVERNED: sema.software, sema.produto.parser_integridade
 // Descricao: nucleo semantico particionado; consulte contratos/sema/software.sema antes de editar.
 import type { BlocoCasoTesteAst, BlocoGenericoAst, CampoAst, ModuloAst } from "../ast/tipos.js";
 import type { Diagnostico } from "../diagnosticos/index.js";
@@ -176,6 +176,9 @@ export function analisarCampoTipo(tipo: string, modificadores: string[]): Omit<I
   };
 }
 export function converterCampo(campo: CampoAst): IrCampo {
+  if (campo.literalComposto) return {
+    nome: campo.nome, ...analisarCampoTipo("Json", []), tipo: campo.valor, tipoOriginal: campo.valor,
+  };
   return {
     nome: campo.nome,
     ...analisarCampoTipo(campo.valor, campo.modificadores),

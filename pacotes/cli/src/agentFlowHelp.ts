@@ -6,7 +6,7 @@ export const FLUXO_IA = [
   'Depois: sema sessao "<intenção>" --janela-contexto <tokens> --arquivo <contrato> --json',
   "O perfil escolhe o contexto. Leia apenas contrato selecionado, dependências justificadas e docs bloqueantes. Resumos são opcionais; índices globais, AST e IR ficam sob demanda, no escopo necessário.",
   'sema docs-impacto --intencao "<intenção>" --arquivo <contrato> --json',
-  "Guarde mudancaId. O retorno contém proximasChamadas como arrays de argumentos para sema. Após compactação: sema sessao --mudanca-id <id> --json.",
+  "Guarde mudancaId. O retorno contém proximasChamadas como arrays de argumentos para sema. Após compactação: sema sessao --mudanca-id <id> --json; use estadoAtual recompilado, não conclusões antigas do resumo da conversa. Protocolo antigo bloqueia até sync-codex e releitura de SEMA_BOOT.md.",
   "Antes da edição: inspecionar <contrato> --drift none; impacto com --alvo <símbolo>; drift <contrato> --cache fresh --pacote --json.",
   "Após editar: validar o contrato, testar o comportamento e repetir drift fresh. Referências válidas e score não comprovam comportamento; confira lacunas de evidência.",
   "Fechamento documental: sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc1> --doc-lida <doc2> --json. Use só docs efetivamente lidas. Declaração não comprova compreensão nem substitui testes.",

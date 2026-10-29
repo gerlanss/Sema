@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { verificarFrescorArtefatos } from "../../pacotes/cli/src/index.part04.js";
 import { criarAgentContextPack, criarGuiaCapacidadeIa } from "../../pacotes/cli/src/agentContextPack.js";
 import { renderizarInstrucaoCodexSema, renderizarSemaBoot, renderizarSemaSmallModel } from "../../pacotes/cli/src/agentBootstrap.js";
+import { registrarMudanca } from "../../pacotes/cli/src/changeScope.js";
 
 async function criarWorkspace(): Promise<string> {
   const base = await mkdtemp(path.join(tmpdir(), "sema-sessao-"));
@@ -96,6 +97,62 @@ test("freshness: hash muda quando contrato muda", async () => {
   } finally {
     await rm(base, { recursive: true, force: true });
   }
+});
+
+test("retomada recompila o contrato atual, bloqueia protocolo antigo e não herda veredictos", async () => {
+  const base = await criarWorkspace();
+  const cli = path.resolve("pacotes/cli/dist/bin.js");
+  const arquivo = "contratos/app.sema";
+  const contrato = `module teste.app {
+    use teste.dep
+    task primeira { input {} output { ok: Booleano } guarantees { ok existe } }
+    task segunda { input {} output { ok: Booleano } guarantees { ok existe } }
+  }`;
+  const rodar = (id: string) => {
+    const processo = spawnSync(process.execPath, [cli, "sessao", "--mudanca-id", id, "--janela-contexto", "32768", "--json"], { cwd: base, encoding: "utf8", timeout: 30000 });
+    return { status: processo.status, payload: JSON.parse(processo.stdout).payload };
+  };
+  const atualizarIndice = async () => {
+    const frescor = await verificarFrescorArtefatos(base);
+    await writeFile(path.join(base, "SEMA_INDEX.json"), JSON.stringify({ hashContratos: frescor.hashAtual }));
+  };
+  try {
+    await writeFile(path.join(base, arquivo), contrato);
+    await writeFile(path.join(base, "contratos/dep.sema"), "module teste.dep { entity Item { fields { id: Id } } }");
+    await writeFile(path.join(base, "contratos/lateral.sema"), "conteúdo inválido fora do escopo");
+    await atualizarIndice();
+    const mudanca = await registrarMudanca(base, "Editar aplicação", [arquivo]);
+    const primeiro = rodar(mudanca.id);
+    assert.equal(primeiro.status, 0, JSON.stringify(primeiro.payload));
+    assert.equal(primeiro.payload.estadoAtual.valido, true);
+    assert.equal(primeiro.payload.estadoAtual.contratos.length, 2);
+    assert.ok(!JSON.stringify(primeiro.payload.estadoAtual).includes("lateral.sema"));
+    assert.equal(primeiro.payload.estadoAtual.contratos[0].tarefasReconhecidas, 2);
+    assert.equal(primeiro.payload.estadoAtual.drift, "nao_avaliado");
+    assert.equal(primeiro.payload.estadoAtual.comportamento, "nao_avaliado");
+    assert.deepEqual(primeiro.payload.gates[0].validar, ["validar", arquivo, "--json"]);
+    const hashAntes = primeiro.payload.estadoAtual.contratos[0].hash;
+    await writeFile(path.join(base, "SEMA_BOOT.md"), "Protocolo antigo da sessão.");
+    const antigo = rodar(mudanca.id);
+    assert.equal(antigo.status, 1);
+    assert.equal(antigo.payload.sucesso, false);
+    assert.equal(antigo.payload.status, "indice_desatualizado");
+    assert.ok(antigo.payload.frescor.arquivosProtocoloDesatualizados.includes("SEMA_BOOT.md"));
+    assert.match(antigo.payload.proximosPassos.join(" "), /releia SEMA_BOOT/);
+    const pack = criarAgentContextPack(criarGuiaCapacidadeIa());
+    await writeFile(path.join(base, "SEMA_BOOT.md"), renderizarSemaBoot(pack));
+    await writeFile(path.join(base, arquivo), contrato.replace("module teste.app {", "module teste.app { enum Filtro { valores { a b } }"));
+    await atualizarIndice();
+    const invalido = rodar(mudanca.id);
+    assert.equal(invalido.status, 1);
+    assert.equal(invalido.payload.status, "contrato_invalido", JSON.stringify(invalido.payload));
+    assert.equal(invalido.payload.estadoAtual.valido, false);
+    assert.equal(invalido.payload.estadoAtual.contratos[0].tarefasReconhecidas, 2);
+    assert.notEqual(invalido.payload.estadoAtual.contratos[0].hash, hashAntes);
+    assert.ok(invalido.payload.estadoAtual.contratos[0].erros > 0);
+    assert.equal(invalido.payload.mudancaId, mudanca.id);
+    assert.ok(JSON.stringify(invalido.payload).length < 9000);
+  } finally { await rm(base, { recursive: true, force: true }); }
 });
 
 test("freshness: hash deterministico para mesmos contratos", async () => {
