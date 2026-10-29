@@ -7,10 +7,10 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `4.2.5`
+- Version: `4.2.6`
 - Package: `@semacode/cli`
 - Last updated: 2026-10-28
-- Reference commit: `84ad149`
+- Reference commit: `80deff9`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -32,6 +32,11 @@ Every public publication must pass:
 - `npm run release:verificar-drift`
 
 ## Maintenance Focus
+
+- Resume changes by id with fixed intention and files; reuse reading declarations
+  only while document hashes match. Documentation closure does not certify behavior.
+- Recognize plain JavaScript IIFEs and browser/CommonJS exports, diagnose unquoted
+  binding paths early, and provide focused help without leaking raw arguments.
 
 - Initialize configuration and agent rules without inventing business contracts;
   isolate template demonstrations under exemplos and model the requested domain first.

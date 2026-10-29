@@ -102,10 +102,10 @@ export function criarAjudaRaiz(versao: string): string {
       "sema drift <arquivo-ou-pasta> --escopo modulo --cache fresh --json",
     ]),
     "",
-    renderizarSecaoAscii("IA por capacidade", [
-      "fraca: sema resumo <arquivo> --micro --drift none --json (contrato compacto; implementação não avaliada)",
-      "média: sema resumo <arquivo> --curto --drift none --json + sema drift <arquivo> --cache fresh --json",
-      "forte: sema contexto-ia <arquivo.sema> --saida <diretorio> --json",
+    renderizarSecaoAscii("Contexto da IA", [
+      "sema sessao <intenção> --janela-contexto <tokens-confirmados> --arquivo <contrato> --json",
+      "A janela efetiva, o orçamento e o escopo controlam a entrega; não deduza capacidade pelo modelo.",
+      "Retome com sema sessao --mudanca-id <id-retornado-por-docs-impacto> --json.",
       "context-pack: sema resumo <arquivo.sema> --micro --para mudanca --drift none --json (compactação determinística automática; use --pedido para focar a seleção)",
     ]),
     "",
@@ -150,7 +150,7 @@ export function criarAjudaRaiz(versao: string): string {
       "sema instalar-exemplos [--json]",
       "sema sessao [intencao] [entrada] [--arquivo <contrato-ou-codigo>] [--janela-contexto <tokens>] [--orcamento-contexto <tokens>] [--reserva-saida <tokens>] [--salvar-perfil] [--json]",
       "sema docs-impacto --intencao <acao> [--arquivo <caminho>] [--criar-ausentes] [--completo] [--json]",
-      "sema finalizar-mudanca --intencao <acao> [--arquivo <caminho>] [--doc-lida <caminho>] [--json]",
+      "sema finalizar-mudanca --mudanca-id <id> [--doc-lida <caminho>] [--json] (alternativa: --intencao <acao> --arquivo <caminho>)",
       "sema author briefing <arquivo.sema> [--json]",
       "sema author revisar-cliches <arquivo.sema> [--texto <texto>|--texto-arquivo <arquivo>] [--texto-anterior <texto>|--texto-anterior-arquivo <arquivo>] [--json]",
       "sema author validar-narrativa <arquivo.sema> [--texto <texto>|--texto-arquivo <arquivo>] [--json]",

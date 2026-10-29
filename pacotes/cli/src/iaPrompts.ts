@@ -8,7 +8,8 @@ Execute sema sessao "<intenção>" --janela-contexto <tokens> --salvar-perfil --
 Leia somente o contrato selecionado, suas dependências e as docs bloqueantes. Resolva ambiguidade antes de editar.
 Não carregue índices ou packs globais. O resumo selecionado pela CLI é opcional e não deve repetir conteúdo já entregue pela sessão.
 Antes de editar: inspecionar --drift none, docs-impacto --arquivo, drift --cache fresh --pacote e impacto.
-Após editar: validar, testar, drift fresh e finalizar-mudanca com documentos efetivamente lidos.
+Guarde mudancaId de docs-impacto; retome após compactação com sessao --mudanca-id <id> --json.
+Após editar: validar, testar, drift --cache fresh --pacote e finalizar-mudanca --mudanca-id <id> --doc-lida <doc>, repetindo por leitura. Declaração de leitura não prova compreensão ou comportamento.
 Preserve SEMA-GOVERNED, impl e vinculos. Sucesso de um comando não substitui evidência do comportamento.
 Sema não autoriza publicação, mensagens, dinheiro, segredos ou bypass. Se indisponível, pare antes de editar código governado.
 `;
@@ -53,14 +54,14 @@ Se algo nao estiver claro, siga a forma ja usada nos exemplos oficiais. Nao impr
 
 export const PROMPT_IA_UI = `Atue como Engenheiro de Software Senior e UX/UI Designer de elite.
 
-Quero que voce trabalhe com Sema como fonte de verdade semantica do sistema e com React + TypeScript como camada de interface.
+Quero que voce trabalhe com Sema como contrato do sistema e a implementação mais simples adequada ao pedido como camada de interface.
 
 Entregue obrigatoriamente duas partes integradas:
 1. os arquivos \`.sema\` do dominio
-2. a proposta ou implementacao da interface em React + TypeScript
+2. a proposta ou implementação da interface na stack do projeto ou solicitada pelo usuário
 
 Regras:
-- nao entregue apenas HTML solto em arquivo unico
+- HTML/CSS/JavaScript simples é válido; preserve vínculos com o contrato e teste o comportamento
 - nao trate a Sema como enfeite conceitual
 - a interface deve nascer do contrato semantico definido em Sema
 - use os exemplos oficiais da Sema como referencia de estilo e semantica
@@ -91,13 +92,13 @@ A interface deve refletir visualmente:
 Estruture a entrega assim:
 1. visao do produto
 2. dominio modelado em Sema
-3. arquitetura de pastas em React + TypeScript
+3. arquitetura de pastas adequada ao projeto
 4. componentes principais
 5. estrategia visual
 6. codigo principal da interface
 7. explicacao curta de como a UI conversa com a semantica da Sema
 
-Se a tarefa envolver app visual, a Sema governa o significado e o React renderiza a experiencia. Nao atropele essa separacao.
+Se a tarefa envolver app visual, Sema governa o contrato e a stack escolhida renderiza a experiência. Não imponha framework para satisfazer o analisador.
 `;
 
 export const PROMPT_IA_REACT = `Crie uma solucao com Sema + React + TypeScript.
@@ -204,7 +205,7 @@ Entregue:
 Revise e corrija um modulo \`.sema\`.
 Antes de editar:
 - leia os exemplos oficiais parecidos
-- consulte AST e IR
+- consulte AST ou IR do contrato apenas se a consulta focada não resolver a dúvida
 Depois de editar:
 - rode \`sema formatar\`
 - rode \`sema validar --json\`
@@ -215,13 +216,13 @@ Depois de editar:
 
 Quero uma interface premium para este dominio, mas a solucao deve continuar ancorada em Sema.
 Modele primeiro o dominio em \`.sema\`.
-Depois proponha uma interface em React + TypeScript que torne visiveis:
+Depois proponha uma interface na stack adequada ao pedido que torne visíveis:
 - estado
 - fluxo
 - erros
 - efeitos
 - garantias
-Nao transforme isso em um \`index.html\` solto.
+HTML/CSS/JavaScript simples é uma opção válida; mantenha o contrato vinculado e teste o fluxo real.
 
 Comandos uteis da CLI para esse fluxo:
 - \`sema starter-ia\`

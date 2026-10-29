@@ -45,6 +45,16 @@ it does not name Sema. Loading the skill is not consent to adopt it.
    Follow the local gates and selected contract through implementation/testing.
    Save a context profile only with `--salvar-perfil` as requested.
 
+Run `docs-impacto --intencao "<intent>" --arquivo <contract> --json` and retain
+`mudancaId`. After compaction, resume `sessao --mudanca-id <id> --json`.
+Use the returned argument arrays for closure; repeat `--doc-lida` only for docs
+actually read. Hashes reuse declarations until a file changes. Missing scope or
+nonexistent files block closure. This gate checks declarations, not comprehension
+or behavior: validation, fresh drift and application tests remain separate.
+Use `drift <contract> --cache fresh --pacote --json` and inspect evidence gaps;
+consume JSON without truncating lines or object depth. Quote `arquivo` paths in
+contracts. Do not convert a plain JavaScript app to ES modules to satisfy Sema.
+
 `sema formatar` formats .sema contracts and `sema validar` validates those
 contracts. Neither adopts a project or proves that HTML, CSS, JavaScript or
 the application works. Report what was actually checked, including no contracts

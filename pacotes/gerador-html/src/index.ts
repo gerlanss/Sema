@@ -149,7 +149,7 @@ SEMA-GOVERNED
 Módulo de origem: ${escaparHtml(modulo.nome)}
 Consulte o contrato .sema aplicável antes de editar este arquivo.
 Rastreabilidade: outros contratos .sema podem governar este mesmo arquivo via vinculos.
-Para IA fraca/média/forte: chame Sema, rode docs-impacto e drift antes de alterar código.
+Para qualquer IA: chame Sema, rode docs-impacto e drift antes de alterar código.
 Descrição: página HTML gerada para humanos e IAs entenderem rapidamente a intenção do contrato.
 -->`;
 }

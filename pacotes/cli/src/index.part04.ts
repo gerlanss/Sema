@@ -1,3 +1,4 @@
+import { executarDocumentacaoMudanca } from "./changeCommands.js";
 import { lerPerfilContexto } from "./contextBudget.js";
 import { selecionarContextoAtivo, arquivarResumosLegados, ARQUIVOS_CONTEXTO_PROJETO } from "./contextDelivery.js";
 // SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.escrita_segura_workspace, sema.produto.governanca_ia.drift.cache.modos
@@ -448,90 +449,11 @@ export function resolverEntradaDocs(posicionais: string[], args: string[]): { in
 }
 
 export async function comandoDocsImpacto(posicionais: string[], args: string[], emJson: boolean): Promise<number> {
-  const { intencao, arquivosAlvo } = resolverEntradaDocs(posicionais, args);
-  if (!intencao.trim()) {
-    console.error("Uso: sema docs-impacto --intencao <acao> [--arquivo <caminho>] [--criar-ausentes] [--completo] [--json]");
-    return 1;
-  }
-
-  const resultado = await resolverDocumentacaoObrigatoria({
-    baseProjeto: process.cwd(),
-    intencao,
-    arquivosAlvo,
-    criarAusentes: possuiFlag(args, "--criar-ausentes"),
-  });
-  const completo = possuiFlag(args, "--completo");
-
-  const payload = {
-    comando: "docs-impacto",
-    ...(completo ? resultado : {
-      ...resultado,
-      leituraObrigatoria: resultado.leituraObrigatoria.map(compactarDocumentoObrigatorio),
-      docsAusentes: resultado.docsAusentes.map(compactarDocumentoObrigatorio),
-      docsCriadas: resultado.docsCriadas.map(compactarDocumentoObrigatorio),
-      modoDocumentos: "compacto",
-    }),
-  };
-
-  if (emJson) {
-    console.log(JSON.stringify(payload, null, 2));
-    return resultado.sucesso ? 0 : 1;
-  }
-
-  console.log("Documentacao obrigatoria da mudanca");
-  console.log(`- Intencao: ${resultado.intencao}`);
-  console.log(`- Categorias: ${resumirListaTexto(resultado.categorias, 8)}`);
-  console.log(`- Leitura obrigatoria: ${resultado.leituraObrigatoria.length}`);
-  for (const doc of resultado.leituraObrigatoria) {
-    console.log(`  - ${doc.relativo} (${doc.existe ? "ok" : "ausente"}) - ${doc.motivo}`);
-  }
-  if (resultado.docsCriadas.length > 0) {
-    console.log(`- Docs criadas: ${resultado.docsCriadas.map((doc) => doc.relativo).join(", ")}`);
-  }
-  if (resultado.bloqueios.length > 0) {
-    console.error("Bloqueios:");
-    for (const bloqueio of resultado.bloqueios) {
-      console.error(`- [SEM DOC ${bloqueio.severidade}] ${bloqueio.mensagem}`);
-    }
-  }
-
-  return resultado.sucesso ? 0 : 1;
+  return executarDocumentacaoMudanca("docs-impacto", posicionais, args, emJson);
 }
 
 export async function comandoFinalizarMudanca(posicionais: string[], args: string[], emJson: boolean): Promise<number> {
-  const { intencao, arquivosAlvo } = resolverEntradaDocs(posicionais, args);
-  if (!intencao.trim()) {
-    console.error("Uso: sema finalizar-mudanca --intencao <acao> [--arquivo <caminho>] [--doc-lida <caminho>] [--json]");
-    return 1;
-  }
-
-  const resultado = await verificarDocumentacaoMudanca({
-    baseProjeto: process.cwd(),
-    intencao,
-    arquivosAlvo,
-    docsLidas: obterOpcoesRepetidas(args, "--doc-lida"),
-  });
-
-  const payload = {
-    comando: "finalizar-mudanca",
-    ...resultado,
-  };
-
-  if (emJson) {
-    console.log(JSON.stringify(payload, null, 2));
-    return resultado.sucesso ? 0 : 1;
-  }
-
-  if (resultado.sucesso) {
-    console.log("Leitura documental comprovada para a mudanca.");
-    return 0;
-  }
-
-  console.error("Mudanca bloqueada por documentacao obrigatoria:");
-  for (const diagnostico of resultado.diagnosticos) {
-    console.error(`- [severidade ${diagnostico.severidade}] ${diagnostico.mensagem}`);
-  }
-  return 1;
+  return executarDocumentacaoMudanca("finalizar-mudanca", posicionais, args, emJson);
 }
 
 export async function comandoValidar(entrada?: string): Promise<number> {

@@ -9,7 +9,7 @@ Use this file when Codex does not know which command to run. A Sema command is a
 sema --version
 sema sessao "<intencao>" --json
 sema resumo --drift none
-sema docs-impacto --intencao "<acao>" --json
+sema docs-impacto --intencao "<acao>" --arquivo <contract> --json
 ```
 
 If `sema` is absent from `PATH`, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH, cmd.exe resolves `sema.cmd`, and the absolute fallback is `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version`. `sema skill sync --json` repairs launcher and skill without touching the workspace or plugin caches.
@@ -45,11 +45,11 @@ Then read every required doc returned by `docs-impacto`.
 
 ## Change and Closure
 
-- `sema docs-impacto --intencao "<acao>" --json`: discovers required docs and documentary blockers.
+- `sema docs-impacto --intencao "<acao>" --arquivo <contract> --json`: discovers required docs and returns mudancaId with next argument arrays.
 - `sema drift <arquivo-ou-pasta> --escopo modulo [--cache <none|cache|fresh>] --json`: plans a safe physical scope, then compares contract and implementation without a global fallback.
 - `sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca "<descricao>" --json`: maps impact before changing behavior.
 - `sema verificar <arquivo-ou-pasta> --json`: runs aggregated final verification.
-- `sema finalizar-mudanca --intencao "<acao>" --doc-lida <arquivo> --json`: proves documentation reading before closure.
+- `sema finalizar-mudanca --mudanca-id <id> --doc-lida <arquivo> --json`: checks scoped reading declarations and file hashes, not comprehension or application behavior. Repeat --doc-lida for actual readings. Explicit --intencao and --arquivo remain supported.
 
 Honest closure: unwrap drift JSON and treat its command payload as the source of truth. `payload.sucesso:false`, non-empty `payload.vinculos_quebrados`, non-empty `payload.rotas_divergentes`, or non-empty `payload.impls_quebrados` mean the change is not complete yet. Do not report "clean drift" without a green payload. `payload.vinculos_fora_do_escopo` is informational: the file exists in the workspace outside `diretoriosCodigo`, and each entry carries a `diretorioSugerido` for `sema.config.json`.
 

@@ -49,6 +49,8 @@ module sema.produto.cli_invocacao_publica.argumentos {
     }
     vinculos {
       arquivo: "pacotes/cli/src/cliGrammar.ts"
+      arquivo: "pacotes/cli/src/cliArgs.ts"
+      arquivo: "pacotes/cli/src/agentFlowHelp.ts"
       arquivo: "pacotes/cli/src/cliControlError.ts"
       arquivo: "pacotes/cli/src/index.part08.ts"
       arquivo: "pacotes/cli/src/comandos.ts"

@@ -764,7 +764,7 @@ function gerarCabecalhoSemaCpp(modulo: IrModulo, tipo: TipoCabecalhoCpp): string
     `${prefixo} Módulo de origem: ${modulo.nome}`,
     `${prefixo} Consulte o contrato .sema aplicável antes de editar este arquivo.`,
     `${prefixo} Rastreabilidade: outros contratos .sema podem governar este mesmo arquivo via vínculos.`,
-    `${prefixo} Para IA fraca/média/forte: chame Sema, rode docs-impacto e drift antes de alterar código.`,
+    `${prefixo} Para qualquer IA: chame Sema, rode docs-impacto e drift antes de alterar código.`,
     `${prefixo} Descrição: ${descricoes[tipo]}`,
     "",
   ].join("\n");

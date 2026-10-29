@@ -6,15 +6,15 @@ This is the minimum workflow for Codex in a local workspace.
 1. Read `SEMA_BOOT.md`.
 2. Run `sema --version`. If the shell cannot find it, use `$HOME/.sema/bin/sema` on macOS/Linux. On Windows, PowerShell resolves `sema.ps1` from PATH and cmd.exe resolves `sema.cmd`; use `& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\.sema\bin\sema-managed.ps1" --version` as the absolute fallback. Only then declare the CLI unavailable.
 3. Run `sema sessao "<intenção>" --json`; then `sema resumo <contrato> --micro --drift none --json` only for the selected contract.
-4. Run `sema docs-impacto --intencao "<change>" --arquivo <contract> --json`.
+4. Run `sema docs-impacto --intencao "<change>" --arquivo <contract> --json` and retain mudancaId. After compaction, resume `sema sessao --mudanca-id <id> --json`.
 5. Read every required document returned by the command.
 6. Consult command help or the relevant section of `docs/commands.md` when syntax, a gate or `--saida` is unclear.
 7. If the right capability is unclear, run `sema descobrir recomendar --intencao "<goal>" --json`; do not auto-run ambiguous recommendations.
 8. Use `exemplos/` and `docs/syntax.md` before creating or editing a contract.
-9. Run `sema drift --cache fresh` and `sema impacto` before editing existing code.
+9. Run `sema drift <contract> --cache fresh --pacote --json` and `sema impacto` before editing existing code.
 10. For a new module with a validated contract, scaffold with `sema compilar <contract> --alvo <default target>`, fill the real implementation keeping `impl`/`vinculos`, and close with `sema verificar`.
 11. Run `sema formatar` and `sema validar` after changing a `.sema` contract.
-12. Run `sema finalizar-mudanca` with the documents read before closure.
+12. Run `sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc> --json`, repeating --doc-lida for actual readings. The id preserves intention and files; declarations expire when hashes change. This checks documentation, not comprehension or behavior; validation, drift and tests remain separate.
 
 Contract edit rule: `.sema` has its own size budget. Above 300 lines, plan a split by domain/capability; above 500, do not create or edit before splitting. Do not use parte_1/parte_2 and do not force a 1:1 contract-to-file relationship; several contracts can govern the same file through `vinculos`.
 

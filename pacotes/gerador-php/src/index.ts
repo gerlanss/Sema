@@ -558,7 +558,7 @@ function gerarCabecalhoSemaPhp(modulo: IrModulo, tipo: TipoCabecalhoPhp = "contr
     `// Modulo de origem: ${modulo.nome}`,
     "// Consulte o contrato .sema aplicavel antes de editar este arquivo.",
     "// Rastreabilidade: outros contratos .sema podem governar este mesmo arquivo via vinculos.",
-    "// Para IA fraca/media/forte: chame Sema, rode docs-impacto e drift antes de alterar codigo.",
+    "// Para qualquer IA: chame Sema, rode docs-impacto e drift antes de alterar codigo.",
     `// Descricao: ${descricoes[tipo]}`,
     "",
     "declare(strict_types=1);",

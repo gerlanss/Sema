@@ -499,7 +499,7 @@ function validarComandoBasico(comando: string, args: readonly string[]): boolean
     }
     case "verificar": return parsearArgumentos(args, { opcoes: ["--saida", "--alvo"], flags: ["--sem-cache", "--preservar-implementacao"], maxPosicionais: 1 }) !== null;
     case "sessao": {
-      const parsed = parsearArgumentos(args, { opcoes: ["--arquivo", ...OPCOES_CONTEXTO_IA], flags: ["--salvar-perfil"], maxPosicionais: 2 });
+      const parsed = parsearArgumentos(args, { opcoes: ["--arquivo", "--mudanca-id", ...OPCOES_CONTEXTO_IA], flags: ["--salvar-perfil"], maxPosicionais: 2 });
       return parsed !== null && OPCOES_CONTEXTO_IA.every((n) => valorOpcao(parsed, n) === undefined || /^[1-9]\d*$/u.test(valorOpcao(parsed, n)!));
     }
     case "formatar": return parsearArgumentos(args, { flags: ["--check"], maxPosicionais: 1 }) !== null;
@@ -527,12 +527,12 @@ function validarComandoBasico(comando: string, args: readonly string[]): boolean
       return parsed !== null && FONTES_IMPORTACAO.has(parsed.posicionais[0]!);
     }
     case "docs-impacto": {
-      const parsed = parsearArgumentos(args, { opcoes: ["--intencao", "--arquivo"], flags: ["--criar-ausentes", "--completo"], repetiveis: ["--arquivo"], maxPosicionais: 64 });
-      return parsed !== null && Boolean(valorOpcao(parsed, "--intencao") ?? parsed.posicionais[0]);
+      const parsed = parsearArgumentos(args, { opcoes: ["--intencao", "--arquivo", "--mudanca-id"], flags: ["--criar-ausentes", "--completo"], repetiveis: ["--arquivo"], maxPosicionais: 64 });
+      return parsed !== null && Boolean(valorOpcao(parsed, "--mudanca-id") ?? valorOpcao(parsed, "--intencao") ?? parsed.posicionais[0]);
     }
     case "finalizar-mudanca": {
-      const parsed = parsearArgumentos(args, { opcoes: ["--intencao", "--arquivo", "--doc-lida"], repetiveis: ["--arquivo", "--doc-lida"], maxPosicionais: 64 });
-      return parsed !== null && Boolean(valorOpcao(parsed, "--intencao") ?? parsed.posicionais[0]);
+      const parsed = parsearArgumentos(args, { opcoes: ["--intencao", "--arquivo", "--doc-lida", "--mudanca-id"], repetiveis: ["--arquivo", "--doc-lida"], maxPosicionais: 64 });
+      return parsed !== null && Boolean(valorOpcao(parsed, "--mudanca-id") ?? valorOpcao(parsed, "--intencao") ?? parsed.posicionais[0]);
     }
     default: return false;
   }

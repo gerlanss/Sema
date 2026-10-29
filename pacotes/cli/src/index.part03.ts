@@ -125,10 +125,7 @@ export function renderizarResumoProjetoMarkdown(
     "## Entrada canonica para IA",
     "",
     `- Ordem minima: ${entradaCanonica.ordemLeitura.join(" -> ")}`,
-    `- IA fraca: ${entradaCanonica.porCapacidade.fraca.join(" -> ")}`,
-    `- IA média: ${entradaCanonica.porCapacidade.media.join(" -> ")}`,
-    `- IA forte: ${entradaCanonica.porCapacidade.forte.join(" -> ")}`,
-    `- Aliases: pequena -> fraca; grande -> forte`,
+    "- A janela confirmada e o orçamento do perfil controlam a entrega; amplie somente pelo escopo da tarefa.",
     "",
     "## Agent Context Pack",
     "",
@@ -140,26 +137,17 @@ export function renderizarResumoProjetoMarkdown(
     "## Políticas da plataforma",
     "",
     `- Regra: ${agentContextPack.politicaPlataforma.regra}`,
-    `- IA fraca: ${agentContextPack.politicaPlataforma.porCapacidade.fraca}`,
-    `- IA média: ${agentContextPack.politicaPlataforma.porCapacidade.media}`,
-    `- IA forte: ${agentContextPack.politicaPlataforma.porCapacidade.forte}`,
     `- Se houver alerta externo: ${agentContextPack.politicaPlataforma.quandoHouverBloqueio}`,
     "",
     "## Código governado",
     "",
     `- Marcador: \`${agentContextPack.politicaCodigoGovernado.marcador}\``,
     `- Regra: ${agentContextPack.politicaCodigoGovernado.regra}`,
-    `- IA fraca: ${agentContextPack.politicaCodigoGovernado.porCapacidade.fraca}`,
-    `- IA média: ${agentContextPack.politicaCodigoGovernado.porCapacidade.media}`,
-    `- IA forte: ${agentContextPack.politicaCodigoGovernado.porCapacidade.forte}`,
     "",
     "## Design visual",
     "",
     `- Regra: ${agentContextPack.politicaDesignVisual.regra}`,
     `- Aplicar quando: ${agentContextPack.politicaDesignVisual.aplicarQuando}`,
-    `- IA fraca: ${agentContextPack.politicaDesignVisual.porCapacidade.fraca}`,
-    `- IA média: ${agentContextPack.politicaDesignVisual.porCapacidade.media}`,
-    `- IA forte: ${agentContextPack.politicaDesignVisual.porCapacidade.forte}`,
     `- Proibido: ${agentContextPack.politicaDesignVisual.proibicoes.slice(0, 5).join(", ")}`,
     "",
     "## Timeout e retry",
@@ -169,13 +157,7 @@ export function renderizarResumoProjetoMarkdown(
     `- Escalonamento: ${agentContextPack.politicaTimeoutResumo.escalonamentoSegundos.map((segundos) => `${segundos}s`).join(" -> ")}`,
     `- Bloqueio: ${agentContextPack.politicaTimeoutResumo.ateQuandoTentar}`,
     "",
-    "## Guia por capacidade",
-    "",
   ];
-  for (const capacidade of CAPACIDADES_IA_OPERACIONAIS) {
-    const guia = guiaPorCapacidade[capacidade];
-    linhas.push(`- ${capacidade}: ${guia.descricao} Artefatos: ${guia.artefatos.join(", ")}.`);
-  }
   linhas.push("");
   linhas.push("## Modulos");
   linhas.push("");

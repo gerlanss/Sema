@@ -308,7 +308,7 @@ function gerarCabecalhoCSharp(modulo: IrModulo, descricao: string): string {
     `// Módulo de origem: ${modulo.nome}`,
     "// Contrato: consulte o arquivo .sema aplicável antes de editar este artefato.",
     "// Rastreabilidade: outros contratos .sema podem governar este mesmo arquivo via vinculos.",
-    "// Para IA fraca/média/forte: chame Sema, rode docs-impacto e drift antes de alterar código.",
+    "// Para qualquer IA: chame Sema, rode docs-impacto e drift antes de alterar código.",
     `// Descrição: ${descricao}`,
     "",
   ].join("\n");

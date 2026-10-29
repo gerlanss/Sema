@@ -141,9 +141,9 @@ export async function gerarPacoteContextoChat(
     "## Agent Instructions",
     "1. Read the contracts above. They are the source of truth.",
     "2. Treat selected code as context, not as a substitute for the contract.",
-    "3. Run `sema docs-impacto` with the declared intention before changing files.",
+    "3. Run `sema docs-impacto --intencao <intent> --arquivo <contract> --json`; retain mudancaId before changing files.",
     "4. Run `sema drift --cache fresh` and `sema impacto` locally before editing governed code.",
-    "5. Close with `sema finalizar-mudanca` and concrete evidence.",
+    "5. Validate and test; check fresh drift separately. Close documentation with `sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc> --json`. Read declarations do not prove behavior.",
   ].join("\n");
 
   const tamanhoBytes = Buffer.byteLength(inlineTexto, "utf8");

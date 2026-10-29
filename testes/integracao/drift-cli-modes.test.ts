@@ -669,12 +669,18 @@ test("CLI falha para modo inválido e combinações conflitantes sem criar cache
       const execucao = await executarCli(sandbox, caso.argumentos, raizCache);
       assert.equal(execucao.codigo, 1);
       assert.equal(execucao.stderr, "");
-      assert.deepEqual(JSON.parse(execucao.stdout), {
+      const envelope = JSON.parse(execucao.stdout);
+      assert.match(envelope.message, /^Argumentos inválidos\. Consulte a ajuda do comando\./u);
+      assert.ok(envelope.message.length < 1300);
+      assert.ok(!envelope.message.includes(sandbox.contratoRelativo), "erro não deve ecoar argv");
+      if (caso.argumentos[0] === "drift") assert.match(envelope.message, /--cache fresh --pacote/u);
+      if (caso.argumentos[0] === "inspecionar") assert.match(envelope.message, /--drift none/u);
+      assert.deepEqual({ ...envelope, message: "mensagem pública conferida" }, {
         schemaVersion: "sema.cli.control/v1",
         ok: false,
         kind: "ARGUMENT_ERROR",
         code: "CLI_ARGUMENT_ERROR",
-        message: "Argumentos inválidos. Consulte a ajuda do comando.",
+        message: "mensagem pública conferida",
         exitCode: 1,
       });
       await assertCaminhoAusente(raizCache);

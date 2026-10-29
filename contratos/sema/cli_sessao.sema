@@ -7,6 +7,7 @@ module sema.produto.cli_sessao {
   task abrir_sessao_governada {
     input {
       intencao: Texto
+      mudanca_id: Texto
       entrada: Texto
       janela_contexto: Numero
       orcamento_contexto: Numero
@@ -70,6 +71,8 @@ module sema.produto.cli_sessao {
       arquivo: "pacotes/cli/src/sessionContext.ts"
       arquivo: "testes/unidade/context-budget.test.ts"
       arquivo: "pacotes/cli/src/comandoSessao.ts"
+      arquivo: "pacotes/cli/src/changeScope.ts"
+      arquivo: "testes/unidade/fluxo-ia-regressao.test.ts"
       arquivo: "pacotes/cli/src/agentProtocol.ts"
       arquivo: "pacotes/cli/src/index.part04.ts"
       arquivo: "testes/unidade/comando-sessao.test.ts"
@@ -83,6 +86,7 @@ module sema.produto.cli_sessao {
       criticidade_operacional: media
     }
     guarantees {
+      proximos_passos_emitidos deve_ser retomar_intencao_e_arquivos_originais_por_mudanca_id
       proximos_passos_emitidos deve_ser pedir_contrato_do_usuario_quando_projeto_adotado_nao_tem_contratos
       proximos_passos_emitidos deve_ser nao_selecionar_exemplos_como_dominio_inferido
       proximos_passos_emitidos deve_ser contar_instrucoes_locais_e_entrega_no_mesmo_orcamento

@@ -344,6 +344,10 @@ export class Parser {
         };
       }
 
+      if (nome === "arquivo" && segmentos.some((token) => /[\\/]/.test(token.valor))) {
+        this.diagnosticos.push(criarDiagnostico("PAR004", "Caminho de arquivo deve estar entre aspas para preservar separadores e espaços.", "erro",
+          { inicio, fim: this.anterior().intervalo.fim }, `Use arquivo: ${JSON.stringify(segmentos.map((t) => t.valor).join(""))}`));
+      }
       const tipoTokens: string[] = [];
       const modificadores: string[] = [];
       let profundidadeTipo = 0;

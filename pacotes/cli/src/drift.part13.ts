@@ -129,7 +129,7 @@ interface PayloadIndicesCacheDrift {
 const SCHEMA_PAYLOAD_INDICES_CACHE_DRIFT = "sema.drift-index-payload/v4" as const;
 const SCHEMA_IDENTIDADE_INDICES_CACHE_DRIFT = "sema.drift-index-identity/v3" as const;
 const SCHEMA_ESTADO_CACHE_DRIFT = "sema.drift-cache/v3" as const;
-const EXTRATOR_INDICES_CACHE_DRIFT = "drift-index-v4-2026-08-16" as const;
+const EXTRATOR_INDICES_CACHE_DRIFT = "drift-index-v5-2026-10-28" as const;
 const CHAVES_INDICES_CACHE_DRIFT: readonly ChaveIndiceCacheDrift[] = [
   "indexTs", "indexPy", "indexDart", "indexDotnet", "indexJava", "indexGo",
   "indexRust", "indexLua", "indexCpp", "indexPhp", "indexPersistencia",

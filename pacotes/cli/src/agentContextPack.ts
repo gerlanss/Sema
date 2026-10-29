@@ -1,5 +1,5 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.contexto.agent_pack, sema.produto.governanca_ia.drift.cache.modos
-// Descrição: monta o Agent Context Pack e políticas que agentes fracos, médios e fortes consomem antes do código.
+// Descrição: monta a base interna de contexto e políticas para consultas focadas pelo perfil da IA.
 
 import {
   LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO,
@@ -31,7 +31,7 @@ export const LIMITE_CARACTERES_PAYLOAD_INLINE = 262144;
 
 export function criarGuiaCapacidadeIa(): GuiaCapacidadeIaMap {
   const fraca: GuiaCapacidadeIa = {
-    descricao: "IA fraca, gratuita, local pequena ou com disciplina baixa. Leia o boot card, pare cedo e chame Sema antes de agir.",
+    descricao: "Alias legado. Use a janela configurada, o orçamento do perfil e o contrato selecionado.",
     artefatos: ["AGENTS.md", ARQUIVO_SEMA_BOOT],
     ordemLeitura: ["AGENTS.md", ARQUIVO_SEMA_BOOT],
     evitar: ["ast.json", "ir.json", "diagnosticos.json"],
@@ -43,7 +43,7 @@ export function criarGuiaCapacidadeIa(): GuiaCapacidadeIaMap {
     evitar: ["ast.json"],
   };
   const forte: GuiaCapacidadeIa = {
-    descricao: "IA forte. Comece pela mesma entrada curta e expanda somente conforme a tarefa e o orçamento de contexto declarado.",
+    descricao: "Alias legado. Use a mesma entrada curta e expanda conforme a tarefa e o orçamento declarado.",
     artefatos: ["AGENTS.md", ARQUIVO_SEMA_BOOT],
     ordemLeitura: ["AGENTS.md", ARQUIVO_SEMA_BOOT],
     evitar: ["ast.json", "ir.json", "drift.json"],
@@ -75,7 +75,7 @@ function criarPoliticaCodigoGovernadoAgentContext(): PoliticaCodigoGovernadoAgen
     porCapacidade: {
       fraca: `Se abrir codigo com SEMA-GOVERNED, pare, consulte AGENTS.md e chame Sema antes de editar. Nao crie codigo acima de ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO} linhas nem contrato .sema acima de ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}; divida .sema por capacidade, nunca em parte_1/parte_2.`,
       media: `Se abrir codigo com SEMA-GOVERNED, rode docs-impacto e drift antes de alterar comportamento. Trate codigo ${LIMITE_AVISO_LINHAS_CODIGO_GOVERNADO}+ e contrato .sema ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA}+ como refatoracao provavel; se o payload inline passar de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres, separe HTML, estilos, estado, renderizacao, calculo e dados antes de sincronizar.`,
-      forte: `Se abrir codigo com SEMA-GOVERNED, pode inspecionar AST/IR e codigo completo, mas mantem contrato primeiro, drift, codigo ate ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO}, .sema ate ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} e finalizar-mudanca. Contexto grande nao autoriza monolito nem payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres.`,
+      forte: `Se abrir codigo com SEMA-GOVERNED, consulte apenas o contrato e os arquivos necessários dentro do perfil, mantendo contrato primeiro, drift, codigo ate ${LIMITE_BLOQUEIO_LINHAS_CODIGO_GOVERNADO}, .sema ate ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA} e finalizar-mudanca. Contexto grande nao autoriza monolito nem payload inline acima de ${LIMITE_CARACTERES_PAYLOAD_INLINE} caracteres.`,
     },
     formatosPorAlvo: {
       typescript: "// SEMA-GOVERNED",
@@ -99,7 +99,7 @@ function criarPoliticaTimeoutResumoAgentContext(): PoliticaTimeoutResumoAgentCon
     porCapacidade: {
       fraca: "Se `resumo . --micro` estourar, tente `resumo <arquivo.sema> --micro`, depois repita com timeout maior. Timeout não autoriza editar.",
       media: "Prefira resumo escopado; se um gate Sema estourar, aumente timeout e repita antes de concluir falha.",
-      forte: "Pode rodar projeto inteiro com timeout alto, mas deve distinguir lentidão de falha real e registrar evidência.",
+      forte: "Reduza o escopo ao contrato e suas dependências; aumente timeout somente se necessário e registre evidência.",
     },
   };
 }
@@ -276,7 +276,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       prioridade: 10,
       obrigatorio: false,
       quandoUsar: "configurar o Codex para operar com diferentes capacidades de contexto",
-      incluirTextoBrutoQuando: "a IA precisa entender tiers fraca/média/forte e política de idioma",
+      incluirTextoBrutoQuando: "a IA precisa consultar o perfil configurado e a política de idioma",
     },
     {
       caminho: "docs/syntax.md",
@@ -358,8 +358,8 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
     prioridades: [
       "Menor artefato suficiente primeiro.",
       "Catálogo de discovery antes de escolher por chute entre profile, workflow, pipeline, gerador ou adapter.",
-      "Workspace local: sema --version, resumo, docs-impacto, inspecionar, drift e impacto pela CLI; sem shim, use $HOME/.sema/bin/sema ou, no Windows, sema.ps1 pelo PATH / sema.cmd no cmd.exe / & \"$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$HOME\\.sema\\bin\\sema-managed.ps1\" --version, e só depois peça reparo.",
-      "Contrato, índice e AGENTS complementam o contexto Sema; não substituem chamada Sema.",
+      "Workspace local: sema --version, sessao com perfil confirmado, docs-impacto com arquivo, inspecionar, drift --cache fresh --pacote e impacto pela CLI; sem shim, use $HOME/.sema/bin/sema ou, no Windows, sema.ps1 pelo PATH / sema.cmd no cmd.exe / & \"$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$HOME\\.sema\\bin\\sema-managed.ps1\" --version, e só depois peça reparo.",
+      "Contrato selecionado e AGENTS complementam as consultas; índices são bases internas, não leituras obrigatórias.",
       "Exemplos oficiais antes de nova sintaxe.",
       "Diagnóstico estruturado antes de opinião livre.",
       "Compatibilidade com políticas da plataforma antes de reformular ou continuar após alerta externo.",
@@ -368,7 +368,7 @@ export function criarAgentContextPack(guiaPorCapacidade: GuiaCapacidadeIaMap): A
       "Fechamento honesto: `payload` do drift JSON verde antes de dizer concluido; sucesso:false, vinculo quebrado ou rota divergente ainda e bloqueio.",
       "Separar limite de transporte inline de lentidão real: payload grande demais exige split/transporte correto, não retry infinito.",
       "Orçamento semântico, divisão por responsabilidade e cabeçalho governado antes de gravar ou finalizar código.",
-      "Acabamento visual/terminal por capacidade quando houver experiência de uso, com prova de viewport mobile sem overflow horizontal ou smoke check de comando.",
+      "Acabamento visual/terminal adequado ao pedido quando houver experiência de uso, com prova de viewport mobile sem overflow horizontal ou smoke check de comando.",
       "Se risco ou escopo estiver ambíguo, parar e pedir contrato/contexto.",
     ],
     fontes,

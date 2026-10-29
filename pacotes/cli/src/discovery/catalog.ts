@@ -155,7 +155,7 @@ function entradasGovernanca(): DiscoveryEntry[] {
         template("inspecionar", "sema inspecionar <contrato.sema> --drift none --json", "READ_ONLY_VALIDATION"),
         template("drift", "sema drift <contrato.sema> --escopo modulo --cache fresh --json", "READ_ONLY_VALIDATION"),
         template("impacto", "sema impacto <contrato.sema> --alvo <token> --mudanca <descrição> --json", "READ_ONLY_VALIDATION"),
-        template("finalizar", "sema finalizar-mudanca --intencao <intenção> --doc-lida <documento> --json", "WORKSPACE_VERIFICATION"),
+        template("finalizar", "sema finalizar-mudanca --mudanca-id <id-de-docs-impacto> --doc-lida <documento> --json", "WORKSPACE_VERIFICATION"),
       ],
       related: ["flow.contract-verification"],
       source: "contratos/sema/governanca_ia.sema",

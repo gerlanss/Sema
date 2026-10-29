@@ -8,6 +8,7 @@ import { carregarConfiguracaoProjeto } from "./projetoConfig.js";
 import { resolverDocumentacaoObrigatoria } from "./docs.js";
 import { resolverPerfilContexto, salvarPerfilContexto, estimarRespostaTokens, PERGUNTA_CONTEXTO } from "./contextBudget.js";
 import { navegarContextoSessao } from "./sessionContext.js";
+import { carregarMudanca, normalizarEscopo, proximasChamadas } from "./changeScope.js";
 
 function opcao(args: string[], nome: string): string | undefined {
   const i = args.findIndex((arg) => arg === nome || arg.startsWith(`${nome}=`));
@@ -36,6 +37,26 @@ export async function comandoSessao(posicionais: string[], args: string[], emJso
     proximosPassos: [PERGUNTA_CONTEXTO, 'Repita sema sessao "<intenção>" --janela-contexto <tokens> --salvar-perfil --json. Não infira a janela pelo modelo.'],
   });
   if (args.includes("--salvar-perfil")) await salvarPerfilContexto(base, perfil);
+  const mudancaId = opcao(args, "--mudanca-id");
+  if (mudancaId) {
+    try {
+      const mudanca = await carregarMudanca(base, mudancaId);
+      if (intencao && intencao !== mudanca.intencao) return emitir({ sucesso: false, status: "escopo_divergente", proximosPassos: ["Retome o id sem trocar a intenção; abra docs-impacto para uma mudança distinta."] }, 1);
+      const arquivoSolicitado = opcao(args, "--arquivo");
+      if (arquivoSolicitado && !mudanca.arquivosAlvo.includes(normalizarEscopo(base, [arquivoSolicitado])[0]!)) return emitir({ sucesso: false, status: "escopo_divergente", proximosPassos: ["O id já fixa os arquivos da mudança."] }, 1);
+      const docs = await resolverDocumentacaoObrigatoria({ baseProjeto: base, intencao: mudanca.intencao, arquivosAlvo: mudanca.arquivosAlvo });
+      const frescor = await verificarFrescorArtefatos(base);
+      const retomada = {
+        comando: "sessao", sucesso: docs.sucesso, status: frescor.fresco ? "mudanca_retomada" : "indice_desatualizado", execucaoAutorizada: false,
+        mudancaId, intencao: mudanca.intencao, arquivosAlvo: mudanca.arquivosAlvo, perfil, frescor,
+        leiturasObrigatorias: docs.leituraObrigatoria.map((d) => ({ arquivo: d.relativo, motivo: d.motivo })),
+        proximasChamadas: proximasChamadas(mudanca, docs.leituraObrigatoria.map((d) => d.relativo)),
+        proximosPassos: [frescor.fresco ? "Retome o mesmo escopo. Reavalie documentos alterados; declaração de leitura não comprova comportamento." : "Rode sema sync-codex --json e retome este mesmo id."],
+      };
+      if (await tokensEntradaLocal(base) + estimarRespostaTokens(retomada) > perfil.orcamentoTokens) return emitir({ sucesso: false, status: "orcamento_insuficiente", proximosPassos: ["O escopo preservado excede o orçamento; ajuste --orcamento-contexto sem omitir dependências."] }, 1);
+      return emitir(retomada, docs.sucesso ? 0 : 1);
+    } catch (erro) { return emitir({ sucesso: false, status: "mudanca_invalida", proximosPassos: [(erro as Error).message] }, 1); }
+  }
   const projeto = await carregarProjeto(entrada, cwd, { escopo: "projeto", adiarDescobertaCodigo: true });
   const frescor = await verificarFrescorArtefatos(projeto.baseProjeto);
   const pacoteCli = (await import("../package.json", { with: { type: "json" } })).default;

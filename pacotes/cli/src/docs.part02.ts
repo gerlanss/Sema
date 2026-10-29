@@ -216,7 +216,7 @@ export async function verificarDocumentacaoMudanca(opcoes: {
       tipo: "leitura_obrigatoria_nao_comprovada",
       severidade: 4,
       caminho: doc.relativo,
-      mensagem: `Leitura obrigatoria nao comprovada: ${doc.relativo}.`,
+      mensagem: `Leitura obrigatoria nao declarada (--doc-lida): ${doc.relativo}.`,
     })),
     ...docsTemplatePendentes.map((doc): BloqueioDocumentacaoMudanca => ({
       tipo: "documentacao_template_cru",
@@ -257,7 +257,7 @@ export async function verificarDocumentacaoMudanca(opcoes: {
     docsTemplatePendentes: docsTemplatePendentes.map(compactarDocumentoObrigatorio),
     diagnosticos,
     instrucoes: diagnosticos.length === 0
-      ? ["Leitura documental comprovada. Continue com validar, drift e testes conforme a mudanca."]
+      ? ["Declarações documentais conferidas. Isso não comprova leitura efetiva, compreensão nem comportamento; validar, drift e testes têm resultados próprios."]
       : ["Nao conclua a mudanca enquanto houver diagnosticos de severidade 4+."],
   };
 }

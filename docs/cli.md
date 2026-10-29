@@ -170,7 +170,7 @@ gate.
 - `sema drift`: compare contracts and implementation with `--cache none|cache|fresh` (default `fresh`).
 - `sema impacto`: map the blast radius of a planned change.
 - `sema docs-impacto`: identify docs that must be read or updated.
-- `sema finalizar-mudanca`: close the governed change with evidence.
+- `sema finalizar-mudanca`: check reading declarations and hashes for the scope saved by `docs-impacto`; use `--mudanca-id`. Does not run or replace validation, drift or application tests.
 - `sema compilar`: generate code from contracts.
 - `sema testar`: generate, compile, and execute local contract tests, including `dotnet` and `cpp`.
 - `sema verificar`: run the final local verification bundle.

@@ -9,7 +9,7 @@ Public Sema documentation is English and local-only.
 ## Required Flow
 
 ```bash
-sema docs-impacto --intencao "describe the change" --json
+sema docs-impacto --intencao "describe the change" --arquivo contratos/app.sema --json
 ```
 
 The result lists:
@@ -19,15 +19,30 @@ The result lists:
 - `docsCriadas`: generated draft docs that must be completed by Codex;
 - `bloqueios`: blocking diagnostics.
 
-Before closing the change, prove the required docs were read:
+Retain `mudancaId` and `proximasChamadas` (arrays of CLI arguments, not shell
+strings). Before closing, declare the required documents actually read:
 
 ```bash
 sema finalizar-mudanca \
-  --intencao "describe the change" \
+  --mudanca-id <returned-id> \
   --doc-lida README.md \
   --doc-lida docs/documentation.md \
   --json
 ```
+
+Repeat `--doc-lida` for every required reading. Sema cannot observe a client's
+read tool or prove comprehension. It checks declarations against existing files
+and stores SHA-256 hashes in `.sema/mudancas/<id>.json`. Unchanged declarations
+can be reused; changed or removed documents invalidate them. Missing files,
+missing scope, and scope conflicting with the id block closure.
+
+Resume after compaction with `sema sessao --mudanca-id <id> --json`. The original
+intention and target files remain fixed. For an independent change, open another
+`docs-impacto` with explicit intention and targets. Legacy explicit closure with
+`--intencao` and repeated `--arquivo` remains supported; intention-only closure
+is rejected. The result distinguishes `documentacao_conferida` from pending
+documentation. Run contract validation, fresh drift and application tests
+separately; this command does not execute or certify them.
 
 ## Public Docs Rules
 
@@ -72,7 +87,7 @@ through `vinculos.arquivo`. Required expansion follows declared `use` dependenci
 with reasons and originating contracts. Missing or ambiguous dependencies block.
 `docs.arquivo` references are recommendations and do not expand the dependency
 graph. Intent suggestions stay in `leituraRecomendada`, distinct from
-`leituraObrigatoria`, and do not block closure. Pass the same target at closure
+`leituraObrigatoria`, and do not block closure. Retain the id or pass the same target at closure
 and confirm the selected contracts before editing code.
 
 The context-budget and docs-relevancia tests measure actual CLI output, prove

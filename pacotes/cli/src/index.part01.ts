@@ -359,9 +359,6 @@ export function renderizarCabecalhoDocsIa(descoberta: DescobertaDocsIa): string 
     "- Use `sema` como interface publica principal.",
     "- A Sema entra em projeto novo, projeto ja semantizado e adocao incremental em legado sem contrato inicial.",
     "- Nao assuma monorepo, `node pacotes/cli/dist/bin.js`, `npm run project:check` ou uma pasta `exemplos` externa ao projeto atual.",
-    "- Se a IA tiver contexto curto, comece por `sema resumo --drift none` e `sema prompt-curto`; implementação e score ficam não avaliados.",
-    "- Se a IA aguentar mais contexto e precisar de evidência viva, suba para `sema drift --cache fresh --json` e `sema contexto-ia`.",
-    "- So leia `ast.json` e `ir.json` completos quando a capacidade da IA realmente aguentar esse volume.",
   ];
   if (documentos.length > 0) {
     linhas.push(`- Documentos locais empacotados: ${documentos.join(", ")}.`);

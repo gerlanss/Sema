@@ -2,6 +2,7 @@
 // SEMA-GOVERNED: sema.produto.cli_invocacao_publica, sema.produto.cli_invocacao_publica.resultados, sema.produto.cli_invocacao_publica.handlers, sema.produto.distribuicao_global
 // Descrição: bootstrap executável puro; ajuda e versão encerram antes do runtime operacional.
 
+import { ajudaComandoIa, mensagemArgumentosIa } from "./agentFlowHelp.js";
 import pacoteCli from "../package.json" with { type: "json" };
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -62,7 +63,7 @@ function mensagemAjudaPublica(argv: readonly string[]): string {
       return ajudaConteudo.mensagem;
     }
   }
-  return criarAjudaRaiz(pacoteCli.version);
+  return ajudaComandoIa(argv[0] ?? "") ?? criarAjudaRaiz(pacoteCli.version);
 }
 
 function emitirAjuda(argv: readonly string[], modoJson: boolean): number {
@@ -75,7 +76,7 @@ function emitirAjuda(argv: readonly string[], modoJson: boolean): number {
       ? criarEnvelopeControleJsonV1({
           categoria: "HELP",
           codigoPublico: "CLI_HELP",
-          mensagemPublica: argv[0] === "conteudo" ? mensagemTexto : "Sema CLI help",
+          mensagemPublica: argv[0] === "conteudo" || ajudaComandoIa(argv[0] ?? "") ? mensagemTexto : "Sema CLI help",
           codigoSaida: 0,
         })
       : undefined,
@@ -91,6 +92,9 @@ function emitirFalhaControle(
   codigoSaida: number,
 ): number {
   const modoJson = argv.includes("--json");
+  if (categoria === "ARGUMENT_ERROR") {
+    mensagemPublica = mensagemArgumentosIa(argv[0] ?? "");
+  }
   const relatorio = executarInvocacaoPublica({
     resultado: categoria,
     modoJson,

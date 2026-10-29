@@ -6,6 +6,7 @@ import {
   type EntradaEnvelopeResultadoCliV1,
   type EnvelopeResultadoCliV1,
 } from "./resultadoCli.js";
+import { mensagemArgumentosIaPermitida } from "./agentFlowHelp.js";
 
 export {
   CODIGO_SAIDA_FATAL_RUNTIME_CLI,
@@ -116,6 +117,7 @@ function normalizarCodigoPublico(categoria: TipoControleCli, codigo: string): st
 }
 
 function normalizarMensagemPublica(categoria: TipoControleCli, mensagem: string): string {
+  if (categoria === "ARGUMENT_ERROR" && mensagemArgumentosIaPermitida(mensagem)) return mensagem;
   if (categoria !== "HELP") {
     return MENSAGEM_PADRAO[categoria];
   }
@@ -171,7 +173,7 @@ function envelopeSeguroParaInvocacao(
   return criarEnvelopeControleJsonV1({
     categoria: resultado,
     codigoPublico: coerente?.code ?? CODIGO_PADRAO[resultado],
-    mensagemPublica: resultado === "HELP"
+    mensagemPublica: resultado === "HELP" || resultado === "ARGUMENT_ERROR"
       ? coerente?.message ?? mensagemTexto ?? MENSAGEM_PADRAO.HELP
       : MENSAGEM_PADRAO[resultado],
     codigoSaida: coerente?.exitCode ?? (resultado === "HELP" ? 0 : 1),

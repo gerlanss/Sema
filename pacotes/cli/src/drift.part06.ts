@@ -1,5 +1,6 @@
 // SEMA-GOVERNED: sema.produto.governanca_ia.drift
 // Descricao: indexa TypeScript com catalogo e AST compartilhados pelo drift.
+import { simbolosJavaScriptLocais } from "./javascriptBindings.js";
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -386,6 +387,9 @@ export async function indexarTypeScript(
       const sourceFile = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKind);
       sourceFiles.set(path.resolve(arquivo), sourceFile);
       const basesSimbolicas = caminhosSimbolicos(diretorio, arquivo);
+      for (const nome of simbolosJavaScriptLocais(sourceFile)) {
+        registrarSimboloTypeScript(simbolos, basesSimbolicas, arquivo, nome, undefined, origemArquivo);
+      }
       const relacao = path.relative(diretorio, arquivo);
 
       for (const recurso of extrairRecursosPersistenciaCodigoVivo(arquivo, codigo)) {

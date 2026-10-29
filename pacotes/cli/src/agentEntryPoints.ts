@@ -222,7 +222,7 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "MCP server, remote workspace bridge, login, license, billing, token, credit,",
     "panel, or runtime authorization gate.",
     "",
-    `Supported capacity labels: ${supportedCapacities}.`,
+    `Legacy aliases (${supportedCapacities}) remain compatible; they do not choose the context window. Use the confirmed token profile.`,
     "",
     "## Local-Only Rule",
     "",
@@ -241,18 +241,22 @@ export function renderizarDocumentoAgentesPorCapacidade(agentContextPack: AgentC
     "## Before Editing",
     "",
     "```bash",
-    "sema docs-impacto --intencao \"describe the change\" --json",
+    "sema docs-impacto --intencao \"describe the change\" --arquivo contratos/example.sema --json",
     "sema inspecionar contratos/example.sema --drift none --json",
-    "sema drift contratos/example.sema --escopo modulo --cache fresh --json",
+    "sema drift contratos/example.sema --escopo modulo --cache fresh --pacote --json",
     "sema impacto contratos/example.sema --alvo app.example --mudanca \"describe the change\" --json",
     "```",
     "",
-    "Read every document listed by `docs-impacto` before changing code, contracts,",
+    "Read the required documents listed by `docs-impacto` before changing code, contracts,",
     "operational docs, generated artifacts, workflows, profiles, or release material.",
     "A cache hit is acceleration, not evidence: closing requires `--cache fresh`,",
     "while contract-only queries keep unobserved implementation fields null inside the command payload.",
     "",
-    "## Codex Context Tiers",
+    "Retain mudancaId. Resume with `sema sessao --mudanca-id <id> --json` after compaction.",
+    "Close documentation using `sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc> --json`.",
+    "Repeat --doc-lida for actual readings. Declarations expire when file hashes change; they do not prove behavior.",
+    "",
+    "## Configured Context",
     "",
     "All context capacities start with AGENTS.md, SEMA_BOOT.md and sema sessao.",
     "The first session asks for the effective window in tokens. Declare --janela-contexto",
@@ -480,15 +484,15 @@ This is the minimum workflow for Codex in a local workspace.
 1. Read \`${ARQUIVO_SEMA_BOOT}\`.
 2. Run \`sema --version\`. If the shell cannot find it, use \`$HOME/.sema/bin/sema\` on macOS/Linux. On Windows, PowerShell resolves \`sema.ps1\` from PATH and cmd.exe resolves \`sema.cmd\`; use \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\` as the absolute fallback. Only then declare the CLI unavailable.
 3. Run \`sema sessao "<intenção>" --json\`; then \`sema resumo <contrato> --micro --drift none --json\` only for the selected contract.
-4. Run \`sema docs-impacto --intencao "<change>" --arquivo <contract> --json\`.
+4. Run \`sema docs-impacto --intencao "<change>" --arquivo <contract> --json\` and retain mudancaId. After compaction, resume \`sema sessao --mudanca-id <id> --json\`.
 5. Read every required document returned by the command.
 6. Consult command help or the relevant section of \`docs/commands.md\` when syntax, a gate or \`--saida\` is unclear.
 7. If the right capability is unclear, run \`sema descobrir recomendar --intencao "<goal>" --json\`; do not auto-run ambiguous recommendations.
 8. Use \`exemplos/\` and \`docs/syntax.md\` before creating or editing a contract.
-9. Run \`sema drift --cache fresh\` and \`sema impacto\` before editing existing code.
+9. Run \`sema drift <contract> --cache fresh --pacote --json\` and \`sema impacto\` before editing existing code.
 10. For a new module with a validated contract, scaffold with \`sema compilar <contract> --alvo <default target>\`, fill the real implementation keeping \`impl\`/\`vinculos\`, and close with \`sema verificar\`.
 11. Run \`sema formatar\` and \`sema validar\` after changing a \`.sema\` contract.
-12. Run \`sema finalizar-mudanca\` with the documents read before closure.
+12. Run \`sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc> --json\`, repeating --doc-lida for actual readings. The id preserves intention and files; declarations expire when hashes change. This checks documentation, not comprehension or behavior; validation, drift and tests remain separate.
 
 Contract edit rule: \`.sema\` has its own size budget. Above ${LIMITE_AVISO_LINHAS_CONTRATO_SEMA} lines, plan a split by domain/capability; above ${LIMITE_BLOQUEIO_LINHAS_CONTRATO_SEMA}, do not create or edit before splitting. Do not use parte_1/parte_2 and do not force a 1:1 contract-to-file relationship; several contracts can govern the same file through \`vinculos\`.
 
@@ -540,7 +544,7 @@ Use this file when Codex does not know which command to run. A Sema command is a
 sema --version
 sema sessao "<intencao>" --json
 sema resumo --drift none
-sema docs-impacto --intencao "<acao>" --json
+sema docs-impacto --intencao "<acao>" --arquivo <contract> --json
 \`\`\`
 
 If \`sema\` is absent from \`PATH\`, use \`$HOME/.sema/bin/sema\` on macOS/Linux. On Windows, PowerShell resolves \`sema.ps1\` from PATH, cmd.exe resolves \`sema.cmd\`, and the absolute fallback is \`& "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$HOME\\.sema\\bin\\sema-managed.ps1" --version\`. \`sema skill sync --json\` repairs launcher and skill without touching the workspace or plugin caches.
@@ -576,11 +580,11 @@ Then read every required doc returned by \`docs-impacto\`.
 
 ## Change and Closure
 
-- \`sema docs-impacto --intencao "<acao>" --json\`: discovers required docs and documentary blockers.
+- \`sema docs-impacto --intencao "<acao>" --arquivo <contract> --json\`: discovers required docs and returns mudancaId with next argument arrays.
 - \`sema drift <arquivo-ou-pasta> --escopo modulo [--cache <none|cache|fresh>] --json\`: plans a safe physical scope, then compares contract and implementation without a global fallback.
 - \`sema impacto <arquivo-ou-pasta> --alvo <token> --mudanca "<descricao>" --json\`: maps impact before changing behavior.
 - \`sema verificar <arquivo-ou-pasta> --json\`: runs aggregated final verification.
-- \`sema finalizar-mudanca --intencao "<acao>" --doc-lida <arquivo> --json\`: proves documentation reading before closure.
+- \`sema finalizar-mudanca --mudanca-id <id> --doc-lida <arquivo> --json\`: checks scoped reading declarations and file hashes, not comprehension or application behavior. Repeat --doc-lida for actual readings. Explicit --intencao and --arquivo remain supported.
 
 Honest closure: unwrap drift JSON and treat its command payload as the source of truth. \`payload.sucesso:false\`, non-empty \`payload.vinculos_quebrados\`, non-empty \`payload.rotas_divergentes\`, or non-empty \`payload.impls_quebrados\` mean the change is not complete yet. Do not report "clean drift" without a green payload. \`payload.vinculos_fora_do_escopo\` is informational: the file exists in the workspace outside \`diretoriosCodigo\`, and each entry carries a \`diretorioSugerido\` for \`sema.config.json\`.
 

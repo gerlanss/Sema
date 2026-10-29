@@ -128,6 +128,8 @@ module sema.produto.governanca_ia.drift {
       arquivo: "testes/unidade/drift-score-evidencia.test.ts"
       arquivo: "pacotes/cli/src/drift.part05.ts"
       arquivo: "pacotes/cli/src/drift.part06.ts"
+      arquivo: "pacotes/cli/src/javascriptBindings.ts"
+      arquivo: "testes/unidade/fluxo-ia-regressao.test.ts"
       arquivo: "pacotes/cli/src/drift.part07.ts"
       arquivo: "pacotes/cli/src/drift.part08.ts"
       arquivo: "pacotes/cli/src/drift.part11.ts"

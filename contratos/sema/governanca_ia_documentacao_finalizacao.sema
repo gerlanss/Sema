@@ -1,6 +1,6 @@
 module sema.produto.governanca_ia.documentacao.finalizacao {
   docs {
-    resumo: "Comprova leitura e decisao documental antes de finalizar uma mudanca governada."
+    resumo: "Confere declaracoes documentais com escopo persistido e hashes sem alegar prova de compreensao ou comportamento."
     arquivo: "contratos/sema/governanca_ia_documentacao.sema"
     arquivo: "docs/documentation.md"
   }
@@ -11,18 +11,10 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       intencao: Texto required
       arquivos_alvo: Texto
       docs_lidas: Texto
-      docs_criadas: Texto
-      docs_editadas: Texto
-      docs_removidas: Texto
-      docs_sem_impacto: Texto
-      sem_impacto_doc: Texto
+      mudanca_id: Texto
     }
     output {
       docs_obrigatorias_lidas: Booleano
-      docs_impactadas_cobertas: Booleano
-      decisao_documental_comprovada: Booleano
-      documentacao_atualizada_ou_justificada: Booleano
-      docs_sem_decisao: Lista
       bloqueio_emitido_quando_falta_leitura: Booleano
       templates_crus_bloqueados: Booleano
       docs_sem_substancia_bloqueadas: Booleano
@@ -36,29 +28,6 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
     dados {
       classificacao_padrao: interno
       redacao_log: parcial
-      input {
-        base_projeto: interno
-        intencao: interno
-        arquivos_alvo: interno
-        docs_lidas: interno
-        docs_criadas: interno
-        docs_editadas: interno
-        docs_removidas: interno
-        docs_sem_impacto: interno
-        sem_impacto_doc: interno
-      }
-      output {
-        docs_obrigatorias_lidas: interno
-        docs_impactadas_cobertas: interno
-        decisao_documental_comprovada: interno
-        documentacao_atualizada_ou_justificada: interno
-        docs_sem_decisao: interno
-        bloqueio_emitido_quando_falta_leitura: interno
-        templates_crus_bloqueados: interno
-        docs_sem_substancia_bloqueadas: interno
-        leitura_recomendada_nao_bloqueia_fechamento: interno
-        diagnostico_compacto_emitido: interno
-      }
     }
     audit {
       evento: sema.docs.mudanca_finalizada
@@ -70,12 +39,12 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
     forbidden {
       retornar_conteudo_documental_no_fechamento
       ocultar_diagnostico_atras_de_contexto_longo
-      finalizar_somente_com_doc_lida
-      concluir_sem_decisao_documental
-      deixar_doc_operacional_relacionada_sem_decisao
-      marcar_doc_nao_relacionada_como_evidencia
-      usar_sem_impacto_doc_sem_motivo
-      usar_motivo_sem_impacto_sem_doc
+      tratar_declaracao_com_hash_como_prova_de_leitura_ou_compreensao
+      tratar_gate_documental_como_execucao_de_validar_drift_ou_testes
+      finalizar_cli_sem_id_ou_arquivos_explicitos
+      trocar_intencao_ou_reduzir_arquivos_do_id
+      reutilizar_declaracao_de_documento_alterado_ou_removido
+      aceitar_doc_lida_inexistente_ou_fora_do_workspace
       finalizar_com_template_cru_criado_pela_sema
       finalizar_com_doc_sem_substancia
       bloquear_fechamento_por_leitura_recomendada
@@ -87,57 +56,30 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       arquivo: "pacotes/cli/src/docs.ts"
       arquivo: "pacotes/cli/src/docs.part02.ts"
       arquivo: "pacotes/cli/src/index.part04.ts"
-      arquivo: "pacotes/cli/src/index.ts"
+      arquivo: "pacotes/cli/src/changeScope.ts"
+      arquivo: "pacotes/cli/src/changeCommands.ts"
+      arquivo: "testes/unidade/fluxo-ia-regressao.test.ts"
       simbolo: cli.src.docs.verificarDocumentacaoMudanca
     }
     execucao {
       idempotencia: verdadeiro
       timeout: "10s"
       retry: "nenhum"
-      compensacao: "ler docs obrigatorias e declarar por arquivo doc criada editada removida ou sem impacto justificado antes de concluir"
+      compensacao: "retomar mudanca_id ler documentos pendentes e declarar apenas leituras efetivas"
       criticidade_operacional: alta
     }
     guarantees {
-      docs_obrigatorias_lidas existe
-      docs_impactadas_cobertas existe
-      decisao_documental_comprovada existe
-      documentacao_atualizada_ou_justificada existe
-      docs_sem_decisao existe
-      docs_sem_decisao deve_ser vazia_quando_sem_impacto_doc_ausente
+      docs_obrigatorias_lidas deve_ser declaracao_do_agente_nao_prova_de_compreensao
       bloqueio_emitido_quando_falta_leitura existe
       templates_crus_bloqueados existe
       docs_sem_substancia_bloqueadas existe
       leitura_recomendada_nao_bloqueia_fechamento existe
-      diagnostico_compacto_emitido existe
-      documentacao_atualizada_ou_justificada == verdadeiro
+      diagnostico_compacto_emitido deve_ser incluir_id_escopo_e_proximas_chamadas_completas
+      diagnostico_compacto_emitido deve_ser preservar_codigo_legado_leitura_obrigatoria_nao_comprovada
     }
     error {
       leitura_obrigatoria_nao_comprovada {
-        mensagem: IA tentou concluir sem comprovar leitura das docs obrigatorias
-        categoria: negocio
-        recuperabilidade: permanente
-        acao_chamador: corrigir
-        impacta_estado: falso
-        requer_compensacao: falso
-      }
-      decisao_documental_nao_comprovada {
-        mensagem: IA tentou concluir sem declarar se a documentacao foi criada editada removida ou sem impacto justificado
-        categoria: negocio
-        recuperabilidade: permanente
-        acao_chamador: corrigir
-        impacta_estado: falso
-        requer_compensacao: falso
-      }
-      documentacao_template_cru {
-        mensagem: IA tentou concluir usando esqueleto criado pela Sema sem preencher procedimento validacao e rollback reais
-        categoria: negocio
-        recuperabilidade: permanente
-        acao_chamador: corrigir
-        impacta_estado: falso
-        requer_compensacao: falso
-      }
-      documentacao_sem_substancia {
-        mensagem: IA tentou concluir com documento obrigatorio praticamente vazio sem procedimento validacao e rollback reais
+        mensagem: IA tentou fechar sem declarar documentos obrigatorios lidos
         categoria: negocio
         recuperabilidade: permanente
         acao_chamador: corrigir
@@ -146,7 +88,7 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
       }
     }
     tests {
-      caso "mudanca nao fecha sem docs lidas" {
+      caso "mudanca nao fecha sem docs declaradas" {
         given {
           base_projeto: "."
           intencao: "alterar CLI local"
@@ -157,35 +99,6 @@ module sema.produto.governanca_ia.documentacao.finalizacao {
           sucesso: verdadeiro
           bloqueio_emitido_quando_falta_leitura: verdadeiro
           diagnostico_compacto_emitido: verdadeiro
-        }
-      }
-      caso "mudanca nao fecha somente com doc lida" {
-        given {
-          base_projeto: "."
-          intencao: "alterar painel admin"
-          docs_lidas: "AGENTS.md docs/frontend.md docs/i18n.md"
-        }
-
-        expect {
-          sucesso: verdadeiro
-          decisao_documental_comprovada: falso
-          documentacao_atualizada_ou_justificada: falso
-        }
-      }
-      caso "mudanca fecha com doc editada declarada" {
-        given {
-          base_projeto: "."
-          intencao: "alterar painel admin"
-          docs_lidas: "AGENTS.md docs/frontend.md docs/i18n.md"
-          docs_editadas: "docs/frontend.md"
-          docs_sem_impacto: "docs/i18n.md"
-          sem_impacto_doc: "continua valida para esta mudanca"
-        }
-
-        expect {
-          sucesso: verdadeiro
-          decisao_documental_comprovada: verdadeiro
-          documentacao_atualizada_ou_justificada: verdadeiro
         }
       }
     }

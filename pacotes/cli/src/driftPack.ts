@@ -13,6 +13,10 @@ export type DriftPack = {
   };
   status: {
     success: boolean;
+    evidenceScope: "static_references_and_recorded_evidence";
+    behaviorEvidence: "pending" | "no_gaps_reported";
+    tasksPendingEvidence: number;
+    completeBehaviorProof: false;
     score: number;
     confidence: string;
     belowFloor: boolean;
@@ -80,6 +84,8 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
   rawDriftChars?: number;
 } = {}): DriftPack {
   const targetModule = options.targetModule ?? null;
+  const tasksPendingEvidence = resultado.tasks.filter((t) => !t.evidenciaVerificacao?.sucesso
+    || t.evidenciaVerificacao.quantidadeTestes <= 0).length;
   const tarefas = resultado.tasks
     .filter((task) => !targetModule || task.modulo === targetModule)
     .filter((task) => task.semImplementacao || task.implsQuebrados > 0 || task.lacunas.length > 0)
@@ -97,6 +103,10 @@ export function criarDriftPack(resultado: ResultadoDrift, options: {
     },
     status: {
       success: resultado.sucesso,
+      evidenceScope: "static_references_and_recorded_evidence" as const,
+      behaviorEvidence: tasksPendingEvidence > 0 ? "pending" as const : "no_gaps_reported" as const,
+      tasksPendingEvidence,
+      completeBehaviorProof: false as const,
       score: resultado.resumo_operacional.scoreMedio,
       confidence: resultado.resumo_operacional.confiancaGeral,
       belowFloor: resultado.resumo_operacional.pontuacaoAbaixoDoPiso,

@@ -6,8 +6,8 @@
 
 Sema is a local-first semantic governance layer for AI coding agents. It turns
 human intent into explicit contracts, checks live code against them, generates
-governed scaffolds and design systems, and closes changes with executed
-evidence — so an agent cannot quietly drift from what you asked.
+governed scaffolds and design systems, and keeps scope and evidence explicit
+through implementation and closure.
 
 `intent -> contract -> constraints -> impact -> execution -> evidence`
 
@@ -22,8 +22,9 @@ victory early. Not malice — statistics: context compaction loses the original
 spec, attention dilutes into plausible generic code, and nothing measures the
 gap between what the agent says it did and what it did. Sema makes that gap
 structural: the contract is lossless ground truth outside the agent's context,
-drift is a mechanical diff between promise and code, and closure requires
-green, executed evidence.
+drift checks static references and recorded evidence. Application tests establish
+behavior; the documentation closure gate checks declared readings and their hashes.
+A passing score or documentation check does not prove that the application works.
 
 Sema does not replace human approval, platform policy, security review, or
 legal judgment. It is a local layer for scope, evidence, drift and quality.
@@ -147,13 +148,19 @@ The governed loop in a project:
 sema iniciar --template base --janela-contexto 32768 # example: confirmed 32K window
 sema sessao "describe the requested application" --json
 # Model that request in contratos/app.sema before the implementation or checks below.
-sema docs-impacto --intencao "describe the change" --json
+sema docs-impacto --intencao "describe the change" --arquivo contratos/app.sema --json
+# Keep mudancaId and the returned proximasChamadas argument arrays.
 sema validar contratos/app.sema --json
-sema drift contratos/app.sema --escopo modulo --cache fresh --json
+sema drift contratos/app.sema --escopo modulo --cache fresh --pacote --json
 sema compilar contratos/app.sema --alvo typescript --saida .tmp/scaffold
 sema verificar contratos --alvo typescript --json   # executes the contract tests
-sema finalizar-mudanca --intencao "describe the change" --doc-lida AGENTS.md --json
+sema finalizar-mudanca --mudanca-id <returned-id> --doc-lida <read-doc> --json
+# Repeat --doc-lida for required documents actually read.
 ```
+
+After compaction, resume `sema sessao --mudanca-id <returned-id> --json`.
+The id preserves intention and target files. Reading declarations are reused only
+while file hashes match; they do not attest comprehension or replace tests.
 
 Confirm the model's effective configured context window before initialization;
 32,768 above is an example, not a default. Without that value, initialization

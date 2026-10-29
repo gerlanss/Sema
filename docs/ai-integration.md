@@ -28,7 +28,7 @@ Already-open tasks may need a reload. The distribution contains no
 MCP server, remote workspace bridge, login, license, billing, token, credit,
 panel, or runtime authorization gate.
 
-Supported capacity labels: fraca, pequena, media, forte, grande.
+Legacy aliases (fraca, pequena, media, forte, grande) remain compatible; they do not choose the context window. Use the confirmed token profile.
 
 ## Local-Only Rule
 
@@ -47,18 +47,22 @@ service, control panel, or external authorization request.
 ## Before Editing
 
 ```bash
-sema docs-impacto --intencao "describe the change" --json
+sema docs-impacto --intencao "describe the change" --arquivo contratos/example.sema --json
 sema inspecionar contratos/example.sema --drift none --json
-sema drift contratos/example.sema --escopo modulo --cache fresh --json
+sema drift contratos/example.sema --escopo modulo --cache fresh --pacote --json
 sema impacto contratos/example.sema --alvo app.example --mudanca "describe the change" --json
 ```
 
-Read every document listed by `docs-impacto` before changing code, contracts,
+Read the required documents listed by `docs-impacto` before changing code, contracts,
 operational docs, generated artifacts, workflows, profiles, or release material.
 A cache hit is acceleration, not evidence: closing requires `--cache fresh`,
 while contract-only queries keep unobserved implementation fields null inside the command payload.
 
-## Codex Context Tiers
+Retain mudancaId. Resume with `sema sessao --mudanca-id <id> --json` after compaction.
+Close documentation using `sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc> --json`.
+Repeat --doc-lida for actual readings. Declarations expire when file hashes change; they do not prove behavior.
+
+## Configured Context
 
 All context capacities start with AGENTS.md, SEMA_BOOT.md and sema sessao.
 The first session asks for the effective window in tokens. Declare --janela-contexto

@@ -42,6 +42,7 @@ export const OPCOES_COM_VALOR = new Set([
   "--intencao",
   "--arquivo",
   "--doc-lida",
+  "--mudanca-id",
   "--texto",
   "--texto-arquivo",
   "--operation-code",

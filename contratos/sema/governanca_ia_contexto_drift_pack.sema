@@ -61,6 +61,8 @@ module sema.produto.governanca_ia.contexto.drift_pack {
       contagens existe
       drift_bruto_encaminhado == falso
       pacote deve_ser preservar_travas_e_divergencias
+      pacote deve_ser distinguir_referencias_estaticas_de_evidencia_de_comportamento
+      pacote deve_ser contar_tasks_sem_evidencia_verificada_sem_tratar_score_como_prova
       pacote deve_ser expor_lacunas_em_tasksWithGaps_com_alias_legado_tasksWithoutImplementation_identico
       pacote deve_ser deduplicar_caminhos_e_checks_em_guidance_sem_ocultar_lacunas
       caracteres_pacote deve_ser incluir_telemetria_e_indentacao_do_pacote

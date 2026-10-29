@@ -1,3 +1,4 @@
+import { FLUXO_IA } from "./agentFlowHelp.js";
 // SEMA-GOVERNED: sema.governanca_ia_contexto, sema.produto.governanca_ia.drift.cache.modos
 // Descrição: resume contrato ou projeto com política explícita de análise de drift.
 
@@ -322,60 +323,7 @@ export async function comandoSyncCodex(emJson: boolean): Promise<number> {
 }
 
 export async function comandoAjudaIa(): Promise<number> {
-  const descoberta = await descobrirDocsIa();
-  console.log("Ajuda de IA da Sema");
-  console.log("");
-  console.log(renderizarCaixaAscii([
-    "IA-first para greenfield, edicao guiada e legado sem contrato inicial",
-    "use o menor artefato semantico que resolva a tarefa",
-  ]));
-  console.log("");
-  console.log(renderizarCabecalhoDocsIa(descoberta));
-  console.log("");
-  console.log(renderizarSecaoAscii("Tres jeitos de usar a Sema", [
-    "[1] Producao inicial: modele, valide, compile e verifique antes de subir codigo derivado.",
-    "[2] Edicao em projeto com Sema: inspecione, leia resumo, rode drift e gere contexto antes de editar codigo vivo.",
-    "[3] Projeto sem Sema ainda: importe, revise o rascunho, formate, valide e use drift como juiz da adocao incremental.",
-  ]));
-  console.log("");
-  console.log(renderizarSecaoAscii("Capacidade de IA", [
-    "fraca: `sema resumo <arquivo> --micro --drift none --json` já devolve o context-pack compacto sem inventar evidência de implementação",
-    "média: `sema resumo <arquivo> --curto --drift none --json` já compacta o resumo; use `sema drift <arquivo> --cache fresh --json` quando precisar de evidência do código",
-    "forte: `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` materializa o pacote completo",
-  ]));
-  console.log("");
-  console.log(renderizarSecaoAscii("Fluxo recomendado", [
-    "Use `sema starter-ia` para um texto curto de onboarding.",
-    "Use `sema descobrir recomendar --intencao <objetivo> --json` quando ainda não souber qual profile, workflow, pipeline, gerador ou adaptador usar.",
-    "Use `sema descobrir catalogo --json` ou `sema capabilities --json` para expor o mapa completo de capacidades à IA.",
-    "Use `sema interativo pipelines --json` para jogos, simulações e híbridos 3D, 2D, retro, texto, XR ou headless.",
-    "Use `sema sync-codex` para regenerar o contexto governado do Codex na raiz.",
-    "Use `sema instalar-exemplos` para materializar `exemplos/` oficiais sem sobrescrever arquivos locais.",
-    "Use `sema resumo <arquivo> --micro --para onboarding --drift none --json` para IA fraca; o context-pack é automático e campos derivados ficam não avaliados.",
-    "Se `sema resumo` ou outro gate estourar timeout local, aumente o timeout e tente de novo; timeout do agente nao e falha do Sema.",
-    "Use `sema prompt-curto <arquivo> --curto --para mudanca` para colar contexto em modelo gratuito.",
-    "Use `sema prompt-ia`, `sema prompt-ia-ui`, `sema prompt-ia-react` e `sema prompt-ia-sema-primeiro` conforme a tarefa.",
-    "Use `sema exemplos-prompt-ia` para pegar modelos prontos de prompt.",
-    "Use `sema inspecionar --drift none` para descobrir a superfície contratual sem executar drift implicitamente.",
-    "Use `sema drift --cache fresh` para medir impls, vínculos, rotas, score e lacunas no fechamento; cache é aceleração, não prova final.",
-    "Use `sema docs-impacto --intencao <acao>` para ler ou criar docs obrigatorias antes de agir.",
-    "Use `sema finalizar-mudanca --intencao <acao>` para bloquear conclusao sem leitura documental comprovada.",
-    "Use `sema contexto-ia <arquivo.sema> --saida <diretorio> --json` para gerar somente o resumo selecionado pelo perfil. Consulte AST, IR ou drift pela CLI quando necessário.",
-    "Use `sema compilar <arquivo-ou-pasta> --alvo <typescript|python|php|dart|lua|javascript|html|css|dotnet|cpp> --saida <diretorio>` quando a tarefa pedir codigo derivado.",
-  ]));
-  console.log("");
-  console.log(renderizarSecaoAscii("Regras praticas", [
-    "Foi feita para IA operar melhor; leitura humana e consequencia, nao centro de produto.",
-    "Governa contrato, intencao, erro, efeito, garantia, fluxo, vinculos e execucao.",
-    "Nao escreve contrato final sozinho nem substitui decisao arquitetural.",
-    "Se voce quer testar a Sema de verdade, nao peca so HTML solto.",
-    "Peca `.sema` + arquitetura + React + TypeScript, ou use o modo `Sema primeiro`.",
-    "Se o projeto ja existe, trate `importar` como rascunho e `drift` como juiz.",
-    "IA fraca comeca no menor artefato que resolve a tarefa; nao enfie `ast.json` inteiro nela de bobeira.",
-    "Timeout local e so limite do agente: escale e tente de novo antes de chamar Sema de inativo.",
-    "Antes de editar software vivo, rode os gates locais e consulte somente o contrato selecionado e suas dependências. A CLI materializa apenas os arquivos do perfil ativo.",
-    "Trate `route`, `worker`, `evento`, `fila`, `cron`, `webhook`, `cache`, `storage` e `policy` como superficies de primeira classe.",
-  ]));
+  console.log(FLUXO_IA);
   return 0;
 }
 
