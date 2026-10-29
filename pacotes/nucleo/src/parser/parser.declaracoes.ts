@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.software
-// Descricao: parser particionado; consulte contratos/sema/software.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.parser_integridade
+// Descrição: declarações preservam os limites do módulo ao recuperar enums inválidos.
 
 import type {
   BlocoGenericoAst,
@@ -95,13 +95,20 @@ export function parseEnumParser(parser: Parser): EnumAst {
     parser.consumirValor("{", "Era esperado abrir o corpo do enum.");
     const valores: string[] = [];
     let docs: BlocoGenericoAst | undefined;
-    while (parser.atual().tipo !== "fim_arquivo" && parser.atual().valor !== "}") {
+    const dica = `Declare os valores diretamente: enum ${nome} { todas, pendentes, concluidas }. Não use valores { ... } nem atribuições.`;
+    while (parser.atual().tipo !== "fim_arquivo" && !parser.temValor("}")) {
       parser.ignorarRuido();
-      if (parser.atual().valor === "}") {
+      if (parser.temValor("}") || parser.atual().tipo === "fim_arquivo") {
         break;
       }
-      if (parser.atual().valor === "docs") {
+      if (parser.iniciaBlocoSimples("docs")) {
         docs = parser.parseBlocoGenerico("docs");
+        continue;
+      }
+      if (parser.temValor("{") || parser.tokenNaFrente()?.valor === "{") {
+        parser.registrarErro("PAR006", `Enum ${nome} não aceita subblocos de valores.`, parser.atual().intervalo, undefined, dica);
+        if (!parser.temValor("{")) parser.avancar();
+        parser.descartarBlocoInvalido();
         continue;
       }
       if (["identificador", "palavra_chave"].includes(parser.atual().tipo)) {
@@ -111,6 +118,7 @@ export function parseEnumParser(parser: Parser): EnumAst {
         }
         continue;
       }
+      parser.registrarErro("PAR006", `Valor inválido no enum ${nome}.`, parser.atual().intervalo, undefined, dica);
       parser.avancar();
     }
     const fim = parser.consumirValor("}", "Era esperado fechar o enum.").intervalo.fim;

@@ -10,6 +10,9 @@ module sema.validacao_resposta {
       mensagem: Texto
       dica: Texto
       contexto: Texto
+      arquivo: Texto optional
+      linha: Inteiro optional
+      coluna: Inteiro optional
     }
     invariants {
       codigo existe
@@ -80,12 +83,14 @@ module sema.validacao_resposta {
       aprovar_com_erro_semantico
       omitir_proximo_passo_obrigatorio
       retornar_bloqueia_acao_falso_com_erros
+      omitir_local_do_diagnostico_quando_disponivel
     }
     impl {
       ts: nucleo.src.index.gerarRespostaValidacao
     }
     vinculos {
       arquivo: "pacotes/nucleo/src/index.ts"
+      arquivo: "testes/unidade/parser-integridade.test.ts"
       simbolo: nucleo.src.index.gerarRespostaValidacao
     }
     execucao {

@@ -162,6 +162,7 @@ test("impacto de modulo usa somente contratos selecionados e arquivos planejados
     await writeFile(path.join(base, "contratos", "alvo.sema"), `module app.alvo {
   vinculos { arquivo: "app/alvo.ts" }
   task executar {
+    input {}
     output { ok: Booleano }
     impl { ts: alvo.executar }
     guarantees { ok existe }

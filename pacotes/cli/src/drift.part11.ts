@@ -275,6 +275,23 @@ export async function analisarDriftLegado(
   const recursosValidos: RegistroRecursoDrift[] = [];
   const recursosDivergentes: RegistroRecursoDrift[] = [];
   const diagnosticos: DiagnosticoDrift[] = [];
+  for (const item of contexto.modulosCarregados) {
+    for (const diagnostico of item.resultado.diagnosticos) {
+      if (diagnostico.severidade !== "erro") continue;
+      bloqueiosAnalise.add("contrato_invalido");
+      diagnosticos.push({
+        tipo: "contrato_invalido",
+        modulo: item.resultado.modulo?.nome ?? "contrato",
+        arquivo: relativoEscopo(item.caminho),
+        codigo: diagnostico.codigo,
+        linha: diagnostico.intervalo?.inicio.linha,
+        coluna: diagnostico.intervalo?.inicio.coluna,
+        severidade: "erro",
+        mensagem: diagnostico.mensagem,
+        dica: diagnostico.dica,
+      });
+    }
+  }
   const moduloDiagnostico = contexto.modulosSelecionados[0]?.resultado.ir?.nome
     ?? contexto.modulosSelecionados[0]?.resultado.modulo?.nome
     ?? "projeto";

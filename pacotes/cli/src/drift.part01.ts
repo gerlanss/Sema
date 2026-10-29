@@ -70,6 +70,7 @@ export interface OpcoesDriftLegado {
 }
 export interface DiagnosticoDrift {
   tipo:
+    | "contrato_invalido"
     | "impl_quebrado"
     | "task_sem_impl"
     | "rota_divergente"
@@ -89,6 +90,10 @@ export interface DiagnosticoDrift {
   route?: string;
   arquivo?: string;
   linhas?: number;
+  codigo?: string;
+  linha?: number;
+  coluna?: number;
+  dica?: string;
   severidade?: "aviso" | "erro";
   limite_bloqueio_linhas?: number;
   frameworksEsperados?: string[];

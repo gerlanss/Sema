@@ -52,8 +52,13 @@ actually read. Hashes reuse declarations until a file changes. Missing scope or
 nonexistent files block closure. This gate checks declarations, not comprehension
 or behavior: validation, fresh drift and application tests remain separate.
 Use `drift <contract> --cache fresh --pacote --json` and inspect evidence gaps;
-consume JSON without truncating lines or object depth. Quote `arquivo` paths in
-contracts. Do not convert a plain JavaScript app to ES modules to satisfy Sema.
+consume JSON without truncating lines or object depth. When creating a contract,
+plan each task's `impl { js: app.cadastrar }` and
+`vinculos { arquivo: "app.js" simbolo: app.cadastrar }` before implementation.
+Confirm the planned files and symbols with fresh drift once they exist.
+Link HTML/CSS as module files; they are not JavaScript implementations.
+`SEMA-GOVERNED` headers identify ownership but do not replace task mappings.
+Quote `arquivo` paths. Do not convert plain JavaScript to ES modules for Sema.
 
 `sema formatar` formats .sema contracts and `sema validar` validates those
 contracts. Neither adopts a project or proves that HTML, CSS, JavaScript or

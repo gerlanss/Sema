@@ -1,0 +1,72 @@
+module sema.produto.parser_integridade {
+  docs {
+    resumo: "Preserva as fronteiras do contrato e rejeita sintaxe que descartaria tarefas ou vínculos sem diagnóstico. Recuperação do parser permite apontar erros, nunca autoriza execução de um contrato inválido."
+    arquivo: "docs/syntax.md"
+  }
+
+  task analisar_contrato_inteiro {
+    input {
+      tokens: Lista required
+    }
+    output {
+      modulo: Objeto
+      diagnosticos: Lista
+    }
+    rules {
+      tokens deve_ser consumido_ate_fim_arquivo
+      tokens deve_ser preservar_fronteiras_de_blocos_durante_recuperacao
+    }
+    forbidden {
+      aceitar_conteudo_apos_fechamento_do_modulo
+      aceitar_subbloco_valores_em_enum
+      descartar_declaracao_de_modulo_desconhecida_sem_erro
+      aceitar_impl_no_modulo_em_vez_da_task
+      aceitar_blocos_impl_ou_vinculos_duplicados_descartando_o_segundo
+      confundir_delimitadores_de_texto_com_sintaxe
+      descartar_alias_canonico_de_origem_como_linha_sem_implementacao
+      considerar_ast_recuperada_prova_de_contrato_valido
+    }
+    impl {
+      ts: nucleo.src.parser.parser_part03.parsear
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/parser/parser.part03.ts"
+      arquivo: "pacotes/nucleo/src/parser/parser.part02.ts"
+      arquivo: "pacotes/nucleo/src/parser/parser.modulo.ts"
+      arquivo: "pacotes/nucleo/src/parser/parser.declaracoes.ts"
+      arquivo: "pacotes/nucleo/src/lexer/lexer.ts"
+      arquivo: "testes/unidade/parser-integridade.test.ts"
+      arquivo: "testes/unidade/dsl-origens-canonicas.test.ts"
+      simbolo: nucleo.src.parser.parser_part03.parsear
+    }
+    guarantees {
+      diagnosticos deve_ser conter_erro_com_local_e_dica_quando_estrutura_invalida
+      modulo deve_ser preservar_tarefas_apos_enum_invalido_recuperavel
+    }
+  }
+
+  task validar_vinculos_estruturados {
+    input {
+      bloco: Objeto required
+    }
+    output {
+      diagnosticos: Lista
+    }
+    forbidden {
+      aceitar_setas_ou_subblocos_como_vinculos
+      aceitar_vinculo_vazio
+      confundir_marcador_sema_governed_com_mapeamento_de_task
+    }
+    impl {
+      ts: nucleo.src.semantico.analisador_part01.validarVinculos
+    }
+    vinculos {
+      arquivo: "pacotes/nucleo/src/semantico/analisador.part01.ts"
+      arquivo: "testes/unidade/parser-integridade.test.ts"
+      simbolo: nucleo.src.semantico.analisador_part01.validarVinculos
+    }
+    guarantees {
+      diagnosticos deve_ser conter_erro_para_vinculos_sem_campos_reconhecidos
+    }
+  }
+}

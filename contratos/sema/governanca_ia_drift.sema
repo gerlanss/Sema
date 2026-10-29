@@ -98,6 +98,8 @@ module sema.produto.governanca_ia.drift {
     }
     forbidden {
       executar_drift_modulo_sem_contrato_alvo
+      declarar_sucesso_com_erro_de_compilacao_no_escopo_carregado
+      ocultar_codigo_local_e_dica_do_erro_de_contrato
       executar_drift_arquivo_sem_contrato_alvo
       varrer_projeto_inteiro_com_escopo_estreito
       tratar_ruido_global_como_diagnostico_util
@@ -133,6 +135,8 @@ module sema.produto.governanca_ia.drift {
       arquivo: "pacotes/cli/src/drift.part07.ts"
       arquivo: "pacotes/cli/src/drift.part08.ts"
       arquivo: "pacotes/cli/src/drift.part11.ts"
+      arquivo: "pacotes/cli/src/drift.part01.ts"
+      arquivo: "testes/unidade/parser-integridade.test.ts"
       arquivo: "pacotes/cli/src/drift.part13.ts"
       arquivo: "pacotes/cli/src/drift.part14.ts"
       arquivo: "pacotes/cli/src/drift.part09.ts"
@@ -145,6 +149,7 @@ module sema.produto.governanca_ia.drift {
       arquivo: "pacotes/cli/src/projetoTipos.ts"
       arquivo: "pacotes/cli/src/index.part05.ts"
       arquivo: "testes/integracao/drift-escopo-io.test.ts"
+      arquivo: "testes/integracao/drift-legado.parte07.ts"
       arquivo: "testes/integracao/drift-caminhos-externos.test.ts"
       arquivo: "testes/unidade/drift-catalogo.test.ts"
       arquivo: "testes/unidade/drift-escopo-dependencias.test.ts"

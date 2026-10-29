@@ -31,6 +31,7 @@ module sema.produto.governanca_ia.contexto.drift_pack {
     }
     forbidden {
       esconder_impl_quebrado
+      esconder_codigo_local_e_dica_do_erro_de_contrato
       esconder_vinculo_quebrado
       esconder_rota_divergente
       converter_inferencia_em_prova
@@ -46,6 +47,7 @@ module sema.produto.governanca_ia.contexto.drift_pack {
       arquivo: "pacotes/cli/src/driftPack.ts"
       arquivo: "pacotes/cli/src/index.part05.ts"
       arquivo: "testes/unidade/context-packs.test.ts"
+      arquivo: "testes/unidade/parser-integridade.test.ts"
       simbolo: cli.src.drift_pack.criarDriftPack
     }
     execucao {

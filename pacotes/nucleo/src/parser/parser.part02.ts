@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.software
-// Descricao: parser particionado; consulte contratos/sema/software.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.parser_integridade
+// Descrição: parser com diagnóstico estrutural e recuperação sem sucesso parcial silencioso.
 
 import {
   criarDiagnostico,
@@ -45,11 +45,32 @@ export class Parser {
   public analisar(): ResultadoParser {
       this.ignorarRuido();
       const modulo = this.parseModulo();
+      this.ignorarRuido();
+      if (modulo && this.atual().tipo !== "fim_arquivo") {
+        this.registrarErro("PAR005", "Há conteúdo depois do fechamento do module.", this.atual().intervalo, undefined,
+          "Mantenha as declarações dentro do único module do arquivo; confira as chaves anteriores. Separe outro módulo em outro .sema.");
+        while (this.atual().tipo !== "fim_arquivo") this.avancar();
+      }
       return { modulo, diagnosticos: this.diagnosticos };
     }
 
   public atual(): Token {
       return this.tokens[this.indice]!;
+    }
+
+  public temValor(valor: string): boolean {
+      return !["texto", "comentario"].includes(this.atual().tipo) && this.atual().valor === valor;
+    }
+
+  public descartarBlocoInvalido(): void {
+      if (!this.temValor("{")) return;
+      let nivel = 0;
+      do {
+        if (this.temValor("{")) nivel += 1;
+        if (this.temValor("}")) nivel -= 1;
+        this.avancar();
+      } while (nivel > 0 && this.atual().tipo !== "fim_arquivo");
+      if (nivel > 0) this.registrarErro("PAR001", "Bloco inválido não foi fechado.", this.atual().intervalo);
     }
 
   public anterior(): Token {
@@ -75,21 +96,21 @@ export class Parser {
     }
 
   public iniciaBlocoSimples(keyword: string): boolean {
-      if (this.atual().valor !== keyword) {
+      if (!this.temValor(keyword)) {
         return false;
       }
       return this.tokenNaFrente()?.valor === "{";
     }
 
   public iniciaBlocoComNomeObrigatorio(keyword: string): boolean {
-      if (this.atual().valor !== keyword) {
+      if (!this.temValor(keyword)) {
         return false;
       }
       return this.tokenNaFrente()?.tipo === "identificador" && this.tokenNaFrente(2)?.valor === "{";
     }
 
   public iniciaBlocoState(): boolean {
-      if (this.atual().valor !== "state") {
+      if (!this.temValor("state")) {
         return false;
       }
       return this.tokenNaFrente()?.valor === "{"
@@ -137,7 +158,7 @@ export class Parser {
 
   public consumirValor(valor: string, mensagem: string): Token {
       const token = this.atual();
-      if (token.valor === valor) {
+      if (this.temValor(valor)) {
         this.avancar();
         return token;
       }
@@ -155,14 +176,14 @@ export class Parser {
       return token;
     }
 
-  public registrarErro(codigo: string, mensagem: string, intervalo?: IntervaloFonte, contexto?: string): void {
+  public registrarErro(codigo: string, mensagem: string, intervalo?: IntervaloFonte, contexto?: string, dica?: string): void {
       this.diagnosticos.push(
         criarDiagnostico(
           codigo,
           mensagem,
           "erro",
           intervalo,
-          "Revise a sintaxe do bloco e a ordem das declaracoes.",
+          dica ?? "Revise a sintaxe do bloco e a ordem das declaracoes.",
           contexto,
         ),
       );
@@ -210,6 +231,13 @@ export class Parser {
     }
 
   public parseBlocoGenerico(palavraChave: PalavraBloco | "desconhecido"): BlocoGenericoAst {
+      if (palavraChave === "desconhecido") {
+        const token = this.atual();
+        this.registrarErro("PAR007", token.valor === "impl" ? "impl só pode ser declarado dentro de uma task." : `Declaração inválida no module: ${token.valor}.`, token.intervalo, undefined,
+          token.valor === "impl"
+            ? 'Declare impl { js: app.acao } dentro da task e vinculos { arquivo: "app.js" }. HTML/CSS são arquivos vinculados, não símbolos impl.'
+            : "Use uma declaração documentada com o nome obrigatório, como task cadastrar { ... } ou enum Filtro { todas, pendentes }. Consulte docs/syntax.md.");
+      }
       const inicioToken = this.avancar();
       let nome: string | undefined;
       if (this.atual().tipo === "identificador") {
@@ -247,9 +275,9 @@ export class Parser {
       const linhas: BlocoGenericoAst["linhas"] = [];
       const blocos: BlocoAst[] = [];
 
-      while (this.atual().tipo !== "fim_arquivo" && this.atual().valor !== "}") {
+      while (this.atual().tipo !== "fim_arquivo" && !this.temValor("}")) {
         this.ignorarRuido();
-        if (this.atual().valor === "}") {
+        if (this.temValor("}") || this.atual().tipo === "fim_arquivo") {
           break;
         }
 
@@ -259,6 +287,15 @@ export class Parser {
         }
 
         if (this.iniciaSubblocoConhecido()) {
+          const chave = this.atual().valor;
+          if (["impl", "vinculos"].includes(chave) && blocos.some((b) => b.tipo === "bloco_generico" && b.palavraChave === chave)) {
+            this.registrarErro("PAR008", `Bloco ${chave} repetido no mesmo escopo.`, this.atual().intervalo, undefined,
+              `Reúna os campos em um único bloco ${chave}; blocos repetidos não são mesclados.`);
+          }
+          if (chave === "impl" && palavraChave !== "task") {
+            this.registrarErro("PAR007", "impl só pode ser declarado dentro de uma task.", this.atual().intervalo, undefined,
+              'Use task acao { impl { js: app.acao } vinculos { arquivo: "app.js" } } para ligar a operação ao código.');
+          }
           blocos.push(this.parseBlocoGenerico(this.atual().valor as PalavraBloco));
           continue;
         }
@@ -279,7 +316,7 @@ export class Parser {
         }
 
         if (["identificador", "palavra_chave"].includes(this.atual().tipo) && this.tokens[this.indice + 1]?.valor === ":") {
-          campos.push(this.parseCampo());
+          campos.push(this.parseCampo(palavraChave));
           continue;
         }
 
@@ -301,13 +338,13 @@ export class Parser {
       };
     }
 
-  private parseCampo(): CampoAst {
+  private parseCampo(contexto: BlocoGenericoAst["palavraChave"]): CampoAst {
       const inicio = this.atual().intervalo.inicio;
       const nome = this.avancar().valor;
       this.consumirValor(":", "Era esperado ':' depois do nome do campo.");
       const partes: Token[] = [];
       let profundidade = 0;
-      while (this.atual().tipo !== "fim_arquivo" && this.atual().tipo !== "nova_linha" && this.atual().valor !== "}") {
+      while (!["fim_arquivo", "nova_linha", "comentario"].includes(this.atual().tipo) && !this.temValor("}")) {
         const proximoToken = this.tokens[this.indice + 1];
         const iniciaNovoCampo =
           profundidade === 0
@@ -321,14 +358,19 @@ export class Parser {
 
         const token = this.avancar();
         partes.push(token);
-        if (["<", "[", "("].includes(token.valor)) {
+        if (token.tipo !== "texto" && ["<", "[", "("].includes(token.valor)) {
           profundidade += 1;
-        } else if ([">", "]", ")"].includes(token.valor)) {
+        } else if (token.tipo !== "texto" && [">", "]", ")"].includes(token.valor)) {
           profundidade = Math.max(0, profundidade - 1);
         }
       }
       const segmentos = partes.filter((token) => token.valor.length > 0);
       const possuiTextoLiteral = segmentos.some((token) => token.tipo === "texto");
+
+      if (contexto === "vinculos" && nome === "arquivo" && (partes.length !== 1 || partes[0]?.tipo !== "texto")) {
+        this.registrarErro("PAR004", "arquivo no vínculo exige um único caminho entre aspas.",
+          { inicio, fim: this.anterior().intervalo.fim }, undefined, 'Use arquivo: "app.js". Repita arquivo: "outro.css" para outro arquivo.');
+      }
 
       if (possuiTextoLiteral) {
         const valorLiteral = segmentos.map((token) => token.tipo === "texto" ? decodificarTextoLiteral(token.valor) : token.valor).join(" ");
@@ -407,7 +449,7 @@ export class Parser {
   private parseLinhaDeclarativa() {
       const inicio = this.atual().intervalo.inicio;
       const partes: string[] = [];
-      while (this.atual().tipo !== "fim_arquivo" && this.atual().tipo !== "nova_linha" && this.atual().valor !== "}") {
+      while (!["fim_arquivo", "nova_linha", "comentario"].includes(this.atual().tipo) && !this.temValor("}")) {
         partes.push(this.avancar().valor);
       }
       if (this.atual().tipo === "nova_linha") {
@@ -435,9 +477,9 @@ export class Parser {
       let docs: BlocoGenericoAst | undefined;
       let comments: BlocoGenericoAst | undefined;
 
-      while (this.atual().tipo !== "fim_arquivo" && this.atual().valor !== "}") {
+      while (this.atual().tipo !== "fim_arquivo" && !this.temValor("}")) {
         this.ignorarRuido();
-        if (this.atual().valor === "}") {
+        if (this.temValor("}") || this.atual().tipo === "fim_arquivo") {
           break;
         }
         switch (this.atual().valor) {

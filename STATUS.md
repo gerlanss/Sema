@@ -7,10 +7,10 @@ the first proving ground, not the product boundary.
 
 ## Current Line
 
-- Version: `4.2.6`
+- Version: `4.2.7`
 - Package: `@semacode/cli`
 - Last updated: 2026-10-28
-- Reference commit: `80deff9`
+- Reference commit: `c5c548e`
 - Support: `suporte@otimitare.com`
 - Public boundary: local CLI, absolute managed launcher, bundled global skill,
   optional repo marketplace,
@@ -32,6 +32,12 @@ Every public publication must pass:
 - `npm run release:verificar-drift`
 
 ## Maintenance Focus
+
+- Reject malformed enums, trailing declarations and invalid mapping blocks without
+  silently dropping tasks. Preserve contract error codes, locations and repair hints
+  in validation and drift, including the compact output.
+- Plan task implementations and file bindings before coding; distinguish those
+  mappings from ownership headers and from references verified by fresh drift.
 
 - Resume changes by id with fixed intention and files; reuse reading declarations
   only while document hashes match. Documentation closure does not certify behavior.

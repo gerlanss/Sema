@@ -36,6 +36,11 @@ module app.example {
     guarantees {
       item existe
     }
+    impl { js: app.createItem }
+    vinculos {
+      arquivo: "app.js"
+      simbolo: app.createItem
+    }
     tests {
       caso "creates valid item" {
         given { name: "Item" }
@@ -45,6 +50,22 @@ module app.example {
   }
 }
 ```
+
+Plan the task-to-function and task-to-file mapping when creating the contract.
+These references are pending until implementation exists; confirm them with fresh drift.
+An implementation identifier is a symbol, not a filename. Put `impl` inside the
+task, never at module level. Link shared HTML/CSS with module-level
+`vinculos { arquivo: "index.html" arquivo: "style.css" }`; do not invent JavaScript
+implementations for assets. A `SEMA-GOVERNED` header identifies the owning contract
+but does not replace these mappings. Multiple tasks can reference the same file.
+
+## Enums and Module Boundaries
+
+`enum Filtro { todas, pendentes, concluidas }` is valid. Do not wrap values in
+`valores { ... }`. Each file contains one module, with all declarations inside it.
+Malformed enums, trailing declarations, duplicate mapping blocks and arrow-style
+bindings are errors with a location and repair hint. Fix them before using counts
+from a recovered AST. An entity-only module may legitimately have no tasks.
 
 ## Common Blocks
 

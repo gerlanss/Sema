@@ -48,6 +48,8 @@ module sema.produto.dsl_impl {
       duplicar_combinacao_de_origem_e_papel
       quebrar_contratos_com_impl_nu_existente
       resolver_apenas_o_primeiro_papel_no_drift
+      aceitar_impl_vazio_ou_com_setas_ou_subblocos
+      aceitar_caminho_de_arquivo_no_lugar_de_simbolo_impl
     }
     impl {
       ts: nucleo.src.semantico.analisador_part01.validarImplementacoesTask
@@ -57,6 +59,7 @@ module sema.produto.dsl_impl {
       arquivo: "pacotes/nucleo/src/ir/conversor.part01.ts"
       arquivo: "pacotes/nucleo/src/ir/modelos.ts"
       arquivo: "testes/unidade/impl-multi-papel.test.ts"
+      arquivo: "testes/unidade/parser-integridade.test.ts"
       simbolo: nucleo.src.semantico.analisador_part01.validarImplementacoesTask
     }
     execucao {

@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.software
-// Descricao: parser particionado; consulte contratos/sema/software.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.parser_integridade
+// Descrição: entrada do parser governado por contratos/sema/parser_integridade.sema.
 
 import type { Token } from "../lexer/tokens.js";
 import { ResultadoParser } from "./parser.part01.js";

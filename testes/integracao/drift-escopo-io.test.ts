@@ -57,7 +57,7 @@ async function criarWorkspaceEscopo(): Promise<string> {
 }
 `, "utf8");
   await writeFile(path.join(base, "contratos", "sem_ancora.sema"), `module app.sem_ancora {
-  task descrever { output { ok: Booleano } guarantees { ok existe } }
+  task descrever { input {} output { ok: Booleano } guarantees { ok existe } }
 }
 `, "utf8");
   return base;
@@ -252,6 +252,7 @@ test("origem js planeja arquivo TypeScript aceito pelo resolvedor", async () => 
     ].join("\n"), "utf8");
     await writeFile(path.join(base, "contratos", "typed_impl.sema"), `module app.typed_impl {
   task executar {
+    input {}
     output { ok: Booleano }
     impl { js: app.typed_impl.executar }
     guarantees { ok existe }
@@ -279,6 +280,7 @@ test("drift focado sem config encontra src por raiz logica sem caminhada previa"
     await writeFile(path.join(base, "src", "app.ts"), "export function executar() { return { ok: true }; }\n", "utf8");
     await writeFile(path.join(base, "contratos", "app.sema"), `module app.servico {
   task executar {
+    input {}
     output { ok: Booleano }
     impl { ts: app.executar }
     vinculos { simbolo: app.executar }
@@ -310,6 +312,7 @@ test("implementacao sem candidato falha pelo impl real, nao por arquivo inventad
     await writeFile(path.join(base, "contratos", "parcial.sema"), `module app.parcial {
   vinculos { arquivo: "app/ancora.py" }
   task executar {
+    input {}
     output { ok: Booleano }
     impl { py: app.inexistente.executar }
     guarantees { ok existe }
@@ -346,6 +349,7 @@ test("vinculo declarado prevalece sobre inferencia do mesmo arquivo", async () =
     await writeFile(path.join(base, "contratos", "declarado.sema"), `module app.declarado {
   vinculos { arquivo: "app/declarado.py" }
   task executar {
+    input {}
     output { ok: Booleano }
     impl { py: app.declarado.executar }
     guarantees { ok existe }
@@ -380,6 +384,7 @@ test("vinculo explicito impede que simbolo homonimo lateral sobrescreva a implem
     await writeFile(path.join(base, "contratos", "health.sema"), `module app.health {
   vinculos { arquivo: "app/health.ts" }
   task executar {
+    input {}
     output { ok: Booleano }
     impl { ts: health.executar }
     vinculos { simbolo: health.executar }
@@ -418,6 +423,7 @@ test("implementacao homonima sem vinculo falha como escopo ambiguo antes da leit
     await writeFile(path.join(base, "other", "health.ts"), "export function executar() { return { ok: false }; }\n", "utf8");
     await writeFile(path.join(base, "contratos", "health.sema"), `module app.health {
   task executar {
+    input {}
     output { ok: Booleano }
     impl { ts: health.executar }
     guarantees { ok existe }
@@ -456,6 +462,7 @@ test("escopo projeto preserva candidatos homonimos e falha sem escolher o ultimo
     await writeFile(path.join(base, "other", "health.ts"), "export function executar() { return { ok: false }; }\n", "utf8");
     await writeFile(path.join(base, "contratos", "health.sema"), `module app.health {
   task executar {
+    input {}
     output { ok: Booleano }
     impl { ts: health.executar }
     guarantees { ok existe }
@@ -499,12 +506,14 @@ test("origens diferentes com o mesmo caminho semantico resolvem sem misturar can
     await writeFile(path.join(base, "py", "health.py"), "def executar():\n    return True\n", "utf8");
     await writeFile(path.join(base, "contratos", "health.sema"), `module app.health {
   task executar_ts {
+    input {}
     output { ok: Booleano }
     impl { ts: health.executar }
     vinculos { arquivo: "ts/health.ts" }
     guarantees { ok existe }
   }
   task executar_py {
+    input {}
     output { ok: Booleano }
     impl { py: health.executar }
     vinculos { arquivo: "py/health.py" }

@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.produto.cli_init_templates
+// SEMA-GOVERNED: sema.produto.cli_init_templates, sema.produto.parser_integridade
 // Descricao: prova que linguagens e tecnologias suportadas estao explicitas em docs, help e gramatica.
 
 import test from "node:test";
@@ -40,15 +40,26 @@ test("toda origem canonica de impl valida no nucleo, incluindo php", () => {
     const resultado = compilarCodigo(CONTRATO_IMPL(origem), `contrato-${origem}.sema`);
     const erros = resultado.diagnosticos.filter((diagnostico) => diagnostico.severidade === "erro");
     assert.equal(erros.length, 0, `origem ${origem} deveria validar: ${JSON.stringify(erros)}`);
+    assert.equal(resultado.ir?.tasks[0]?.implementacoesExternas.length, 1, `origem ${origem} não pode desaparecer da implementação`);
+    assert.equal(resultado.ir?.tasks[0]?.implementacoesExternas[0]?.caminho, "exemplo.origens.criarItem");
   }
 });
 
 test("papel de impl combina com qualquer origem, nao so typescript", () => {
-  for (const campo of ["php_rota", "php_servico", "py_persistencia", "cs_repositorio", "go_rota", "rust_servico"]) {
+  for (const campo of ["php_rota", "php_servico", "py_persistencia", "cs_repositorio", "go_rota", "rust_servico", "c++_servico"]) {
     const resultado = compilarCodigo(CONTRATO_IMPL(campo), `contrato-papel-${campo}.sema`);
     const erros = resultado.diagnosticos.filter((diagnostico) => diagnostico.severidade === "erro");
     assert.equal(erros.length, 0, `campo ${campo} deveria validar: ${JSON.stringify(erros)}`);
+    assert.equal(resultado.ir?.tasks[0]?.implementacoesExternas.length, 1, `campo ${campo} não pode desaparecer da implementação`);
   }
+});
+
+test("alias c++ preserva também a origem do use", () => {
+  const resultado = compilarCodigo(CONTRATO_IMPL("c++").replace("  entity Item", "  use c++ exemplo.origens\n  entity Item"));
+  assert.deepEqual(resultado.diagnosticos.filter((d) => d.severidade === "erro"), []);
+  assert.equal(resultado.modulo?.uses[0]?.origem, "cpp");
+  assert.equal(resultado.modulo?.uses[0]?.caminho, "exemplo.origens");
+  assert.equal(resultado.ir?.tasks[0]?.implementacoesExternas[0]?.origem, "cpp");
 });
 
 test("template de commands.md lista as onze origens com aliases e php", async () => {

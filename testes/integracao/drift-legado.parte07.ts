@@ -463,6 +463,7 @@ def upsert_contact_config():
   }
 
   task salvar_contato_whatsapp {
+    input {}
     output {
       ok: Booleano
     }

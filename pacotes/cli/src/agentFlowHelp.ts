@@ -11,7 +11,8 @@ export const FLUXO_IA = [
   "Após editar: validar o contrato, testar o comportamento e repetir drift fresh. Referências válidas e score não comprovam comportamento; confira lacunas de evidência.",
   "Fechamento documental: sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc1> --doc-lida <doc2> --json. Use só docs efetivamente lidas. Declaração não comprova compreensão nem substitui testes.",
   "Consumir JSON diretamente; não cortar linhas nem reserializar com pouca profundidade. Use --pacote no drift; detalhes completos somente quando necessários.",
-  "Vínculos: arquivo sempre entre aspas, por exemplo arquivo: \"src/app/lista.js\". Use impl na task com o símbolo encontrado pela CLI. JavaScript não precisa virar ES module para usar Sema.",
+  'Ao criar o contrato, planeje em cada task: impl { js: app.cadastrar } e vinculos { arquivo: "app.js" simbolo: app.cadastrar }. Confirme no código e no drift assim que implementar. HTML/CSS são arquivos vinculados no módulo, não impl JS. SEMA-GOVERNED não substitui o mapeamento; não exige ES modules.',
+  "Enum declara valores diretamente: enum Filtro { todas, pendentes, concluidas }. Não aninhe valores { ... }. Corrija diagnósticos antes de usar contagens de uma análise inválida.",
   "Se protocolo/índice estiver desatualizado: sync-codex --json, depois retome a mesma mudança. Sema não concede autorização externa.",
 ].join("\n");
 

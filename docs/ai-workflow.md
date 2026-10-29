@@ -12,7 +12,7 @@ This is the minimum workflow for Codex in a local workspace.
 7. If the right capability is unclear, run `sema descobrir recomendar --intencao "<goal>" --json`; do not auto-run ambiguous recommendations.
 8. Use `exemplos/` and `docs/syntax.md` before creating or editing a contract.
 9. Run `sema drift <contract> --cache fresh --pacote --json` and `sema impacto` before editing existing code.
-10. For a new module with a validated contract, scaffold with `sema compilar <contract> --alvo <default target>`, fill the real implementation keeping `impl`/`vinculos`, and close with `sema verificar`.
+10. For a new module, plan each task's `impl` and `vinculos` before code. Validate, scaffold with `sema compilar <contract> --alvo <default target>`, then implement those symbols and files. Pending references become verified only after fresh drift; a `SEMA-GOVERNED` header alone does not link a task. Test the application and run `sema verificar`.
 11. Run `sema formatar` and `sema validar` after changing a `.sema` contract.
 12. Run `sema finalizar-mudanca --mudanca-id <id> --doc-lida <doc> --json`, repeating --doc-lida for actual readings. The id preserves intention and files; declarations expire when hashes change. This checks documentation, not comprehension or behavior; validation, drift and tests remain separate.
 

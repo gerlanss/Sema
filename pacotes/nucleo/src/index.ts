@@ -1,5 +1,5 @@
 // SEMA-GOVERNED
-// Módulo: sema.produto.orcamento_semantico
+// Módulo: sema.produto.orcamento_semantico, sema.validacao_resposta
 // Contrato: contratos/sema/orcamento_semantico.sema
 // Descrição: ponto público do núcleo Sema, incluindo compilação, IR e validações semânticas.
 
@@ -149,6 +149,9 @@ export interface RespostaValidacao {
     mensagem: string;
     dica?: string;
     contexto?: string;
+    arquivo?: string;
+    linha?: number;
+    coluna?: number;
   }>;
   advertencias: Array<{
     codigo: string;
@@ -166,6 +169,9 @@ export function gerarRespostaValidacao(diagnosticos: Diagnostico[]): RespostaVal
       mensagem: d.mensagem,
       dica: d.dica,
       contexto: d.contexto,
+      arquivo: d.intervalo?.arquivo,
+      linha: d.intervalo?.inicio.linha,
+      coluna: d.intervalo?.inicio.coluna,
     }));
 
   const advertencias = diagnosticos

@@ -1,5 +1,5 @@
-// SEMA-GOVERNED: sema.software
-// Descricao: parser particionado; consulte contratos/sema/software.sema antes de editar.
+// SEMA-GOVERNED: sema.produto.parser_integridade
+// Descrição: um módulo não ignora declarações desconhecidas ou mapeamentos fora de escopo.
 
 import type {
   BlocoGenericoAst,
@@ -16,7 +16,7 @@ import type {
 import type { Parser } from "./parser.part02.js";
 
 export function parseModuloParser(parser: Parser): ModuloAst | undefined {
-    if (parser.atual().valor !== "module") {
+    if (!parser.temValor("module")) {
       parser.registrarErro("PAR003", "Arquivo .sema deve iniciar com um bloco module.", parser.atual().intervalo);
       return undefined;
     }
@@ -49,10 +49,10 @@ export function parseModuloParser(parser: Parser): ModuloAst | undefined {
     let comments: BlocoGenericoAst | undefined;
     let tests: BlocoGenericoAst | undefined;
 
-    while (parser.atual().tipo !== "fim_arquivo" && parser.atual().valor !== "}") {
+    while (parser.atual().tipo !== "fim_arquivo" && !parser.temValor("}")) {
       parser.ignorarRuido();
       const token = parser.atual();
-      if (token.valor === "}") {
+      if (parser.temValor("}") || token.tipo === "fim_arquivo") {
         break;
       }
 
@@ -87,6 +87,8 @@ export function parseModuloParser(parser: Parser): ModuloAst | undefined {
           break;
         case "vinculos":
           if (parser.iniciaBlocoSimples("vinculos")) {
+            if (vinculos) parser.registrarErro("PAR008", "Bloco vinculos repetido no módulo.", token.intervalo, undefined,
+              "Reúna todos os campos arquivo e simbolo em um único bloco vinculos.");
             vinculos = parser.parseBlocoGenerico("vinculos");
             break;
           }

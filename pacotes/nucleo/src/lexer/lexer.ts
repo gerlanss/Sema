@@ -1,3 +1,5 @@
+// SEMA-GOVERNED: sema.produto.parser_integridade
+// Descrição: tokeniza os contratos preservando os aliases canônicos de origem.
 import { criarDiagnostico, type Diagnostico, type PosicaoFonte } from "../diagnosticos/index.js";
 import { PALAVRAS_CHAVE, type Token, type TipoToken } from "./tokens.js";
 
@@ -111,6 +113,17 @@ export function tokenizar(codigo: string, arquivo?: string): ResultadoLexer {
       while (cursor.indice < codigo.length && /[A-Za-z0-9_.-]/.test(codigo[cursor.indice]!)) {
         texto += codigo[cursor.indice];
         cursor = avancar(cursor, codigo[cursor.indice]!);
+      }
+      // c++ e c++_<papel> são aliases públicos de cpp, inclusive em use.
+      if (texto.toLowerCase() === "c" && codigo.slice(cursor.indice, cursor.indice + 2) === "++") {
+        texto += "++";
+        cursor = avancar(avancar(cursor, "+"), "+");
+        if (codigo[cursor.indice] === "_") {
+          while (cursor.indice < codigo.length && /[A-Za-z0-9_]/.test(codigo[cursor.indice]!)) {
+            texto += codigo[cursor.indice];
+            cursor = avancar(cursor, codigo[cursor.indice]!);
+          }
+        }
       }
       const tipo: TipoToken = PALAVRAS_CHAVE.has(texto) ? "palavra_chave" : "identificador";
       tokens.push(criarToken(tipo, texto, inicio, cursor, arquivo));

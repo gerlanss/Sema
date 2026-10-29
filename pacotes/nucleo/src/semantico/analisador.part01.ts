@@ -1,4 +1,4 @@
-// SEMA-GOVERNED: sema.software
+// SEMA-GOVERNED: sema.software, sema.produto.dsl_impl, sema.produto.parser_integridade
 // Descricao: nucleo semantico particionado; consulte contratos/sema/software.sema antes de editar.
 import { criarDiagnostico, type Diagnostico } from "../diagnosticos/index.js";
 import type {
@@ -412,6 +412,10 @@ export function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnosti
   if (!task.impl) {
     return;
   }
+  if (task.impl.campos.length === 0 || task.impl.linhas.length > 0 || task.impl.blocos.length > 0) {
+    diagnosticos.push(criarDiagnostico("SEM061", `Task "${task.nome}" exige campos de símbolo no bloco impl.`, "erro", task.impl.intervalo,
+      'Dentro da task, use impl { js: app.cadastrar }. O arquivo fica em vinculos { arquivo: "app.js" }; setas e subblocos não declaram implementações.'));
+  }
   const chaves = new Set<string>();
   for (const campo of task.impl.campos) {
     const nome = normalizarNomeCampoImplementacao(campo.nome);
@@ -442,7 +446,7 @@ export function validarImplementacoesTask(task: TaskAst, diagnosticos: Diagnosti
       continue;
     }
     chaves.add(chave);
-    if (!PADRAO_CAMINHO_INTEROP.test(campo.valor)) {
+    if (!PADRAO_CAMINHO_INTEROP.test(campo.valor) || campo.modificadores.length > 0) {
       diagnosticos.push(
         criarDiagnostico(
           "SEM061",
@@ -459,7 +463,15 @@ export function validarVinculos(bloco: BlocoGenericoAst | undefined, diagnostico
   if (!bloco) {
     return;
   }
+  if (bloco.campos.length === 0 || bloco.linhas.length > 0 || bloco.blocos.length > 0) {
+    diagnosticos.push(criarDiagnostico("SEM126", `Vínculos em ${contexto} exigem campos, não setas ou subblocos.`, "erro", bloco.intervalo,
+      'Use vinculos { arquivo: "app.js" simbolo: app.cadastrar }. Coloque esse bloco na task correspondente; repita arquivo para outros arquivos.'));
+  }
   for (const campo of bloco.campos) {
+    if (!campo.valor.trim()) {
+      diagnosticos.push(criarDiagnostico("SEM126", `Vínculo "${campo.nome}" vazio em ${contexto}.`, "erro", campo.intervalo,
+        'Informe uma referência concreta, por exemplo arquivo: "app.js" ou simbolo: app.cadastrar.'));
+    }
     if (!CAMPOS_VINCULO_SUPORTADOS.has(campo.nome)) {
       diagnosticos.push(
         criarDiagnostico(
